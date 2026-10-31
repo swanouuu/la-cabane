@@ -1,0 +1,13 @@
+name = "Ecologics"
+filename = "ecologics-1.21.1-2.3.8.jar"
+side = "both"
+
+[download]
+url = "https://cdn.modrinth.com/data/NCKpPR0Z/versions/62SFTuDx/ecologics-1.21.1-2.3.8.jar"
+hash-format = "sha512"
+hash = "995d0a255b7882cf3288c1d174fde923bd88ef0ad02f750e0c2f1b88bae01f721c9a64a02b12b27ba23c4fe968a0297c8a926b2c5da4d69392987a41b686aacf"
+
+[update]
+[update.modrinth]
+mod-id = "NCKpPR0Z"
+version = "62SFTuDx"

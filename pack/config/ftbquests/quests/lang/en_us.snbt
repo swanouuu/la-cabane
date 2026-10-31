@@ -1,0 +1,253 @@
+{
+	chapter.44CD4C5260BE1635.title: "&eLes Sept Reliques"
+	chapter.7849F1A38AA6D284.title: "&cLes Grands Donjons"
+	chapter.7DF581286AE72B3C.title: "&6La Cabane"
+	quest.03F6D4DFAA073670.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.03F6D4DFAA073670.title: "Le Palais de Shiraz"
+	quest.070F6BEE2B0A62E3.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.070F6BEE2B0A62E3.title: "&cLe Gardien de l'End"
+	quest.0C5B8DC2684CD88F.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.0C5B8DC2684CD88F.title: "L'Usine Ancienne"
+	quest.1313B185449CA3E3.quest_desc: [
+		"Vestige des fonderies et des citadelles mécaniques."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.1313B185449CA3E3.title: "Indice : Fonderies Oubliées"
+	quest.1452DDA22E67B185.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.1452DDA22E67B185.title: "Trouver : Temple de la Jungle"
+	quest.157CE27E91E64AE3.quest_desc: [
+		"Scellé dans la salle du trésor d'une forteresse enfouie."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.157CE27E91E64AE3.title: "&6Œil du Gardien"
+	quest.161721A13AF5F233.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.161721A13AF5F233.title: "La Flèche du Nécromancien"
+	quest.178AE12232445145.quest_desc: [
+		"Gardée au plus profond d'un temple englouti par la jungle."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.178AE12232445145.title: "Indice : Temple de la Jungle"
+	quest.183DCC1F588D2578.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.183DCC1F588D2578.title: "&cLe Sculpteur"
+	quest.1974F56FFD803CBD.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.1974F56FFD803CBD.title: "Le Donjon de Kayra"
+	quest.1ABE8225987936FB.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.1ABE8225987936FB.title: "Trouver : Forteresses Illageoises"
+	quest.1B47B0E50BBD7040.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.1B47B0E50BBD7040.title: "Le Labyrinthe"
+	quest.1D49D9D2B5C40024.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.1D49D9D2B5C40024.title: "&cLe Wroughtnaut"
+	quest.1E02703E34C70F9F.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.1E02703E34C70F9F.title: "&cLe Léviathan"
+	quest.1FD30F90AE282C8F.quest_desc: [
+		"Cachée dans les forteresses qui flottent au-dessus des nuages."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.1FD30F90AE282C8F.title: "&6Plume Céleste"
+	quest.23ABBB9F0B1999B1.quest_desc: [
+		"Create permet de construire des machines, des moulins, des trains…"
+		"Fabrique 16 alliages d'andésite pour commencer."
+	]
+	quest.23ABBB9F0B1999B1.title: "Les rouages"
+	quest.2DC0C447D1E4AB1D.quest_desc: [
+		"Appuie sur &eN&r (ou clic droit avec le téléphone) et choisis ton numéro à 3 ou 4 chiffres."
+		""
+		"Donne-le à tes potes… ou garde-le secret ! Puis appelle quelqu'un : la voix passe par Simple Voice Chat, où que vous soyez sur la map."
+		""
+		"Pas de téléphone ? Il se fabrique avec du fer, du cuivre, de la redstone et une vitre."
+	]
+	quest.2DC0C447D1E4AB1D.quest_subtitle: "Ton numéro perso"
+	quest.2DC0C447D1E4AB1D.title: "Allô ?"
+	quest.30546597D6492C6A.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.30546597D6492C6A.title: "Trouver : Fonderies Oubliées"
+	quest.33B200AA18D79663.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.33B200AA18D79663.title: "Trouver : Temple du Désert"
+	quest.397C706B2F73B8B6.quest_desc: [
+		"Fabrique une marmite (Farmer's Delight). Les bons plats nourrissent beaucoup plus longtemps."
+	]
+	quest.397C706B2F73B8B6.title: "Aux fourneaux"
+	quest.3DD5D5059BE6D774.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.3DD5D5059BE6D774.title: "La Cité Engloutie"
+	quest.3E245369C09E7B82.quest_desc: [
+		"Cachée dans les forteresses qui flottent au-dessus des nuages."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.3E245369C09E7B82.title: "Indice : Citadelles du Ciel"
+	quest.401F3F3D38522062.quest_desc: [
+		"La map est immense. Fabrique une &bWaystone&r et pose-la près de la Cabane : vous pourrez y revenir de très loin."
+	]
+	quest.401F3F3D38522062.title: "Pierres de voyage"
+	quest.4040726D0528310B.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.4040726D0528310B.title: "&cLe Héraut"
+	quest.44EDE10E469B20B0.quest_desc: [
+		"Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.44EDE10E469B20B0.title: "Indice : Temple du Désert"
+	quest.45A9B3AB9BA55F7F.quest_desc: [
+		"Gardée au plus profond d'un temple englouti par la jungle."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.45A9B3AB9BA55F7F.title: "&6Idole de Jade"
+	quest.48F2088D4FD8A8BD.quest_desc: [
+		"Elle repose dans un monument au fond de l'océan."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.48F2088D4FD8A8BD.title: "&6Perle des Abysses"
+	quest.49A7BD08274ACF97.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.49A7BD08274ACF97.title: "Trouver : Monument des Profondeurs"
+	quest.510D385C84B27B4C.quest_desc: [
+		"Scellé dans la salle du trésor d'une forteresse enfouie."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.510D385C84B27B4C.title: "Indice : Forteresse Souterraine"
+	quest.52E14CF141DF0919.quest_desc: [
+		"Les sept reliques sont de retour sur le comptoir."
+		""
+		"La Confrérie des Explorateurs renaît : vous êtes les nouveaux Gardiens de la Cabane."
+	]
+	quest.52E14CF141DF0919.quest_subtitle: "Les sept reliques sont réunies"
+	quest.52E14CF141DF0919.title: "&6&lLe Réveil de la Cabane"
+	quest.54BAB8678049D39C.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.54BAB8678049D39C.title: "L'Asile de la Peste"
+	quest.54C6F739E6B19F28.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.54C6F739E6B19F28.title: "&cUmvuthi, roi de la savane"
+	quest.568AFD2416050B14.quest_desc: [
+		"Vous voilà au centre de la map, dans une vieille cabane abandonnée au milieu de la savane."
+		""
+		"C'est ici que vous construirez votre base. Allez parler au &6Vieux Gardien&r près du porche, lisez son journal sur le pupitre, puis cochez cette quête."
+	]
+	quest.568AFD2416050B14.quest_subtitle: "Le début de tout"
+	quest.568AFD2416050B14.title: "Bienvenue à la Cabane"
+	quest.59A5D271A3B2BC7F.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.59A5D271A3B2BC7F.title: "&cFrostmaw"
+	quest.59D736BF49BFCBA9.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.59D736BF49BFCBA9.title: "Les Tours Épineuses"
+	quest.5A1FE7140641866E.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.5A1FE7140641866E.title: "Trouver : Citadelles du Ciel"
+	quest.5B29BBCFB6E40493.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.5B29BBCFB6E40493.title: "&cScylla"
+	quest.61BC56987E3E4478.quest_desc: [
+		"Vestige des fonderies et des citadelles mécaniques."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.61BC56987E3E4478.title: "&6Engrenage Ancien"
+	quest.675D84D08440B854.quest_desc: [
+		"Elle repose dans un monument au fond de l'océan."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.675D84D08440B854.title: "Indice : Monument des Profondeurs"
+	quest.69337CA8CD88663A.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.69337CA8CD88663A.title: "&cMaledictus"
+	quest.6A53D1699CAE1BCF.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.6A53D1699CAE1BCF.title: "Le Typhon"
+	quest.6AD7B0781F8385FC.quest_desc: [
+		"Le trésor le mieux gardé des forteresses illageoises."
+		""
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène au donjon le plus proche… qui peut être très loin !"
+	]
+	quest.6AD7B0781F8385FC.title: "Indice : Forteresses Illageoises"
+	quest.6B2B8507B9BF412E.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.6B2B8507B9BF412E.title: "Le Manoir Hanté"
+	quest.6DA30A5BEC4F2CB0.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.6DA30A5BEC4F2CB0.title: "&cIgnis"
+	quest.6FEF7F7E3D26E56D.quest_desc: [
+		"Le trésor le mieux gardé des forteresses illageoises."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.6FEF7F7E3D26E56D.title: "&6Couronne Illageoise"
+	quest.71228EE420BFC212.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.71228EE420BFC212.title: "&cLa Monstruosité de Netherite"
+	quest.73A740F15D08ECBE.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.73A740F15D08ECBE.title: "L'Acropole"
+	quest.758C2C41EB15DFBC.quest_desc: [
+		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
+	]
+	quest.758C2C41EB15DFBC.title: "La Prison Gelée"
+	quest.7A91D8D132FC3B06.quest_desc: [
+		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
+	]
+	quest.7A91D8D132FC3B06.title: "Trouver : Forteresse Souterraine"
+	quest.7AD03ACFF44107AA.quest_desc: [
+		"Un sac à dos, c'est la base pour partir en expédition."
+	]
+	quest.7AD03ACFF44107AA.title: "Bien équipé"
+	quest.7CCADBA9586409BC.quest_desc: [
+		"Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert."
+		""
+		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+	]
+	quest.7CCADBA9586409BC.title: "&6Scarabée d'Or"
+	quest.7E9CCC0F6A03976E.quest_desc: [
+		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
+	]
+	quest.7E9CCC0F6A03976E.title: "&cLe Vestige Ancien"
+}

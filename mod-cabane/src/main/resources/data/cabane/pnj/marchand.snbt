@@ -1,0 +1,31 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;1324909610,-468153482,-198452457,675235941],
+  CustomName:'{"text":"Bako le Marchand","color":"green"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"DEFAULT"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    DialogDataSet:{
+      Type:"STANDARD",
+      DialogDataSet:[{
+        Label:"default",
+        Name:"Bako",
+        Text:"Mes étals sont encore vides… Reviens quand la Cabane aura repris vie, j'aurai de quoi faire affaire !",
+        Texts:[{Text:"Mes étals sont encore vides… Reviens quand la Cabane aura repris vie, j'aurai de quoi faire affaire !"}],
+        Buttons:[{
+          Label:"bye",
+          Name:"À bientôt",
+          Type:"CLOSE",
+          Actions:[]
+        }]
+      }]
+    }
+  },
+  Status:{finalized:1b}
+}

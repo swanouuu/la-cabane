@@ -1,0 +1,29 @@
+{
+  "parent": "cabane:racine",
+  "display": {
+    "icon": {
+      "id": "cabane:couronne_illageoise"
+    },
+    "title": {
+      "text": "Couronne Illageoise"
+    },
+    "description": {
+      "text": "Le trésor le mieux gardé des forteresses illageoises."
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "trouvee": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:couronne_illageoise"
+          }
+        ]
+      }
+    }
+  }
+}

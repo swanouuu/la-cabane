@@ -1,0 +1,47 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;1365483136,-867177340,-1625606551,-696587307],
+  CustomName:'{"text":"Mira la Cartographe","color":"aqua"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"ALEX",
+  SkinData:{Type:"DEFAULT"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    DialogDataSet:{
+      Type:"STANDARD",
+      DialogDataSet:[{
+        Label:"default",
+        Name:"Mira",
+        Text:"Des cartes, des cartes, encore des cartes ! Chaque relique a la sienne. Complète les quêtes d'indice dans ton livre et je te les donne.",
+        Texts:[{Text:"Des cartes, des cartes, encore des cartes ! Chaque relique a la sienne. Complète les quêtes d'indice dans ton livre et je te les donne."}],
+        Buttons:[{
+          Label:"conseil",
+          Name:"Un conseil ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"conseil"}]
+        },{
+          Label:"bye",
+          Name:"Merci Mira",
+          Type:"CLOSE",
+          Actions:[]
+        }]
+      },{
+        Label:"conseil",
+        Name:"Conseil",
+        Text:"Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit.",
+        Texts:[{Text:"Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Noté !",
+          Type:"CLOSE",
+          Actions:[]
+        }]
+      }]
+    }
+  },
+  Status:{finalized:1b}
+}

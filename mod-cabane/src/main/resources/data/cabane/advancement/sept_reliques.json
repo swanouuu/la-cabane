@@ -1,0 +1,89 @@
+{
+  "parent": "cabane:relique_oeil_du_gardien",
+  "display": {
+    "icon": {
+      "id": "minecraft:elytra"
+    },
+    "title": {
+      "text": "Le Réveil de la Cabane"
+    },
+    "description": {
+      "text": "Réunir les sept reliques."
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "scarabee_dor": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:scarabee_dor"
+          }
+        ]
+      }
+    },
+    "idole_de_jade": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:idole_de_jade"
+          }
+        ]
+      }
+    },
+    "perle_des_abysses": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:perle_des_abysses"
+          }
+        ]
+      }
+    },
+    "plume_celeste": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:plume_celeste"
+          }
+        ]
+      }
+    },
+    "couronne_illageoise": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:couronne_illageoise"
+          }
+        ]
+      }
+    },
+    "oeil_du_gardien": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:oeil_du_gardien"
+          }
+        ]
+      }
+    },
+    "engrenage_ancien": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:engrenage_ancien"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "parent": "cabane:racine",
+  "display": {
+    "icon": {
+      "id": "cabane:scarabee_dor"
+    },
+    "title": {
+      "text": "Scarabée d'Or"
+    },
+    "description": {
+      "text": "Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert."
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "trouvee": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:scarabee_dor"
+          }
+        ]
+      }
+    }
+  }
+}

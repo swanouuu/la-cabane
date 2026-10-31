@@ -1,0 +1,702 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "reliques"
+	group: ""
+	icon: {
+		count: 1
+		id: "cabane:scarabee_dor"
+	}
+	id: "44CD4C5260BE1635"
+	order_index: 1
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "44EDE10E469B20B0"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/desert"
+					elevate_perms: true
+					id: "46C16C197E968B0E"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "5407F4E840706331"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
+				"44EDE10E469B20B0"
+			]
+			id: "33B200AA18D79663"
+			rewards: [
+				{
+					id: "639B1B8668DFFEA8"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "5DFC702E7BBA7242"
+					structure: "#cabane:quete/desert"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
+				"33B200AA18D79663"
+			]
+			id: "7CCADBA9586409BC"
+			rewards: [
+				{
+					id: "2154431D3CE8D624"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "1504E8D0517B8489"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "573E3ABF42573720"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "4BD2147958358DF5"
+					item: {
+						count: 1
+						id: "cabane:scarabee_dor"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "178AE12232445145"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/jungle"
+					elevate_perms: true
+					id: "055348BE28D99772"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "59AD57716205B13F"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"178AE12232445145"
+			]
+			id: "1452DDA22E67B185"
+			rewards: [
+				{
+					id: "4AB40496DAD19116"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "17482BBEA96EB22C"
+					structure: "#cabane:quete/jungle"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"1452DDA22E67B185"
+			]
+			id: "45A9B3AB9BA55F7F"
+			rewards: [
+				{
+					id: "72FAB2FE76E90956"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "4436C8C407E3BB4A"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "174C5D4D6B54FE9D"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "7CC1316EE598B0CA"
+					item: {
+						count: 1
+						id: "cabane:idole_de_jade"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "675D84D08440B854"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/ocean"
+					elevate_perms: true
+					id: "0CBCDD2F723B68B3"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "18F089BA6BE9A0BA"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"675D84D08440B854"
+			]
+			id: "49A7BD08274ACF97"
+			rewards: [
+				{
+					id: "59AA276E0CB6A0C9"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "77C2055FA203C970"
+					structure: "#cabane:quete/ocean"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"49A7BD08274ACF97"
+			]
+			id: "48F2088D4FD8A8BD"
+			rewards: [
+				{
+					id: "66A5D80E955B5ECC"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "2A93D3CC72FF2021"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "42AB1B23067B9DE8"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "772730E47E1CA446"
+					item: {
+						count: 1
+						id: "cabane:perle_des_abysses"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "3E245369C09E7B82"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/ciel"
+					elevate_perms: true
+					id: "677714AA3B1687E8"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "6B29F57E4D2F8C9E"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"3E245369C09E7B82"
+			]
+			id: "5A1FE7140641866E"
+			rewards: [
+				{
+					id: "1ECA653B9CE117D7"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "64AA42B4A8C963ED"
+					structure: "#cabane:quete/ciel"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"5A1FE7140641866E"
+			]
+			id: "1FD30F90AE282C8F"
+			rewards: [
+				{
+					id: "42BC206985EC077B"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "37939816FE9C7EC2"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "350562BD9453B85B"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "38E39D39270DE465"
+					item: {
+						count: 1
+						id: "cabane:plume_celeste"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "6AD7B0781F8385FC"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/forteresse"
+					elevate_perms: true
+					id: "6C694FAB73403C46"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "39C15B4DCEAD0B05"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: 1.5d
+		}
+		{
+			dependencies: [
+				"6AD7B0781F8385FC"
+			]
+			id: "1ABE8225987936FB"
+			rewards: [
+				{
+					id: "6E21771ED12F84D4"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "1CB1645FC885EF32"
+					structure: "#cabane:quete/forteresse"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: 1.5d
+		}
+		{
+			dependencies: [
+				"1ABE8225987936FB"
+			]
+			id: "6FEF7F7E3D26E56D"
+			rewards: [
+				{
+					id: "10D4913087F9751D"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "23AE961DBD8874F6"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "67A3BB296C7A4718"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "4E953C807E9DC3F6"
+					item: {
+						count: 1
+						id: "cabane:couronne_illageoise"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "510D385C84B27B4C"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/souterrain"
+					elevate_perms: true
+					id: "358D76844D2ACE1D"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "34F38DA4DC7FEEF6"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: 3.0d
+		}
+		{
+			dependencies: [
+				"510D385C84B27B4C"
+			]
+			id: "7A91D8D132FC3B06"
+			rewards: [
+				{
+					id: "5130E8AC9642ADF8"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "2EAC3CE2664942EC"
+					structure: "#cabane:quete/souterrain"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: 3.0d
+		}
+		{
+			dependencies: [
+				"7A91D8D132FC3B06"
+			]
+			id: "157CE27E91E64AE3"
+			rewards: [
+				{
+					id: "6009899EDAEB1132"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "3770DE465D687BFE"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "1EBB920228BE9CBC"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "09F881D2C1EC7F1D"
+					item: {
+						count: 1
+						id: "cabane:oeil_du_gardien"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "1313B185449CA3E3"
+			rewards: [
+				{
+					command: "/loot give {p} loot cabane:cartes/mecanique"
+					elevate_perms: true
+					id: "4A920EAFFAEE6A9D"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "5B43B5DC3EBBA83C"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"1313B185449CA3E3"
+			]
+			id: "30546597D6492C6A"
+			rewards: [
+				{
+					id: "59F3219420BECA9D"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+			]
+			tasks: [
+				{
+					id: "21E6785D031E20AF"
+					structure: "#cabane:quete/mecanique"
+					type: "structure"
+				}
+			]
+			x: 2.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"30546597D6492C6A"
+			]
+			id: "61BC56987E3E4478"
+			rewards: [
+				{
+					id: "23A431C57BC06C8B"
+					type: "xp_levels"
+					xp_levels: 10
+				}
+				{
+					count: 3
+					id: "737E5B1CCCDBA54E"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					count: 10
+					id: "3ADD1A43DB2FA9FA"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					count: 1L
+					id: "0273992495AD4521"
+					item: {
+						count: 1
+						id: "cabane:engrenage_ancien"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"7CCADBA9586409BC"
+				"45A9B3AB9BA55F7F"
+				"48F2088D4FD8A8BD"
+				"1FD30F90AE282C8F"
+				"6FEF7F7E3D26E56D"
+				"157CE27E91E64AE3"
+				"61BC56987E3E4478"
+			]
+			id: "52E14CF141DF0919"
+			rewards: [
+				{
+					count: 1
+					id: "1E726E24450F8B8F"
+					item: {
+						count: 1
+						id: "minecraft:elytra"
+					}
+					type: "item"
+				}
+				{
+					count: 16
+					id: "47A1A66B9366A3C7"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					command: "/title {p} title {\"text\":\"Gardien de la Cabane\",\"color\":\"gold\"}"
+					elevate_perms: true
+					id: "35DEB07BC9588C0A"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			shape: "gear"
+			size: 2.0d
+			tasks: [
+				{
+					id: "012E3A1028137C5A"
+					type: "checkmark"
+				}
+			]
+			x: 6.5d
+			y: 0.0d
+		}
+	]
+}

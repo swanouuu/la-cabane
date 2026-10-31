@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "betteroceanmonuments:ocean_monument",
+      "required": false
+    },
+    {
+      "id": "minecraft:monument",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "betterdeserttemples:desert_temple",
+      "required": false
+    },
+    {
+      "id": "minecraft:desert_pyramid",
+      "required": false
+    }
+  ]
+}

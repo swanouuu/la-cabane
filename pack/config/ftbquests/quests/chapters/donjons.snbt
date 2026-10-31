@@ -1,0 +1,783 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "donjons"
+	group: ""
+	icon: {
+		count: 1
+		id: "minecraft:netherite_sword"
+	}
+	id: "7849F1A38AA6D284"
+	order_index: 2
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "1974F56FFD803CBD"
+			rewards: [
+				{
+					id: "792C13682474EFF0"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "6B4A474C3407D839"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "4EF69985F0606144"
+					structure: "dungeons_arise:keep_kayra"
+					type: "structure"
+				}
+			]
+			x: 0.0d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "59D736BF49BFCBA9"
+			rewards: [
+				{
+					id: "653132358DAAF675"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "089C4594B4B6E62D"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "0E1CB31D6526D0F9"
+					structure: "dungeons_arise:thornborn_towers"
+					type: "structure"
+				}
+			]
+			x: 1.5d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "6A53D1699CAE1BCF"
+			rewards: [
+				{
+					id: "48673613A8623A44"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "204EB28CC4BC31A9"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "3816D8CA997FC8AB"
+					structure: "dungeons_arise:typhon"
+					type: "structure"
+				}
+			]
+			x: 3.0d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "54BAB8678049D39C"
+			rewards: [
+				{
+					id: "09120A563157CB50"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "120D36AFC6A5C43D"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "1516E59C9EB2E66D"
+					structure: "dungeons_arise:plague_asylum"
+					type: "structure"
+				}
+			]
+			x: 4.5d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "03F6D4DFAA073670"
+			rewards: [
+				{
+					id: "6F0AE16D3C410FBC"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "4994DF0315859EB0"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "5B554AB9C5B730A3"
+					structure: "dungeons_arise:shiraz_palace"
+					type: "structure"
+				}
+			]
+			x: 6.0d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "1B47B0E50BBD7040"
+			rewards: [
+				{
+					id: "20AC73555C20BB96"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "7D844B40357454B1"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "256B9BCE2D7FD965"
+					structure: "idas:labyrinth"
+					type: "structure"
+				}
+			]
+			x: 7.5d
+			y: -3.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "6B2B8507B9BF412E"
+			rewards: [
+				{
+					id: "7B5E44848011D4D6"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "1D06FE1F28E973B5"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "5C11C429C9DDED36"
+					structure: "idas:haunted_manor"
+					type: "structure"
+				}
+			]
+			x: 0.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "161721A13AF5F233"
+			rewards: [
+				{
+					id: "75E085AEF72C1ED9"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "58B36F9B93D6C787"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "3C3648BCAB5ABA43"
+					structure: "idas:necromancers_spire"
+					type: "structure"
+				}
+			]
+			x: 1.5d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "3DD5D5059BE6D774"
+			rewards: [
+				{
+					id: "44A2CA8B526C9DBC"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "11FBFE7C866054C2"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "7B7F0E21BBA10D37"
+					structure: "cataclysm:sunken_city"
+					type: "structure"
+				}
+			]
+			x: 3.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "73A740F15D08ECBE"
+			rewards: [
+				{
+					id: "7BC2927BE5385673"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "2207C9A56972373C"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "4ABA1BB37ADB0EE5"
+					structure: "cataclysm:acropolis"
+					type: "structure"
+				}
+			]
+			x: 4.5d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "0C5B8DC2684CD88F"
+			rewards: [
+				{
+					id: "38A893CA249137A8"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "010304DAFCDFB640"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "40B52F4020C785DC"
+					structure: "cataclysm:ancient_factory"
+					type: "structure"
+				}
+			]
+			x: 6.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "758C2C41EB15DFBC"
+			rewards: [
+				{
+					id: "00B660D703F85CAD"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					count: 6
+					id: "47665208444F538F"
+					item: {
+						count: 1
+						id: "minecraft:emerald"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					id: "5A328F50B94106CF"
+					structure: "cataclysm:frosted_prison"
+					type: "structure"
+				}
+			]
+			x: 7.5d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "54C6F739E6B19F28"
+			rewards: [
+				{
+					id: "6ED146308DF63C21"
+					type: "xp_levels"
+					xp_levels: 13
+				}
+				{
+					count: 3
+					id: "60E5526B567CD39E"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "mowziesmobs:umvuthi"
+					id: "169DE51F928C5607"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 0.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "1D49D9D2B5C40024"
+			rewards: [
+				{
+					id: "57BC4A20D0A913FC"
+					type: "xp_levels"
+					xp_levels: 13
+				}
+				{
+					count: 3
+					id: "4C7B0869CF7DB69D"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "mowziesmobs:ferrous_wroughtnaut"
+					id: "0D2AD08BE1039195"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 1.5d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "59A5D271A3B2BC7F"
+			rewards: [
+				{
+					id: "31A2B9D9D610F9BD"
+					type: "xp_levels"
+					xp_levels: 13
+				}
+				{
+					count: 3
+					id: "327F370C319FEF4A"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "mowziesmobs:frostmaw"
+					id: "7CC61C36F7EE784D"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 3.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "183DCC1F588D2578"
+			rewards: [
+				{
+					id: "53AC14A360C55040"
+					type: "xp_levels"
+					xp_levels: 14
+				}
+				{
+					count: 4
+					id: "7BB4D7339D3C6173"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "mowziesmobs:sculptor"
+					id: "57861950D88E1D17"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 4.5d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "7E9CCC0F6A03976E"
+			rewards: [
+				{
+					id: "693BA1DA388B2CF8"
+					type: "xp_levels"
+					xp_levels: 15
+				}
+				{
+					count: 5
+					id: "2F645CDB84966BD8"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:ancient_remnant"
+					id: "20D6DFA49318118E"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 6.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "1E02703E34C70F9F"
+			rewards: [
+				{
+					id: "431D29DB4742CB75"
+					type: "xp_levels"
+					xp_levels: 16
+				}
+				{
+					count: 6
+					id: "40AFDC52AD6629DF"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:the_leviathan"
+					id: "1D0F030B8DE514C4"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 7.5d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "71228EE420BFC212"
+			rewards: [
+				{
+					id: "2EBEAF3BB1DB9234"
+					type: "xp_levels"
+					xp_levels: 16
+				}
+				{
+					count: 6
+					id: "12579A3B7B5D4958"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:netherite_monstrosity"
+					id: "37624F57F24E57A7"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 0.0d
+			y: 2.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "6DA30A5BEC4F2CB0"
+			rewards: [
+				{
+					id: "27DF17A7A7E1DE74"
+					type: "xp_levels"
+					xp_levels: 17
+				}
+				{
+					count: 7
+					id: "2C9018B486214D0B"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:ignis"
+					id: "1050F81177325D8F"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 1.5d
+			y: 2.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "69337CA8CD88663A"
+			rewards: [
+				{
+					id: "108806620C62A4EC"
+					type: "xp_levels"
+					xp_levels: 17
+				}
+				{
+					count: 7
+					id: "500BFDB046C7C705"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:maledictus"
+					id: "2EADBDCD57024D37"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 3.0d
+			y: 2.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "5B29BBCFB6E40493"
+			rewards: [
+				{
+					id: "4C98473D7A2C6B5F"
+					type: "xp_levels"
+					xp_levels: 17
+				}
+				{
+					count: 7
+					id: "4E839F5F1E5F7F60"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:scylla"
+					id: "51D99533FF152C4A"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 4.5d
+			y: 2.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "070F6BEE2B0A62E3"
+			rewards: [
+				{
+					id: "723BFA4185728AED"
+					type: "xp_levels"
+					xp_levels: 18
+				}
+				{
+					count: 8
+					id: "41CF63C10210A1EF"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:ender_guardian"
+					id: "172DE99B505287B0"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 6.0d
+			y: 2.5d
+		}
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "4040726D0528310B"
+			rewards: [
+				{
+					id: "07CA449EDD6679FF"
+					type: "xp_levels"
+					xp_levels: 18
+				}
+				{
+					count: 8
+					id: "749D1FB49B54D4DE"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					entity: "cataclysm:the_harbinger"
+					id: "2786A8018EB661C8"
+					type: "kill"
+					value: 1L
+				}
+			]
+			x: 7.5d
+			y: 2.5d
+		}
+	]
+}

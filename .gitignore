@@ -1,0 +1,11 @@
+# Outils locaux (installer-outils.bat les remet en place)
+.outils/
+# Compilation du mod
+mod-cabane/build/
+mod-cabane/.gradle/
+mod-cabane/run/
+mod-cabane/runs/
+# Fichiers produits
+dist/
+serveur-test/
+*.log

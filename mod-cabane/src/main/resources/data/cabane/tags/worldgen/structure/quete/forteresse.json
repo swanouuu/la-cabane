@@ -1,0 +1,16 @@
+{
+  "values": [
+    {
+      "id": "dungeons_arise:illager_fort",
+      "required": false
+    },
+    {
+      "id": "dungeons_arise:keep_kayra",
+      "required": false
+    },
+    {
+      "id": "idas:castle",
+      "required": false
+    }
+  ]
+}

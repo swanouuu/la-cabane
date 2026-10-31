@@ -1,0 +1,23 @@
+{
+  "itemGroup.cabane": "La Cabane",
+  "item.cabane.telephone": "Téléphone",
+  "item.cabane.telephone.desc": "Clic droit ou touche N : choisis ton numéro et appelle tes potes.",
+  "item.cabane.relique": "Relique de la Cabane",
+  "screen.cabane.telephone": "Téléphone",
+  "key.cabane.telephone": "Ouvrir le téléphone",
+  "key.categories.cabane": "La Cabane",
+  "item.cabane.scarabee_dor": "Scarabée d'Or",
+  "item.cabane.scarabee_dor.desc": "Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert.",
+  "item.cabane.idole_de_jade": "Idole de Jade",
+  "item.cabane.idole_de_jade.desc": "Gardée au plus profond d'un temple englouti par la jungle.",
+  "item.cabane.perle_des_abysses": "Perle des Abysses",
+  "item.cabane.perle_des_abysses.desc": "Elle repose dans un monument au fond de l'océan.",
+  "item.cabane.plume_celeste": "Plume Céleste",
+  "item.cabane.plume_celeste.desc": "Cachée dans les forteresses qui flottent au-dessus des nuages.",
+  "item.cabane.couronne_illageoise": "Couronne Illageoise",
+  "item.cabane.couronne_illageoise.desc": "Le trésor le mieux gardé des forteresses illageoises.",
+  "item.cabane.oeil_du_gardien": "Œil du Gardien",
+  "item.cabane.oeil_du_gardien.desc": "Scellé dans la salle du trésor d'une forteresse enfouie.",
+  "item.cabane.engrenage_ancien": "Engrenage Ancien",
+  "item.cabane.engrenage_ancien.desc": "Vestige des fonderies et des citadelles mécaniques."
+}

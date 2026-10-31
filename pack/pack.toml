@@ -1,0 +1,13 @@
+name = "La Cabane"
+author = "Swan"
+version = "0.1.0"
+pack-format = "packwiz:1.1.0"
+
+[index]
+file = "index.toml"
+hash-format = "sha256"
+hash = "1fa15dafe826a04ad1840022782843447ec1a3a03fc50e5041b1ff5af50ef5ec"
+
+[versions]
+minecraft = "1.21.1"
+neoforge = "21.1.265"

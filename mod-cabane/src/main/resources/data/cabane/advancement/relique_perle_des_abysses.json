@@ -1,0 +1,29 @@
+{
+  "parent": "cabane:racine",
+  "display": {
+    "icon": {
+      "id": "cabane:perle_des_abysses"
+    },
+    "title": {
+      "text": "Perle des Abysses"
+    },
+    "description": {
+      "text": "Elle repose dans un monument au fond de l'océan."
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "trouvee": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:perle_des_abysses"
+          }
+        ]
+      }
+    }
+  }
+}

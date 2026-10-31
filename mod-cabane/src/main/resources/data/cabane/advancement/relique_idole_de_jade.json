@@ -1,0 +1,29 @@
+{
+  "parent": "cabane:racine",
+  "display": {
+    "icon": {
+      "id": "cabane:idole_de_jade"
+    },
+    "title": {
+      "text": "Idole de Jade"
+    },
+    "description": {
+      "text": "Gardée au plus profond d'un temple englouti par la jungle."
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "trouvee": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cabane:idole_de_jade"
+          }
+        ]
+      }
+    }
+  }
+}
