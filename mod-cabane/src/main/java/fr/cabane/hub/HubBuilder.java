@@ -54,6 +54,10 @@ import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import net.minecraft.world.level.levelgen.structure.StructureSet;
+import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -79,7 +83,7 @@ public class HubBuilder {
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
     public static final String TAG = "cabane_hub";
-    private static final List<String> HOSTILES = List.of("outpost", "umvuthana", "bandit", "illager", "pillager", "cataclysm:", "mowziesmobs:");
+    private static final List<String> HOSTILES = List.of("outpost", "umvuthana", "bandit", "cataclysm:");
 
     private final ServerLevel level;
     private final BlockPos c;
@@ -97,131 +101,279 @@ public class HubBuilder {
 
     // ================================================================== recherche de l'emplacement
 
-    /** Un village de savane sans structure hostile autour, sinon une savane plate. */
-    public static Site trouverSite(ServerLevel level) {
-        Registry<Structure> registre = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
-        List<Holder<Structure>> villages = new ArrayList<>();
-        List<Holder<Structure>> hostiles = new ArrayList<>();
-        registre.holders().forEach(h -> {
-            String id = h.key().location().toString();
-            if (id.contains("village") && id.contains("savanna")) {
-                villages.add(h);
-            }
-            if (HOSTILES.stream().anyMatch(id::contains)) {
-                hostiles.add(h);
-            }
-        });
-        ChunkGenerator generateur = level.getChunkSource().getGenerator();
-        BlockPos origine = BlockPos.ZERO;
-        for (int essai = 0; essai < 8 && !villages.isEmpty(); essai++) {
-            Pair<BlockPos, Holder<Structure>> v = generateur.findNearestMapStructure(level, HolderSet.direct(villages), origine, 100, false);
-            if (v == null) {
-                break;
-            }
-            BlockPos vp = v.getFirst();
-            if (!hostileProche(level, generateur, hostiles, vp)) {
-                Site site = aCoteDuVillage(level, vp, v.getSecond());
-                if (site != null) {
-                    Cabane.LOGGER.info("Village de savane choisi en {} ({})", vp, v.getSecond().getRegisteredName());
-                    return site;
+    /**
+     * La recherche du site, faite petit à petit avec un budget de temps par appel à {@link #etape()},
+     * pour ne jamais bloquer le serveur. Les emplacements possibles des villages et des structures
+     * hostiles sont calculés avec les règles de placement du jeu, sans assembler les structures ;
+     * seul le village retenu est réellement préparé.
+     */
+    public static final class Recherche {
+        private static final int DISTANCE_HOSTILE = 320;
+        private static final int RAYON_VILLAGES = 8000;
+        private static final long BUDGET_MS = 1500;
+        private static final int[][] AUTOUR = {{26, 0}, {-26, 0}, {0, 26}, {0, -26}, {18, 18}, {-18, -18}, {18, -18}, {-18, 18}};
+
+        private record Candidat(ChunkPos chunk, Holder<Structure> structure, double distance) {
+        }
+
+        private final ServerLevel level;
+        private final ChunkGenerator generateur;
+        private final RandomState aleatoire;
+        private final ChunkGeneratorStructureState etat;
+        private final long graine;
+        private final int mer;
+        private final List<Holder<StructureSet>> setsVillages = new ArrayList<>();
+        private final List<Holder<StructureSet>> setsHostiles = new ArrayList<>();
+        private List<Candidat> candidats;
+        private int index;
+        // le village en cours d'évaluation, un côté par appel
+        private BoundingBox bbEnCours;
+        private int coteEnCours;
+        private Site meilleurEnCours;
+        private int meilleurEcart;
+        // le repli en savane : anneau carré et position dans l'anneau
+        private int anneau = 0;
+        private int pointAnneau = 0;
+        private Site resultat;
+        private boolean fini;
+
+        public Recherche(ServerLevel level) {
+            this.level = level;
+            this.generateur = level.getChunkSource().getGenerator();
+            this.aleatoire = level.getChunkSource().randomState();
+            this.etat = level.getChunkSource().getGeneratorState();
+            this.graine = etat.getLevelSeed();
+            this.mer = level.getSeaLevel();
+            for (Holder<StructureSet> set : etat.possibleStructureSets()) {
+                if (!(set.value().placement() instanceof RandomSpreadStructurePlacement)) {
+                    continue;
+                }
+                if (set.value().structures().stream().anyMatch(e -> estVillageDeSavane(e.structure()))) {
+                    setsVillages.add(set);
+                }
+                if (set.value().structures().stream().anyMatch(e -> estHostile(e.structure()))) {
+                    setsHostiles.add(set);
                 }
             }
-            origine = vp.offset(vp.getX() >= origine.getX() ? 800 : -800, 0, vp.getZ() >= origine.getZ() ? 800 : -800);
         }
-        BlockPos savane = trouverSavane(level, hostiles);
-        return savane == null ? null : new Site(savane, null);
-    }
 
-    private static boolean hostileProche(ServerLevel level, ChunkGenerator generateur, List<Holder<Structure>> hostiles, BlockPos pos) {
-        if (hostiles.isEmpty()) {
+        private static String nom(Holder<Structure> s) {
+            return s.unwrapKey().map(k -> k.location().toString()).orElse("");
+        }
+
+        private static boolean estVillageDeSavane(Holder<Structure> s) {
+            String n = nom(s);
+            return n.contains("village") && n.contains("savanna");
+        }
+
+        private static boolean estHostile(Holder<Structure> s) {
+            String n = nom(s);
+            return HOSTILES.stream().anyMatch(n::contains);
+        }
+
+        public boolean fini() {
+            return fini;
+        }
+
+        public Site resultat() {
+            return resultat;
+        }
+
+        /** Biome approximatif (à hauteur fixe) : bien moins cher que de calculer le relief. */
+        private Holder<Biome> biome(int x, int z) {
+            return level.getUncachedNoiseBiome(x >> 2, (mer + 10) >> 2, z >> 2);
+        }
+
+        private int sol(int x, int z) {
+            return generateur.getBaseHeight(x, z, Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
+        }
+
+        /** Les villages de savane possibles, du plus proche au plus loin du centre du monde. */
+        private List<Candidat> calculerCandidats() {
+            List<Candidat> liste = new ArrayList<>();
+            int rayonChunks = RAYON_VILLAGES >> 4;
+            for (Holder<StructureSet> set : setsVillages) {
+                RandomSpreadStructurePlacement placement = (RandomSpreadStructurePlacement) set.value().placement();
+                int ecart = placement.spacing();
+                for (int rx = Math.floorDiv(-rayonChunks, ecart); rx <= Math.floorDiv(rayonChunks, ecart); rx++) {
+                    for (int rz = Math.floorDiv(-rayonChunks, ecart); rz <= Math.floorDiv(rayonChunks, ecart); rz++) {
+                        ChunkPos cp = placement.getPotentialStructureChunk(graine, rx * ecart, rz * ecart);
+                        if (!placement.isStructureChunk(etat, cp.x, cp.z)) {
+                            continue;
+                        }
+                        Holder<Biome> b = biome(cp.getMiddleBlockX(), cp.getMiddleBlockZ());
+                        set.value().structures().stream()
+                                .filter(e -> estVillageDeSavane(e.structure()) && e.structure().value().biomes().contains(b))
+                                .findFirst()
+                                .ifPresent(e -> liste.add(new Candidat(cp, e.structure(), Math.hypot(cp.getMiddleBlockX(), cp.getMiddleBlockZ()))));
+                    }
+                }
+            }
+            liste.sort(java.util.Comparator.comparingDouble(Candidat::distance));
+            Cabane.LOGGER.info("{} villages de savane possibles autour du centre du monde", liste.size());
+            return liste;
+        }
+
+        /** Une structure hostile (avant-poste, village Umvuthana, donjon à boss…) dans les parages ? */
+        boolean hostileProche(BlockPos pos) {
+            int r = DISTANCE_HOSTILE >> 4;
+            int cx = pos.getX() >> 4;
+            int cz = pos.getZ() >> 4;
+            for (Holder<StructureSet> set : setsHostiles) {
+                RandomSpreadStructurePlacement placement = (RandomSpreadStructurePlacement) set.value().placement();
+                int ecart = placement.spacing();
+                for (int rx = Math.floorDiv(cx - r, ecart); rx <= Math.floorDiv(cx + r, ecart); rx++) {
+                    for (int rz = Math.floorDiv(cz - r, ecart); rz <= Math.floorDiv(cz + r, ecart); rz++) {
+                        ChunkPos cp = placement.getPotentialStructureChunk(graine, rx * ecart, rz * ecart);
+                        double d = Math.hypot(cp.getMiddleBlockX() - pos.getX(), cp.getMiddleBlockZ() - pos.getZ());
+                        if (d > DISTANCE_HOSTILE || !placement.isStructureChunk(etat, cp.x, cp.z)) {
+                            continue;
+                        }
+                        Holder<Biome> b = biome(cp.getMiddleBlockX(), cp.getMiddleBlockZ());
+                        boolean present = set.value().structures().stream().anyMatch(e -> estHostile(e.structure())
+                                && e.structure().value().biomes().contains(b)
+                                && d <= (nom(e.structure()).contains("umvuthana") ? DISTANCE_HOSTILE : 160));
+                        if (present) {
+                            return true;
+                        }
+                    }
+                }
+            }
             return false;
         }
-        Pair<BlockPos, Holder<Structure>> h = generateur.findNearestMapStructure(level, HolderSet.direct(hostiles), pos, 14, false);
-        if (h == null) {
-            return false;
-        }
-        double dx = h.getFirst().getX() - pos.getX();
-        double dz = h.getFirst().getZ() - pos.getZ();
-        return dx * dx + dz * dz < 230 * 230;
-    }
 
-    /** Choisit le côté du village le plus plat et sans eau pour y poser notre place. */
-    private static Site aCoteDuVillage(ServerLevel level, BlockPos villagePos, Holder<Structure> structure) {
-        ChunkAccess chunk = level.getChunk(villagePos.getX() >> 4, villagePos.getZ() >> 4, ChunkStatus.STRUCTURE_STARTS, true);
-        StructureStart start = chunk.getStartForStructure(structure.value());
-        BoundingBox bb = start != null && start.isValid() ? start.getBoundingBox()
-                : new BoundingBox(villagePos.getX() - 40, 0, villagePos.getZ() - 40, villagePos.getX() + 40, 0, villagePos.getZ() + 40);
-        int cx = (bb.minX() + bb.maxX()) / 2;
-        int cz = (bb.minZ() + bb.maxZ()) / 2;
-        int marge = RAYON + 6;
-        int[][] candidats = {{cx, bb.minZ() - marge}, {bb.maxX() + marge, cz}, {cx, bb.maxZ() + marge}, {bb.minX() - marge, cz}};
-        ChunkGenerator generateur = level.getChunkSource().getGenerator();
-        RandomState aleatoire = level.getChunkSource().randomState();
-        int mer = level.getSeaLevel();
-        Site meilleur = null;
-        int meilleurEcart = Integer.MAX_VALUE;
-        for (int[] p : candidats) {
+        /** Un pas de recherche, d'environ {@link #BUDGET_MS} au plus. */
+        public void etape() {
+            if (fini) {
+                return;
+            }
+            if (candidats == null) {
+                candidats = calculerCandidats();
+                return;
+            }
+            if (bbEnCours != null) {
+                evaluerCote();
+                return;
+            }
+            if (index < candidats.size()) {
+                Candidat c = candidats.get(index++);
+                BlockPos vp = c.chunk().getMiddleBlockPosition(0);
+                ChunkAccess chunk = level.getChunk(c.chunk().x, c.chunk().z, ChunkStatus.STRUCTURE_STARTS, true);
+                StructureStart start = chunk.getStartForStructure(c.structure().value());
+                if (start == null || !start.isValid()) {
+                    Cabane.LOGGER.info("Village en {} écarté : il ne se génère pas finalement", vp);
+                    return;
+                }
+                bbEnCours = start.getBoundingBox();
+                coteEnCours = 0;
+                meilleurEnCours = null;
+                meilleurEcart = Integer.MAX_VALUE;
+                Cabane.LOGGER.info("Village candidat en {} ({}), on regarde autour…", vp, c.structure().getRegisteredName());
+                return;
+            }
+            repliSavane();
+        }
+
+        /** Un côté du village (nord, est, sud, ouest) : assez plat et sans eau pour notre place ? */
+        private void evaluerCote() {
+            BoundingBox bb = bbEnCours;
+            int cx = (bb.minX() + bb.maxX()) / 2;
+            int cz = (bb.minZ() + bb.maxZ()) / 2;
+            int marge = RAYON + 6;
+            int[][] cotes = {{cx, bb.minZ() - marge}, {bb.maxX() + marge, cz}, {cx, bb.maxZ() + marge}, {bb.minX() - marge, cz}};
+            int[] p = cotes[coteEnCours++];
             int min = Integer.MAX_VALUE;
             int max = Integer.MIN_VALUE;
             boolean eau = false;
             List<Integer> hauteurs = new ArrayList<>();
-            for (int dx = -24; dx <= 24; dx += 12) {
-                for (int dz = -24; dz <= 24; dz += 12) {
-                    int fond = generateur.getBaseHeight(p[0] + dx, p[1] + dz, Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
-                    int surface = generateur.getBaseHeight(p[0] + dx, p[1] + dz, Heightmap.Types.WORLD_SURFACE_WG, level, aleatoire) - 1;
-                    eau |= surface > fond || fond <= mer;
-                    min = Math.min(min, fond);
-                    max = Math.max(max, fond);
-                    hauteurs.add(fond);
+            for (int dx = -24; dx <= 24; dx += 24) {
+                for (int dz = -24; dz <= 24; dz += 24) {
+                    int h = sol(p[0] + dx, p[1] + dz);
+                    eau |= h <= mer || biome(p[0] + dx, p[1] + dz).is(BiomeTags.IS_RIVER) || biome(p[0] + dx, p[1] + dz).is(BiomeTags.IS_OCEAN);
+                    min = Math.min(min, h);
+                    max = Math.max(max, h);
+                    hauteurs.add(h);
                 }
             }
-            if (!eau && max - min < meilleurEcart && max - min <= 18) {
+            if (!eau && max - min <= 16 && max - min < meilleurEcart) {
                 hauteurs.sort(Integer::compare);
                 meilleurEcart = max - min;
-                meilleur = new Site(new BlockPos(p[0], hauteurs.get(hauteurs.size() / 2), p[1]), new BlockPos(cx, 0, cz));
+                meilleurEnCours = new Site(new BlockPos(p[0], hauteurs.get(hauteurs.size() / 2), p[1]), new BlockPos(cx, 0, cz));
+            }
+            if (coteEnCours < 4) {
+                return;
+            }
+            bbEnCours = null;
+            if (meilleurEnCours == null) {
+                Cabane.LOGGER.info("Village écarté : terrain trop accidenté ou trop d'eau autour");
+            } else if (hostileProche(meilleurEnCours.centre())) {
+                Cabane.LOGGER.info("Village écarté : structure hostile près de notre place");
+            } else {
+                Cabane.LOGGER.info("Village de savane choisi, notre place sera en {}", meilleurEnCours.centre());
+                resultat = meilleurEnCours;
+                fini = true;
             }
         }
-        return meilleur;
-    }
 
-    private static final int[][] AUTOUR = {{26, 0}, {-26, 0}, {0, 26}, {0, -26}, {18, 18}, {-18, -18}, {18, -18}, {-18, 18}};
-
-    /** Repli : une savane plate, sur la terre ferme, loin des structures hostiles. */
-    private static BlockPos trouverSavane(ServerLevel level, List<Holder<Structure>> hostiles) {
-        ChunkGenerator generateur = level.getChunkSource().getGenerator();
-        RandomState aleatoire = level.getChunkSource().randomState();
-        int mer = level.getSeaLevel();
-        for (int r = 0; r <= 6000; r += 48) {
-            for (int i = -r; i <= r; i += 48) {
-                for (int[] p : r == 0 ? new int[][] {{0, 0}} : new int[][] {{i, -r}, {i, r}, {-r, i}, {r, i}}) {
-                    if (!savaneA(level, p[0], mer + 12, p[1])) {
-                        continue;
+        /** Repli : une savane plate, sur la terre ferme, loin des structures hostiles. Avec budget de temps. */
+        private void repliSavane() {
+            long debut = System.currentTimeMillis();
+            while (System.currentTimeMillis() - debut < BUDGET_MS) {
+                int r = anneau * 48;
+                if (r > 6000) {
+                    fini = true;
+                    return;
+                }
+                int cote = r == 0 ? 1 : 8 * anneau;
+                if (pointAnneau >= cote) {
+                    anneau++;
+                    pointAnneau = 0;
+                    continue;
+                }
+                int k = pointAnneau++;
+                int x;
+                int z;
+                if (r == 0) {
+                    x = 0;
+                    z = 0;
+                } else {
+                    int segment = k / (2 * anneau);
+                    int t = k % (2 * anneau) * 48 - r;
+                    switch (segment) {
+                        case 0 -> { x = t; z = -r; }
+                        case 1 -> { x = r; z = t; }
+                        case 2 -> { x = -t; z = r; }
+                        default -> { x = -r; z = -t; }
                     }
-                    int sol = generateur.getBaseHeight(p[0], p[1], Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
-                    if (sol <= mer + 1 || !savaneA(level, p[0], sol, p[1])) {
-                        continue;
+                }
+                if (!savaneA(level, x, mer + 12, z)) {
+                    continue;
+                }
+                int s = sol(x, z);
+                if (s <= mer + 1) {
+                    continue;
+                }
+                int min = s;
+                int max = s;
+                boolean ok = true;
+                for (int[] d : AUTOUR) {
+                    int h = sol(x + d[0], z + d[1]);
+                    if (h <= mer + 1 || !savaneA(level, x + d[0], mer + 12, z + d[1])) {
+                        ok = false;
+                        break;
                     }
-                    int min = sol;
-                    int max = sol;
-                    boolean ok = true;
-                    for (int[] d : AUTOUR) {
-                        int h = generateur.getBaseHeight(p[0] + d[0], p[1] + d[1], Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
-                        if (h <= mer + 1 || !savaneA(level, p[0] + d[0], h, p[1] + d[1])) {
-                            ok = false;
-                            break;
-                        }
-                        min = Math.min(min, h);
-                        max = Math.max(max, h);
-                    }
-                    BlockPos pos = new BlockPos(p[0], sol, p[1]);
-                    if (ok && max - min <= 10 && !hostileProche(level, generateur, hostiles, pos)) {
-                        Cabane.LOGGER.info("Savane trouvée pour la cabane en {}", pos);
-                        return pos;
-                    }
+                    min = Math.min(min, h);
+                    max = Math.max(max, h);
+                }
+                BlockPos pos = new BlockPos(x, s, z);
+                if (ok && max - min <= 10 && !hostileProche(pos)) {
+                    Cabane.LOGGER.info("Savane trouvée pour la cabane en {}", pos);
+                    resultat = new Site(pos, null);
+                    fini = true;
+                    return;
                 }
             }
         }
-        return null;
     }
 
     private static boolean savaneA(ServerLevel level, int x, int y, int z) {
@@ -239,23 +391,29 @@ public class HubBuilder {
                 level.getChunk(cx, cz);
             }
         }
-        preparerTerrain();
-        chemins();
-        place();
-        grandeCabane();
-        marche();
-        tableauDesQuetes();
-        feuDeCamp();
-        tour();
-        potager();
-        arche();
-        cloture();
-        finitions();
+        mesure("preparerTerrain", () -> preparerTerrain());
+        mesure("chemins", () -> chemins());
+        mesure("place", () -> place());
+        mesure("grandeCabane", () -> grandeCabane());
+        mesure("marche", () -> marche());
+        mesure("tableauDesQuetes", () -> tableauDesQuetes());
+        mesure("feuDeCamp", () -> feuDeCamp());
+        mesure("tour", () -> tour());
+        mesure("potager", () -> potager());
+        mesure("arche", () -> arche());
+        mesure("cloture", () -> cloture());
+        mesure("finitions", () -> finitions());
         if (village != null) {
-            cheminVersLeVillage(village);
+            mesure("cheminVersLeVillage", () -> cheminVersLeVillage(village));
         }
-        avion();
-        textes();
+        mesure("avion", () -> avion());
+        mesure("textes", () -> textes());
+    }
+
+    private static void mesure(String nom, Runnable r) {
+        long t = System.currentTimeMillis();
+        r.run();
+        Cabane.LOGGER.info("  construction {} : {} ms", nom, System.currentTimeMillis() - t);
     }
 
     // ------------------------------------------------------------------ terrain
@@ -689,11 +847,73 @@ public class HubBuilder {
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
                 ItemStack carte = MapItem.create(level, c.getX() + i * 512, c.getZ() + j * 512, (byte) 2, false, false);
-                MapItem.renderBiomePreviewMap(level, carte);
+                dessinerCarte(carte);
                 MapItemSavedData.addTargetDecoration(carte, c, "cabane", MapDecorationTypes.RED_X);
                 cadre(-7 + i, 3 - j, z + 1, Direction.SOUTH, carte);
             }
         }
+    }
+
+    /**
+     * Colorie une carte d'après les biomes, un échantillon pour 2x2 pixels : bien plus rapide
+     * que le rendu du jeu (qui échantillonne chaque pixel plusieurs fois).
+     */
+    private void dessinerCarte(ItemStack carte) {
+        MapItemSavedData data = MapItem.getSavedData(carte, level);
+        if (data == null) {
+            return;
+        }
+        int echelle = 1 << data.scale;
+        int y = level.getSeaLevel() + 8;
+        for (int px = 0; px < 128; px += 2) {
+            for (int pz = 0; pz < 128; pz += 2) {
+                int x = data.centerX + (px - 64) * echelle;
+                int z = data.centerZ + (pz - 64) * echelle;
+                Holder<Biome> biome = level.getUncachedNoiseBiome(x >> 2, y >> 2, z >> 2);
+                net.minecraft.world.level.material.MapColor couleur = couleurBiome(biome);
+                int bruit = Math.floorMod(x * 734287 ^ z * 912931, 7);
+                var luminosite = bruit == 0 ? net.minecraft.world.level.material.MapColor.Brightness.LOW
+                        : bruit == 1 ? net.minecraft.world.level.material.MapColor.Brightness.HIGH
+                        : net.minecraft.world.level.material.MapColor.Brightness.NORMAL;
+                byte octet = couleur.getPackedId(luminosite);
+                for (int a = 0; a < 2; a++) {
+                    for (int b = 0; b < 2; b++) {
+                        data.setColor(px + a, pz + b, octet);
+                    }
+                }
+            }
+        }
+    }
+
+    private static net.minecraft.world.level.material.MapColor couleurBiome(Holder<Biome> b) {
+        if (b.is(BiomeTags.IS_OCEAN) || b.is(BiomeTags.IS_RIVER)) {
+            return net.minecraft.world.level.material.MapColor.WATER;
+        }
+        if (b.is(BiomeTags.IS_BEACH) || b.is(Tags.Biomes.IS_DESERT)) {
+            return net.minecraft.world.level.material.MapColor.SAND;
+        }
+        if (b.is(BiomeTags.IS_SAVANNA) || b.is(Tags.Biomes.IS_SAVANNA)) {
+            return net.minecraft.world.level.material.MapColor.TERRACOTTA_YELLOW;
+        }
+        if (b.is(BiomeTags.IS_BADLANDS)) {
+            return net.minecraft.world.level.material.MapColor.TERRACOTTA_ORANGE;
+        }
+        if (b.is(Tags.Biomes.IS_SNOWY)) {
+            return net.minecraft.world.level.material.MapColor.SNOW;
+        }
+        if (b.is(BiomeTags.IS_MOUNTAIN)) {
+            return net.minecraft.world.level.material.MapColor.STONE;
+        }
+        if (b.is(Tags.Biomes.IS_SWAMP)) {
+            return net.minecraft.world.level.material.MapColor.TERRACOTTA_GREEN;
+        }
+        if (b.is(Tags.Biomes.IS_MUSHROOM)) {
+            return net.minecraft.world.level.material.MapColor.COLOR_PURPLE;
+        }
+        if (b.is(BiomeTags.IS_JUNGLE) || b.is(BiomeTags.IS_FOREST) || b.is(BiomeTags.IS_TAIGA)) {
+            return net.minecraft.world.level.material.MapColor.PLANT;
+        }
+        return net.minecraft.world.level.material.MapColor.GRASS;
     }
 
     // ------------------------------------------------------------------ autour

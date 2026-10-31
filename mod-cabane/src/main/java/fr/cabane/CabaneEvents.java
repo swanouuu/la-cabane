@@ -41,6 +41,7 @@ public final class CabaneEvents {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         PhoneCalls.tick(event.getServer());
+        HubEvents.tick(event.getServer());
     }
 
     @SubscribeEvent

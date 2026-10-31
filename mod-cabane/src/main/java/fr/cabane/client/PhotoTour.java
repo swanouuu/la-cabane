@@ -50,14 +50,20 @@ public final class PhotoTour {
         if (etapes.isEmpty()) {
             return;
         }
-        if (index >= 0) {
+        boolean ecran = index >= 0 && etapes.get(index)[0].equals("ui");
+        if (index >= 0 && !ecran) {
             bloquerCamera(mc, etapes.get(index));
         }
         if (--attente > 0) {
             return;
         }
         if (index >= 0) {
-            Screenshot.grab(mc.gameDirectory, etapes.get(index)[0] + ".png", mc.getMainRenderTarget(), message -> { });
+            String[] e = etapes.get(index);
+            Screenshot.grab(mc.gameDirectory, (ecran ? e[1] : e[0]) + ".png", mc.getMainRenderTarget(), message -> { });
+            if (ecran) {
+                mc.setScreen(null);
+                mc.options.hideGui = true;
+            }
         }
         index++;
         if (index >= etapes.size()) {
@@ -66,9 +72,38 @@ public final class PhotoTour {
             return;
         }
         String[] e = etapes.get(index);
+        if (e[0].equals("ui")) {
+            // « ui <nom> cmd <commande…> » ou « ui <nom> ecran <écran> » : capture avec l'interface
+            mc.options.hideGui = false;
+            if (e[2].equals("cmd")) {
+                commande(mc, String.join(" ", java.util.Arrays.copyOfRange(e, 3, e.length)));
+            } else {
+                ouvrir(mc, e[3]);
+            }
+            attente = 50;
+            return;
+        }
         commande(mc, "time set " + (e.length > 6 ? e[6] : "6000"));
         commande(mc, "tp @s " + e[1] + " " + e[2] + " " + e[3] + " " + e[4] + " " + e[5]);
         attente = ATTENTE_POINT;
+    }
+
+    private static void ouvrir(Minecraft mc, String nom) {
+        switch (nom) {
+            case "telephone" -> mc.setScreen(new ClientPiaf.Accueil());
+            case "appels" -> mc.setScreen(new PhoneScreen());
+            case "piaf" -> mc.setScreen(new ClientPiaf.Fil());
+            case "portefeuille" -> mc.setScreen(new ClientPiaf.Portefeuille());
+            case "classeur" -> mc.setScreen(new ClientCartes.ClasseurScreen());
+            case "machine" -> fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.MACHINE_A_SOUS);
+            case "roulette" -> fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.ROULETTE);
+            case "blackjack" -> fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.BLACKJACK);
+            case "des" -> fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.DES);
+            case "roue" -> fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.ROUE);
+            case "pileouface" -> fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.PILE_OU_FACE);
+            default -> {
+            }
+        }
     }
 
     /** La souris ou le clavier ne doivent pas faire bouger la vue pendant le tour. */

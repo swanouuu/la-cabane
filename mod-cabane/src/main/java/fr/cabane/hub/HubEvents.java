@@ -43,20 +43,88 @@ public final class HubEvents {
             new Pnj("cartographe", -2.5, -8.5, 135F),
             new Pnj("marchand", -13.5, 0.5, -90F));
 
+    /**
+     * La construction se fait en plusieurs étapes, sur plusieurs ticks, pour ne jamais bloquer le serveur
+     * trop longtemps (sinon son « watchdog » l'arrête) : recherche du site, génération des chunks en
+     * arrière-plan, puis construction.
+     */
+    private enum Etape { RIEN, RECHERCHE, CHUNKS, CONSTRUCTION }
+
+    private static Etape etape = Etape.RIEN;
+    private static HubBuilder.Site site;
+    private static HubBuilder.Recherche recherche;
+    private static final List<net.minecraft.world.level.ChunkPos> FORCES = new java.util.ArrayList<>();
+    private static int attente;
+    private static int delai;
+    private static net.minecraft.world.level.ChunkPos ticket;
+
     public static void onServerStarted(MinecraftServer server) {
-        if (HubData.get(server).centre() != null) {
+        etape = HubData.get(server).centre() == null ? Etape.RECHERCHE : Etape.RIEN;
+        attente = 40;
+    }
+
+    public static boolean pret(MinecraftServer server) {
+        return HubData.get(server).centre() != null;
+    }
+
+    public static void tick(MinecraftServer server) {
+        if (etape == Etape.RIEN || --attente > 0) {
             return;
         }
         ServerLevel level = server.overworld();
-        HubBuilder.Site site = HubBuilder.trouverSite(level);
-        if (site == null) {
-            BlockPos spawn = level.getSharedSpawnPos();
-            level.getChunk(spawn.getX() >> 4, spawn.getZ() >> 4);
-            BlockPos sol = new BlockPos(spawn.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ()) - 1, spawn.getZ());
-            Cabane.LOGGER.warn("Aucun site trouvé, la cabane est construite au spawn ({})", sol);
-            site = new HubBuilder.Site(sol, null);
+        switch (etape) {
+            case RECHERCHE -> {
+                if (recherche == null) {
+                    Cabane.LOGGER.info("Recherche d'un site pour le centre de map…");
+                    recherche = new HubBuilder.Recherche(level);
+                }
+                recherche.etape();
+                attente = 1;
+                if (!recherche.fini()) {
+                    return;
+                }
+                site = recherche.resultat();
+                recherche = null;
+                if (site == null) {
+                    BlockPos spawn = level.getSharedSpawnPos();
+                    level.getChunk(spawn.getX() >> 4, spawn.getZ() >> 4);
+                    BlockPos sol = new BlockPos(spawn.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ()) - 1, spawn.getZ());
+                    Cabane.LOGGER.warn("Aucun site trouvé, la cabane est construite au spawn ({})", sol);
+                    site = new HubBuilder.Site(sol, null);
+                }
+                // un ticket de chargement : le jeu génère ces chunks en arrière-plan, sans bloquer
+                int cx = site.centre().getX() >> 4;
+                int cz = site.centre().getZ() >> 4;
+                ticket = new net.minecraft.world.level.ChunkPos(cx, cz);
+                level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, 4, ticket);
+                for (int x = cx - 3; x <= cx + 3; x++) {
+                    for (int z = cz - 3; z <= cz + 3; z++) {
+                        FORCES.add(new net.minecraft.world.level.ChunkPos(x, z));
+                    }
+                }
+                etape = Etape.CHUNKS;
+                delai = server.getTickCount() + 20 * 60 * 3;
+                attente = 1;
+            }
+            case CHUNKS -> {
+                boolean tous = FORCES.stream().allMatch(p -> level.getChunkSource().hasChunk(p.x, p.z));
+                if (tous || server.getTickCount() > delai) {
+                    etape = Etape.CONSTRUCTION;
+                }
+                attente = 1;
+            }
+            case CONSTRUCTION -> {
+                build(level, site.centre(), site.village());
+                level.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, 4, ticket);
+                FORCES.clear();
+                etape = Etape.RIEN;
+                for (ServerPlayer joueur : server.getPlayerList().getPlayers()) {
+                    welcome(joueur);
+                }
+            }
+            default -> {
+            }
         }
-        build(level, site.centre(), site.village());
     }
 
     public static void build(ServerLevel level, BlockPos centre, BlockPos village) {
@@ -122,6 +190,10 @@ public final class HubEvents {
     /** Première connexion : le joueur se réveille dans l'avion en feu, avec son kit de départ. */
     public static void welcome(ServerPlayer player) {
         HubData data = HubData.get(player.server);
+        if (data.centre() == null) {
+            player.sendSystemMessage(Component.literal("Le centre de map se construit, ça arrive dans un instant…").withStyle(ChatFormatting.GRAY));
+            return;
+        }
         if (!data.markKit(player.getUUID())) {
             return;
         }
