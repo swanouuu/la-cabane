@@ -302,13 +302,12 @@ function pnj({ fichier, nom, couleur, variante, dialogues }) {
   const entrees = dialogues.map((d) => `{
         Label:${snbtTexte(d.label)},
         Name:${snbtTexte(d.titre)},
-        Text:${snbtTexte(d.texte)},
         Texts:[{Text:${snbtTexte(d.texte)}}],
         Buttons:[${d.boutons.map((b) => `{
           Label:${snbtTexte(b.label)},
           Name:${snbtTexte(b.texte)},
-          Type:${snbtTexte(b.vers ? "ACTION" : "CLOSE")},
-          Actions:[${b.vers ? `{Type:"OPEN_NAMED_DIALOG",Cmd:${snbtTexte(b.vers)}}` : ""}]
+          Type:${snbtTexte(b.vers ? "ACTION" : "CLOSE")}${b.vers ? `,
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:${snbtTexte(b.vers)}}]` : ""}
         }`).join(",")}]
       }`).join(",");
   ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
@@ -324,10 +323,8 @@ function pnj({ fichier, nom, couleur, variante, dialogues }) {
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
-    DialogDataSet:{
-      Type:"STANDARD",
-      DialogDataSet:[${entrees}]
-    }
+    Type:"STANDARD",
+    DialogDataSet:[${entrees}]
   },
   Status:{finalized:1b}
 }

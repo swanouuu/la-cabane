@@ -42,6 +42,10 @@ cd pack
 
 ## Le centre de map
 
+![Le centre de map vu du ciel](docs/centre-de-map.png)
+
+*Vu du ciel, sur le serveur de test : la cabane (toit sombre) avec son porche, le potager à droite, le feu de camp au centre, le puits, la tour de guet à gauche et la clôture en cercle.*
+
 Au tout premier démarrage du serveur, le mod cherche une savane près du centre du monde et y construit :
 
 - **la cabane** : lit, cuisine, cheminée qui fume, bibliothèque, journal du Gardien sur le pupitre, et le **mur des reliques** (7 cadres) ;
@@ -49,7 +53,7 @@ Au tout premier démarrage du serveur, le mod cherche une savane près du centre
 - **le puits**, le **vieux potager**, la **tour de guet en ruine** avec un **feu de signal** dont la fumée se voit de loin, et un coffre au sommet ;
 - les **PNJ** : le Vieux Gardien, Mira la Cartographe et Bako le Marchand (Easy NPC). Tu peux modifier leurs dialogues, leur skin, et plus tard ajouter des voix, directement en jeu.
 
-Le spawn est placé devant le feu de camp. Commandes admin :
+La recherche part du centre du monde et retient le premier endroit en savane, sur la terre ferme, assez plat et entouré de savane. Le spawn est placé devant le feu de camp, et la bordure du monde est centrée sur la cabane : c'est le vrai centre de la map. Commandes admin :
 
 - `/cabane placer` reconstruit le centre de map à tes pieds et y déplace le spawn ;
 - `/cabane pnj` fait revenir les PNJ.

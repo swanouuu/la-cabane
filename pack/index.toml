@@ -54,6 +54,10 @@ hash = "603cdc47142b5aa5729cbbf265a473574c9e2b55561de4318e9842d3d4b3b995"
 metafile = true
 
 [[files]]
+file = "mods/cabane-0.1.0.jar"
+hash = "8039d4fbc05dbed6a5eadc4d3c84eac5551f0c120402ebe1fb96f34515ff38e3"
+
+[[files]]
 file = "mods/camera-mod.pw.toml"
 hash = "d73746f2d5a95c4bd1f09649b21d170830b9c8173aff3b6490f999d1a35c322c"
 metafile = true

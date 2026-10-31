@@ -57,6 +57,8 @@ public final class HubEvents {
         HubData.get(level.getServer()).setCentre(centre);
         level.setDefaultSpawnPos(centre.offset(0, 1, 5), 180F);
         level.getGameRules().getRule(GameRules.RULE_SPAWN_RADIUS).set(0, level.getServer());
+        // la cabane devient le vrai centre de la map : la bordure du monde se centre dessus
+        level.getWorldBorder().setCenter(centre.getX() + 0.5, centre.getZ() + 0.5);
         int npcs = spawnNpcs(level);
         Cabane.LOGGER.info("Centre de map construit en {} : {} ms, {} PNJ", centre, System.currentTimeMillis() - start, npcs);
     }

@@ -42,7 +42,7 @@ public final class ClientPhone {
         PacketDistributor.sendToServer(new PhoneNetwork.Action(action, arg));
     }
 
-    @EventBusSubscriber(modid = Cabane.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
     public static final class ModEvents {
         @SubscribeEvent
         public static void onRegisterKeys(RegisterKeyMappingsEvent event) {

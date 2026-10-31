@@ -1,6 +1,5 @@
 package fr.cabane.hub;
 
-import com.mojang.datafixers.util.Pair;
 import fr.cabane.Cabane;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +43,9 @@ import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.neoforge.common.Tags;
 
@@ -72,25 +73,53 @@ public class HubBuilder {
         this.rnd = RandomSource.create(level.getSeed() ^ centre.asLong());
     }
 
-    /** Cherche une savane près du centre du monde, sur la terre ferme. Renvoie le bloc de sol. */
+    private static final int PAS = 48;
+    private static final int RAYON_RECHERCHE = 6000;
+    private static final int[][] AUTOUR = {{26, 0}, {-26, 0}, {0, 26}, {0, -26}, {18, 18}, {-18, -18}, {18, -18}, {-18, 18}};
+
+    /**
+     * Cherche, en partant du centre du monde, un endroit de savane sur la terre ferme, assez plat
+     * et entouré de savane. Tout est calculé à partir du générateur, sans générer de chunk.
+     * Renvoie le bloc de sol, ou null.
+     */
     public static BlockPos trouverSavane(ServerLevel level) {
-        BlockPos origine = new BlockPos(0, 80, 0);
-        for (int essai = 0; essai < 6; essai++) {
-            Pair<BlockPos, Holder<Biome>> trouve = level.findClosestBiome3d(HubBuilder::estSavane, origine, 6400, 32, 64);
-            if (trouve == null) {
-                return null;
+        ChunkGenerator generateur = level.getChunkSource().getGenerator();
+        RandomState aleatoire = level.getChunkSource().randomState();
+        int mer = level.getSeaLevel();
+        for (int r = 0; r <= RAYON_RECHERCHE; r += PAS) {
+            for (int i = -r; i <= r; i += PAS) {
+                for (int[] p : r == 0 ? new int[][] {{0, 0}} : new int[][] {{i, -r}, {i, r}, {-r, i}, {r, i}}) {
+                    if (!savaneA(level, p[0], mer + 12, p[1])) {
+                        continue;
+                    }
+                    int sol = generateur.getBaseHeight(p[0], p[1], Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
+                    if (sol <= mer + 1 || !savaneA(level, p[0], sol, p[1])) {
+                        continue;
+                    }
+                    int min = sol;
+                    int max = sol;
+                    boolean ok = true;
+                    for (int[] d : AUTOUR) {
+                        int h = generateur.getBaseHeight(p[0] + d[0], p[1] + d[1], Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
+                        if (h <= mer + 1 || !savaneA(level, p[0] + d[0], h, p[1] + d[1])) {
+                            ok = false;
+                            break;
+                        }
+                        min = Math.min(min, h);
+                        max = Math.max(max, h);
+                    }
+                    if (ok && max - min <= 10) {
+                        Cabane.LOGGER.info("Savane trouvée pour la cabane en {} {} {}", p[0], sol, p[1]);
+                        return new BlockPos(p[0], sol, p[1]);
+                    }
+                }
             }
-            BlockPos p = trouve.getFirst();
-            level.getChunk(p.getX() >> 4, p.getZ() >> 4);
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) - 1;
-            BlockPos sol = new BlockPos(p.getX(), y, p.getZ());
-            if (level.getFluidState(sol).isEmpty() && y > level.getSeaLevel()) {
-                Cabane.LOGGER.info("Savane trouvée pour la cabane en {}", sol);
-                return sol;
-            }
-            origine = p.offset(160, 0, 160);
         }
         return null;
+    }
+
+    private static boolean savaneA(ServerLevel level, int x, int y, int z) {
+        return estSavane(level.getUncachedNoiseBiome(x >> 2, y >> 2, z >> 2));
     }
 
     private static boolean estSavane(Holder<Biome> biome) {
@@ -151,7 +180,8 @@ public class HubBuilder {
                 for (int y = Math.min(sol + 1, cible - 3); y < cible; y++) {
                     abs(x, y, z, Blocks.DIRT.defaultBlockState());
                 }
-                boolean terreBattue = Math.sin(x * 0.31) + Math.cos(z * 0.27) + rnd.nextFloat() * 0.6 > 1.55;
+                // petites plaques de terre battue (~9 % du sol), pas de grosses taches
+                boolean terreBattue = Math.sin(x * 0.73 + z * 0.21) * Math.cos(z * 0.67 - x * 0.19) + rnd.nextFloat() * 0.5 > 1.0;
                 abs(x, cible, z, (terreBattue ? Blocks.COARSE_DIRT : Blocks.GRASS_BLOCK).defaultBlockState());
                 if (dedans && !terreBattue && rnd.nextFloat() < 0.14F) {
                     abs(x, cible + 1, z, (rnd.nextFloat() < 0.06F ? Blocks.DANDELION : Blocks.SHORT_GRASS).defaultBlockState());
