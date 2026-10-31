@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/table_pile_ou_face"
+    },
+    "facing=east": {
+      "model": "cabane:block/table_pile_ou_face",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/table_pile_ou_face",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/table_pile_ou_face",
+      "y": 270
+    }
+  }
+}

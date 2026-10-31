@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/comptoir"
+    },
+    "facing=east": {
+      "model": "cabane:block/comptoir",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/comptoir",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/comptoir",
+      "y": 270
+    }
+  }
+}

@@ -245,6 +245,11 @@ ecrire("data/cabane/advancement/premier_appel.json", {
   display: { icon: { id: "cabane:telephone" }, title: { text: "Allô ?" }, description: { text: "Passer ton premier appel." }, frame: "task" },
   criteria: { appel: { trigger: "minecraft:impossible" } },
 });
+ecrire("data/cabane/advancement/premier_contrat.json", {
+  parent: "cabane:racine",
+  display: { icon: { id: "minecraft:bell" }, title: { text: "Au service du village" }, description: { text: "Remplir ton premier contrat au marché." }, frame: "task" },
+  criteria: { contrat: { trigger: "minecraft:impossible" } },
+});
 ecrire("data/cabane/advancement/sept_reliques.json", {
   parent: "cabane:relique_oeil_du_gardien",
   display: { icon: { id: "minecraft:elytra" }, title: { text: "Le Réveil de la Cabane" }, description: { text: "Réunir les sept reliques." },
@@ -306,8 +311,9 @@ function pnj({ fichier, nom, couleur, variante, dialogues }) {
         Buttons:[${d.boutons.map((b) => `{
           Label:${snbtTexte(b.label)},
           Name:${snbtTexte(b.texte)},
-          Type:${snbtTexte(b.vers ? "ACTION" : "CLOSE")}${b.vers ? `,
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:${snbtTexte(b.vers)}}]` : ""}
+          Type:${snbtTexte(b.vers || b.commande ? "ACTION" : "CLOSE")}${b.vers ? `,
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:${snbtTexte(b.vers)}}]` : b.commande ? `,
+          Actions:[{Type:"COMMAND",Cmd:${snbtTexte(b.commande)},ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]` : ""}
         }`).join(",")}]
       }`).join(",");
   ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
@@ -332,8 +338,10 @@ function pnj({ fichier, nom, couleur, variante, dialogues }) {
 }
 
 pnj({ fichier: "gardien", nom: "Le Vieux Gardien", couleur: "gold", variante: "STEVE", dialogues: [
-  { label: "default", titre: "Accueil", texte: "Ah… des voyageurs. Ça faisait longtemps. Cette cabane était le refuge de la Confrérie des Explorateurs. Aujourd'hui, elle est à vous.",
-    boutons: [{ label: "reliques", texte: "La Confrérie ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
+  { label: "default", titre: "Accueil", texte: "Vous avez vu ça ? Votre avion a pris feu au-dessus de la savane ! Le village accepte de vous héberger dans la Grande Cabane… à condition de l'aider.",
+    boutons: [{ label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "reliques", texte: "Et cette cabane ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
+  { label: "aider", titre: "Aider le village", texte: "Bako, au marché, a des contrats qui changent toutes les heures : apportez-lui ce qu'il demande, il paie en SakaiDollars. Et regardez le tableau des quêtes, à côté de la cabane.",
+    boutons: [{ label: "bye", texte: "On s'y met !" }] },
   { label: "reliques", titre: "Les Sept Reliques", texte: "Sept reliques reposaient sur le comptoir. Elles ont été cachées dans les plus grands donjons du monde, parfois très loin d'ici. Ramenez-les, et la Cabane se réveillera. Tout est noté dans votre livre de quêtes.",
     boutons: [{ label: "cartes", texte: "Comment les trouver ?", vers: "cartes" }, { label: "bye", texte: "J'y vais !" }] },
   { label: "cartes", titre: "Les cartes", texte: "Mira, la cartographe, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones.",
@@ -346,8 +354,182 @@ pnj({ fichier: "cartographe", nom: "Mira la Cartographe", couleur: "aqua", varia
     boutons: [{ label: "bye", texte: "Noté !" }] },
 ] });
 pnj({ fichier: "marchand", nom: "Bako le Marchand", couleur: "green", variante: "STEVE", dialogues: [
-  { label: "default", titre: "Bako", texte: "Mes étals sont encore vides… Reviens quand la Cabane aura repris vie, j'aurai de quoi faire affaire !",
-    boutons: [{ label: "bye", texte: "À bientôt" }] },
+  { label: "default", titre: "Bako", texte: "Bienvenue au marché ! Je vends de tout contre de bons SakaiDollars, et mes contrats changent toutes les heures.",
+    boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "contrats", texte: "Les contrats de l'heure", commande: "cabane contrats" }, { label: "bye", texte: "À plus" }] },
 ] });
+
+// ================================================================ économie, marché, casino, cartes, parachute
+
+const P = { // palette commune
+  K: [24, 18, 14], W: [120, 84, 50], w: [150, 108, 66], L: [92, 64, 38], Y: [240, 196, 60], y: [190, 140, 30],
+  R: [190, 40, 40], r: [140, 24, 24], G: [36, 110, 60], g: [26, 84, 44], B: [40, 90, 170], b: [26, 60, 120],
+  S: [200, 204, 210], s: [150, 154, 162], N: [30, 30, 34], T: [245, 240, 228], O: [230, 120, 40], C: [205, 170, 120],
+  c: [170, 136, 90], V: [140, 70, 200], A: [70, 190, 230], ".": [0, 0, 0, 0],
+};
+const tex = (chemin, lignes) => ecrire(`assets/cabane/textures/${chemin}.png`, png(lignes, P));
+const itemGenere = (nom) => ecrire(`assets/cabane/models/item/${nom}.json`, { parent: "minecraft:item/generated", textures: { layer0: `cabane:item/${nom}` } });
+
+// ---- objets
+tex("gui/piece", [
+  "...YYYY...", "..YyyyyY..", ".YyYYYYyY.", "YyYYyyYYyY", "YyYyYYyYyY",
+  "YyYyYYyYyY", "YyYYyyYYyY", ".YyYYYYyY.", "..YyyyyY..", "...YYYY..."]);
+tex("item/parachute", [
+  "................", "....RRRTTTRR....", "..RRRRTTTTRRRR..", ".RRRRRTTTTRRRRR.", "RRRRRRTTTTRRRRRR",
+  "K.K...K..K...K.K", ".K.K...KK...K.K.", "..K.K..KK..K.K..", "...K.K.KK.K.K...", "....K.KKKK.K....",
+  ".....KKKKKK.....", "......LWWL......", "......WwwW......", "......WwwW......", "......LWWL......", "................"]);
+const carte = (cadre, fond) => [
+  "................", "...KKKKKKKKKK...", "...K" + cadre.repeat(8) + "K...", "...K" + cadre + fond.repeat(6) + cadre + "K...",
+  "...K" + cadre + fond + "TTTT" + fond + cadre + "K...", "...K" + cadre + fond + "TYYT" + fond + cadre + "K...",
+  "...K" + cadre + fond + "TYYT" + fond + cadre + "K...", "...K" + cadre + fond + "TTTT" + fond + cadre + "K...",
+  "...K" + cadre + fond.repeat(6) + cadre + "K...", "...K" + cadre + "SSSSSS" + cadre + "K...", "...K" + cadre + fond.repeat(6) + cadre + "K...",
+  "...K" + cadre + "SSSS" + fond + fond + cadre + "K...", "...K" + cadre + fond.repeat(6) + cadre + "K...", "...K" + cadre.repeat(8) + "K...",
+  "...KKKKKKKKKK...", "................"];
+tex("item/carte_commune", carte("s", "N"));
+tex("item/carte_rare", carte("A", "b"));
+tex("item/carte_epique", carte("V", "N"));
+tex("item/carte_legendaire", carte("Y", "r"));
+tex("item/booster", [
+  "....KKKKKKKK....", "...KRRRRRRRRK...", "...KRYYYYYYRK...", "...KRRRRRRRRK...", "...KRRTTTTRRK...", "...KRTYYYYTRK...",
+  "...KRTYRRYTRK...", "...KRTYRRYTRK...", "...KRTYYYYTRK...", "...KRRTTTTRRK...", "...KRRRRRRRRK...", "...KRYYYYYYRK...",
+  "...KRRRRRRRRK...", "...KrrrrrrrrK...", "....KKKKKKKK....", "................"]);
+tex("item/classeur", [
+  "................", "..KKKKKKKKKKKK..", "..KbBBBBBBBBBK..", "..KbBBBBBBBBBK..", "..KbBTTTTTTBBK..", "..KbBTsTTsTBBK..",
+  "..KbBTTTTTTBBK..", "..KbBTsTTsTBBK..", "..KbBTTTTTTBBK..", "..KbBBBBBBBBBK..", "..KbBBBYYBBBBK..", "..KbBBBYYBBBBK..",
+  "..KbBBBBBBBBBK..", "..KbbbbbbbbbbK..", "..KKKKKKKKKKKK..", "................"]);
+tex("item/ticket_a_gratter", [
+  "................", "................", ".KKKKKKKKKKKKKK.", ".KYYYYYYYYYYYYK.", ".KYRRYYRRYYRRYK.", ".KYSSYYSSYYSSYK.",
+  ".KYSSYYSSYYSSYK.", ".KYYYYYYYYYYYYK.", ".KYSSYYSSYYTTYK.", ".KYSSYYSSYYTTYK.", ".KYYYYYYYYYYYYK.", ".KYyyyyyyyyyyYK.",
+  ".KKKKKKKKKKKKKK.", "................", "................", "................"]);
+for (const n of ["parachute", "booster", "classeur", "ticket_a_gratter"]) itemGenere(n);
+for (const n of ["carte_rare", "carte_epique", "carte_legendaire"]) itemGenere(n);
+ecrire("assets/cabane/models/item/carte.json", {
+  parent: "minecraft:item/generated", textures: { layer0: "cabane:item/carte_commune" },
+  overrides: [
+    { predicate: { "cabane:rarete": 0.3 }, model: "cabane:item/carte_rare" },
+    { predicate: { "cabane:rarete": 0.6 }, model: "cabane:item/carte_epique" },
+    { predicate: { "cabane:rarete": 0.9 }, model: "cabane:item/carte_legendaire" },
+  ],
+});
+
+// ---- blocs (orientés : face avant, côtés, dessus)
+const bloc = (nom, { front, side, top }) => {
+  ecrire(`assets/cabane/models/block/${nom}.json`, { parent: "minecraft:block/orientable", textures: { front, side, top } });
+  ecrire(`assets/cabane/models/item/${nom}.json`, { parent: `cabane:block/${nom}` });
+  ecrire(`assets/cabane/blockstates/${nom}.json`, { variants: Object.fromEntries(
+    [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: `cabane:block/${nom}`, ...(y ? { y } : {}) }])) });
+  ecrire(`data/cabane/loot_table/blocks/${nom}.json`, { type: "minecraft:block", pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: `cabane:${nom}` }],
+    conditions: [{ condition: "minecraft:survives_explosion" }] }] });
+};
+const feutre = (motif) => motif.map((l) => l.replace(/ /g, "G"));
+tex("block/comptoir_front", [
+  "wwwwwwwwwwwwwwww", "LLLLLLLLLLLLLLLL", "WWWWWWWWWWWWWWWW", "WKKKKKKKKKKKKKKW", "WKCCCCCCCCCCCCKW", "WKCCCCYYYYCCCCKW",
+  "WKCCCYyyyyYCCCKW", "WKCCCYyYYyYCCCKW", "WKCCCYyYYyYCCCKW", "WKCCCYyyyyYCCCKW", "WKCCCCYYYYCCCCKW", "WKCCCCCCCCCCCCKW",
+  "WKKKKKKKKKKKKKKW", "WWWWWWWWWWWWWWWW", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL"]);
+tex("block/comptoir_top", Array.from({ length: 16 }, (_, i) => (i % 4 === 3 ? "LLLLLLLLLLLLLLLL" : "wwwwwwwwwwwwwwww")));
+tex("block/tableau_contrats_front", [
+  "LLLLLLLLLLLLLLLL", "LccccccccccccccL", "LcTTTTcccTTTTccL", "LcTSSTcccTSSTccL", "LcTTTTcccTTTTccL", "LcTSSTcccTSSTccL",
+  "LcTTRTcccTTTRccL", "LccccccccccccccL", "LccTTTTTccTTTTcL", "LccTSSSTccTSSTcL", "LccTTTTTccTTTTcL", "LccTSSSTccTSSTcL",
+  "LccTTTRTccTTRTcL", "LccccccccccccccL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL"]);
+tex("block/etal_front", [
+  "RRTTRRTTRRTTRRTT", "RRTTRRTTRRTTRRTT", "rRTTrRTTrRTTrRTT", ".R.T.R.T.R.T.R.T", "................", "L..............L",
+  "L.WWWW....WWWW.L", "L.WOOW....WGGW.L", "L.WOOW....WGGW.L", "L.WWWW....WWWW.L", "LwwwwwwwwwwwwwwL", "LWWWWWWWWWWWWWWL",
+  "LKKKKKKKKKKKKKKL", "LWWWWWWWWWWWWWWL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL"]);
+tex("block/machine_a_sous_front", [
+  "rrrrrrrrrrrrrrrr", "rYYYYYYYYYYYYYYr", "rYRRRRRRRRRRRRYr", "rYRTTTRTTTRTTTRr", "rYRTRTRTYTRTOTRr", "rYRTTTRTTTRTTTRr",
+  "rYRRRRRRRRRRRRYr", "rYYYYYYYYYYYYYYr", "rRRRRRRRRRRRRRRr", "rRNNNNNNNNNNNNRr", "rRNYYNNYYNNYYNRr", "rRNNNNNNNNNNNNRr",
+  "rRRRRRRRRRRRRRRr", "rRRRRYYYYYYRRRRr", "rrrrrrrrrrrrrrrr", "KKKKKKKKKKKKKKKK"]);
+tex("block/machine_a_sous_side", Array.from({ length: 16 }, (_, i) => (i === 0 || i === 15 ? "KKKKKKKKKKKKKKKK" : "rRRRRRRRRRRRRRRr")));
+tex("block/machine_a_sous_top", Array.from({ length: 16 }, (_, i) => (i === 0 || i === 15 ? "rrrrrrrrrrrrrrrr" : "rRRRRRRRRRRRRRRr")));
+tex("block/table_side", [
+  "gggggggggggggggg", "WWWWWWWWWWWWWWWW", "LLLLLLLLLLLLLLLL", "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW",
+  "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW",
+  "WLWWWWWWWWWWWWLW", "WLWWWWWWWWWWWWLW", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL"]);
+tex("block/table_roulette_top", feutre([
+  "LLLLLLLLLLLLLLLL", "L              L", "L    WWWWWW    L", "L   WRNRNRNW   L", "L  WNWWWWWWRW  L", "L  WRWLLLLWNW  L",
+  "L  WNWLYYLWRW  L", "L  WRWLYYLWNW  L", "L  WNWLLLLWRW  L", "L  WRWWWWWWNW  L", "L   WNRNRNRW   L", "L    WWWWWW    L",
+  "L  TTTTTTTTTT  L", "L  RNRNRNRNRN  L", "L              L", "LLLLLLLLLLLLLLLL"]));
+tex("block/table_blackjack_top", feutre([
+  "LLLLLLLLLLLLLLLL", "L              L", "L  TTT    TTT  L", "L  TRT    TNT  L", "L  TTT    TTT  L", "L              L",
+  "L YYYYYYYYYYYY L", "L  y        y  L", "L              L", "L   TTT  TTT   L", "L   TRT  TNT   L", "L   TTT  TTT   L",
+  "L      YY      L", "L      YY      L", "L              L", "LLLLLLLLLLLLLLLL"]));
+tex("block/table_des_top", feutre([
+  "LLLLLLLLLLLLLLLL", "L              L", "L  TTTTT       L", "L  TNTTT       L", "L  TTNTT       L", "L  TTTNT       L",
+  "L  TTTTT TTTTT L", "L        TNTNT L", "L        TTTTT L", "L        TNTNT L", "L        TTTTT L", "L              L",
+  "L YYYYYYYYYYYY L", "L  7  <  =  >  L", "L              L", "LLLLLLLLLLLLLLLL"].map((l) => l.replace(/[7<=>]/g, "T"))));
+tex("block/table_pile_ou_face_top", feutre([
+  "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L     YYYY     L", "L    YyyyyY    L", "L   YyYYYYyY   L",
+  "L   YyYyyYyY   L", "L   YyYyyYyY   L", "L   YyYYYYyY   L", "L    YyyyyY    L", "L     YYYY     L", "L              L",
+  "L  TTTT  TTTT  L", "L  TRRT  TNNT  L", "L              L", "LLLLLLLLLLLLLLLL"]));
+tex("block/roue_fortune_front", [
+  "LLLLLLLLLLLLLLLL", "L.....RRRB.....L", "L...OORRRBBA...L", "L..OOORRBBBAA..L", "L.YYYOORBBAAAG.L", "L.YYYYOTTAAGGG.L",
+  "LYYYYYTYYTGGGGGL", "LRRRRRTYYTVVVVVL", "LBBBBBTYYTSSSSSL", "L.BBBBOTTRRSSS.L", "L.AAAGGORRRVVS.L", "L..AAGGGORRVV...L",
+  "L...AGGGOOVV...L", "L.....GGOV.....L", "LLLLLLLRRLLLLLLL", "LLLLLLLLLLLLLLLL"].map((l) => l.length > 16 ? l.slice(0, 16) : l.padEnd(16, "L")));
+bloc("comptoir", { front: "cabane:block/comptoir_front", side: "minecraft:block/spruce_planks", top: "cabane:block/comptoir_top" });
+bloc("tableau_contrats", { front: "cabane:block/tableau_contrats_front", side: "minecraft:block/spruce_planks", top: "minecraft:block/spruce_planks" });
+bloc("etal", { front: "cabane:block/etal_front", side: "minecraft:block/barrel_side", top: "minecraft:block/barrel_top" });
+bloc("machine_a_sous", { front: "cabane:block/machine_a_sous_front", side: "cabane:block/machine_a_sous_side", top: "cabane:block/machine_a_sous_top" });
+for (const t of ["roulette", "blackjack", "des", "pile_ou_face"]) {
+  bloc(`table_${t}`, { front: "cabane:block/table_side", side: "cabane:block/table_side", top: `cabane:block/table_${t}_top` });
+}
+bloc("roue_fortune", { front: "cabane:block/roue_fortune_front", side: "minecraft:block/dark_oak_planks", top: "minecraft:block/dark_oak_planks" });
+
+Object.assign(lang, {
+  "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
+  "item.cabane.classeur": "Classeur de cartes", "item.cabane.ticket_a_gratter": "Ticket à gratter",
+  "block.cabane.comptoir": "Comptoir de la boutique", "block.cabane.tableau_contrats": "Tableau des contrats",
+  "block.cabane.etal": "Étal", "block.cabane.machine_a_sous": "Machine à sous", "block.cabane.table_roulette": "Table de roulette",
+  "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
+  "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
+  "entity.cabane.parachute": "Parachute",
+});
+ecrire("assets/cabane/lang/fr_fr.json", lang);
+ecrire("assets/cabane/lang/en_us.json", lang);
+
+// ---- la boutique du marché (prix modifiables ici ou directement dans les fichiers)
+const offres = [
+  ["telephone", "cabane:telephone", 1, 750], ["parachute", "cabane:parachute", 1, 150],
+  ["booster", "cabane:booster", 1, 120], ["classeur", "cabane:classeur", 1, 300], ["ticket", "cabane:ticket_a_gratter", 1, 20],
+  ["etal", "cabane:etal", 1, 400], ["pain", "minecraft:bread", 8, 30], ["torches", "minecraft:torch", 16, 25],
+  ["machine_a_sous", "cabane:machine_a_sous", 1, 2500], ["table_roulette", "cabane:table_roulette", 1, 3500],
+  ["table_blackjack", "cabane:table_blackjack", 1, 3500], ["table_des", "cabane:table_des", 1, 2000],
+  ["roue_fortune", "cabane:roue_fortune", 1, 3000], ["table_pile_ou_face", "cabane:table_pile_ou_face", 1, 1500],
+];
+offres.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i }));
+
+// ---- les contrats horaires du marché
+const contrats = [
+  ["ble", "minecraft:wheat", 16, 48, 3], ["carottes", "minecraft:carrot", 16, 48, 2], ["patates", "minecraft:potato", 16, 48, 2],
+  ["canne", "minecraft:sugar_cane", 16, 32, 3], ["chene", "minecraft:oak_log", 16, 48, 2], ["acacia", "minecraft:acacia_log", 16, 48, 2],
+  ["pierre", "minecraft:cobblestone", 32, 64, 1], ["fer", "minecraft:iron_ingot", 8, 24, 14], ["charbon", "minecraft:coal", 16, 32, 4],
+  ["cuir", "minecraft:leather", 6, 16, 9], ["laine", "minecraft:white_wool", 8, 24, 5], ["pain", "minecraft:bread", 8, 24, 7],
+  ["boeuf", "minecraft:cooked_beef", 8, 24, 8], ["citrouille", "minecraft:pumpkin", 6, 16, 7], ["fil", "minecraft:string", 8, 24, 4],
+  ["os", "minecraft:bone", 8, 24, 4], ["poudre", "minecraft:gunpowder", 6, 16, 9], ["redstone", "minecraft:redstone", 16, 32, 4],
+  ["cuivre", "minecraft:copper_ingot", 8, 32, 5], ["or", "minecraft:gold_ingot", 4, 12, 22], ["lapis", "minecraft:lapis_lazuli", 8, 24, 6],
+];
+contrats.forEach(([id, item, min, max, prix]) => ecrire(`data/cabane/contrats/${id}.json`, { item, min, max, prix_unitaire: prix }));
+
+// ---- la première série de cartes (à remplacer par les vôtres)
+const cartes = [
+  ["la_cabane", "La Cabane", "Le refuge de la Confrérie des Explorateurs.", "commune"],
+  ["feu_de_camp", "Le Feu de Camp", "Là où l'on se raconte les expéditions.", "commune"],
+  ["tour_de_guet", "La Tour de Guet", "Sa fumée se voit à des kilomètres.", "commune"],
+  ["telephone", "Le Téléphone", "3 ou 4 chiffres, et le monde entier au bout du fil.", "commune"],
+  ["bako", "Bako le Marchand", "Toujours une bonne affaire… pour lui.", "commune"],
+  ["lion", "Le Lion de la Savane", "Le vrai roi de la savane (ne le dites pas à Umvuthi).", "commune"],
+  ["zebre", "Le Zèbre", "Noir sur blanc ou blanc sur noir ?", "commune"],
+  ["sakaidollar", "Le SakaiDollar", "La monnaie du serveur.", "commune"],
+  ["mira", "Mira la Cartographe", "Une carte pour chaque relique.", "rare"],
+  ["avion", "L'Avion en Feu", "Mayday ! On saute au-dessus de la savane.", "rare"],
+  ["elephant", "L'Éléphant", "Il n'oublie jamais une dette.", "rare"],
+  ["scarabee", "Le Scarabée d'Or", "Gardé par le Pharaon.", "rare"],
+  ["idole", "L'Idole de Jade", "Au cœur de la jungle.", "rare"],
+  ["gardien", "Le Vieux Gardien", "Il en sait plus qu'il ne le dit.", "epique"],
+  ["umvuthi", "Umvuthi", "Le roi masqué de la savane.", "epique"],
+  ["perle", "La Perle des Abysses", "Elle brille au fond de l'océan.", "epique"],
+  ["plume", "La Plume Céleste", "Tombée d'une citadelle des nuages.", "epique"],
+  ["ignis", "Ignis", "Le chevalier de flammes.", "legendaire"],
+  ["leviathan", "Le Léviathan", "Ce qui dort sous la Cité Engloutie.", "legendaire"],
+];
+cartes.forEach(([id, nom, description, rarete], i) => ecrire(`data/cabane/cartes/${id}.json`, { nom, description, rarete, numero: i + 1, serie: "Série 1 — La Cabane" }));
 
 console.log("Ressources générées dans", RES);

@@ -8,7 +8,7 @@
 		id: "cabane:scarabee_dor"
 	}
 	id: "44CD4C5260BE1635"
-	order_index: 1
+	order_index: 2
 	quest_links: [ ]
 	quests: [
 		{
@@ -18,7 +18,7 @@
 			id: "44EDE10E469B20B0"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/desert"
+					command: "/cabane carte {p} desert 1500"
 					elevate_perms: true
 					id: "46C16C197E968B0E"
 					permission_level: 2
@@ -86,6 +86,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "6DCDAFFCD85452B1"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -109,7 +117,7 @@
 			id: "178AE12232445145"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/jungle"
+					command: "/cabane carte {p} jungle 2500"
 					elevate_perms: true
 					id: "055348BE28D99772"
 					permission_level: 2
@@ -177,6 +185,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "4ACF1DE6C8A621A9"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -200,7 +216,7 @@
 			id: "675D84D08440B854"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/ocean"
+					command: "/cabane carte {p} ocean 2000"
 					elevate_perms: true
 					id: "0CBCDD2F723B68B3"
 					permission_level: 2
@@ -268,6 +284,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "5F6A39EF7F51A248"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -291,7 +315,7 @@
 			id: "3E245369C09E7B82"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/ciel"
+					command: "/cabane carte {p} ciel 4500"
 					elevate_perms: true
 					id: "677714AA3B1687E8"
 					permission_level: 2
@@ -359,6 +383,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "0F7270C809CE34C5"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -382,7 +414,7 @@
 			id: "6AD7B0781F8385FC"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/forteresse"
+					command: "/cabane carte {p} forteresse 3000"
 					elevate_perms: true
 					id: "6C694FAB73403C46"
 					permission_level: 2
@@ -450,6 +482,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "781A55DFB6D1993B"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -473,7 +513,7 @@
 			id: "510D385C84B27B4C"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/souterrain"
+					command: "/cabane carte {p} souterrain 2500"
 					elevate_perms: true
 					id: "358D76844D2ACE1D"
 					permission_level: 2
@@ -541,6 +581,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "5CD5EA556F1AF7FB"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -564,7 +612,7 @@
 			id: "1313B185449CA3E3"
 			rewards: [
 				{
-					command: "/loot give {p} loot cabane:cartes/mecanique"
+					command: "/cabane carte {p} mecanique 5000"
 					elevate_perms: true
 					id: "4A920EAFFAEE6A9D"
 					permission_level: 2
@@ -632,6 +680,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "56B88ADECE4A6C41"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "diamond"
 			tasks: [
@@ -682,6 +738,14 @@
 					command: "/title {p} title {\"text\":\"Gardien de la Cabane\",\"color\":\"gold\"}"
 					elevate_perms: true
 					id: "35DEB07BC9588C0A"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+				{
+					command: "/argent donner {p} 5000"
+					elevate_perms: true
+					id: "21CF84EF744519D1"
 					permission_level: 2
 					silent: true
 					type: "command"

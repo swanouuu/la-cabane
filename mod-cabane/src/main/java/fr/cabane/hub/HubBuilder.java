@@ -1,13 +1,20 @@
 package fr.cabane.hub;
 
+import com.mojang.datafixers.util.Pair;
 import fr.cabane.Cabane;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.FloatTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -16,9 +23,12 @@ import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.RandomizableContainer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.MapItem;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.BarrelBlock;
@@ -29,7 +39,7 @@ import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.FarmBlock;
-import net.minecraft.world.level.block.FurnaceBlock;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.LecternBlock;
@@ -37,35 +47,47 @@ import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.VineBlock;
-import net.minecraft.world.level.block.WallSignBlock;
-import net.minecraft.world.level.block.entity.SignBlockEntity;
-import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.neoforge.common.Tags;
 
 /**
- * Construit le centre de map : une clairière dans la savane avec la cabane abandonnée,
- * un feu de camp, un puits, une tour de guet en ruine (feu de signal visible de loin),
- * un vieux potager et le tableau des quêtes.
+ * Le centre de map. On s'installe à côté d'un village de savane (« le village qui nous héberge »),
+ * loin des structures hostiles, et on y construit notre place : la Grande Cabane, une place pavée
+ * avec fontaine, le marché, le tableau des quêtes avec une carte de la région, la tour de guet,
+ * le potager, le feu de camp et l'arche d'entrée. Au-dessus, l'avion en feu dont on saute en parachute.
  *
- * <p>Coordonnées relatives au centre {@code c} : y = 0 est le niveau du sol.
+ * <p>Coordonnées relatives au centre {@code c} de la place : y = 0 est le sol.
  */
 public class HubBuilder {
-    private static final int RAYON = 22;
-    private static final int FONDU = 8;
+    private static final int RAYON = 30;
+    private static final int FONDU = 10;
+    public static final int HAUTEUR_AVION = 62;
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
+    public static final String TAG = "cabane_hub";
+    private static final List<String> HOSTILES = List.of("outpost", "umvuthana", "bandit", "illager", "pillager", "cataclysm:", "mowziesmobs:");
 
     private final ServerLevel level;
     private final BlockPos c;
     private final RandomSource rnd;
     private final List<BlockPos> poses = new ArrayList<>();
+
+    public record Site(BlockPos centre, BlockPos village) {
+    }
 
     public HubBuilder(ServerLevel level, BlockPos centre) {
         this.level = level;
@@ -73,21 +95,104 @@ public class HubBuilder {
         this.rnd = RandomSource.create(level.getSeed() ^ centre.asLong());
     }
 
-    private static final int PAS = 48;
-    private static final int RAYON_RECHERCHE = 6000;
-    private static final int[][] AUTOUR = {{26, 0}, {-26, 0}, {0, 26}, {0, -26}, {18, 18}, {-18, -18}, {18, -18}, {-18, 18}};
+    // ================================================================== recherche de l'emplacement
 
-    /**
-     * Cherche, en partant du centre du monde, un endroit de savane sur la terre ferme, assez plat
-     * et entouré de savane. Tout est calculé à partir du générateur, sans générer de chunk.
-     * Renvoie le bloc de sol, ou null.
-     */
-    public static BlockPos trouverSavane(ServerLevel level) {
+    /** Un village de savane sans structure hostile autour, sinon une savane plate. */
+    public static Site trouverSite(ServerLevel level) {
+        Registry<Structure> registre = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
+        List<Holder<Structure>> villages = new ArrayList<>();
+        List<Holder<Structure>> hostiles = new ArrayList<>();
+        registre.holders().forEach(h -> {
+            String id = h.key().location().toString();
+            if (id.contains("village") && id.contains("savanna")) {
+                villages.add(h);
+            }
+            if (HOSTILES.stream().anyMatch(id::contains)) {
+                hostiles.add(h);
+            }
+        });
+        ChunkGenerator generateur = level.getChunkSource().getGenerator();
+        BlockPos origine = BlockPos.ZERO;
+        for (int essai = 0; essai < 8 && !villages.isEmpty(); essai++) {
+            Pair<BlockPos, Holder<Structure>> v = generateur.findNearestMapStructure(level, HolderSet.direct(villages), origine, 100, false);
+            if (v == null) {
+                break;
+            }
+            BlockPos vp = v.getFirst();
+            if (!hostileProche(level, generateur, hostiles, vp)) {
+                Site site = aCoteDuVillage(level, vp, v.getSecond());
+                if (site != null) {
+                    Cabane.LOGGER.info("Village de savane choisi en {} ({})", vp, v.getSecond().getRegisteredName());
+                    return site;
+                }
+            }
+            origine = vp.offset(vp.getX() >= origine.getX() ? 800 : -800, 0, vp.getZ() >= origine.getZ() ? 800 : -800);
+        }
+        BlockPos savane = trouverSavane(level, hostiles);
+        return savane == null ? null : new Site(savane, null);
+    }
+
+    private static boolean hostileProche(ServerLevel level, ChunkGenerator generateur, List<Holder<Structure>> hostiles, BlockPos pos) {
+        if (hostiles.isEmpty()) {
+            return false;
+        }
+        Pair<BlockPos, Holder<Structure>> h = generateur.findNearestMapStructure(level, HolderSet.direct(hostiles), pos, 14, false);
+        if (h == null) {
+            return false;
+        }
+        double dx = h.getFirst().getX() - pos.getX();
+        double dz = h.getFirst().getZ() - pos.getZ();
+        return dx * dx + dz * dz < 230 * 230;
+    }
+
+    /** Choisit le côté du village le plus plat et sans eau pour y poser notre place. */
+    private static Site aCoteDuVillage(ServerLevel level, BlockPos villagePos, Holder<Structure> structure) {
+        ChunkAccess chunk = level.getChunk(villagePos.getX() >> 4, villagePos.getZ() >> 4, ChunkStatus.STRUCTURE_STARTS, true);
+        StructureStart start = chunk.getStartForStructure(structure.value());
+        BoundingBox bb = start != null && start.isValid() ? start.getBoundingBox()
+                : new BoundingBox(villagePos.getX() - 40, 0, villagePos.getZ() - 40, villagePos.getX() + 40, 0, villagePos.getZ() + 40);
+        int cx = (bb.minX() + bb.maxX()) / 2;
+        int cz = (bb.minZ() + bb.maxZ()) / 2;
+        int marge = RAYON + 6;
+        int[][] candidats = {{cx, bb.minZ() - marge}, {bb.maxX() + marge, cz}, {cx, bb.maxZ() + marge}, {bb.minX() - marge, cz}};
         ChunkGenerator generateur = level.getChunkSource().getGenerator();
         RandomState aleatoire = level.getChunkSource().randomState();
         int mer = level.getSeaLevel();
-        for (int r = 0; r <= RAYON_RECHERCHE; r += PAS) {
-            for (int i = -r; i <= r; i += PAS) {
+        Site meilleur = null;
+        int meilleurEcart = Integer.MAX_VALUE;
+        for (int[] p : candidats) {
+            int min = Integer.MAX_VALUE;
+            int max = Integer.MIN_VALUE;
+            boolean eau = false;
+            List<Integer> hauteurs = new ArrayList<>();
+            for (int dx = -24; dx <= 24; dx += 12) {
+                for (int dz = -24; dz <= 24; dz += 12) {
+                    int fond = generateur.getBaseHeight(p[0] + dx, p[1] + dz, Heightmap.Types.OCEAN_FLOOR_WG, level, aleatoire) - 1;
+                    int surface = generateur.getBaseHeight(p[0] + dx, p[1] + dz, Heightmap.Types.WORLD_SURFACE_WG, level, aleatoire) - 1;
+                    eau |= surface > fond || fond <= mer;
+                    min = Math.min(min, fond);
+                    max = Math.max(max, fond);
+                    hauteurs.add(fond);
+                }
+            }
+            if (!eau && max - min < meilleurEcart && max - min <= 18) {
+                hauteurs.sort(Integer::compare);
+                meilleurEcart = max - min;
+                meilleur = new Site(new BlockPos(p[0], hauteurs.get(hauteurs.size() / 2), p[1]), new BlockPos(cx, 0, cz));
+            }
+        }
+        return meilleur;
+    }
+
+    private static final int[][] AUTOUR = {{26, 0}, {-26, 0}, {0, 26}, {0, -26}, {18, 18}, {-18, -18}, {18, -18}, {-18, 18}};
+
+    /** Repli : une savane plate, sur la terre ferme, loin des structures hostiles. */
+    private static BlockPos trouverSavane(ServerLevel level, List<Holder<Structure>> hostiles) {
+        ChunkGenerator generateur = level.getChunkSource().getGenerator();
+        RandomState aleatoire = level.getChunkSource().randomState();
+        int mer = level.getSeaLevel();
+        for (int r = 0; r <= 6000; r += 48) {
+            for (int i = -r; i <= r; i += 48) {
                 for (int[] p : r == 0 ? new int[][] {{0, 0}} : new int[][] {{i, -r}, {i, r}, {-r, i}, {r, i}}) {
                     if (!savaneA(level, p[0], mer + 12, p[1])) {
                         continue;
@@ -108,9 +213,10 @@ public class HubBuilder {
                         min = Math.min(min, h);
                         max = Math.max(max, h);
                     }
-                    if (ok && max - min <= 10) {
-                        Cabane.LOGGER.info("Savane trouvée pour la cabane en {} {} {}", p[0], sol, p[1]);
-                        return new BlockPos(p[0], sol, p[1]);
+                    BlockPos pos = new BlockPos(p[0], sol, p[1]);
+                    if (ok && max - min <= 10 && !hostileProche(level, generateur, hostiles, pos)) {
+                        Cabane.LOGGER.info("Savane trouvée pour la cabane en {}", pos);
+                        return pos;
                     }
                 }
             }
@@ -119,15 +225,14 @@ public class HubBuilder {
     }
 
     private static boolean savaneA(ServerLevel level, int x, int y, int z) {
-        return estSavane(level.getUncachedNoiseBiome(x >> 2, y >> 2, z >> 2));
-    }
-
-    private static boolean estSavane(Holder<Biome> biome) {
+        Holder<Biome> biome = level.getUncachedNoiseBiome(x >> 2, y >> 2, z >> 2);
         return biome.is(BiomeTags.IS_SAVANNA) || biome.is(Tags.Biomes.IS_SAVANNA)
                 || biome.unwrapKey().map(k -> k.location().getPath().contains("savanna")).orElse(false);
     }
 
-    public void construire() {
+    // ================================================================== construction
+
+    public void construire(BlockPos village) {
         int max = RAYON + FONDU;
         for (int cx = (c.getX() - max) >> 4; cx <= (c.getX() + max) >> 4; cx++) {
             for (int cz = (c.getZ() - max) >> 4; cz <= (c.getZ() + max) >> 4; cz++) {
@@ -136,15 +241,21 @@ public class HubBuilder {
         }
         preparerTerrain();
         chemins();
-        cabane();
-        porche();
+        place();
+        grandeCabane();
+        marche();
+        tableauDesQuetes();
         feuDeCamp();
-        puits();
         tour();
         potager();
-        tableau();
+        arche();
         cloture();
         finitions();
+        if (village != null) {
+            cheminVersLeVillage(village);
+        }
+        avion();
+        textes();
     }
 
     // ------------------------------------------------------------------ terrain
@@ -171,7 +282,7 @@ public class HubBuilder {
                     t = t * t * (3 - 2 * t);
                     cible = (int) Math.round(y0 + (sol - y0) * t);
                 }
-                int haut = Math.max(sol, cible) + (dedans ? 32 : 16);
+                int haut = Math.max(sol, cible) + (dedans ? 34 : 16);
                 for (int y = cible + 1; y <= haut; y++) {
                     if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
                         abs(x, y, z, AIR);
@@ -180,7 +291,6 @@ public class HubBuilder {
                 for (int y = Math.min(sol + 1, cible - 3); y < cible; y++) {
                     abs(x, y, z, Blocks.DIRT.defaultBlockState());
                 }
-                // petites plaques de terre battue (~9 % du sol), pas de grosses taches
                 boolean terreBattue = Math.sin(x * 0.73 + z * 0.21) * Math.cos(z * 0.67 - x * 0.19) + rnd.nextFloat() * 0.5 > 1.0;
                 abs(x, cible, z, (terreBattue ? Blocks.COARSE_DIRT : Blocks.GRASS_BLOCK).defaultBlockState());
                 if (dedans && !terreBattue && rnd.nextFloat() < 0.14F) {
@@ -190,7 +300,6 @@ public class HubBuilder {
         }
     }
 
-    /** Hauteur du vrai sol, sans les arbres ni les plantes. */
     private int solNaturel(int x, int z) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(x, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1, z);
         while (p.getY() > level.getMinBuildHeight()) {
@@ -207,14 +316,16 @@ public class HubBuilder {
         return p.getY();
     }
 
-    // ------------------------------------------------------------------ chemins
+    // ------------------------------------------------------------------ chemins et place
 
     private void chemins() {
-        chemin(-1, -4, 1, -2);    // porche → feu de camp
-        chemin(-1, 3, 1, 21);     // feu de camp → sortie sud
-        chemin(2, 2, 9, 3);       // → puits
-        chemin(-11, 2, -2, 3);    // → tour
-        chemin(-11, 4, -11, 6);
+        chemin(-1, -14, 1, -9);     // place → Grande Cabane
+        chemin(-1, 9, 1, 30);       // place → arche, puis le village
+        chemin(-16, -1, -9, 1);     // place → boutique
+        chemin(9, -1, 16, 1);       // place → contrats
+        chemin(-24, 2, -16, 4);     // → tour
+        chemin(-24, 4, -22, 8);
+        chemin(16, -10, 18, -1);    // → potager
     }
 
     private void chemin(int xa, int za, int xb, int zb) {
@@ -227,183 +338,287 @@ public class HubBuilder {
         }
     }
 
-    // ------------------------------------------------------------------ la cabane
+    /** Place pavée ronde avec une fontaine au milieu. */
+    private void place() {
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 9; dz++) {
+                double d = Math.sqrt(dx * dx + dz * dz);
+                if (d > 9.3) {
+                    continue;
+                }
+                float r = rnd.nextFloat();
+                BlockState s = d > 8.4 ? Blocks.STONE_BRICKS.defaultBlockState()
+                        : (r < 0.35F ? Blocks.POLISHED_ANDESITE : r < 0.6F ? Blocks.ANDESITE : r < 0.8F ? Blocks.STONE_BRICKS : Blocks.COBBLESTONE).defaultBlockState();
+                pose(dx, 0, dz, s);
+                pose(dx, 1, dz, AIR);
+                pose(dx, 2, dz, AIR);
+            }
+        }
+        // fontaine
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                boolean bord = Math.abs(dx) == 3 || Math.abs(dz) == 3;
+                boolean coin = Math.abs(dx) == 3 && Math.abs(dz) == 3;
+                pose(dx, -1, dz, Blocks.STONE_BRICKS.defaultBlockState());
+                if (coin) {
+                    pose(dx, 0, dz, Blocks.STONE_BRICKS.defaultBlockState());
+                    pose(dx, 1, dz, Blocks.STONE_BRICK_WALL.defaultBlockState());
+                    pose(dx, 2, dz, Blocks.LANTERN.defaultBlockState());
+                } else if (bord) {
+                    pose(dx, 0, dz, Blocks.STONE_BRICKS.defaultBlockState());
+                    pose(dx, 1, dz, Blocks.STONE_BRICK_SLAB.defaultBlockState());
+                } else {
+                    pose(dx, 0, dz, Blocks.WATER.defaultBlockState());
+                }
+            }
+        }
+        for (int y = 0; y <= 3; y++) {
+            pose(0, y, 0, y == 3 ? Blocks.CHISELED_STONE_BRICKS.defaultBlockState() : Blocks.STONE_BRICK_WALL.defaultBlockState());
+        }
+        pose(0, 4, 0, Blocks.WATER.defaultBlockState());
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            pose(d.getStepX(), 3, d.getStepZ(), Blocks.STONE_BRICK_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.TOP));
+        }
+        lampadaire(-6, -6);
+        lampadaire(6, -6);
+        lampadaire(-6, 6);
+        lampadaire(6, 6);
+    }
 
-    private static final int X0 = -6, X1 = 6, Z0 = -15, Z1 = -7, ZC = -11;
+    // ------------------------------------------------------------------ la Grande Cabane (deux étages)
 
-    private void cabane() {
-        for (int x = X0 - 1; x <= X1 + 1; x++) {
-            for (int z = Z0 - 1; z <= Z1 + 1; z++) {
-                for (int y = 1; y <= 10; y++) {
+    private static final int X0 = -10, X1 = 10, Z0 = -27, Z1 = -15, ZC = -21;
+
+    private void grandeCabane() {
+        for (int x = X0 - 1; x <= X1 + 2; x++) {
+            for (int z = Z0 - 1; z <= Z1 + 3; z++) {
+                for (int y = 1; y <= 16; y++) {
                     pose(x, y, z, AIR);
                 }
             }
         }
+        // fondations, plancher, étage
         for (int x = X0; x <= X1; x++) {
             for (int z = Z0; z <= Z1; z++) {
                 boolean bord = x == X0 || x == X1 || z == Z0 || z == Z1;
                 pose(x, -1, z, Blocks.COBBLESTONE.defaultBlockState());
-                pose(x, 0, z, bord ? pierre() : plancher());
+                pose(x, 0, z, bord ? briques() : plancher());
+                if (!bord) {
+                    pose(x, 5, z, Blocks.SPRUCE_PLANKS.defaultBlockState());
+                }
             }
         }
-        for (int y = 1; y <= 4; y++) {
+        for (int y = 1; y <= 9; y++) {
             for (int x = X0; x <= X1; x++) {
-                mur(x, y, Z0);
-                mur(x, y, Z1);
+                murCabane(x, y, Z0);
+                murCabane(x, y, Z1);
             }
             for (int z = Z0 + 1; z < Z1; z++) {
-                mur(X0, y, z);
-                mur(X1, y, z);
+                murCabane(X0, y, z);
+                murCabane(X1, y, z);
             }
         }
-        toit();
-        cheminee();
-        interieur();
+        toitCabane();
+        porcheEtBalcon();
+        escalier();
+        rezDeChaussee();
+        etage();
+        chemineeCabane();
         lierre();
     }
 
-    private void mur(int x, int y, int z) {
+    private void murCabane(int x, int y, int z) {
         boolean longMur = z == Z0 || z == Z1;
         boolean coin = (x == X0 || x == X1) && longMur;
-        if (coin) {
+        if (coin || (longMur && Math.abs(x) % 5 == 0) || (!longMur && (z == ZC || z == Z0 + 3 || z == Z1 - 3) && y != 5)) {
             pose(x, y, z, pilier(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Y));
             return;
         }
-        if (y == 4) {
-            pose(x, y, z, pilier(Blocks.STRIPPED_SPRUCE_LOG, longMur ? Direction.Axis.X : Direction.Axis.Z));
+        if (y == 5 || y == 9) {
+            pose(x, y, z, pilier(Blocks.STRIPPED_DARK_OAK_LOG, longMur ? Direction.Axis.X : Direction.Axis.Z));
             return;
         }
-        // porte (ouverture, la porte a disparu depuis longtemps)
-        if (z == Z1 && x == 0 && y <= 2) {
+        // grande porte d'entrée (3 de large) et porte du balcon
+        if (z == Z1 && Math.abs(x) <= 1 && y <= 3) {
             pose(x, y, z, AIR);
             return;
         }
-        // âtre, côté est
-        if (x == X1 && z == ZC && y <= 2) {
+        if (z == Z1 && x == 0 && (y == 6 || y == 7)) {
             pose(x, y, z, AIR);
             return;
         }
-        if ((longMur && x == 0) || (!longMur && z == ZC)) {
-            pose(x, y, z, pilier(Blocks.SPRUCE_LOG, Direction.Axis.Y));
+        boolean fenetreBas = (y == 2 || y == 3);
+        boolean fenetreHaut = (y == 7 || y == 8);
+        boolean colonne = longMur ? (Math.abs(x) == 3 || Math.abs(x) == 7) : (z == Z0 + 6 || z == Z1 - 6 + 1 || z == ZC - 2 || z == ZC + 2);
+        boolean murDesReliques = z == Z0 && Math.abs(x) <= 4 && y <= 4;
+        if ((fenetreBas || fenetreHaut) && colonne && !murDesReliques && !(x == X1 && z == ZC)) {
+            pose(x, y, z, Blocks.GLASS_PANE.defaultBlockState());
             return;
         }
-        boolean fenetre = y >= 2 && y <= 3 && ((z == Z1 && (Math.abs(x) == 3 || Math.abs(x) == 4)) || (!longMur && (z == -13 || z == -9)));
-        if (fenetre) {
-            pose(x, y, z, rnd.nextFloat() < 0.3F ? AIR : Blocks.GLASS_PANE.defaultBlockState());
-            return;
-        }
-        float r = rnd.nextFloat();
-        boolean murDesReliques = z == Z0 && Math.abs(x) <= 3;
-        if (!murDesReliques && r < 0.04F) {
-            pose(x, y, z, AIR);
-        } else if (r < 0.10F) {
-            pose(x, y, z, Blocks.DARK_OAK_PLANKS.defaultBlockState());
-        } else {
-            pose(x, y, z, Blocks.SPRUCE_PLANKS.defaultBlockState());
-        }
+        pose(x, y, z, y >= 6 ? Blocks.SPRUCE_PLANKS.defaultBlockState()
+                : rnd.nextFloat() < 0.08F ? Blocks.DARK_OAK_PLANKS.defaultBlockState() : Blocks.SPRUCE_PLANKS.defaultBlockState());
     }
 
     private int hauteurToit(int z) {
-        return 4 + (5 - Math.abs(z - ZC));
+        return 9 + (7 - Math.abs(z - ZC));
     }
 
-    private void toit() {
+    private void toitCabane() {
         for (int z = Z0 - 1; z <= Z1 + 1; z++) {
             int dz = z - ZC;
             int h = hauteurToit(z);
             for (int x = X0 - 1; x <= X1 + 1; x++) {
-                boolean bord = x == X0 - 1 || x == X1 + 1 || Math.abs(dz) == 5;
-                if (!bord && rnd.nextFloat() < 0.05F) {
-                    continue; // trou dans le toit
-                }
                 if (dz == 0) {
                     pose(x, h, z, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+                    pose(x, h + 1, z, Blocks.DARK_OAK_SLAB.defaultBlockState());
                 } else {
                     pose(x, h, z, escalier(Blocks.DARK_OAK_STAIRS, dz < 0 ? Direction.SOUTH : Direction.NORTH));
+                    if (Math.abs(dz) < 7 && x > X0 - 1 && x < X1 + 1) {
+                        pose(x, h - 1, z, escalier(Blocks.DARK_OAK_STAIRS, dz < 0 ? Direction.NORTH : Direction.SOUTH, Half.TOP));
+                    }
                 }
             }
         }
-        // pignons
         for (int z = Z0 + 1; z < Z1; z++) {
-            for (int y = 5; y < hauteurToit(z); y++) {
-                BlockState s = z == ZC && (y == 6 || y == 7) ? Blocks.GLASS_PANE.defaultBlockState() : Blocks.SPRUCE_PLANKS.defaultBlockState();
+            for (int y = 10; y < hauteurToit(z); y++) {
+                boolean rosace = Math.abs(z - ZC) <= 1 && (y == 12 || y == 13);
+                BlockState s = rosace ? Blocks.GLASS_PANE.defaultBlockState() : Blocks.SPRUCE_PLANKS.defaultBlockState();
                 pose(X0, y, z, s);
                 pose(X1, y, z, s);
             }
         }
     }
 
-    private void cheminee() {
-        for (int y = -1; y <= 11; y++) {
-            for (int z = ZC - 1; z <= ZC + 1; z++) {
-                boolean foyer = z == ZC && (y == 1 || y == 2);
-                pose(7, y, z, foyer ? AIR : pierre());
+    private void porcheEtBalcon() {
+        for (int x = -7; x <= 7; x++) {
+            for (int z = Z1 + 1; z <= Z1 + 3; z++) {
+                pose(x, 0, z, Blocks.SPRUCE_PLANKS.defaultBlockState());
+                pose(x, 5, z, Blocks.SPRUCE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.TOP));
+                boolean bordBalcon = z == Z1 + 3 || Math.abs(x) == 7;
+                pose(x, 6, z, bordBalcon ? Blocks.SPRUCE_FENCE.defaultBlockState() : AIR);
             }
-            pose(8, y, ZC, pierre());
         }
-        pose(7, 1, ZC, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.FACING, Direction.WEST));
-        pose(7, 12, ZC, Blocks.CAMPFIRE.defaultBlockState());
+        for (int x : new int[] {-7, -3, 3, 7}) {
+            for (int y = 1; y <= 4; y++) {
+                pose(x, y, Z1 + 3, pilier(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Y));
+            }
+            pose(x, 6, Z1 + 3, Blocks.LANTERN.defaultBlockState());
+        }
+        for (int x : new int[] {-5, 5}) {
+            pose(x, 4, Z1 + 2, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+        pose(-6, 1, Z1 + 1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        pose(6, 1, Z1 + 1, Blocks.COMPOSTER.defaultBlockState());
+        pose(5, 1, Z1 + 1, Blocks.CHIPPED_ANVIL.defaultBlockState());
+        pose(-5, 1, Z1 + 1, Blocks.FLOWER_POT.defaultBlockState());
     }
 
-    private void interieur() {
-        // lit
-        pose(-5, 1, -13, Blocks.BROWN_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH).setValue(BedBlock.PART, BedPart.FOOT));
-        pose(-5, 1, -14, Blocks.BROWN_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH).setValue(BedBlock.PART, BedPart.HEAD));
+    private void escalier() {
+        // escalier le long du mur ouest, du rez-de-chaussée à l'étage
+        for (int i = 0; i < 4; i++) {
+            int z = Z1 - 2 - i;
+            pose(X0 + 1, i + 1, z, escalier(Blocks.SPRUCE_STAIRS, Direction.NORTH));
+            for (int y = 1; y <= i; y++) {
+                pose(X0 + 1, y, z, Blocks.SPRUCE_PLANKS.defaultBlockState());
+            }
+            pose(X0 + 1, 5, z, AIR);
+            pose(X0 + 2, 6, z, Blocks.SPRUCE_FENCE.defaultBlockState());
+        }
+        pose(X0 + 1, 5, Z1 - 6, Blocks.SPRUCE_PLANKS.defaultBlockState());
+    }
+
+    private void rezDeChaussee() {
         // comptoir et mur des reliques
         for (int x = -3; x <= 3; x++) {
-            pose(x, 1, -14, Blocks.POLISHED_DEEPSLATE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.TOP));
+            pose(x, 1, Z0 + 1, Blocks.POLISHED_DEEPSLATE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.TOP));
         }
-        // bibliothèque et pupitre avec le journal du Gardien
-        for (int z = -11; z <= -10; z++) {
-            pose(-5, 1, z, Blocks.BOOKSHELF.defaultBlockState());
-            pose(-5, 2, z, Blocks.BOOKSHELF.defaultBlockState());
-        }
-        pose(-4, 1, -12, Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.EAST));
-        // cuisine
-        pose(5, 1, -14, Blocks.CRAFTING_TABLE.defaultBlockState());
-        pose(5, 1, -13, Blocks.FURNACE.defaultBlockState().setValue(FurnaceBlock.FACING, Direction.WEST));
-        pose(5, 1, -9, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-        // table et chaises
-        pose(0, 1, ZC, Blocks.DARK_OAK_FENCE.defaultBlockState());
-        pose(0, 2, ZC, Blocks.SPRUCE_PRESSURE_PLATE.defaultBlockState());
-        pose(-1, 1, ZC, escalier(Blocks.SPRUCE_STAIRS, Direction.WEST));
-        pose(1, 1, ZC, escalier(Blocks.SPRUCE_STAIRS, Direction.EAST));
-        pose(0, 1, ZC + 1, escalier(Blocks.SPRUCE_STAIRS, Direction.SOUTH));
-        // coffres
-        pose(-4, 1, -8, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
-        pose(4, 1, -8, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
-        // lanternes suspendues au faîtage
-        for (int x : new int[] {-3, 0, 3}) {
-            for (int y = 6; y <= 8; y++) {
-                pose(x, y, ZC, Blocks.CHAIN.defaultBlockState());
+        // longues tables et bancs
+        for (int x = -5; x <= 5; x++) {
+            if (x == 0) {
+                continue;
             }
-            pose(x, 5, ZC, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+            for (int z : new int[] {ZC - 1, ZC + 2}) {
+                pose(x, 1, z, Blocks.SPRUCE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.TOP));
+                pose(x, 1, z - 1, escalier(Blocks.SPRUCE_STAIRS, Direction.NORTH));
+                pose(x, 1, z + 1, escalier(Blocks.SPRUCE_STAIRS, Direction.SOUTH));
+            }
         }
-        // toiles d'araignée et mousse
-        for (int[] t : new int[][] {{-5, 4, -14}, {5, 4, -8}, {-5, 4, -8}, {5, 4, -14}, {-2, 7, -12}, {2, 6, -10}}) {
-            pose(t[0], t[1], t[2], Blocks.COBWEB.defaultBlockState());
+        // bibliothèque et pupitre du Gardien
+        for (int z = Z0 + 1; z <= Z0 + 4; z++) {
+            pose(X0 + 1, 1, z, Blocks.BOOKSHELF.defaultBlockState());
+            pose(X0 + 1, 2, z, Blocks.BOOKSHELF.defaultBlockState());
+            pose(X0 + 1, 3, z, Blocks.BOOKSHELF.defaultBlockState());
         }
-        for (int x = X0 + 1; x < X1; x++) {
-            for (int z = Z0 + 1; z < Z1; z++) {
-                if (level.getBlockState(c.offset(x, 1, z)).isAir() && rnd.nextFloat() < 0.10F) {
-                    pose(x, 1, z, Blocks.MOSS_CARPET.defaultBlockState());
+        pose(X0 + 3, 1, Z0 + 2, Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.EAST));
+        // coin cuisine et rangement
+        pose(X1 - 1, 1, Z0 + 1, Blocks.CRAFTING_TABLE.defaultBlockState());
+        pose(X1 - 2, 1, Z0 + 1, Blocks.SMOKER.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
+        pose(X1 - 3, 1, Z0 + 1, Blocks.FURNACE.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
+        pose(X1 - 1, 1, Z1 - 1, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
+        pose(X1 - 1, 1, Z1 - 2, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
+        pose(X1 - 1, 1, Z1 - 3, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        // lustres
+        for (int x : new int[] {-5, 5}) {
+            pose(x, 4, ZC, Blocks.CHAIN.defaultBlockState());
+            pose(x, 3, ZC, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+        pose(0, 4, ZC - 4, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        tapis(Blocks.RED_CARPET.defaultBlockState(), -1, 1, Z0 + 3, Z1 - 1);
+        coffre(X1 - 1, 1, Z1 - 1, "coffres/cabane");
+        coffre(X1 - 1, 1, Z1 - 2, "coffres/cabane");
+        journal(X0 + 3, 1, Z0 + 2);
+        for (int x = -3; x <= 3; x++) {
+            cadre(x, 2, Z0 + 1, Direction.SOUTH, ItemStack.EMPTY);
+        }
+        texte(0.5, 4.2, Z0 + 1.05, 180F, "{\"text\":\"Les Sept Reliques\",\"color\":\"gold\",\"bold\":true}", 0.9F, 0x00000000, false);
+    }
+
+    private void etage() {
+        // dortoir : 8 lits
+        for (int x : new int[] {-7, -4, 4, 7}) {
+            pose(x, 6, Z0 + 2, Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH).setValue(BedBlock.PART, BedPart.FOOT));
+            pose(x, 6, Z0 + 1, Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH).setValue(BedBlock.PART, BedPart.HEAD));
+            pose(x + (x < 0 ? 1 : -1), 6, Z0 + 1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        }
+        for (int x : new int[] {-4, 4, 7}) {
+            pose(x, 6, Z1 - 2, Blocks.WHITE_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.FOOT));
+            pose(x, 6, Z1 - 1, Blocks.WHITE_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.HEAD));
+        }
+        tapis(Blocks.BROWN_CARPET.defaultBlockState(), -2, 2, Z0 + 4, Z1 - 3);
+        for (int x : new int[] {-5, 0, 5}) {
+            pose(x, 9, ZC, Blocks.CHAIN.defaultBlockState());
+            pose(x, 8, ZC, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+    }
+
+    private void chemineeCabane() {
+        for (int y = -1; y <= 17; y++) {
+            for (int z = ZC - 1; z <= ZC + 1; z++) {
+                boolean foyer = z == ZC && (y == 1 || y == 2);
+                pose(X1 + 1, y, z, foyer ? AIR : briques());
+            }
+            pose(X1 + 2, y, ZC, briques());
+        }
+        pose(X1, 1, ZC, AIR);
+        pose(X1, 2, ZC, AIR);
+        pose(X1 + 1, 1, ZC, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.FACING, Direction.WEST));
+        pose(X1 + 1, 18, ZC, Blocks.CAMPFIRE.defaultBlockState());
+    }
+
+    private void tapis(BlockState tapis, int xa, int xb, int za, int zb) {
+        int y = tapis.is(Blocks.BROWN_CARPET) ? 6 : 1;
+        for (int x = xa; x <= xb; x++) {
+            for (int z = za; z <= zb; z++) {
+                if (level.getBlockState(c.offset(x, y, z)).isAir()) {
+                    pose(x, y, z, tapis);
                 }
             }
-        }
-
-        coffre(-4, 1, -8, "coffres/cabane");
-        coffre(4, 1, -8, "coffres/cabane");
-        journal(-4, 1, -12);
-        panneau(0, 3, -14, Direction.SOUTH, "", "LES SEPT", "RELIQUES", "");
-        for (int x = -3; x <= 3; x++) {
-            level.addFreshEntity(new ItemFrame(level, c.offset(x, 2, -14), Direction.SOUTH));
         }
     }
 
     private void lierre() {
-        for (int y = 1; y <= 4; y++) {
+        for (int y = 1; y <= 8; y++) {
             for (int x = X0; x <= X1; x++) {
-                vigne(x, y, Z1 + 1, Direction.NORTH);
                 vigne(x, y, Z0 - 1, Direction.SOUTH);
             }
             for (int z = Z0; z <= Z1; z++) {
@@ -413,117 +628,129 @@ public class HubBuilder {
     }
 
     private void vigne(int x, int y, int z, Direction versLeMur) {
-        if (rnd.nextFloat() < 0.18F && level.getBlockState(c.offset(x, y, z)).isAir()
+        if (rnd.nextFloat() < 0.15F && level.getBlockState(c.offset(x, y, z)).isAir()
                 && level.getBlockState(c.offset(x, y, z).relative(versLeMur)).isSolid()) {
             pose(x, y, z, Blocks.VINE.defaultBlockState().setValue(VineBlock.getPropertyForFace(versLeMur), true));
         }
     }
 
-    private void porche() {
-        for (int x = -4; x <= 4; x++) {
-            for (int z = -6; z <= -5; z++) {
-                pose(x, 0, z, Blocks.SPRUCE_PLANKS.defaultBlockState());
+    // ------------------------------------------------------------------ le marché
+
+    private void marche() {
+        echoppe(-14, Blocks.RED_WOOL, Blocks.WHITE_WOOL);
+        echoppe(14, Blocks.BLUE_WOOL, Blocks.WHITE_WOOL);
+        echoppe(-14, 8, Blocks.YELLOW_WOOL, Blocks.ORANGE_WOOL);
+        echoppe(14, 8, Blocks.GREEN_WOOL, Blocks.LIME_WOOL);
+        pose(-12, 1, 0, fr.cabane.CabaneBlocks.COMPTOIR.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.EAST));
+        pose(12, 1, 0, fr.cabane.CabaneBlocks.TABLEAU_CONTRATS.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.WEST));
+        pose(-12, 1, 1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        pose(-12, 1, -1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        pose(12, 1, 1, Blocks.HAY_BLOCK.defaultBlockState());
+        pose(12, 1, -1, Blocks.COMPOSTER.defaultBlockState());
+    }
+
+    private void echoppe(int cx, Block toile1, Block toile2) {
+        echoppe(cx, 0, toile1, toile2);
+    }
+
+    /** Une échoppe 5x5 : poteaux, comptoir, toile rayée. */
+    private void echoppe(int cx, int cz, Block toile1, Block toile2) {
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                pose(cx + dx, 0, cz + dz, Blocks.SPRUCE_PLANKS.defaultBlockState());
                 for (int y = 1; y <= 3; y++) {
-                    pose(x, y, z, AIR);
+                    pose(cx + dx, y, cz + dz, AIR);
+                }
+                pose(cx + dx, 4, cz + dz, (Math.floorMod(dx, 2) == 0 ? toile1 : toile2).defaultBlockState());
+            }
+        }
+        for (int dx : new int[] {-2, 2}) {
+            for (int dz : new int[] {-2, 2}) {
+                for (int y = 1; y <= 3; y++) {
+                    pose(cx + dx, y, cz + dz, Blocks.SPRUCE_FENCE.defaultBlockState());
                 }
             }
-            pose(x, 4, -5, Blocks.SPRUCE_SLAB.defaultBlockState());
         }
-        for (int x : new int[] {-4, 4}) {
-            for (int y = 1; y <= 3; y++) {
-                pose(x, y, -5, pilier(Blocks.SPRUCE_LOG, Direction.Axis.Y));
+        pose(cx, 3, cz, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+    }
+
+    // ------------------------------------------------------------------ tableau des quêtes avec la carte de la région
+
+    private void tableauDesQuetes() {
+        int z = -11;
+        for (int x = -10; x <= -4; x++) {
+            for (int y = 1; y <= 5; y++) {
+                boolean bord = x == -10 || x == -4 || y == 5;
+                pose(x, y, z, bord ? pilier(Blocks.STRIPPED_DARK_OAK_LOG, y == 5 ? Direction.Axis.X : Direction.Axis.Y) : Blocks.DARK_OAK_PLANKS.defaultBlockState());
             }
-            pose(x, 1, -6, Blocks.SPRUCE_FENCE.defaultBlockState());
+            pose(x, 6, z, Blocks.DARK_OAK_SLAB.defaultBlockState());
         }
-        for (int x : new int[] {-3, -2, 2, 3}) {
-            pose(x, 1, -5, Blocks.SPRUCE_FENCE.defaultBlockState());
+        // 3x3 cartes de la région, la cabane marquée d'une croix
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                ItemStack carte = MapItem.create(level, c.getX() + i * 512, c.getZ() + j * 512, (byte) 2, false, false);
+                MapItem.renderBiomePreviewMap(level, carte);
+                MapItemSavedData.addTargetDecoration(carte, c, "cabane", MapDecorationTypes.RED_X);
+                cadre(-7 + i, 3 - j, z + 1, Direction.SOUTH, carte);
+            }
         }
-        pose(-3, 3, -5, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
-        pose(3, 3, -5, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
-        pose(3, 1, -6, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-        pose(-3, 1, -6, Blocks.COMPOSTER.defaultBlockState());
-        pose(-2, 1, -6, Blocks.CHIPPED_ANVIL.defaultBlockState());
     }
 
     // ------------------------------------------------------------------ autour
 
     private void feuDeCamp() {
+        int cz = 15;
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
-                pose(dx, 0, dz, (dx == 0 && dz == 0 ? Blocks.COBBLESTONE : Blocks.GRAVEL).defaultBlockState());
-                pose(dx, 1, dz, AIR);
+                pose(dx + 5, 0, cz + dz, (dx == 0 && dz == 0 ? Blocks.COBBLESTONE : Blocks.GRAVEL).defaultBlockState());
+                pose(dx + 5, 1, cz + dz, AIR);
             }
         }
-        pose(0, 1, 0, Blocks.CAMPFIRE.defaultBlockState());
+        pose(5, 1, cz, Blocks.CAMPFIRE.defaultBlockState());
         for (int dz = -1; dz <= 1; dz++) {
-            pose(-3, 1, dz, pilier(Blocks.STRIPPED_ACACIA_LOG, Direction.Axis.Z));
-            pose(3, 1, dz, pilier(Blocks.STRIPPED_ACACIA_LOG, Direction.Axis.Z));
+            pose(8, 1, cz + dz, pilier(Blocks.STRIPPED_ACACIA_LOG, Direction.Axis.Z));
         }
-        lampadaire(2, -3);
-        lampadaire(-2, 8);
-        lampadaire(2, 14);
+        for (int dx = 4; dx <= 6; dx++) {
+            pose(dx, 1, cz + 3, pilier(Blocks.STRIPPED_ACACIA_LOG, Direction.Axis.X));
+        }
+        lampadaire(2, 12);
         lampadaire(-2, 20);
+        lampadaire(2, 26);
     }
 
     private void lampadaire(int x, int z) {
         pose(x, 0, z, Blocks.COBBLESTONE.defaultBlockState());
         pose(x, 1, z, Blocks.SPRUCE_FENCE.defaultBlockState());
-        pose(x, 2, z, Blocks.LANTERN.defaultBlockState());
-    }
-
-    private void puits() {
-        final int px = 10, pz = 6;
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                boolean bord = Math.abs(dx) == 2 || Math.abs(dz) == 2;
-                for (int y = -3; y <= 0; y++) {
-                    pose(px + dx, y, pz + dz, bord || y == -3 ? pierre() : Blocks.WATER.defaultBlockState());
-                }
-                pose(px + dx, 1, pz + dz, bord ? pierre() : AIR);
-                for (int y = 2; y <= 3; y++) {
-                    pose(px + dx, y, pz + dz, AIR);
-                }
-                if (rnd.nextFloat() < 0.85F) {
-                    pose(px + dx, 4, pz + dz, Blocks.SPRUCE_SLAB.defaultBlockState());
-                }
-            }
-        }
-        for (int dx : new int[] {-2, 2}) {
-            for (int dz : new int[] {-2, 2}) {
-                pose(px + dx, 2, pz + dz, Blocks.SPRUCE_FENCE.defaultBlockState());
-                pose(px + dx, 3, pz + dz, Blocks.SPRUCE_FENCE.defaultBlockState());
-            }
-        }
+        pose(x, 2, z, Blocks.SPRUCE_FENCE.defaultBlockState());
+        pose(x, 3, z, Blocks.LANTERN.defaultBlockState());
     }
 
     private void tour() {
-        final int tx = -14, tz = 6;
+        final int tx = -24, tz = 10;
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 boolean bord = Math.abs(dx) == 2 || Math.abs(dz) == 2;
                 pose(tx + dx, 0, tz + dz, briques());
                 pose(tx + dx, -1, tz + dz, Blocks.COBBLESTONE.defaultBlockState());
-                for (int y = 1; y <= 9; y++) {
-                    boolean effondre = dz == 2 && y >= 7 && rnd.nextFloat() < 0.55F;
+                for (int y = 1; y <= 11; y++) {
+                    boolean effondre = dz == 2 && y >= 9 && rnd.nextFloat() < 0.55F;
                     pose(tx + dx, y, tz + dz, bord && !effondre ? briques() : AIR);
                 }
-                pose(tx + dx, 10, tz + dz, bord ? briques() : Blocks.SPRUCE_PLANKS.defaultBlockState());
-                boolean creneau = bord && (dx + dz) % 2 == 0 && rnd.nextFloat() < 0.7F;
-                pose(tx + dx, 11, tz + dz, creneau ? Blocks.STONE_BRICK_WALL.defaultBlockState() : AIR);
+                pose(tx + dx, 12, tz + dz, bord ? briques() : Blocks.SPRUCE_PLANKS.defaultBlockState());
+                boolean creneau = bord && (dx + dz) % 2 == 0 && rnd.nextFloat() < 0.75F;
+                pose(tx + dx, 13, tz + dz, creneau ? Blocks.STONE_BRICK_WALL.defaultBlockState() : AIR);
             }
         }
-        // porte côté est, échelle contre le mur ouest
+        pose(tx + 2, 1, tz - 4 + 4, AIR);
         pose(tx + 2, 1, tz, AIR);
         pose(tx + 2, 2, tz, AIR);
-        for (int y = 1; y <= 10; y++) {
+        for (int y = 1; y <= 12; y++) {
             pose(tx - 1, y, tz, Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.EAST));
         }
-        // feu de signal : sa fumée se voit de très loin
-        pose(tx + 1, 10, tz + 1, Blocks.HAY_BLOCK.defaultBlockState());
-        pose(tx + 1, 11, tz + 1, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.SIGNAL_FIRE, true));
-        pose(tx + 1, 11, tz - 1, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
-        coffre(tx + 1, 11, tz - 1, "coffres/tour");
-        // éboulis
+        pose(tx + 1, 12, tz + 1, Blocks.HAY_BLOCK.defaultBlockState());
+        pose(tx + 1, 13, tz + 1, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.SIGNAL_FIRE, true));
+        pose(tx + 1, 13, tz - 1, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
+        coffre(tx + 1, 13, tz - 1, "coffres/tour");
         for (int i = 0; i < 10; i++) {
             int x = tx + rnd.nextInt(9) - 4;
             int z = tz + 3 + rnd.nextInt(3);
@@ -534,21 +761,16 @@ public class HubBuilder {
     }
 
     private void potager() {
-        for (int x = 9; x <= 15; x++) {
-            for (int z = -15; z <= -7; z++) {
-                boolean bord = x == 9 || x == 15 || z == -15 || z == -7;
+        for (int x = 14; x <= 22; x++) {
+            for (int z = -24; z <= -12; z++) {
+                boolean bord = x == 14 || x == 22 || z == -24 || z == -12;
                 if (bord) {
-                    pose(x, 1, z, rnd.nextFloat() < 0.7F ? Blocks.OAK_FENCE.defaultBlockState() : AIR);
+                    pose(x, 1, z, rnd.nextFloat() < 0.75F ? Blocks.OAK_FENCE.defaultBlockState() : AIR);
                     continue;
                 }
-                if (x == 12 && z == ZC) {
+                if (x == 18 && (z == -21 || z == -15)) {
                     pose(x, 0, z, Blocks.WATER.defaultBlockState());
                     pose(x, 1, z, AIR);
-                    continue;
-                }
-                if (rnd.nextFloat() < 0.15F) {
-                    pose(x, 0, z, Blocks.COARSE_DIRT.defaultBlockState());
-                    pose(x, 1, z, Blocks.DEAD_BUSH.defaultBlockState());
                     continue;
                 }
                 Block culture = switch (Math.floorMod(z, 3)) {
@@ -560,38 +782,234 @@ public class HubBuilder {
                 pose(x, 1, z, culture.defaultBlockState().setValue(CropBlock.AGE, rnd.nextInt(8)));
             }
         }
+        pose(18, 1, -12, AIR);
     }
 
-    private void tableau() {
-        for (int x = -5; x <= -3; x++) {
-            pose(x, 1, -3, x == -4 ? AIR : Blocks.DARK_OAK_FENCE.defaultBlockState());
-            pose(x, 2, -3, Blocks.SPRUCE_PLANKS.defaultBlockState());
-            pose(x, 3, -3, Blocks.SPRUCE_PLANKS.defaultBlockState());
-            pose(x, 4, -3, Blocks.SPRUCE_SLAB.defaultBlockState());
+    private void arche() {
+        int z = 28;
+        for (int x : new int[] {-3, 3}) {
+            for (int y = 1; y <= 5; y++) {
+                pose(x, y, z, pilier(Blocks.STRIPPED_ACACIA_LOG, Direction.Axis.Y));
+            }
+            pose(x, 0, z, briques());
         }
-        panneau(-4, 3, -2, Direction.SOUTH, "~ TABLEAU ~", "DES QUÊTES", "", "");
-        panneau(-5, 2, -2, Direction.SOUTH, "Ouvre ton", "livre de", "quêtes !", "");
-        panneau(-3, 2, -2, Direction.SOUTH, "Le Gardien", "t'attend près", "du porche.", "");
+        for (int x = -4; x <= 4; x++) {
+            pose(x, 6, z, pilier(Blocks.ACACIA_LOG, Direction.Axis.X));
+        }
+        pose(-2, 5, z, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        pose(2, 5, z, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
     }
 
     private void cloture() {
         for (int dx = -RAYON; dx <= RAYON; dx++) {
             for (int dz = -RAYON; dz <= RAYON; dz++) {
                 double d = Math.sqrt(dx * dx + dz * dz);
-                if (Math.abs(d - 20) > 0.5 || (Math.abs(dx) <= 2 && dz > 0)) {
+                if (Math.abs(d - 28) > 0.5 || (Math.abs(dx) <= 4 && dz > 0)) {
                     continue;
                 }
                 double angle = Math.atan2(dz, dx);
-                if (Math.sin(angle * 7) > -0.35 && rnd.nextFloat() < 0.85F) {
+                if (Math.sin(angle * 7) > -0.35 && rnd.nextFloat() < 0.85F && level.getBlockState(c.offset(dx, 1, dz)).canBeReplaced()) {
                     pose(dx, 1, dz, Blocks.OAK_FENCE.defaultBlockState());
                 }
             }
         }
     }
 
-    // ------------------------------------------------------------------ finitions
+    /** Un chemin de terre battue qui suit le relief jusqu'au village. */
+    private void cheminVersLeVillage(BlockPos village) {
+        double dx = village.getX() - c.getX();
+        double dz = village.getZ() - c.getZ();
+        double longueur = Math.sqrt(dx * dx + dz * dz);
+        if (longueur < 1) {
+            return;
+        }
+        double ux = dx / longueur;
+        double uz = dz / longueur;
+        for (double t = RAYON - 4; t < longueur - 20; t += 0.7) {
+            for (int largeur = -1; largeur <= 1; largeur++) {
+                int x = (int) Math.round(c.getX() + ux * t - uz * largeur);
+                int z = (int) Math.round(c.getZ() + uz * t + ux * largeur);
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                BlockPos p = new BlockPos(x, y, z);
+                BlockState s = level.getBlockState(p);
+                if (s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.PODZOL)) {
+                    level.setBlock(p, Blocks.DIRT_PATH.defaultBlockState(), FLAGS);
+                    if (level.getBlockState(p.above()).canBeReplaced()) {
+                        level.setBlock(p.above(), AIR, FLAGS);
+                    }
+                }
+            }
+        }
+    }
 
-    /** Raccorde vitres, barrières et escaliers à leurs voisins une fois tout posé. */
+    // ------------------------------------------------------------------ l'avion en feu
+
+    /** Position (relative) où apparaissent les nouveaux joueurs, dans la carlingue. */
+    public static final BlockPos DANS_AVION = new BlockPos(4, HAUTEUR_AVION + 1, 0);
+    /** Le coffre aux parachutes. */
+    public static final BlockPos COFFRE_AVION = new BlockPos(-9, HAUTEUR_AVION + 1, 1);
+
+    private void avion() {
+        int a = HAUTEUR_AVION;
+        BlockState blanc = Blocks.WHITE_CONCRETE.defaultBlockState();
+        BlockState bleu = Blocks.LIGHT_BLUE_CONCRETE.defaultBlockState();
+        BlockState gris = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
+        BlockState noir = Blocks.BLACK_CONCRETE.defaultBlockState();
+        // carlingue : section 5x5 creuse, de x = -12 à x = 12
+        for (int x = -12; x <= 12; x++) {
+            for (int y = 0; y <= 4; y++) {
+                for (int z = -2; z <= 2; z++) {
+                    boolean coin = (y == 0 || y == 4) && Math.abs(z) == 2;
+                    boolean paroi = y == 0 || y == 4 || Math.abs(z) == 2;
+                    if (coin) {
+                        continue;
+                    }
+                    BlockState s;
+                    if (!paroi) {
+                        s = AIR;
+                    } else if (Math.abs(z) == 2 && y == 2 && x % 3 == 0 && Math.abs(x) < 11) {
+                        s = Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState();
+                    } else if (Math.abs(z) == 2 && y == 1) {
+                        s = bleu;
+                    } else if (y == 0) {
+                        s = gris;
+                    } else {
+                        s = rnd.nextFloat() < 0.07F ? noir : blanc;
+                    }
+                    pose(x, a + y, z, s);
+                }
+            }
+        }
+        // nez et cockpit
+        for (int y = 1; y <= 3; y++) {
+            for (int z = -1; z <= 1; z++) {
+                pose(13, a + y, z, y == 3 ? Blocks.BLACK_STAINED_GLASS.defaultBlockState() : blanc);
+            }
+        }
+        pose(14, a + 2, 0, gris);
+        // queue et dérive
+        for (int x = -15; x <= -13; x++) {
+            int r = -12 - x;
+            for (int y = 1 + r / 2; y <= 3 + r / 2; y++) {
+                pose(x, a + y, 0, blanc);
+            }
+            for (int z = -4 + r; z <= 4 - r; z++) {
+                pose(x, a + 2 + r / 2, z, blanc);
+            }
+            for (int y = 4; y <= 9 - r; y++) {
+                pose(x, a + y, 0, Blocks.RED_CONCRETE.defaultBlockState());
+            }
+        }
+        // ailes et réacteurs
+        for (int x = -3; x <= 3; x++) {
+            for (int z = 3; z <= 12; z++) {
+                int recul = (z - 3) / 3;
+                if (x - recul < -3 || x + recul > 4) {
+                    continue;
+                }
+                pose(x - recul, a + 1, z, (rnd.nextFloat() < 0.15F ? noir : blanc));
+                pose(x - recul, a + 1, -z, (rnd.nextFloat() < 0.15F ? noir : blanc));
+            }
+        }
+        for (int z : new int[] {-6, 6}) {
+            for (int x = -2; x <= 2; x++) {
+                pose(x, a, z, Blocks.GRAY_CONCRETE.defaultBlockState());
+            }
+            pose(3, a, z, Blocks.BLACK_CONCRETE.defaultBlockState());
+        }
+        // l'aile droite brûle : netherrack en feu et colonnes de fumée
+        for (int[] f : new int[][] {{0, 7}, {1, 8}, {-1, 9}, {0, 10}, {2, 6}, {-2, 8}}) {
+            pose(f[0], a + 1, f[1], Blocks.NETHERRACK.defaultBlockState());
+            pose(f[0], a + 2, f[1], Blocks.FIRE.defaultBlockState());
+        }
+        pose(0, a, 6, Blocks.HAY_BLOCK.defaultBlockState());
+        pose(0, a + 1, 6, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.SIGNAL_FIRE, true));
+        pose(-1, a + 1, 11, Blocks.MAGMA_BLOCK.defaultBlockState());
+        // intérieur : sièges, coffre aux parachutes, porte ouverte côté nord
+        for (int x = -6; x <= 8; x += 2) {
+            pose(x, a + 1, -1, escalier(Blocks.QUARTZ_STAIRS, Direction.EAST));
+            pose(x, a + 1, 1, escalier(Blocks.QUARTZ_STAIRS, Direction.EAST));
+        }
+        pose(COFFRE_AVION.getX(), COFFRE_AVION.getY(), COFFRE_AVION.getZ(), Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
+        pose(-9, a + 1, -1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        for (int x = 0; x <= 1; x++) {
+            pose(x, a + 1, -2, AIR);
+            pose(x, a + 2, -2, AIR);
+        }
+        for (int x = -8; x <= 10; x += 6) {
+            pose(x, a + 3, 0, Blocks.REDSTONE_LAMP.defaultBlockState().setValue(net.minecraft.world.level.block.RedstoneLampBlock.LIT, true));
+        }
+    }
+
+    // ------------------------------------------------------------------ textes flottants
+
+    private void textes() {
+        texte(0.5, 11.5, Z1 + 3.6, 180F, "{\"text\":\"LA GRANDE CABANE\",\"color\":\"gold\",\"bold\":true}", 2.2F, 0x55000000, false);
+        texte(-6.5, 7.0, -11 + 0.6, 180F, "{\"text\":\"TABLEAU DES QUÊTES\",\"color\":\"yellow\",\"bold\":true}", 1.2F, 0x99000000, false);
+        texte(-6.5, 0.6, -11 + 0.9, 180F, "[{\"text\":\"Ton livre de quêtes est dans ton inventaire.\\n\",\"color\":\"white\"},{\"text\":\"Le village t'héberge si tu l'aides !\",\"color\":\"gray\"}]", 0.6F, 0x99000000, false);
+        texte(-12.5, 5.3, 0.5, -90F, "{\"text\":\"BOUTIQUE\",\"color\":\"gold\",\"bold\":true}", 1.4F, 0x99000000, true);
+        texte(12.5, 5.3, 0.5, 90F, "[{\"text\":\"CONTRATS\\n\",\"color\":\"aqua\",\"bold\":true},{\"text\":\"nouveaux toutes les heures\",\"color\":\"gray\",\"bold\":false}]", 1.1F, 0x99000000, true);
+        texte(-13.5, 5.3, 8.5, 0F, "[{\"text\":\"EMPLACEMENT LIBRE\\n\",\"color\":\"white\",\"bold\":true},{\"text\":\"Achète un étal à la boutique\",\"color\":\"gray\",\"bold\":false}]", 0.8F, 0x99000000, true);
+        texte(14.5, 5.3, 8.5, 0F, "[{\"text\":\"EMPLACEMENT LIBRE\\n\",\"color\":\"white\",\"bold\":true},{\"text\":\"Achète un étal à la boutique\",\"color\":\"gray\",\"bold\":false}]", 0.8F, 0x99000000, true);
+        texte(0.5, 7.4, 28.5, 0F, "{\"text\":\"LA CABANE\",\"color\":\"gold\",\"bold\":true}", 1.8F, 0x00000000, false);
+        texte(0.5, 7.4, 28.5, 180F, "{\"text\":\"LA CABANE\",\"color\":\"gold\",\"bold\":true}", 1.8F, 0x00000000, false);
+        texte(-1.5, HAUTEUR_AVION + 2.2, 0.5, 90F, "[{\"text\":\"MAYDAY ! L'AVION EST EN FEU !\\n\",\"color\":\"red\",\"bold\":true},{\"text\":\"Prends un parachute dans le coffre au fond\\npuis saute par la porte !\",\"color\":\"white\",\"bold\":false}]", 0.5F, 0xAA000000, false);
+    }
+
+    /** Un texte flottant (text display). {@code tourne} : il fait face au joueur. */
+    private void texte(double dx, double dy, double dz, float yaw, String json, float echelle, int fond, boolean tourne) {
+        if (json.isEmpty()) {
+            return;
+        }
+        CompoundTag tag = new CompoundTag();
+        tag.putString("id", "minecraft:text_display");
+        tag.putString("text", json);
+        tag.putString("billboard", tourne ? "center" : "fixed");
+        tag.putString("alignment", "center");
+        tag.putInt("background", fond);
+        tag.putInt("line_width", 300);
+        tag.putBoolean("shadow", true);
+        CompoundTag t = new CompoundTag();
+        t.put("left_rotation", floats(0, 0, 0, 1));
+        t.put("right_rotation", floats(0, 0, 0, 1));
+        t.put("translation", floats(0, 0, 0));
+        t.put("scale", floats(echelle, echelle, echelle));
+        tag.put("transformation", t);
+        ListTag tags = new ListTag();
+        tags.add(StringTag.valueOf(TAG));
+        tag.put("Tags", tags);
+        Entity e = EntityType.loadEntityRecursive(tag, level, ent -> {
+            ent.moveTo(c.getX() + dx, c.getY() + dy, c.getZ() + dz, yaw, 0F);
+            return ent;
+        });
+        if (e != null) {
+            level.addFreshEntity(e);
+        }
+    }
+
+    private static ListTag floats(float... v) {
+        ListTag l = new ListTag();
+        for (float f : v) {
+            l.add(FloatTag.valueOf(f));
+        }
+        return l;
+    }
+
+    private void cadre(int x, int y, int z, Direction face, ItemStack contenu) {
+        ItemFrame cadre = new ItemFrame(level, c.offset(x, y, z), face);
+        if (!contenu.isEmpty()) {
+            cadre.setItem(contenu, false);
+            CompoundTag t = new CompoundTag();
+            cadre.saveWithoutId(t);
+            t.putBoolean("Fixed", true);
+            cadre.load(t);
+        }
+        cadre.addTag(TAG);
+        level.addFreshEntity(cadre);
+    }
+
+    // ------------------------------------------------------------------ finitions et outils
+
     private void finitions() {
         for (BlockPos p : poses) {
             BlockState s = level.getBlockState(p);
@@ -607,35 +1025,20 @@ public class HubBuilder {
         RandomizableContainer.setBlockEntityLootTable(level, rnd, c.offset(x, y, z), key);
     }
 
-    private void panneau(int x, int y, int z, Direction facing, String... lignes) {
-        BlockPos p = c.offset(x, y, z);
-        level.setBlock(p, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, facing), FLAGS);
-        if (level.getBlockEntity(p) instanceof SignBlockEntity sign) {
-            SignText texte = new SignText();
-            for (int i = 0; i < lignes.length && i < 4; i++) {
-                texte = texte.setMessage(i, Component.literal(lignes[i]));
-            }
-            sign.setText(texte, true);
-            sign.setWaxed(true);
-        }
-    }
-
     private void journal(int x, int y, int z) {
         BlockPos p = c.offset(x, y, z);
         List<Filterable<Component>> pages = List.of(
-                "Journal du Gardien\n\nCette cabane fut le refuge de la Confrérie des Explorateurs. Nous partions d'ici vers les quatre coins du monde.",
-                "Sept reliques reposaient sur ce comptoir. Quand la Confrérie s'est dispersée, chacune a été cachée au cœur d'un donjon lointain.",
+                "Journal du Gardien\n\nMayday… votre avion s'est écrasé au-dessus de la savane. Le village voisin accepte de vous héberger dans cette Grande Cabane.",
+                "En échange, aidez-le : les contrats du marché, les quêtes du tableau. Le village paie en SakaiDollars.",
+                "Autrefois, la Confrérie des Explorateurs vivait ici. Sept reliques reposaient sur ce comptoir, puis ont été cachées au cœur de donjons lointains.",
                 "Le Scarabée d'Or, sous le sable.\nL'Idole de Jade, dans la jungle.\nLa Perle des Abysses, sous la mer.\nLa Plume Céleste, dans le ciel.",
-                "La Couronne Illageoise, chez nos ennemis.\nL'Œil du Gardien, sous la terre.\nL'Engrenage Ancien, dans les fonderies.",
-                "Ramenez-les et posez-les sur les cadres du mur. Alors la Cabane se réveillera.\n\n— Le Vieux Gardien")
+                "La Couronne Illageoise, chez nos ennemis.\nL'Œil du Gardien, sous la terre.\nL'Engrenage Ancien, dans les fonderies.\n\nRamenez-les.\n— Le Vieux Gardien")
                 .stream().map(t -> Filterable.passThrough((Component) Component.literal(t))).toList();
         ItemStack livre = new ItemStack(Items.WRITTEN_BOOK);
         livre.set(DataComponents.WRITTEN_BOOK_CONTENT,
                 new WrittenBookContent(Filterable.passThrough("Journal du Gardien"), "Le Vieux Gardien", 0, pages, true));
         LecternBlock.tryPlaceBook(null, level, p, level.getBlockState(p), livre);
     }
-
-    // ------------------------------------------------------------------ outils
 
     private void pose(int dx, int dy, int dz, BlockState state) {
         BlockPos p = c.offset(dx, dy, dz);
@@ -647,10 +1050,6 @@ public class HubBuilder {
         level.setBlock(new BlockPos(x, y, z), state, FLAGS);
     }
 
-    private BlockState pierre() {
-        return (rnd.nextFloat() < 0.3F ? Blocks.MOSSY_COBBLESTONE : Blocks.COBBLESTONE).defaultBlockState();
-    }
-
     private BlockState briques() {
         float r = rnd.nextFloat();
         return (r < 0.25F ? Blocks.MOSSY_STONE_BRICKS : r < 0.45F ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS).defaultBlockState();
@@ -658,7 +1057,7 @@ public class HubBuilder {
 
     private BlockState plancher() {
         float r = rnd.nextFloat();
-        return (r < 0.06F ? Blocks.COARSE_DIRT : r < 0.15F ? Blocks.DARK_OAK_PLANKS : Blocks.SPRUCE_PLANKS).defaultBlockState();
+        return (r < 0.12F ? Blocks.DARK_OAK_PLANKS : Blocks.SPRUCE_PLANKS).defaultBlockState();
     }
 
     private static BlockState pilier(Block block, Direction.Axis axis) {
@@ -667,5 +1066,9 @@ public class HubBuilder {
 
     private static BlockState escalier(Block block, Direction facing) {
         return block.defaultBlockState().setValue(StairBlock.FACING, facing);
+    }
+
+    private static BlockState escalier(Block block, Direction facing, Half moitie) {
+        return escalier(block, facing).setValue(StairBlock.HALF, moitie);
     }
 }

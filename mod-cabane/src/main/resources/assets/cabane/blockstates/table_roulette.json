@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/table_roulette"
+    },
+    "facing=east": {
+      "model": "cabane:block/table_roulette",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/table_roulette",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/table_roulette",
+      "y": 270
+    }
+  }
+}

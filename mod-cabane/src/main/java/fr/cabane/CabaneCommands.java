@@ -1,7 +1,12 @@
 package fr.cabane;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import fr.cabane.boutique.Boutique;
+import fr.cabane.boutique.Contrats;
+import fr.cabane.casino.Casino;
+import net.minecraft.commands.arguments.EntityArgument;
 import com.mojang.brigadier.context.CommandContext;
 import fr.cabane.hub.HubEvents;
 import fr.cabane.telephone.PhoneCalls;
@@ -34,15 +39,34 @@ public final class CabaneCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(CabaneCommands::annuaire)));
 
+        dispatcher.register(Commands.literal("pileouface")
+                .then(Commands.literal("accepter").executes(ctx -> run(ctx, Casino::accepter)))
+                .then(Commands.argument("joueur", EntityArgument.player())
+                        .then(Commands.argument("mise", LongArgumentType.longArg(1)).executes(ctx -> {
+                            Casino.defier(ctx.getSource().getPlayerOrException(), EntityArgument.getPlayer(ctx, "joueur"),
+                                    LongArgumentType.getLong(ctx, "mise"));
+                            return 1;
+                        }))));
+
         dispatcher.register(Commands.literal("cabane")
-                .requires(source -> source.hasPermission(3))
-                .then(Commands.literal("placer").executes(ctx -> {
+                // utilisables par les PNJ (Easy NPC, « exécuter en tant que joueur ») ou à la main
+                .then(Commands.literal("boutique").executes(ctx -> run(ctx, Boutique::ouvrir)))
+                .then(Commands.literal("contrats").executes(ctx -> run(ctx, Contrats::ouvrir)))
+                // utilisée par les quêtes : une carte au trésor vers le donjon le plus proche d'un point lointain
+                .then(Commands.literal("carte").requires(source -> source.hasPermission(2))
+                        .then(Commands.argument("joueur", EntityArgument.player())
+                                .then(Commands.argument("lieu", StringArgumentType.word())
+                                        .then(Commands.argument("distance", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 30000))
+                                                .executes(ctx -> carteAuTresor(ctx.getSource(), EntityArgument.getPlayer(ctx, "joueur"),
+                                                        StringArgumentType.getString(ctx, "lieu"),
+                                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "distance")))))))
+                .then(Commands.literal("placer").requires(source -> source.hasPermission(3)).executes(ctx -> {
                     BlockPos pos = BlockPos.containing(ctx.getSource().getPosition()).below();
-                    HubEvents.build(ctx.getSource().getLevel(), pos);
+                    HubEvents.build(ctx.getSource().getLevel(), pos, null);
                     ctx.getSource().sendSuccess(() -> Component.literal("Centre de map construit ici, le spawn y est déplacé."), true);
                     return 1;
                 }))
-                .then(Commands.literal("pnj").executes(ctx -> {
+                .then(Commands.literal("pnj").requires(source -> source.hasPermission(3)).executes(ctx -> {
                     int count = HubEvents.spawnNpcs(ctx.getSource().getLevel());
                     ctx.getSource().sendSuccess(() -> Component.literal(count + " PNJ replacés autour de la cabane."), true);
                     return count;
@@ -55,6 +79,34 @@ public final class CabaneCommands {
 
     private static int run(CommandContext<CommandSourceStack> ctx, PlayerAction action) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         action.accept(ctx.getSource().getPlayerOrException());
+        return 1;
+    }
+
+    /**
+     * Le point de départ de la recherche est loin de la cabane, dans une direction propre à chaque lieu :
+     * les donjons des reliques sont donc à des milliers de blocs.
+     */
+    private static int carteAuTresor(CommandSourceStack source, ServerPlayer joueur, String lieu, int distance) {
+        net.minecraft.server.level.ServerLevel level = source.getServer().overworld();
+        BlockPos centre = fr.cabane.hub.HubData.get(source.getServer()).centre();
+        if (centre == null) {
+            centre = level.getSharedSpawnPos();
+        }
+        double angle = Math.floorMod(lieu.hashCode(), 360) * Math.PI / 180;
+        net.minecraft.world.phys.Vec3 origine = new net.minecraft.world.phys.Vec3(
+                centre.getX() + Math.cos(angle) * distance, centre.getY(), centre.getZ() + Math.sin(angle) * distance);
+        var cle = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE, Cabane.id("cartes/" + lieu));
+        var table = source.getServer().reloadableRegistries().getLootTable(cle);
+        var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(level)
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, origine)
+                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.CHEST);
+        for (var stack : table.getRandomItems(params)) {
+            if (!joueur.getInventory().add(stack)) {
+                joueur.drop(stack, false);
+            }
+        }
+        joueur.sendSystemMessage(Component.literal("Mira te tend une carte au trésor : le donjon est à environ "
+                + distance + " blocs de la cabane.").withStyle(ChatFormatting.AQUA));
         return 1;
     }
 

@@ -1,0 +1,20 @@
+{
+  "parent": "cabane:racine",
+  "display": {
+    "icon": {
+      "id": "minecraft:bell"
+    },
+    "title": {
+      "text": "Au service du village"
+    },
+    "description": {
+      "text": "Remplir ton premier contrat au marché."
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "contrat": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

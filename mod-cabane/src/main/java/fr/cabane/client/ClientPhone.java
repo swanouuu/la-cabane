@@ -33,8 +33,10 @@ public final class ClientPhone {
         }
     }
 
+    /** Ouvre l'accueil du téléphone, ou directement les appels si ça sonne ou si on est en ligne. */
     public static void openScreen() {
-        Minecraft.getInstance().setScreen(new PhoneScreen());
+        boolean appel = state == PhoneNetwork.State.APPEL_ENTRANT || state == PhoneNetwork.State.EN_LIGNE;
+        Minecraft.getInstance().setScreen(appel ? new PhoneScreen() : new ClientPiaf.Accueil());
         send(PhoneNetwork.Action.ETAT, "");
     }
 

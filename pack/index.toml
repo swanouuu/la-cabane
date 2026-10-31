@@ -6,15 +6,19 @@ hash = "e57d8311aec9f524911ed1313cabf138bb7fa5a2d3ba985a00a2a267ff35ef78"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/donjons.snbt"
-hash = "10b5225d073390e4fea3c8f802655d4c462e46e2fefc9bf3297b8a67d158d74e"
+hash = "3f7e27157d7085480599d66aa45c566090bfd6bea52591265630b66594312016"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/la_cabane.snbt"
-hash = "58de33d9ba41358663caac28e14ca10abf40ad65650fd17adec69186dec06d76"
+hash = "757ee338d60648b370a2ad2307893387c225b6479a1b3aafe865c10a485b6a36"
+
+[[files]]
+file = "config/ftbquests/quests/chapters/le_village.snbt"
+hash = "863ba1b9d63535cf576447757066e3f7926ed994b92f37e38dcd2b640f3600d9"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/reliques.snbt"
-hash = "950d94f82a1a2bfc5f7c169e3c136c7ede9064378b86d370106938504297f4c2"
+hash = "18a4aaf52998bc6bf5398ea64a5b1de23980d4b9079bd0d37bea7b26aa2975de"
 
 [[files]]
 file = "config/ftbquests/quests/data.snbt"
@@ -22,11 +26,11 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "0877e398fa4d935c705087218ae99b174d01a7464ac636585b0389c6017bf3e2"
+hash = "44302475bb251713e04b6aefac511a0a7808c0a16ca28f9e6458db7b66c8f9b3"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "0877e398fa4d935c705087218ae99b174d01a7464ac636585b0389c6017bf3e2"
+hash = "44302475bb251713e04b6aefac511a0a7808c0a16ca28f9e6458db7b66c8f9b3"
 
 [[files]]
 file = "mods/amendments.pw.toml"
@@ -54,8 +58,13 @@ hash = "603cdc47142b5aa5729cbbf265a473574c9e2b55561de4318e9842d3d4b3b995"
 metafile = true
 
 [[files]]
+file = "mods/biomes-o-plenty.pw.toml"
+hash = "a4931e5abbec081a08ab3a1d69b2d470596b6361d707a7756f6ad34c0f21f81e"
+metafile = true
+
+[[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "8039d4fbc05dbed6a5eadc4d3c84eac5551f0c120402ebe1fb96f34515ff38e3"
+hash = "3d813c5f7d17c545bd614eae116b2ea3e836f0973bb629079f4777fb2b331233"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
@@ -105,6 +114,11 @@ metafile = true
 [[files]]
 file = "mods/create.pw.toml"
 hash = "dcaf5f2e28db0b9a127d0167456832341045ddc9aec058c3d9fcf53f618d2404"
+metafile = true
+
+[[files]]
+file = "mods/creativecore.pw.toml"
+hash = "e731242bf8430d501714cc752b3e54056e110863c75034dc0649e10af339fb57"
 metafile = true
 
 [[files]]
@@ -235,6 +249,11 @@ metafile = true
 [[files]]
 file = "mods/geckolib.pw.toml"
 hash = "35779b39ddc06059ec483b33de2ecfdc3adb95c0a49e69b6701fb0024827e2f5"
+metafile = true
+
+[[files]]
+file = "mods/glitchcore.pw.toml"
+hash = "e53646f88aeb6bd54c38db50da972abdac91e83c145a8f974107b0ca103b15bc"
 metafile = true
 
 [[files]]
@@ -513,6 +532,11 @@ hash = "dd46fad79cf33a00123be0a74c73581da72cd98503ef23822a624a08f4b10ff2"
 metafile = true
 
 [[files]]
+file = "mods/terrablender.pw.toml"
+hash = "15962183bec2468058c70e87aa32e902a08489b0f86741088cdc9aa958ba4931"
+metafile = true
+
+[[files]]
 file = "mods/terralith.pw.toml"
 hash = "da7ee99189ad35aac094919fe33cac647d98533b23c228f10d4811f08989e2b8"
 metafile = true
@@ -525,6 +549,26 @@ metafile = true
 [[files]]
 file = "mods/towns-and-towers.pw.toml"
 hash = "a9afe82b3d1b4975dd9f8b3272898450aeb29365678b3779059977301f88c101"
+metafile = true
+
+[[files]]
+file = "mods/waterframes.pw.toml"
+hash = "59e15d108b41b10145596a3ef899ad20ef8c8885504eef10cd89225aef87daef"
+metafile = true
+
+[[files]]
+file = "mods/watermedia-binaries.pw.toml"
+hash = "cae7e8292ef90ab14e32cf5970e8467116a6e01df5a79c8a33968d45556eede8"
+metafile = true
+
+[[files]]
+file = "mods/watermedia.pw.toml"
+hash = "b77a560d6c4a3f4558ee0b977463de1283b6b1c39fd565883f9b35df2453cd3d"
+metafile = true
+
+[[files]]
+file = "mods/watervision.pw.toml"
+hash = "393310e8c75c51eb3143c8ddcdac51917a5d759d428e5b962e4c2b4c8e87bc0e"
 metafile = true
 
 [[files]]

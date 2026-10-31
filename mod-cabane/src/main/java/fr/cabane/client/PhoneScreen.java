@@ -47,6 +47,8 @@ public class PhoneScreen extends Screen {
             saisie = "";
             rafraichir();
         }).bounds(left + 14, top + 208, 104, 16).build());
+        addRenderableWidget(Button.builder(Component.literal("⌂"), b -> minecraft.setScreen(new ClientPiaf.Accueil()))
+                .bounds(left + W - 22, top + 12, 14, 14).build());
         rafraichir();
     }
 

@@ -29,6 +29,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 50"
+					elevate_perms: true
+					id: "415E6E9E994FE9B6"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			shape: "gear"
 			size: 1.5d
@@ -55,6 +63,14 @@
 						id: "minecraft:emerald"
 					}
 					type: "item"
+				}
+				{
+					command: "/argent donner {p} 50"
+					elevate_perms: true
+					id: "393606046CAD1434"
+					permission_level: 2
+					silent: true
+					type: "command"
 				}
 			]
 			tasks: [
@@ -87,6 +103,14 @@
 						id: "minecraft:ender_pearl"
 					}
 					type: "item"
+				}
+				{
+					command: "/argent donner {p} 75"
+					elevate_perms: true
+					id: "4466D9F662C31B07"
+					permission_level: 2
+					silent: true
+					type: "command"
 				}
 			]
 			tasks: [
@@ -123,6 +147,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 50"
+					elevate_perms: true
+					id: "1329AB81C1CF31B1"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			tasks: [
 				{
@@ -158,6 +190,14 @@
 					}
 					type: "item"
 				}
+				{
+					command: "/argent donner {p} 50"
+					elevate_perms: true
+					id: "4DE262478E370B86"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
 			]
 			tasks: [
 				{
@@ -192,6 +232,14 @@
 						id: "create:cogwheel"
 					}
 					type: "item"
+				}
+				{
+					command: "/argent donner {p} 100"
+					elevate_perms: true
+					id: "4C1B7884954228C8"
+					permission_level: 2
+					silent: true
+					type: "command"
 				}
 			]
 			tasks: [

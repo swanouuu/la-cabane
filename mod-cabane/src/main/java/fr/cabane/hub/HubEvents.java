@@ -12,11 +12,17 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -24,36 +30,44 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 
 public final class HubEvents {
 
-    /** Les PNJ du centre de map : fichier data/cabane/pnj/&lt;nom&gt;.snbt, position autour du feu de camp. */
+    /** Les PNJ du centre de map : fichier data/cabane/pnj/&lt;nom&gt;.snbt, position relative à la place. */
     private record Pnj(String file, double dx, double dz, float yaw) {
     }
 
     private static final List<Pnj> PNJ = List.of(
-            new Pnj("gardien", 2.5, -3.5, 135F),
-            new Pnj("cartographe", -4.5, -1.5, 180F),
-            new Pnj("marchand", 7.5, 2.5, 90F));
+            new Pnj("gardien", 2.5, -12.5, 180F),
+            new Pnj("cartographe", -2.5, -8.5, 135F),
+            new Pnj("marchand", -13.5, 0.5, -90F));
 
     public static void onServerStarted(MinecraftServer server) {
         if (HubData.get(server).centre() != null) {
             return;
         }
         ServerLevel level = server.overworld();
-        BlockPos centre = HubBuilder.trouverSavane(level);
-        if (centre == null) {
+        HubBuilder.Site site = HubBuilder.trouverSite(level);
+        if (site == null) {
             BlockPos spawn = level.getSharedSpawnPos();
             level.getChunk(spawn.getX() >> 4, spawn.getZ() >> 4);
-            centre = new BlockPos(spawn.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ()) - 1, spawn.getZ());
-            Cabane.LOGGER.warn("Aucune savane trouvée, la cabane est construite au spawn ({})", centre);
+            BlockPos sol = new BlockPos(spawn.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ()) - 1, spawn.getZ());
+            Cabane.LOGGER.warn("Aucun site trouvé, la cabane est construite au spawn ({})", sol);
+            site = new HubBuilder.Site(sol, null);
         }
-        build(level, centre);
+        build(level, site.centre(), site.village());
     }
 
-    public static void build(ServerLevel level, BlockPos centre) {
+    public static void build(ServerLevel level, BlockPos centre, BlockPos village) {
         long start = System.currentTimeMillis();
-        new HubBuilder(level, centre).construire();
+        BlockPos ancien = HubData.get(level.getServer()).centre();
+        if (ancien != null) {
+            for (Entity e : level.getEntities((Entity) null, new AABB(ancien).inflate(80, 120, 80), e -> e.getTags().contains(HubBuilder.TAG))) {
+                e.discard();
+            }
+        }
+        new HubBuilder(level, centre).construire(village);
         HubData.get(level.getServer()).setCentre(centre);
         level.setDefaultSpawnPos(centre.offset(0, 1, 5), 180F);
         level.getGameRules().getRule(GameRules.RULE_SPAWN_RADIUS).set(0, level.getServer());
@@ -105,9 +119,10 @@ public final class HubEvents {
         }
     }
 
-    /** Kit de départ, une seule fois par joueur. */
+    /** Première connexion : le joueur se réveille dans l'avion en feu, avec son kit de départ. */
     public static void welcome(ServerPlayer player) {
-        if (!HubData.get(player.server).markKit(player.getUUID())) {
+        HubData data = HubData.get(player.server);
+        if (!data.markKit(player.getUUID())) {
             return;
         }
         give(player, new ItemStack(CabaneItems.TELEPHONE.get()));
@@ -117,10 +132,39 @@ public final class HubEvents {
         }
         give(player, new ItemStack(Items.BREAD, 8));
         give(player, new ItemStack(Items.TORCH, 16));
-        player.sendSystemMessage(Component.literal("Bienvenue à la Cabane !").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-        player.sendSystemMessage(Component.literal("• Parle au Vieux Gardien près du feu de camp.").withStyle(ChatFormatting.YELLOW));
-        player.sendSystemMessage(Component.literal("• Ton téléphone : touche N, choisis ton numéro à 3 ou 4 chiffres.").withStyle(ChatFormatting.YELLOW));
-        player.sendSystemMessage(Component.literal("• Ton livre de quêtes t'attend dans l'inventaire.").withStyle(ChatFormatting.YELLOW));
+        BlockPos centre = data.centre();
+        if (centre != null) {
+            ServerLevel level = player.server.overworld();
+            BlockPos coffre = centre.offset(HubBuilder.COFFRE_AVION);
+            if (level.getBlockEntity(coffre) instanceof Container conteneur) {
+                remplirParachutes(conteneur);
+            }
+            BlockPos dedans = centre.offset(HubBuilder.DANS_AVION);
+            player.teleportTo(level, dedans.getX() + 0.5, dedans.getY(), dedans.getZ() + 0.5, 90F, 0F);
+            level.playSound(null, dedans, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.AMBIENT, 0.6F, 0.7F);
+        }
+        player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
+        player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("MAYDAY !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
+        player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Prends un parachute dans le coffre et saute !").withStyle(ChatFormatting.YELLOW)));
+        player.sendSystemMessage(Component.literal("Ton avion est en feu au-dessus de la savane !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+        player.sendSystemMessage(Component.literal("• Prends un parachute dans le coffre, saute, puis clic droit en l'air pour l'ouvrir.").withStyle(ChatFormatting.YELLOW));
+        player.sendSystemMessage(Component.literal("• En bas, le village t'accueille dans la Grande Cabane. Parle au Vieux Gardien.").withStyle(ChatFormatting.YELLOW));
+        player.sendSystemMessage(Component.literal("• Téléphone : touche N. Ton argent s'affiche à droite de l'écran.").withStyle(ChatFormatting.YELLOW));
+    }
+
+    private static void remplirParachutes(Container coffre) {
+        int presents = 0;
+        for (int i = 0; i < coffre.getContainerSize(); i++) {
+            if (coffre.getItem(i).is(CabaneItems.PARACHUTE.get())) {
+                presents++;
+            }
+        }
+        for (int i = 0; i < coffre.getContainerSize() && presents < 6; i++) {
+            if (coffre.getItem(i).isEmpty()) {
+                coffre.setItem(i, new ItemStack(CabaneItems.PARACHUTE.get()));
+                presents++;
+            }
+        }
     }
 
     private static void give(ServerPlayer player, ItemStack stack) {

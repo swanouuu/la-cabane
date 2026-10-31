@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/machine_a_sous"
+    },
+    "facing=east": {
+      "model": "cabane:block/machine_a_sous",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/machine_a_sous",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/machine_a_sous",
+      "y": 270
+    }
+  }
+}

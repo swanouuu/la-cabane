@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/roue_fortune"
+    },
+    "facing=east": {
+      "model": "cabane:block/roue_fortune",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/roue_fortune",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/roue_fortune",
+      "y": 270
+    }
+  }
+}

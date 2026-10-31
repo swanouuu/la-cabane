@@ -19,5 +19,20 @@
   "item.cabane.oeil_du_gardien": "Œil du Gardien",
   "item.cabane.oeil_du_gardien.desc": "Scellé dans la salle du trésor d'une forteresse enfouie.",
   "item.cabane.engrenage_ancien": "Engrenage Ancien",
-  "item.cabane.engrenage_ancien.desc": "Vestige des fonderies et des citadelles mécaniques."
+  "item.cabane.engrenage_ancien.desc": "Vestige des fonderies et des citadelles mécaniques.",
+  "item.cabane.parachute": "Parachute",
+  "item.cabane.carte": "Carte",
+  "item.cabane.booster": "Booster de cartes",
+  "item.cabane.classeur": "Classeur de cartes",
+  "item.cabane.ticket_a_gratter": "Ticket à gratter",
+  "block.cabane.comptoir": "Comptoir de la boutique",
+  "block.cabane.tableau_contrats": "Tableau des contrats",
+  "block.cabane.etal": "Étal",
+  "block.cabane.machine_a_sous": "Machine à sous",
+  "block.cabane.table_roulette": "Table de roulette",
+  "block.cabane.table_blackjack": "Table de blackjack",
+  "block.cabane.table_des": "Table de dés",
+  "block.cabane.roue_fortune": "Roue de la fortune",
+  "block.cabane.table_pile_ou_face": "Table de pile ou face",
+  "entity.cabane.parachute": "Parachute"
 }

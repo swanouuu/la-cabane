@@ -1,0 +1,32 @@
+package fr.cabane;
+
+import com.mojang.serialization.Codec;
+import java.util.HashMap;
+import java.util.Map;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+/** Les données attachées aux objets : quelle carte, le contenu d'un classeur. */
+public final class CabaneComponents {
+    public static final DeferredRegister.DataComponents COMPONENTS = DeferredRegister.createDataComponents(Cabane.MODID);
+
+    /** L'identifiant de la carte, ex. « cabane:gardien ». */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> CARTE =
+            COMPONENTS.registerComponentType("carte", b -> b.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8));
+
+    /** Les cartes rangées dans un classeur : identifiant → nombre. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Map<String, Integer>>> CLASSEUR =
+            COMPONENTS.registerComponentType("classeur", b -> b
+                    .persistent(Codec.unboundedMap(Codec.STRING, Codec.INT))
+                    .networkSynchronized(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)));
+
+    static void register(IEventBus modBus) {
+        COMPONENTS.register(modBus);
+    }
+
+    private CabaneComponents() {
+    }
+}

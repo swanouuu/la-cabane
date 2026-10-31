@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/tableau_contrats"
+    },
+    "facing=east": {
+      "model": "cabane:block/tableau_contrats",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/tableau_contrats",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/tableau_contrats",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,213 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "le_village"
+	group: ""
+	icon: {
+		count: 1
+		id: "minecraft:bell"
+	}
+	id: "775508E513569867"
+	order_index: 1
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "62BD944D28455283"
+			rewards: [
+				{
+					command: "/argent donner {p} 50"
+					elevate_perms: true
+					id: "3657DD430E55036D"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			shape: "gear"
+			size: 1.3d
+			tasks: [
+				{
+					id: "076DE07122BD7624"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"62BD944D28455283"
+			]
+			id: "5BC229FB0DEDF5E5"
+			rewards: [
+				{
+					command: "/argent donner {p} 100"
+					elevate_perms: true
+					id: "3BFFB8F04EE6F7F5"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					advancement: "cabane:premier_contrat"
+					criterion: ""
+					id: "400FBED2073F110E"
+					type: "advancement"
+				}
+			]
+			x: 2.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"62BD944D28455283"
+			]
+			id: "171408FDF42922B0"
+			rewards: [
+				{
+					command: "/argent donner {p} 200"
+					elevate_perms: true
+					id: "1826A95F92D9223C"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					count: 32L
+					id: "538849AFE292C4F5"
+					item: {
+						count: 1
+						id: "minecraft:bread"
+					}
+					type: "item"
+				}
+			]
+			x: 2.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"62BD944D28455283"
+			]
+			id: "630B39043A0588F3"
+			rewards: [
+				{
+					command: "/argent donner {p} 200"
+					elevate_perms: true
+					id: "4B80A707F74C8DB7"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					count: 64L
+					id: "60D03019327CED4A"
+					item: {
+						count: 1
+						id: "minecraft:acacia_log"
+					}
+					type: "item"
+				}
+			]
+			x: 2.0d
+			y: 1.5d
+		}
+		{
+			dependencies: [
+				"630B39043A0588F3"
+			]
+			id: "684BED4BD158F907"
+			rewards: [
+				{
+					command: "/argent donner {p} 300"
+					elevate_perms: true
+					id: "3A18C92D994A7FD0"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					count: 24L
+					id: "583B45A0A1CD0100"
+					item: {
+						count: 1
+						id: "minecraft:iron_ingot"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 1.5d
+		}
+		{
+			dependencies: [
+				"5BC229FB0DEDF5E5"
+			]
+			id: "3B258B2628A0EE6F"
+			rewards: [
+				{
+					command: "/argent donner {p} 100"
+					elevate_perms: true
+					id: "13CE568A30CA6AA8"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					count: 1L
+					id: "130C5C19B4D19BA4"
+					item: {
+						count: 1
+						id: "cabane:etal"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: -1.5d
+		}
+		{
+			dependencies: [
+				"171408FDF42922B0"
+			]
+			id: "241FDFC2883E4E5A"
+			rewards: [
+				{
+					count: 2
+					id: "39DA89BB5332CB54"
+					item: {
+						count: 1
+						id: "cabane:booster"
+					}
+					type: "item"
+				}
+			]
+			tasks: [
+				{
+					count: 1L
+					id: "2DC4410ADF445177"
+					item: {
+						count: 1
+						id: "cabane:classeur"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 0.0d
+		}
+	]
+}

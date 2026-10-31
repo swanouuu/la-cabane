@@ -1,10 +1,17 @@
 package fr.cabane;
 
+import fr.cabane.boutique.Boutique;
+import fr.cabane.boutique.Contrats;
+import fr.cabane.casino.Blackjack;
+import fr.cabane.economie.Economie;
+import fr.cabane.economie.EconomieCommands;
 import fr.cabane.hub.HubEvents;
+import fr.cabane.tcg.Cartes;
 import fr.cabane.telephone.PhoneCalls;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -13,6 +20,13 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class CabaneEvents {
+
+    @SubscribeEvent
+    public static void onReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(Boutique.INSTANCE);
+        event.addListener(Contrats.INSTANCE);
+        event.addListener(Cartes.INSTANCE);
+    }
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
@@ -32,6 +46,7 @@ public final class CabaneEvents {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            Economie.connexion(player);
             HubEvents.welcome(player);
             PhoneCalls.sendState(player);
         }
@@ -41,12 +56,14 @@ public final class CabaneEvents {
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             PhoneCalls.onLogout(player);
+            Blackjack.deconnexion(player);
         }
     }
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         CabaneCommands.register(event.getDispatcher());
+        EconomieCommands.register(event.getDispatcher());
     }
 
     private CabaneEvents() {

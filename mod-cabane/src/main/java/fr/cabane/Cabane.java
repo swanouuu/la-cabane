@@ -1,6 +1,12 @@
 package fr.cabane;
 
 import com.mojang.logging.LogUtils;
+import fr.cabane.bloc.Etals;
+import fr.cabane.boutique.Boutique;
+import fr.cabane.boutique.Contrats;
+import fr.cabane.casino.Casino;
+import fr.cabane.economie.Economie;
+import fr.cabane.tcg.Cartes;
 import fr.cabane.telephone.PhoneNetwork;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
@@ -8,8 +14,8 @@ import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
 
 /**
- * Mod maison du serveur « La Cabane » : téléphones (Simple Voice Chat), centre de map
- * avec la cabane abandonnée, reliques cachées dans les donjons.
+ * Mod maison du serveur « La Cabane » : téléphones (Simple Voice Chat), économie en SakaiDollars,
+ * marché, étals, casino, cartes à collectionner, parachute, centre de map et reliques.
  */
 @Mod(Cabane.MODID)
 public class Cabane {
@@ -17,8 +23,18 @@ public class Cabane {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public Cabane(IEventBus modBus) {
+        CabaneBlocks.register(modBus);
         CabaneItems.register(modBus);
+        CabaneComponents.register(modBus);
+        CabaneEntities.register(modBus);
         modBus.addListener(PhoneNetwork::register);
+        modBus.addListener(Economie::register);
+        modBus.addListener(Boutique::register);
+        modBus.addListener(Contrats::register);
+        modBus.addListener(Etals::register);
+        modBus.addListener(Casino::register);
+        modBus.addListener(Cartes::register);
+        modBus.addListener(fr.cabane.telephone.Piaf::register);
     }
 
     public static ResourceLocation id(String path) {

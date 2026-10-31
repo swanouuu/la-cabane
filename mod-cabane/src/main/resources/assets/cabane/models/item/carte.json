@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "cabane:item/carte_commune"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "cabane:rarete": 0.3
+      },
+      "model": "cabane:item/carte_rare"
+    },
+    {
+      "predicate": {
+        "cabane:rarete": 0.6
+      },
+      "model": "cabane:item/carte_epique"
+    },
+    {
+      "predicate": {
+        "cabane:rarete": 0.9
+      },
+      "model": "cabane:item/carte_legendaire"
+    }
+  ]
+}

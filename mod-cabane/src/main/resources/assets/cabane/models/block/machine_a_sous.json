@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "cabane:block/machine_a_sous_front",
+    "side": "cabane:block/machine_a_sous_side",
+    "top": "cabane:block/machine_a_sous_top"
+  }
+}

@@ -15,15 +15,29 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Accueil",
-        Texts:[{Text:"Ah… des voyageurs. Ça faisait longtemps. Cette cabane était le refuge de la Confrérie des Explorateurs. Aujourd'hui, elle est à vous."}],
+        Texts:[{Text:"Vous avez vu ça ? Votre avion a pris feu au-dessus de la savane ! Le village accepte de vous héberger dans la Grande Cabane… à condition de l'aider."}],
         Buttons:[{
+          Label:"aider",
+          Name:"Comment aider ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"aider"}]
+        },{
           Label:"reliques",
-          Name:"La Confrérie ?",
+          Name:"Et cette cabane ?",
           Type:"ACTION",
           Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"reliques"}]
         },{
           Label:"bye",
           Name:"À plus tard",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"aider",
+        Name:"Aider le village",
+        Texts:[{Text:"Bako, au marché, a des contrats qui changent toutes les heures : apportez-lui ce qu'il demande, il paie en SakaiDollars. Et regardez le tableau des quêtes, à côté de la cabane."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"On s'y met !",
           Type:"CLOSE"
         }]
       },{

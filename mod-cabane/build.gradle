@@ -57,6 +57,13 @@ neoForge {
             client()
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // tout le pack peut être copié dans run/mods pour tester en conditions réelles
+            jvmArgument '-Xmx6G'
+            programArguments.addAll '--width', '1600', '--height', '900'
+            // gradlew runClient -Pmonde=<dossier dans run/saves> ouvre directement ce monde
+            if (project.hasProperty('monde')) {
+                programArguments.addAll '--quickPlaySingleplayer', project.property('monde').toString()
+            }
         }
 
         server {

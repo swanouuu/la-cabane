@@ -15,10 +15,20 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Bako",
-        Texts:[{Text:"Mes étals sont encore vides… Reviens quand la Cabane aura repris vie, j'aurai de quoi faire affaire !"}],
+        Texts:[{Text:"Bienvenue au marché ! Je vends de tout contre de bons SakaiDollars, et mes contrats changent toutes les heures."}],
         Buttons:[{
+          Label:"boutique",
+          Name:"Voir la boutique",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane boutique",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
+          Label:"contrats",
+          Name:"Les contrats de l'heure",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane contrats",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
           Label:"bye",
-          Name:"À bientôt",
+          Name:"À plus",
           Type:"CLOSE"
         }]
       }]
