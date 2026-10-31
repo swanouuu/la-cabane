@@ -8,10 +8,13 @@ Nom provisoire : remplace « La Cabane » dans `outils/config.json` et `pack/pac
 
 Captures prises automatiquement dans le jeu de test (`docs/apercu/`).
 
-![Le village et l’avion](docs/apercu/1-village-et-avion.jpg)
 ![Les PNJ et le casino](docs/apercu/2-pnj-rpg.jpg)
 ![Le téléphone et les boosters](docs/apercu/3-telephone-et-cartes.jpg)
 ![Le classeur et les jeux du casino](docs/apercu/4-classeur-et-casino.jpg)
+![Le grand panneau et la Grande Cabane](docs/apercu/village-2-panneau-et-cabane.jpg)
+![Dans la Grande Cabane](docs/apercu/village-3-dans-la-cabane.jpg)
+![Le Grand Bazar et la rue](docs/apercu/village-4-bazar-et-rue.jpg)
+![Les champs et l’avion](docs/apercu/village-5-champs-et-avion.jpg)
 
 ## Comment ça marche
 
@@ -52,18 +55,18 @@ cd pack
 
 ## Le centre de map
 
-![Le centre de map vu du ciel](docs/centre-de-map.png)
+![Le village vu du ciel](docs/apercu/village-1-vue-d-ensemble.jpg)
 
-*Vu du ciel, sur le serveur de test : la cabane (toit sombre) avec son porche, le potager à droite, le feu de camp au centre, le puits, la tour de guet à gauche et la clôture en cercle.*
+Au tout premier démarrage du serveur, le mod s'installe à côté d'un village de savane (« le village qui nous héberge ») et y construit le nôtre, en grand (130 blocs de large) :
 
-Au tout premier démarrage du serveur, le mod cherche une savane près du centre du monde et y construit :
+- **au centre**, une grande place pavée avec quatre fontaines et le **grand panneau de la carte** : côté sud la carte du monde (9 x 5 cartes), côté nord les environs, une croix rouge sur le village ;
+- **au nord**, la **Grande Cabane**, notre base : grande salle avec tablées, cheminée, cuisine, bibliothèque, 14 grands coffres et le **mur des reliques** ; à l'étage un dortoir de 14 lits ; dans les combles l'atelier et la table d'enchantement ; deux tours de pierre aux coins ;
+- **à l'ouest**, le **Grand Bazar** : le comptoir de Bako et sa vitrine, le tableau des contrats, et 8 emplacements d'étals pour vos boutiques ;
+- **à l'est**, la rue du village : quatre maisons libres, une maison en chantier, une parcelle libre, la **forge de Brokk** ; deux autres parcelles libres au nord ;
+- **au sud**, les champs, le puits, l'enclos avec ses animaux, le feu de camp, la tour de guet et la **grande porte** ; une palissade fait le tour ;
+- les **PNJ** : le Vieux Gardien, Mira la Cartographe, Bako le Marchand, Brokk le Forgeron et Lumi la Fée (Easy NPC). Tu peux modifier leurs dialogues, leur skin, et plus tard ajouter des voix, directement en jeu.
 
-- **la cabane** : lit, cuisine, cheminée qui fume, bibliothèque, journal du Gardien sur le pupitre, et le **mur des reliques** (7 cadres) ;
-- **le feu de camp** avec des bancs, les **lampadaires**, le **tableau des quêtes** ;
-- **le puits**, le **vieux potager**, la **tour de guet en ruine** avec un **feu de signal** dont la fumée se voit de loin, et un coffre au sommet ;
-- les **PNJ** : le Vieux Gardien, Mira la Cartographe et Bako le Marchand (Easy NPC). Tu peux modifier leurs dialogues, leur skin, et plus tard ajouter des voix, directement en jeu.
-
-La recherche part du centre du monde et retient le premier endroit en savane, sur la terre ferme, assez plat et entouré de savane. Le spawn est placé devant le feu de camp, et la bordure du monde est centrée sur la cabane : c'est le vrai centre de la map. Commandes admin :
+Les meubles viennent des mods du pack (Handcrafted, Farmer's Delight, Supplementaries, Macaw's Lights) ; si l'un d'eux est retiré, le village garde une version simple. La construction se fait en une trentaine d'étapes, une par tick, pour que le serveur ne bloque jamais. Le spawn est devant le grand panneau, et la bordure du monde est centrée sur le village. Commandes admin :
 
 - `/cabane placer` reconstruit le centre de map à tes pieds et y déplace le spawn ;
 - `/cabane pnj` fait revenir les PNJ.

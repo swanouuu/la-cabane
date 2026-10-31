@@ -62,8 +62,8 @@ public final class CabaneCommands {
                                                         com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "distance")))))))
                 .then(Commands.literal("placer").requires(source -> source.hasPermission(3)).executes(ctx -> {
                     BlockPos pos = BlockPos.containing(ctx.getSource().getPosition()).below();
-                    HubEvents.build(ctx.getSource().getLevel(), pos, null);
-                    ctx.getSource().sendSuccess(() -> Component.literal("Centre de map construit ici, le spawn y est déplacé."), true);
+                    HubEvents.placer(ctx.getSource().getLevel(), pos);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Construction du centre de map lancée ici (une minute environ), le spawn y sera déplacé."), true);
                     return 1;
                 }))
                 .then(Commands.literal("pnj").requires(source -> source.hasPermission(3)).executes(ctx -> {

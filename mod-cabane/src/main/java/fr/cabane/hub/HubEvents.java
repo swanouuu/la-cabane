@@ -39,11 +39,14 @@ public final class HubEvents {
     }
 
     private static final List<Pnj> PNJ = List.of(
-            new Pnj("gardien", 2.5, -12.5, 180F),
-            new Pnj("cartographe", -2.5, -8.5, 135F),
-            new Pnj("marchand", -13.5, 0.5, -90F),
-            new Pnj("forgeron", 12.5, -9.5, 135F),
-            new Pnj("fee", 4.5, 5.5, 180F));
+            new Pnj("gardien", 3.5, -31.5, 0F),        // sur le porche de la Grande Cabane
+            new Pnj("cartographe", -9.5, 4.5, 0F),     // à côté du grand panneau de la carte
+            new Pnj("marchand", -54.5, 0.5, -90F),     // derrière son comptoir, au Grand Bazar
+            new Pnj("forgeron", 58.5, 0.5, 90F),       // dans sa forge, au bout de la rue
+            new Pnj("fee", -27.5, 4.5, 0F));           // devant le Grand Bazar
+
+    /** Rayon (en chunks) chargé autour du centre pendant la construction. */
+    private static final int RAYON_CHUNKS = 6;
 
     /**
      * La construction se fait en plusieurs étapes, sur plusieurs ticks, pour ne jamais bloquer le serveur
@@ -59,8 +62,17 @@ public final class HubEvents {
     private static int attente;
     private static int delai;
     private static net.minecraft.world.level.ChunkPos ticket;
+    private static List<HubBuilder.Etape> etapes;
+    private static int indexEtape;
+    private static long debutConstruction;
 
     public static void onServerStarted(MinecraftServer server) {
+        // en solo, on peut ouvrir plusieurs mondes de suite : rien ne doit rester du précédent
+        recherche = null;
+        etapes = null;
+        ticket = null;
+        site = null;
+        FORCES.clear();
         etape = HubData.get(server).centre() == null ? Etape.RECHERCHE : Etape.RIEN;
         attente = 40;
     }
@@ -94,19 +106,7 @@ public final class HubEvents {
                     Cabane.LOGGER.warn("Aucun site trouvé, la cabane est construite au spawn ({})", sol);
                     site = new HubBuilder.Site(sol, null);
                 }
-                // un ticket de chargement : le jeu génère ces chunks en arrière-plan, sans bloquer
-                int cx = site.centre().getX() >> 4;
-                int cz = site.centre().getZ() >> 4;
-                ticket = new net.minecraft.world.level.ChunkPos(cx, cz);
-                level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, 4, ticket);
-                for (int x = cx - 3; x <= cx + 3; x++) {
-                    for (int z = cz - 3; z <= cz + 3; z++) {
-                        FORCES.add(new net.minecraft.world.level.ChunkPos(x, z));
-                    }
-                }
-                etape = Etape.CHUNKS;
-                delai = server.getTickCount() + 20 * 60 * 3;
-                attente = 1;
+                demanderChunks(level);
             }
             case CHUNKS -> {
                 // getChunkNow ne renvoie le chunk qu'une fois généré (hasChunk dit seulement qu'il est demandé)
@@ -117,8 +117,27 @@ public final class HubEvents {
                 attente = 1;
             }
             case CONSTRUCTION -> {
-                build(level, site.centre(), site.village());
-                level.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, 4, ticket);
+                // une étape par tick : le serveur reste fluide pendant toute la construction
+                if (etapes == null) {
+                    retirerAnciens(level);
+                    etapes = new HubBuilder(level, site.centre()).etapes(site.village());
+                    indexEtape = 0;
+                    debutConstruction = System.currentTimeMillis();
+                }
+                HubBuilder.Etape e = etapes.get(indexEtape++);
+                long t = System.currentTimeMillis();
+                e.action().run();
+                Cabane.LOGGER.info("  construction {} : {} ms", e.nom(), System.currentTimeMillis() - t);
+                attente = 1;
+                if (indexEtape < etapes.size()) {
+                    return;
+                }
+                etapes = null;
+                terminer(level, site.centre(), debutConstruction);
+                if (ticket != null) {
+                    level.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, RAYON_CHUNKS + 1, ticket);
+                    ticket = null;
+                }
                 FORCES.clear();
                 etape = Etape.RIEN;
                 for (ServerPlayer joueur : server.getPlayerList().getPlayers()) {
@@ -130,17 +149,46 @@ public final class HubEvents {
         }
     }
 
-    public static void build(ServerLevel level, BlockPos centre, BlockPos village) {
-        long start = System.currentTimeMillis();
+    /** Commande /cabane placer : reconstruit le centre de map ici, en plusieurs ticks. */
+    public static void placer(ServerLevel level, BlockPos centre) {
+        site = new HubBuilder.Site(centre, null);
+        demanderChunks(level);
+    }
+
+    /** Un ticket de chargement : le jeu génère les chunks du village en arrière-plan, sans bloquer. */
+    private static void demanderChunks(ServerLevel level) {
+        if (ticket != null) {
+            level.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, RAYON_CHUNKS + 1, ticket);
+        }
+        FORCES.clear();
+        etapes = null;
+        int cx = site.centre().getX() >> 4;
+        int cz = site.centre().getZ() >> 4;
+        ticket = new net.minecraft.world.level.ChunkPos(cx, cz);
+        level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, ticket, RAYON_CHUNKS + 1, ticket);
+        for (int x = cx - RAYON_CHUNKS; x <= cx + RAYON_CHUNKS; x++) {
+            for (int z = cz - RAYON_CHUNKS; z <= cz + RAYON_CHUNKS; z++) {
+                FORCES.add(new net.minecraft.world.level.ChunkPos(x, z));
+            }
+        }
+        etape = Etape.CHUNKS;
+        delai = level.getServer().getTickCount() + 20 * 60 * 5;
+        attente = 1;
+    }
+
+    /** Les textes, cadres et PNJ de l'ancien centre de map, s'il y en avait un. */
+    private static void retirerAnciens(ServerLevel level) {
         BlockPos ancien = HubData.get(level.getServer()).centre();
         if (ancien != null) {
-            for (Entity e : level.getEntities((Entity) null, new AABB(ancien).inflate(80, 120, 80), e -> e.getTags().contains(HubBuilder.TAG))) {
+            for (Entity e : level.getEntities((Entity) null, new AABB(ancien).inflate(100, 120, 100), e -> e.getTags().contains(HubBuilder.TAG))) {
                 e.discard();
             }
         }
-        new HubBuilder(level, centre).construire(village);
+    }
+
+    private static void terminer(ServerLevel level, BlockPos centre, long start) {
         HubData.get(level.getServer()).setCentre(centre);
-        level.setDefaultSpawnPos(centre.offset(0, 1, 5), 180F);
+        level.setDefaultSpawnPos(centre.offset(0, 1, 8), 180F);
         level.getGameRules().getRule(GameRules.RULE_SPAWN_RADIUS).set(0, level.getServer());
         // la cabane devient le vrai centre de la map : la bordure du monde se centre dessus
         level.getWorldBorder().setCenter(centre.getX() + 0.5, centre.getZ() + 0.5);
