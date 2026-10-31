@@ -58,6 +58,18 @@ public final class PhoneCalls {
             case PhoneNetwork.Action.APPELER -> dial(player, action.arg());
             case PhoneNetwork.Action.DECROCHER -> answer(player);
             case PhoneNetwork.Action.RACCROCHER -> hangUp(player);
+            case PhoneNetwork.Action.AJOUTER_CONTACT -> {
+                String[] parts = action.arg().split("\\|", 2);
+                String nom = parts.length > 1 ? parts[1].strip().replace("§", "") : "";
+                if (parts.length == 2 && NUMBER.matcher(parts[0]).matches() && !nom.isEmpty() && nom.length() <= 24) {
+                    PhoneData.get(player.server).ajouterContact(player.getUUID(), parts[0], nom);
+                }
+                sendState(player);
+            }
+            case PhoneNetwork.Action.SUPPRIMER_CONTACT -> {
+                PhoneData.get(player.server).supprimerContact(player.getUUID(), action.arg());
+                sendState(player);
+            }
             default -> sendState(player);
         }
     }
@@ -100,8 +112,11 @@ public final class PhoneCalls {
             Call call = new Call(caller.getUUID(), calleeId);
             CALLS.put(caller.getUUID(), call);
             CALLS.put(calleeId, call);
-            callee.displayClientMessage(Component.literal("☎ Appel entrant du " + myNumber + " : ouvre ton téléphone (touche N) pour décrocher !")
-                    .withStyle(ChatFormatting.YELLOW), false);
+            data.ajouterRecent(caller.getUUID(), number, PhoneData.SORTANT);
+            data.ajouterRecent(calleeId, myNumber, PhoneData.ENTRANT);
+            String qui = data.contacts(calleeId).getOrDefault(myNumber, "du " + myNumber);
+            callee.displayClientMessage(Component.literal("☎ Appel entrant " + (qui.startsWith("du ") ? qui : "de " + qui)
+                    + " : ouvre ton téléphone (touche N) pour décrocher !").withStyle(ChatFormatting.YELLOW), false);
             sendState(callee);
         }
         sendState(caller);
@@ -188,6 +203,13 @@ public final class PhoneCalls {
     private static void end(MinecraftServer server, Call call, String reason) {
         CALLS.remove(call.caller, call);
         CALLS.remove(call.callee, call);
+        if (call.etat == Etat.SONNE) {
+            PhoneData data = PhoneData.get(server);
+            String numeroAppelant = data.numberOf(call.caller);
+            if (numeroAppelant != null) {
+                data.marquerManque(call.callee, numeroAppelant);
+            }
+        }
         for (UUID id : List.of(call.caller, call.callee)) {
             ServerPlayer p = server.getPlayerList().getPlayer(id);
             if (p != null) {
@@ -213,6 +235,11 @@ public final class PhoneCalls {
             }
         }
         PacketDistributor.sendToPlayer(player, new PhoneNetwork.State(myNumber == null ? "" : myNumber, state, other));
+        List<PhoneNetwork.Contact> contacts = data.contacts(player.getUUID()).entrySet().stream()
+                .map(e -> new PhoneNetwork.Contact(e.getKey(), e.getValue())).toList();
+        List<PhoneNetwork.Appel> recents = data.recents(player.getUUID()).stream()
+                .map(r -> new PhoneNetwork.Appel(r.numero(), r.type(), r.temps())).toList();
+        PacketDistributor.sendToPlayer(player, new PhoneNetwork.Carnet(contacts, recents));
     }
 
     static boolean hasPhone(ServerPlayer player) {

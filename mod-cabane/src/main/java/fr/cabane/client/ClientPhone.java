@@ -24,6 +24,28 @@ public final class ClientPhone {
     static int state = PhoneNetwork.State.LIBRE;
     static String other = "";
 
+    static java.util.List<PhoneNetwork.Contact> contacts = java.util.List.of();
+    static java.util.List<PhoneNetwork.Appel> recents = java.util.List.of();
+
+    public static void onCarnet(PhoneNetwork.Carnet carnet) {
+        contacts = carnet.contacts();
+        recents = carnet.recents();
+        if (Minecraft.getInstance().screen instanceof ClientPiaf.Rafraichissable r) {
+            r.rafraichir();
+        }
+    }
+
+    /** Le nom enregistré pour ce numéro, ou le numéro lui-même. */
+    static String nom(String numero) {
+        return contacts.stream().filter(c -> c.numero().equals(numero)).map(PhoneNetwork.Contact::nom).findFirst().orElse(numero);
+    }
+
+    /** Lance un appel et ouvre l'écran des appels. */
+    static void appeler(String numero) {
+        send(PhoneNetwork.Action.APPELER, numero);
+        Minecraft.getInstance().setScreen(new PhoneScreen());
+    }
+
     public static void onState(PhoneNetwork.State payload) {
         myNumber = payload.myNumber();
         state = payload.state();

@@ -126,6 +126,9 @@ public class HubBuilder {
         private final List<Holder<StructureSet>> setsHostiles = new ArrayList<>();
         private List<Candidat> candidats;
         private int index;
+        // le village candidat, calculé en arrière-plan comme à la génération du monde
+        private java.util.concurrent.CompletableFuture<StructureStart> futur;
+        private Candidat candidatFutur;
         // le village en cours d'évaluation, un côté par appel
         private BoundingBox bbEnCours;
         private int coteEnCours;
@@ -255,11 +258,14 @@ public class HubBuilder {
                 evaluerCote();
                 return;
             }
-            if (index < candidats.size()) {
-                Candidat c = candidats.get(index++);
+            if (futur != null) {
+                if (!futur.isDone()) {
+                    return;
+                }
+                Candidat c = candidatFutur;
+                StructureStart start = futur.isCompletedExceptionally() ? null : futur.join();
+                futur = null;
                 BlockPos vp = c.chunk().getMiddleBlockPosition(0);
-                ChunkAccess chunk = level.getChunk(c.chunk().x, c.chunk().z, ChunkStatus.STRUCTURE_STARTS, true);
-                StructureStart start = chunk.getStartForStructure(c.structure().value());
                 if (start == null || !start.isValid()) {
                     Cabane.LOGGER.info("Village en {} écarté : il ne se génère pas finalement", vp);
                     return;
@@ -269,6 +275,25 @@ public class HubBuilder {
                 meilleurEnCours = null;
                 meilleurEcart = Integer.MAX_VALUE;
                 Cabane.LOGGER.info("Village candidat en {} ({}), on regarde autour…", vp, c.structure().getRegisteredName());
+                return;
+            }
+            if (index < candidats.size()) {
+                Candidat c = candidats.get(index++);
+                int x = c.chunk().getMiddleBlockX();
+                int z = c.chunk().getMiddleBlockZ();
+                Holder<Biome> enSurface = level.getUncachedNoiseBiome(x >> 2, sol(x, z) >> 2, z >> 2);
+                if (!c.structure().value().biomes().contains(enSurface)) {
+                    return;
+                }
+                candidatFutur = c;
+                // le même calcul que la génération du monde, sans charger de chunk : sur un autre fil,
+                // le serveur continue de tourner pendant ce temps
+                Structure structure = c.structure().value();
+                var acces = level.registryAccess();
+                var modeles = level.getStructureManager();
+                futur = java.util.concurrent.CompletableFuture.supplyAsync(() -> structure.generate(acces, generateur,
+                        generateur.getBiomeSource(), aleatoire, modeles, graine, c.chunk(), 0, level, structure.biomes()::contains),
+                        net.minecraft.Util.backgroundExecutor());
                 return;
             }
             repliSavane();
@@ -847,7 +872,7 @@ public class HubBuilder {
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
                 ItemStack carte = MapItem.create(level, c.getX() + i * 512, c.getZ() + j * 512, (byte) 2, false, false);
-                dessinerCarte(carte);
+                dessinerCarte(level, carte);
                 MapItemSavedData.addTargetDecoration(carte, c, "cabane", MapDecorationTypes.RED_X);
                 cadre(-7 + i, 3 - j, z + 1, Direction.SOUTH, carte);
             }
@@ -855,34 +880,49 @@ public class HubBuilder {
     }
 
     /**
-     * Colorie une carte d'après les biomes, un échantillon pour 2x2 pixels : bien plus rapide
-     * que le rendu du jeu (qui échantillonne chaque pixel plusieurs fois).
+     * Colorie une carte d'après les biomes, un échantillon pour 2x2 pixels. Avec les mods de biomes,
+     * chaque échantillon coûte cher : le calcul se fait sur un autre fil, et les couleurs sont posées
+     * sur la carte par le serveur une fois prêtes.
      */
-    private void dessinerCarte(ItemStack carte) {
+    static void dessinerCarte(ServerLevel level, ItemStack carte) {
         MapItemSavedData data = MapItem.getSavedData(carte, level);
         if (data == null) {
             return;
         }
         int echelle = 1 << data.scale;
         int y = level.getSeaLevel() + 8;
-        for (int px = 0; px < 128; px += 2) {
-            for (int pz = 0; pz < 128; pz += 2) {
-                int x = data.centerX + (px - 64) * echelle;
-                int z = data.centerZ + (pz - 64) * echelle;
-                Holder<Biome> biome = level.getUncachedNoiseBiome(x >> 2, y >> 2, z >> 2);
-                net.minecraft.world.level.material.MapColor couleur = couleurBiome(biome);
-                int bruit = Math.floorMod(x * 734287 ^ z * 912931, 7);
-                var luminosite = bruit == 0 ? net.minecraft.world.level.material.MapColor.Brightness.LOW
-                        : bruit == 1 ? net.minecraft.world.level.material.MapColor.Brightness.HIGH
-                        : net.minecraft.world.level.material.MapColor.Brightness.NORMAL;
-                byte octet = couleur.getPackedId(luminosite);
-                for (int a = 0; a < 2; a++) {
-                    for (int b = 0; b < 2; b++) {
-                        data.setColor(px + a, pz + b, octet);
+        int cx = data.centerX;
+        int cz = data.centerZ;
+        var biomes = level.getChunkSource().getGenerator().getBiomeSource();
+        var echantillon = level.getChunkSource().randomState().sampler();
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            byte[] couleurs = new byte[128 * 128];
+            for (int px = 0; px < 128; px += 2) {
+                for (int pz = 0; pz < 128; pz += 2) {
+                    int x = cx + (px - 64) * echelle;
+                    int z = cz + (pz - 64) * echelle;
+                    Holder<Biome> biome = biomes.getNoiseBiome(x >> 2, y >> 2, z >> 2, echantillon);
+                    net.minecraft.world.level.material.MapColor couleur = couleurBiome(biome);
+                    int bruit = Math.floorMod(x * 734287 ^ z * 912931, 7);
+                    var luminosite = bruit == 0 ? net.minecraft.world.level.material.MapColor.Brightness.LOW
+                            : bruit == 1 ? net.minecraft.world.level.material.MapColor.Brightness.HIGH
+                            : net.minecraft.world.level.material.MapColor.Brightness.NORMAL;
+                    byte octet = couleur.getPackedId(luminosite);
+                    for (int a = 0; a < 2; a++) {
+                        for (int b = 0; b < 2; b++) {
+                            couleurs[(px + a) + (pz + b) * 128] = octet;
+                        }
                     }
                 }
             }
-        }
+            return couleurs;
+        }, net.minecraft.Util.backgroundExecutor()).thenAcceptAsync(couleurs -> {
+            for (int px = 0; px < 128; px++) {
+                for (int pz = 0; pz < 128; pz++) {
+                    data.setColor(px, pz, couleurs[px + pz * 128]);
+                }
+            }
+        }, level.getServer());
     }
 
     private static net.minecraft.world.level.material.MapColor couleurBiome(Holder<Biome> b) {

@@ -303,7 +303,7 @@ const uuid = (graine) => {
 const snbtTexte = (s) => JSON.stringify(s);
 const nomJson = (texte, couleur) => `'${JSON.stringify({ text: texte, color: couleur }).replace(/'/g, "\\'")}'`;
 
-function pnj({ fichier, nom, couleur, variante, dialogues }) {
+function pnj({ fichier, nom, couleur, type = "humanoid", variante, dialogues }) {
   const entrees = dialogues.map((d) => `{
         Label:${snbtTexte(d.label)},
         Name:${snbtTexte(d.titre)},
@@ -317,7 +317,7 @@ function pnj({ fichier, nom, couleur, variante, dialogues }) {
         }`).join(",")}]
       }`).join(",");
   ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
-  id:"easy_npc:humanoid",
+  id:${snbtTexte("easy_npc:" + type)},
   UUID:${uuid(fichier)},
   CustomName:${nomJson(nom, couleur)},
   CustomNameVisible:1b,
@@ -337,7 +337,7 @@ function pnj({ fichier, nom, couleur, variante, dialogues }) {
 `);
 }
 
-pnj({ fichier: "gardien", nom: "Le Vieux Gardien", couleur: "gold", variante: "STEVE", dialogues: [
+pnj({ fichier: "gardien", nom: "Le Vieux Gardien", couleur: "gold", type: "illusioner", variante: "ILLUSIONER", dialogues: [
   { label: "default", titre: "Accueil", texte: "Vous avez vu ça ? Votre avion a pris feu au-dessus de la savane ! Le village accepte de vous héberger dans la Grande Cabane… à condition de l'aider.",
     boutons: [{ label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "reliques", texte: "Et cette cabane ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
   { label: "aider", titre: "Aider le village", texte: "Bako, au marché, a des contrats qui changent toutes les heures : apportez-lui ce qu'il demande, il paie en SakaiDollars. Et regardez le tableau des quêtes, à côté de la cabane.",
@@ -347,15 +347,28 @@ pnj({ fichier: "gardien", nom: "Le Vieux Gardien", couleur: "gold", variante: "S
   { label: "cartes", titre: "Les cartes", texte: "Mira, la cartographe, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones.",
     boutons: [{ label: "bye", texte: "Merci, Gardien" }] },
 ] });
-pnj({ fichier: "cartographe", nom: "Mira la Cartographe", couleur: "aqua", variante: "ALEX", dialogues: [
+pnj({ fichier: "cartographe", nom: "Mira la Cartographe", couleur: "aqua", type: "witch", variante: "WITCH", dialogues: [
   { label: "default", titre: "Mira", texte: "Des cartes, des cartes, encore des cartes ! Chaque relique a la sienne. Complète les quêtes d'indice dans ton livre et je te les donne.",
     boutons: [{ label: "conseil", texte: "Un conseil ?", vers: "conseil" }, { label: "bye", texte: "Merci Mira" }] },
   { label: "conseil", titre: "Conseil", texte: "Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit.",
     boutons: [{ label: "bye", texte: "Noté !" }] },
 ] });
-pnj({ fichier: "marchand", nom: "Bako le Marchand", couleur: "green", variante: "STEVE", dialogues: [
+pnj({ fichier: "marchand", nom: "Bako le Marchand", couleur: "green", type: "wandering_trader", variante: "WANDERING_TRADER", dialogues: [
   { label: "default", titre: "Bako", texte: "Bienvenue au marché ! Je vends de tout contre de bons SakaiDollars, et mes contrats changent toutes les heures.",
     boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "contrats", texte: "Les contrats de l'heure", commande: "cabane contrats" }, { label: "bye", texte: "À plus" }] },
+] });
+
+pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", dialogues: [
+  { label: "default", titre: "Brokk", texte: "Hrmpf. Un orc forgeron, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent.",
+    boutons: [{ label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "À plus, Brokk" }] },
+  { label: "travail", titre: "Le travail", texte: "Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Bako changent toutes les heures.",
+    boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "bye", texte: "Compris" }] },
+] });
+pnj({ fichier: "fee", nom: "Lumi la Fée", couleur: "light_purple", type: "fairy", variante: "GREEN", dialogues: [
+  { label: "default", titre: "Lumi", texte: "Coucou ! Tu collectionnes les cartes ? Les boosters se vendent chez Bako, et un classeur garde toute ta collection bien rangée.",
+    boutons: [{ label: "casino", texte: "Et le casino ?", vers: "casino" }, { label: "bye", texte: "Merci Lumi !" }] },
+  { label: "casino", titre: "Le casino", texte: "Machines à sous, roulette, blackjack… Bako vend les machines : à vous de construire le plus beau casino de la savane !",
+    boutons: [{ label: "bye", texte: "On s'y met" }] },
 ] });
 
 // ================================================================ économie, marché, casino, cartes, parachute

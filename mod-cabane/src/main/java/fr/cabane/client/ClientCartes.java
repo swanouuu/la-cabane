@@ -111,6 +111,12 @@ public final class ClientCartes {
             }).bounds(width / 2 - 60, height / 2 + 80, 120, 18).build());
         }
 
+        void toutRetourner() {
+            while (prochaine < cartes.size()) {
+                retourner();
+            }
+        }
+
         private void retourner() {
             if (prochaine >= cartes.size()) {
                 return;

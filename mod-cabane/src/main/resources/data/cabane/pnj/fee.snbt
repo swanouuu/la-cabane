@@ -1,0 +1,41 @@
+{
+  id:"easy_npc:fairy",
+  UUID:[I;257933296,1118867928,-1063026391,730673501],
+  CustomName:'{"text":"Lumi la Fée","color":"light_purple"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"GREEN",
+  SkinData:{Type:"DEFAULT"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Lumi",
+        Texts:[{Text:"Coucou ! Tu collectionnes les cartes ? Les boosters se vendent chez Bako, et un classeur garde toute ta collection bien rangée."}],
+        Buttons:[{
+          Label:"casino",
+          Name:"Et le casino ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"casino"}]
+        },{
+          Label:"bye",
+          Name:"Merci Lumi !",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"casino",
+        Name:"Le casino",
+        Texts:[{Text:"Machines à sous, roulette, blackjack… Bako vend les machines : à vous de construire le plus beau casino de la savane !"}],
+        Buttons:[{
+          Label:"bye",
+          Name:"On s'y met",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

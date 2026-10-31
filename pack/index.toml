@@ -1,6 +1,10 @@
 hash-format = "sha256"
 
 [[files]]
+file = "config/fancymenu/options.txt"
+hash = "66918f9cb4ebdcf1a20d73cb6cfbd8906a4c3e72b9b568b1e5315748a7707ca9"
+
+[[files]]
 file = "config/ftbquests/quests/chapter_groups.snbt"
 hash = "e57d8311aec9f524911ed1313cabf138bb7fa5a2d3ba985a00a2a267ff35ef78"
 
@@ -64,7 +68,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "3d813c5f7d17c545bd614eae116b2ea3e836f0973bb629079f4777fb2b331233"
+hash = "68886f4948ec111aeefb62ce5cfb790119853d61a816a72a44296ef9b635e7c1"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
@@ -208,7 +212,7 @@ metafile = true
 
 [[files]]
 file = "mods/fancymenu.pw.toml"
-hash = "26975365054fadd972780c02ec9c5e7b394abcf3fc9f75d59ed3f7e5ead8f3e7"
+hash = "1a460fb6b7cb30fd446eb437fee0e9a90c7f1c49e9f26ed63a46e2fdef2bb216"
 metafile = true
 
 [[files]]
@@ -557,13 +561,8 @@ hash = "59e15d108b41b10145596a3ef899ad20ef8c8885504eef10cd89225aef87daef"
 metafile = true
 
 [[files]]
-file = "mods/watermedia-binaries.pw.toml"
-hash = "cae7e8292ef90ab14e32cf5970e8467116a6e01df5a79c8a33968d45556eede8"
-metafile = true
-
-[[files]]
 file = "mods/watermedia.pw.toml"
-hash = "b77a560d6c4a3f4558ee0b977463de1283b6b1c39fd565883f9b35df2453cd3d"
+hash = "03a442894e03f9ebe0657ea717a01ea53718ac785a3b20bdcab647e5198902ee"
 metafile = true
 
 [[files]]

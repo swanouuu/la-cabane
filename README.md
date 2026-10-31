@@ -4,6 +4,15 @@ Survie moddée en **NeoForge 1.21.1** (la même base que CrazyTown S3). Grande m
 
 Nom provisoire : remplace « La Cabane » dans `outils/config.json` et `pack/pack.toml` quand vous aurez trouvé le vrai nom.
 
+## Aperçu en jeu
+
+Captures prises automatiquement dans le jeu de test (`docs/apercu/`).
+
+![Le village et l’avion](docs/apercu/1-village-et-avion.jpg)
+![Les PNJ et le casino](docs/apercu/2-pnj-rpg.jpg)
+![Le téléphone et les boosters](docs/apercu/3-telephone-et-cartes.jpg)
+![Le classeur et les jeux du casino](docs/apercu/4-classeur-et-casino.jpg)
+
 ## Comment ça marche
 
 ```
@@ -32,6 +41,7 @@ Prévoir 8 Go de RAM pour l'instance (réglé par défaut).
 | `compiler.bat` | Compile le mod maison et le met dans le pack. |
 | `publier.bat` | Compare les mods de **ton** instance Prism avec le pack, met le pack à jour et l'envoie sur GitHub. `publier.bat --essai` montre seulement ce qui changerait. |
 | `construire-instance.bat` | Refait `dist/La Cabane.zip`, à envoyer aux potes. |
+| `tester-en-jeu.bat` | Lance le jeu de développement avec tous les mods du pack et la dernière version du mod maison (compilée au passage). Pratique pour voir l’avancée sans attendre une publication. Le compte est un compte de test hors ligne : pas de serveur en ligne avec. |
 
 **Ajouter ou retirer un mod** : fais-le dans ton Prism, puis double-clique sur `publier.bat` **avant** de relancer le jeu. Sinon, au lancement, le pack remet les mods comme avant. Les mods qui ne sont que sur CurseForge doivent être ajoutés à la main :
 
@@ -71,7 +81,8 @@ Pour modifier les quêtes, utilise le livre en jeu (en op, mode édition), ou mo
 - Touche **N** (ou clic droit avec le téléphone). La première fois, chacun choisit son numéro à **3 ou 4 chiffres**.
 - Compose un numéro → ça sonne chez l'autre (les joueurs autour l'entendent aussi). Il décroche, et vous vous entendez partout sur la map grâce à Simple Voice Chat.
 - Il faut avoir le téléphone dans l'inventaire. Recette : vitre, fer, redstone, cuivre. Chaque nouveau joueur en reçoit un.
-- Commandes : `/telephone numero|appeler|decrocher|raccrocher`. Pour les admins : `/telephone annuaire`.
+- Tout se fait dans le téléphone : **Clavier** pour appeler, **Contacts** pour ton annuaire (ajouter, appeler, supprimer), **Récents** pour les appels passés, reçus et manqués, **Piaf** pour le réseau social, **Photo** et **Galerie**, **Argent** pour ton solde.
+- Les commandes `/telephone …` existent encore pour dépanner. Pour les admins : `/telephone annuaire`.
 
 ## Les mods principaux
 

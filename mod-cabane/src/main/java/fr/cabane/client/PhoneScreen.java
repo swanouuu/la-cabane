@@ -27,6 +27,7 @@ public class PhoneScreen extends Screen {
 
     public PhoneScreen() {
         super(Component.translatable("screen.cabane.telephone"));
+        ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
     }
 
     @Override
@@ -172,16 +173,16 @@ public class PhoneScreen extends Screen {
         } else {
             switch (ClientPhone.state) {
                 case State.APPEL_ENTRANT -> {
-                    statut = "Appel entrant !";
+                    statut = "Appel de " + ClientPhone.nom(ClientPhone.other);
                     grand = ClientPhone.other;
                     couleur = 0xFFFFD75E;
                 }
                 case State.APPEL_SORTANT -> {
-                    statut = "Appel en cours…";
+                    statut = "On appelle " + ClientPhone.nom(ClientPhone.other) + "…";
                     grand = ClientPhone.other;
                 }
                 case State.EN_LIGNE -> {
-                    statut = "En ligne — parle !";
+                    statut = "En ligne avec " + ClientPhone.nom(ClientPhone.other);
                     grand = ClientPhone.other;
                     couleur = 0xFF7CFF9B;
                 }

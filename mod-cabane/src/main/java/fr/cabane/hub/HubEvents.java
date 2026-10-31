@@ -41,7 +41,9 @@ public final class HubEvents {
     private static final List<Pnj> PNJ = List.of(
             new Pnj("gardien", 2.5, -12.5, 180F),
             new Pnj("cartographe", -2.5, -8.5, 135F),
-            new Pnj("marchand", -13.5, 0.5, -90F));
+            new Pnj("marchand", -13.5, 0.5, -90F),
+            new Pnj("forgeron", 12.5, -9.5, 135F),
+            new Pnj("fee", 4.5, 5.5, 180F));
 
     /**
      * La construction se fait en plusieurs étapes, sur plusieurs ticks, pour ne jamais bloquer le serveur
@@ -107,7 +109,8 @@ public final class HubEvents {
                 attente = 1;
             }
             case CHUNKS -> {
-                boolean tous = FORCES.stream().allMatch(p -> level.getChunkSource().hasChunk(p.x, p.z));
+                // getChunkNow ne renvoie le chunk qu'une fois généré (hasChunk dit seulement qu'il est demandé)
+                boolean tous = FORCES.stream().allMatch(p -> level.getChunkSource().getChunkNow(p.x, p.z) != null);
                 if (tous || server.getTickCount() > delai) {
                     etape = Etape.CONSTRUCTION;
                 }

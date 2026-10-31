@@ -20,11 +20,15 @@ public final class PhoneNetwork {
         public static final int DECROCHER = 2;
         public static final int RACCROCHER = 3;
         public static final int ETAT = 4;
+        /** arg = « numéro|nom » */
+        public static final int AJOUTER_CONTACT = 5;
+        /** arg = numéro */
+        public static final int SUPPRIMER_CONTACT = 6;
 
         public static final Type<Action> TYPE = new Type<>(Cabane.id("telephone_action"));
         public static final StreamCodec<ByteBuf, Action> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, Action::action,
-                ByteBufCodecs.stringUtf8(8), Action::arg,
+                ByteBufCodecs.stringUtf8(64), Action::arg,
                 Action::new);
 
         @Override
@@ -53,8 +57,39 @@ public final class PhoneNetwork {
         }
     }
 
+    public record Contact(String numero, String nom) {
+        public static final StreamCodec<ByteBuf, Contact> CODEC = StreamCodec.composite(
+                ByteBufCodecs.stringUtf8(8), Contact::numero,
+                ByteBufCodecs.stringUtf8(32), Contact::nom,
+                Contact::new);
+    }
+
+    public record Appel(String numero, int type, long temps) {
+        public static final StreamCodec<ByteBuf, Appel> CODEC = StreamCodec.composite(
+                ByteBufCodecs.stringUtf8(8), Appel::numero,
+                ByteBufCodecs.VAR_INT, Appel::type,
+                ByteBufCodecs.VAR_LONG, Appel::temps,
+                Appel::new);
+    }
+
+    /** Serveur → client : le carnet de contacts et les appels récents. */
+    public record Carnet(java.util.List<Contact> contacts, java.util.List<Appel> recents) implements CustomPacketPayload {
+        public static final Type<Carnet> TYPE = new Type<>(Cabane.id("telephone_carnet"));
+        public static final StreamCodec<ByteBuf, Carnet> CODEC = StreamCodec.composite(
+                Contact.CODEC.apply(ByteBufCodecs.list(64)), Carnet::contacts,
+                Appel.CODEC.apply(ByteBufCodecs.list(32)), Carnet::recents,
+                Carnet::new);
+
+        @Override
+        public Type<Carnet> type() {
+            return TYPE;
+        }
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
+        registrar.playToClient(Carnet.TYPE, Carnet.CODEC, (payload, context) ->
+                context.enqueueWork(() -> ClientPhone.onCarnet(payload)));
         registrar.playToServer(Action.TYPE, Action.CODEC, (payload, context) -> context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer player) {
                 PhoneCalls.handle(player, payload);

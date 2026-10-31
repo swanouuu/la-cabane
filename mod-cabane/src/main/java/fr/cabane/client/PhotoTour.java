@@ -26,6 +26,7 @@ public final class PhotoTour {
     private static List<String[]> etapes;
     private static int index = -1;
     private static int attente;
+    private static String[] point;
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
@@ -51,16 +52,16 @@ public final class PhotoTour {
             return;
         }
         boolean ecran = index >= 0 && etapes.get(index)[0].equals("ui");
-        if (index >= 0 && !ecran) {
-            bloquerCamera(mc, etapes.get(index));
+        if (point != null && !ecran) {
+            bloquerCamera(mc, point);
         }
         if (--attente > 0) {
             return;
         }
-        if (index >= 0) {
+        if (index >= 0 && !etapes.get(index)[0].equals("cmd") && !etapes.get(index)[0].equals("act")) {
             String[] e = etapes.get(index);
             Screenshot.grab(mc.gameDirectory, (ecran ? e[1] : e[0]) + ".png", mc.getMainRenderTarget(), message -> { });
-            if (ecran) {
+            if (ecran && !(e.length > 4 && e[e.length - 1].equals("garder"))) {
                 mc.setScreen(null);
                 mc.options.hideGui = true;
             }
@@ -72,17 +73,36 @@ public final class PhotoTour {
             return;
         }
         String[] e = etapes.get(index);
-        if (e[0].equals("ui")) {
-            // « ui <nom> cmd <commande…> » ou « ui <nom> ecran <écran> » : capture avec l'interface
-            mc.options.hideGui = false;
-            if (e[2].equals("cmd")) {
-                commande(mc, String.join(" ", java.util.Arrays.copyOfRange(e, 3, e.length)));
-            } else {
-                ouvrir(mc, e[3]);
-            }
-            attente = 50;
+        if (e[0].equals("cmd")) {
+            // « cmd <commande…> » : une commande, sans capture
+            commande(mc, String.join(" ", java.util.Arrays.copyOfRange(e, 1, e.length)));
+            attente = 15;
             return;
         }
+        if (e[0].equals("act")) {
+            // « act <action> <arguments…> » : ce que ferait le joueur avec son téléphone, sans capture
+            attente = agir(e);
+            return;
+        }
+        if (e[0].equals("ui")) {
+            // « ui <nom> cmd <commande…> », « ui <nom> ecran <écran> [garder] »,
+            // « ui <nom> jouer <écran> <jeu> <choix> <ticks> » : capture avec l'interface
+            mc.options.hideGui = false;
+            attente = 50;
+            switch (e[2]) {
+                case "cmd" -> commande(mc, String.join(" ", java.util.Arrays.copyOfRange(e, 3, e.length)));
+                case "jouer" -> {
+                    ouvrir(mc, e[3]);
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                            new fr.cabane.casino.Casino.Jouer(Integer.parseInt(e[4]), 50, Integer.parseInt(e[5])));
+                    attente = Integer.parseInt(e[6]);
+                }
+                case "rien" -> attente = Integer.parseInt(e[3]);
+                default -> ouvrir(mc, e[3]);
+            }
+            return;
+        }
+        point = e;
         commande(mc, "time set " + (e.length > 6 ? e[6] : "6000"));
         commande(mc, "tp @s " + e[1] + " " + e[2] + " " + e[3] + " " + e[4] + " " + e[5]);
         attente = ATTENTE_POINT;
@@ -91,6 +111,17 @@ public final class PhotoTour {
     private static void ouvrir(Minecraft mc, String nom) {
         switch (nom) {
             case "telephone" -> mc.setScreen(new ClientPiaf.Accueil());
+            case "contacts" -> mc.setScreen(new ClientPiaf.Contacts());
+            case "recents" -> mc.setScreen(new ClientPiaf.Recents());
+            case "booster", "booster-ouvert" -> {
+                var ids = fr.cabane.tcg.Cartes.toutes().stream().map(fr.cabane.tcg.Cartes.Def::id).toList();
+                var tirage = List.of(ids.get(0), ids.get(5), ids.get(9), ids.get(14), ids.get(18));
+                ClientCartes.BoosterScreen ecranBooster = new ClientCartes.BoosterScreen(tirage);
+                mc.setScreen(ecranBooster);
+                if (nom.equals("booster-ouvert")) {
+                    ecranBooster.toutRetourner();
+                }
+            }
             case "appels" -> mc.setScreen(new PhoneScreen());
             case "piaf" -> mc.setScreen(new ClientPiaf.Fil());
             case "portefeuille" -> mc.setScreen(new ClientPiaf.Portefeuille());
@@ -106,6 +137,27 @@ public final class PhotoTour {
         }
     }
 
+    private static int agir(String[] e) {
+        String reste = String.join(" ", java.util.Arrays.copyOfRange(e, 2, e.length));
+        switch (e[1]) {
+            case "numero" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    new fr.cabane.telephone.PhoneNetwork.Action(fr.cabane.telephone.PhoneNetwork.Action.CHOISIR_NUMERO, reste));
+            case "contact" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    new fr.cabane.telephone.PhoneNetwork.Action(fr.cabane.telephone.PhoneNetwork.Action.AJOUTER_CONTACT,
+                            e[2] + "|" + String.join(" ", java.util.Arrays.copyOfRange(e, 3, e.length))));
+            case "pseudo" -> ClientPiaf.demander(1, reste, 0);
+            case "photo" -> ClientPiaf.prendrePhoto();
+            case "publier" -> ClientPiaf.demander(2, reste, ClientPiaf.galerie.isEmpty() ? 0 : ClientPiaf.galerie.getLast());
+            case "texte" -> ClientPiaf.demander(2, reste, 0);
+            case "attendre" -> {
+                return Integer.parseInt(e[2]);
+            }
+            default -> {
+            }
+        }
+        return 30;
+    }
+
     /** La souris ou le clavier ne doivent pas faire bouger la vue pendant le tour. */
     private static void bloquerCamera(Minecraft mc, String[] e) {
         float yaw = Float.parseFloat(e[4]);
@@ -119,8 +171,16 @@ public final class PhotoTour {
         mc.player.setYHeadRot(yaw);
     }
 
+    /** Exécutée directement par le serveur intégré, même si le monde n'autorise pas les commandes. */
     private static void commande(Minecraft mc, String commande) {
-        mc.player.connection.sendCommand(commande);
+        var serveur = mc.getSingleplayerServer();
+        java.util.UUID id = mc.player.getUUID();
+        serveur.execute(() -> {
+            var joueur = serveur.getPlayerList().getPlayer(id);
+            if (joueur != null) {
+                serveur.getCommands().performPrefixedCommand(joueur.createCommandSourceStack().withPermission(4), commande);
+            }
+        });
     }
 
     private static List<String[]> lire(Path fichier) {

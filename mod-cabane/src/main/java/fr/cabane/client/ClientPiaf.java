@@ -58,7 +58,8 @@ public final class ClientPiaf {
 
     public static void photo(long id, byte[] png) {
         try {
-            NativeImage image = NativeImage.read(png);
+            // depuis un flux : la version « tableau » passe par la petite pile de LWJGL et échoue au-delà de 64 Ko
+            NativeImage image = NativeImage.read(new java.io.ByteArrayInputStream(png));
             ResourceLocation rl = Cabane.id("photo/" + id);
             Minecraft.getInstance().getTextureManager().register(rl, new DynamicTexture(image));
             PHOTOS.put(id, rl);
@@ -211,9 +212,11 @@ public final class ClientPiaf {
         @Override
         protected void init() {
             super.init();
-            String[] noms = {"Appels", "Piaf", "Photo", "Galerie", "Argent"};
+            String[] noms = {"Clavier", "Contacts", "Récents", "Piaf", "Photo", "Galerie", "Argent"};
             Runnable[] actions = {
                     () -> minecraft.setScreen(new PhoneScreen()),
+                    () -> minecraft.setScreen(new Contacts()),
+                    () -> minecraft.setScreen(new Recents()),
                     () -> minecraft.setScreen(new Fil()),
                     ClientPiaf::prendrePhoto,
                     () -> minecraft.setScreen(new Galerie(false)),
@@ -223,16 +226,151 @@ public final class ClientPiaf {
                 int lig = i / 3;
                 Runnable a = actions[i];
                 addRenderableWidget(Button.builder(Component.literal(noms[i]), b -> a.run())
-                        .bounds(x0() + 4 + col * 56, y0() + 30 + lig * 56, 52, 44).build());
+                        .bounds(x0() + 4 + col * 56, y0() + 30 + lig * 48, 52, 40).build());
             }
             demander(0, "", 0);
+            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
         }
 
         @Override
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
             g.drawCenteredString(font, monPseudo.isEmpty() ? "" : "@" + monPseudo, left + W / 2, y0() + 8, 0xFF7FB7FF);
-            g.drawCenteredString(font, "Photo : vise, puis clique.", left + W / 2, y0() + 160, Ui.GRIS);
+            String numero = ClientPhone.myNumber.isEmpty() ? "pas encore de numéro" : "mon n° : " + ClientPhone.myNumber;
+            g.drawCenteredString(font, numero, left + W / 2, y0() + 18, Ui.GRIS);
+        }
+    }
+
+    /** Le carnet : un nom et un numéro, appeler en un clic, ajouter, supprimer. */
+    static final class Contacts extends Ecran {
+        private static final int PAR_PAGE = 8;
+        private boolean ajout;
+        private int page;
+        private EditBox nom;
+        private EditBox numero;
+
+        Contacts() {
+            super("Contacts");
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            if (ajout) {
+                nom = addRenderableWidget(new EditBox(font, x0() + 6, y0() + 24, largeur() - 12, 18, Component.literal("nom")));
+                nom.setMaxLength(24);
+                nom.setHint(Component.literal("nom du contact"));
+                numero = addRenderableWidget(new EditBox(font, x0() + 6, y0() + 48, largeur() - 12, 18, Component.literal("numéro")));
+                numero.setFilter(s -> s.matches("\\d{0,4}"));
+                numero.setHint(Component.literal("numéro (3 ou 4 chiffres)"));
+                addRenderableWidget(Button.builder(Component.literal("Enregistrer"), b -> {
+                    if (!nom.getValue().isBlank() && numero.getValue().length() >= 3) {
+                        ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.AJOUTER_CONTACT, numero.getValue() + "|" + nom.getValue().strip());
+                        ajout = false;
+                        rebuildWidgets();
+                    }
+                }).bounds(x0() + 6, y0() + 74, largeur() - 12, 18).build());
+                addRenderableWidget(Button.builder(Component.literal("Annuler"), b -> {
+                    ajout = false;
+                    rebuildWidgets();
+                }).bounds(x0() + 6, y0() + 96, largeur() - 12, 18).build());
+                return;
+            }
+            addRenderableWidget(Button.builder(Component.literal("+ Ajouter"), b -> {
+                ajout = true;
+                rebuildWidgets();
+            }).bounds(left + W - 70, top + H - 26, 62, 18).build());
+            var liste = ClientPhone.contacts;
+            int pages = Math.max(1, (liste.size() + PAR_PAGE - 1) / PAR_PAGE);
+            page = Math.min(page, pages - 1);
+            for (int k = 0; k < PAR_PAGE; k++) {
+                int i = page * PAR_PAGE + k;
+                if (i >= liste.size()) {
+                    break;
+                }
+                var c = liste.get(i);
+                int y = y0() + 4 + k * 26;
+                addRenderableWidget(Button.builder(Component.literal("☎"), b -> ClientPhone.appeler(c.numero()))
+                        .bounds(x0() + largeur() - 44, y, 20, 20).build());
+                addRenderableWidget(Button.builder(Component.literal("✕"), b ->
+                        ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.SUPPRIMER_CONTACT, c.numero()))
+                        .bounds(x0() + largeur() - 22, y, 20, 20).build());
+            }
+            if (pages > 1) {
+                addRenderableWidget(Button.builder(Component.literal("<"), b -> {
+                    page = Math.floorMod(page - 1, pages);
+                    rebuildWidgets();
+                }).bounds(left + 8, top + H - 26, 18, 18).build());
+                addRenderableWidget(Button.builder(Component.literal(">"), b -> {
+                    page = Math.floorMod(page + 1, pages);
+                    rebuildWidgets();
+                }).bounds(left + 28, top + H - 26, 18, 18).build());
+            }
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.render(g, mouseX, mouseY, partialTick);
+            if (ajout) {
+                g.drawString(font, "Nouveau contact", x0() + 6, y0() + 8, 0xFFFFFFFF, false);
+                return;
+            }
+            var liste = ClientPhone.contacts;
+            if (liste.isEmpty()) {
+                Ui.paragraphe(g, font, "Aucun contact. Ajoute le numéro de tes potes avec « + Ajouter ».", x0() + 6, y0() + 20, largeur() - 12, Ui.GRIS);
+            }
+            for (int k = 0; k < PAR_PAGE; k++) {
+                int i = page * PAR_PAGE + k;
+                if (i >= liste.size()) {
+                    break;
+                }
+                var c = liste.get(i);
+                int y = y0() + 4 + k * 26;
+                g.fill(x0(), y - 2, x0() + largeur(), y + 22, 0xFF1B1E25);
+                g.drawString(font, Ui.couper(font, c.nom(), largeur() - 56), x0() + 4, y + 2, 0xFFFFFFFF, false);
+                g.drawString(font, c.numero(), x0() + 4, y + 12, 0xFF7FB7FF, false);
+            }
+        }
+    }
+
+    /** Les appels récents : sortants, entrants, manqués ; rappeler en un clic. */
+    static final class Recents extends Ecran {
+        Recents() {
+            super("Récents");
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            var liste = ClientPhone.recents;
+            for (int i = 0; i < Math.min(9, liste.size()); i++) {
+                var a = liste.get(i);
+                addRenderableWidget(Button.builder(Component.literal("☎"), b -> ClientPhone.appeler(a.numero()))
+                        .bounds(x0() + largeur() - 22, y0() + 4 + i * 26, 20, 20).build());
+            }
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.render(g, mouseX, mouseY, partialTick);
+            var liste = ClientPhone.recents;
+            if (liste.isEmpty()) {
+                g.drawCenteredString(font, "Aucun appel pour l'instant.", left + W / 2, y0() + 30, Ui.GRIS);
+            }
+            for (int i = 0; i < Math.min(9, liste.size()); i++) {
+                var a = liste.get(i);
+                int y = y0() + 4 + i * 26;
+                g.fill(x0(), y - 2, x0() + largeur(), y + 22, 0xFF1B1E25);
+                String icone = a.type() == 0 ? "↗" : a.type() == 1 ? "↙" : "✗";
+                int couleur = a.type() == 0 ? Ui.VERT : a.type() == 1 ? 0xFF7FB7FF : Ui.ROUGE;
+                g.drawString(font, icone, x0() + 4, y + 6, couleur, false);
+                g.drawString(font, Ui.couper(font, ClientPhone.nom(a.numero()), largeur() - 44), x0() + 16, y + 2,
+                        a.type() == 2 ? Ui.ROUGE : 0xFFFFFFFF, false);
+                String detail = (a.type() == 0 ? "sortant" : a.type() == 1 ? "entrant" : "manqué") + " · " + Fil.ilYa(a.temps());
+                g.drawString(font, detail, x0() + 16, y + 12, Ui.GRIS, false);
+            }
         }
     }
 
