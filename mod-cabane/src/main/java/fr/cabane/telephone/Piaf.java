@@ -38,7 +38,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  * Les photos sont des PNG enregistrés dans le dossier du monde (cabane_photos/).
  */
 public final class Piaf {
-    public static final Pattern PSEUDO = Pattern.compile("[A-Za-z0-9_]{3,16}");
+    public static final Pattern PSEUDO = Pattern.compile("[\\p{L}0-9_.-]{3,16}");
     public static final int TEXTE_MAX = 280;
     private static final int PHOTO_MAX = 600_000;
     private static final int MORCEAU = 30_000;
@@ -47,9 +47,11 @@ public final class Piaf {
     // ---------------------------------------------------------------- données
 
     public static class Donnees extends SavedData {
-        final Map<UUID, String> pseudos = new HashMap<>();
+        // le compte Piaf et les photos appartiennent au téléphone (sa SIM), pas au joueur :
+        // qui vole le téléphone peut se faire passer pour son propriétaire
+        final Map<String, String> pseudos = new HashMap<>();
         final LinkedList<Post> posts = new LinkedList<>();
-        final Map<UUID, List<Long>> galeries = new HashMap<>();
+        final Map<String, List<Long>> galeries = new HashMap<>();
         long prochainId = 1;
 
         static Donnees get(MinecraftServer server) {
@@ -61,12 +63,18 @@ public final class Piaf {
             d.prochainId = tag.getLong("prochain");
             for (Tag t : tag.getList("comptes", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) t;
-                d.pseudos.put(c.getUUID("joueur"), c.getString("pseudo"));
+                String sim = c.getString("sim");
+                if (sim.isEmpty()) {
+                    continue;
+                }
+                if (!c.getString("pseudo").isEmpty()) {
+                    d.pseudos.put(sim, c.getString("pseudo"));
+                }
                 List<Long> galerie = new ArrayList<>();
                 for (long id : c.getLongArray("galerie")) {
                     galerie.add(id);
                 }
-                d.galeries.put(c.getUUID("joueur"), galerie);
+                d.galeries.put(sim, galerie);
             }
             for (Tag t : tag.getList("posts", Tag.TAG_COMPOUND)) {
                 CompoundTag p = (CompoundTag) t;
@@ -84,13 +92,15 @@ public final class Piaf {
         public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
             tag.putLong("prochain", prochainId);
             ListTag comptes = new ListTag();
-            pseudos.forEach((id, pseudo) -> {
+            Set<String> sims = new HashSet<>(pseudos.keySet());
+            sims.addAll(galeries.keySet());
+            for (String sim : sims) {
                 CompoundTag c = new CompoundTag();
-                c.putUUID("joueur", id);
-                c.putString("pseudo", pseudo);
-                c.putLongArray("galerie", galeries.getOrDefault(id, List.of()).stream().mapToLong(Long::longValue).toArray());
+                c.putString("sim", sim);
+                c.putString("pseudo", pseudos.getOrDefault(sim, ""));
+                c.putLongArray("galerie", galeries.getOrDefault(sim, List.of()).stream().mapToLong(Long::longValue).toArray());
                 comptes.add(c);
-            });
+            }
             tag.put("comptes", comptes);
             ListTag liste = new ListTag();
             for (Post p : posts) {
@@ -247,28 +257,43 @@ public final class Piaf {
 
     // ---------------------------------------------------------------- logique
 
-    private static final Map<UUID, Long> DERNIER_POST = new HashMap<>();
+    private static final Map<String, Long> DERNIER_POST = new HashMap<>();
+
+    /** L'identité Piaf d'une SIM (sert d'auteur et pour les « j'aime ») : rien ne trahit le vrai joueur. */
+    static UUID compte(String sim) {
+        return UUID.nameUUIDFromBytes(("piaf:" + sim).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
 
     private static void agir(ServerPlayer joueur, Action a) {
         Donnees d = Donnees.get(joueur.server);
+        String sim = PhoneCalls.numero(joueur);
+        if (sim == null) {
+            if (a.action() != 0) {
+                joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("Active d'abord la SIM de ton téléphone.")
+                        .withStyle(net.minecraft.ChatFormatting.RED), true);
+            }
+            envoyerFil(joueur);
+            return;
+        }
+        UUID compte = compte(sim);
         switch (a.action()) {
             case 1 -> {
                 String pseudo = a.texte().trim();
                 boolean pris = d.pseudos.entrySet().stream()
-                        .anyMatch(e -> e.getValue().equalsIgnoreCase(pseudo) && !e.getKey().equals(joueur.getUUID()));
+                        .anyMatch(e -> e.getValue().equalsIgnoreCase(pseudo) && !e.getKey().equals(sim));
                 if (PSEUDO.matcher(pseudo).matches() && !pris) {
-                    d.pseudos.put(joueur.getUUID(), pseudo);
+                    d.pseudos.put(sim, pseudo);
                     d.setDirty();
                 } else {
                     joueur.displayClientMessage(net.minecraft.network.chat.Component.literal(
-                            pris ? "Ce pseudo est déjà pris." : "Pseudo : 3 à 16 lettres, chiffres ou _.")
+                            pris ? "Ce pseudo est déjà pris." : "Pseudo : 3 à 16 lettres, chiffres, _ . ou -")
                             .withStyle(net.minecraft.ChatFormatting.RED), true);
                 }
             }
-            case 2 -> publier(joueur, d, a.texte(), a.nombre());
+            case 2 -> publier(joueur, sim, d, a.texte(), a.nombre());
             case 3 -> d.posts.stream().filter(p -> p.id() == a.nombre()).findFirst().ifPresent(p -> {
-                if (!p.likes().remove(joueur.getUUID())) {
-                    p.likes().add(joueur.getUUID());
+                if (!p.likes().remove(compte)) {
+                    p.likes().add(compte);
                 }
                 d.setDirty();
             });
@@ -278,26 +303,26 @@ public final class Piaf {
         envoyerFil(joueur);
     }
 
-    private static void publier(ServerPlayer joueur, Donnees d, String brut, long photo) {
-        String pseudo = d.pseudos.get(joueur.getUUID());
+    private static void publier(ServerPlayer joueur, String sim, Donnees d, String brut, long photo) {
+        String pseudo = d.pseudos.get(sim);
         String texte = brut.replace("§", "").strip();
         if (pseudo == null || (texte.isEmpty() && photo == 0)) {
             return;
         }
         long maintenant = System.currentTimeMillis();
-        if (maintenant - DERNIER_POST.getOrDefault(joueur.getUUID(), 0L) < 15_000) {
+        if (maintenant - DERNIER_POST.getOrDefault(sim, 0L) < 15_000) {
             joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("Doucement ! Attends un peu avant de republier.")
                     .withStyle(net.minecraft.ChatFormatting.RED), true);
             return;
         }
-        if (photo != 0 && !d.galeries.getOrDefault(joueur.getUUID(), List.of()).contains(photo)) {
+        if (photo != 0 && !d.galeries.getOrDefault(sim, List.of()).contains(photo)) {
             photo = 0;
         }
-        DERNIER_POST.put(joueur.getUUID(), maintenant);
+        DERNIER_POST.put(sim, maintenant);
         if (texte.length() > TEXTE_MAX) {
             texte = texte.substring(0, TEXTE_MAX);
         }
-        d.posts.addFirst(new Post(d.prochainId++, joueur.getUUID(), pseudo, texte, photo, maintenant, new HashSet<>()));
+        d.posts.addFirst(new Post(d.prochainId++, compte(sim), pseudo, texte, photo, maintenant, new HashSet<>()));
         while (d.posts.size() > 300) {
             d.posts.removeLast();
         }
@@ -312,10 +337,12 @@ public final class Piaf {
 
     public static void envoyerFil(ServerPlayer joueur) {
         Donnees d = Donnees.get(joueur.server);
+        String sim = PhoneCalls.numero(joueur);
+        UUID compte = sim == null ? null : compte(sim);
         List<Vue> vues = d.posts.stream().limit(FIL).map(p -> new Vue(p.id(), p.auteur(), p.pseudo(), p.texte(), p.photo(), p.temps(),
-                p.likes().size(), p.likes().contains(joueur.getUUID()))).toList();
-        List<Long> galerie = d.galeries.getOrDefault(joueur.getUUID(), List.of());
-        PacketDistributor.sendToPlayer(joueur, new Fil(d.pseudos.getOrDefault(joueur.getUUID(), ""), vues,
+                p.likes().size(), compte != null && p.likes().contains(compte))).toList();
+        List<Long> galerie = sim == null ? List.of() : d.galeries.getOrDefault(sim, List.of());
+        PacketDistributor.sendToPlayer(joueur, new Fil(sim == null ? "" : d.pseudos.getOrDefault(sim, ""), vues,
                 galerie.subList(Math.max(0, galerie.size() - 64), galerie.size())));
     }
 
@@ -362,6 +389,10 @@ public final class Piaf {
         if (!estPng || png.length > PHOTO_MAX) {
             return;
         }
+        String sim = PhoneCalls.numero(joueur);
+        if (sim == null) {
+            return;
+        }
         Donnees d = Donnees.get(joueur.server);
         long id = d.prochainId++;
         try {
@@ -370,13 +401,13 @@ public final class Piaf {
             Cabane.LOGGER.warn("Photo non enregistrée : {}", e.toString());
             return;
         }
-        List<Long> galerie = d.galeries.computeIfAbsent(joueur.getUUID(), k -> new ArrayList<>());
+        List<Long> galerie = d.galeries.computeIfAbsent(sim, k -> new ArrayList<>());
         galerie.add(id);
         while (galerie.size() > 64) {
             galerie.remove(0);
         }
         d.setDirty();
-        joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("📷 Photo enregistrée dans ta galerie.")
+        joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("📷 Photo enregistrée dans le téléphone.")
                 .withStyle(net.minecraft.ChatFormatting.GREEN), true);
         envoyerFil(joueur);
     }

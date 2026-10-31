@@ -37,6 +37,16 @@ public final class CabaneItems {
     public static final DeferredItem<TcgItems.TicketItem> TICKET_A_GRATTER =
             ITEMS.register("ticket_a_gratter", () -> new TcgItems.TicketItem(new Item.Properties().stacksTo(16)));
 
+    // La puff et le tuyau de la chicha
+    public static final DeferredItem<fr.cabane.fumee.Fumee.PuffItem> PUFF_ROSE =
+            ITEMS.register("puff_rose", () -> new fr.cabane.fumee.Fumee.PuffItem(new Item.Properties().durability(200), 0xFF8FC8, "fraise"));
+    public static final DeferredItem<fr.cabane.fumee.Fumee.PuffItem> PUFF_BLEUE =
+            ITEMS.register("puff_bleue", () -> new fr.cabane.fumee.Fumee.PuffItem(new Item.Properties().durability(200), 0x7FC8FF, "myrtille glacée"));
+    public static final DeferredItem<fr.cabane.fumee.Fumee.PuffItem> PUFF_MENTHE =
+            ITEMS.register("puff_menthe", () -> new fr.cabane.fumee.Fumee.PuffItem(new Item.Properties().durability(200), 0x8FFFC0, "menthe"));
+    public static final DeferredItem<fr.cabane.fumee.Fumee.TuyauItem> TUYAU =
+            ITEMS.register("tuyau", () -> new fr.cabane.fumee.Fumee.TuyauItem(new Item.Properties().stacksTo(1)));
+
     // Les sept reliques, cachées dans les coffres de donjons précis (voir data/cabane/loot_modifiers)
     public static final DeferredItem<RelicItem> SCARABEE_DOR = relique("scarabee_dor", Rarity.UNCOMMON);
     public static final DeferredItem<RelicItem> IDOLE_DE_JADE = relique("idole_de_jade", Rarity.UNCOMMON);

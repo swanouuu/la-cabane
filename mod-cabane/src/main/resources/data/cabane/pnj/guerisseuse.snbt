@@ -1,0 +1,42 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-1552068102,-1491660792,50174663,-2115090223],
+  CustomName:'{"text":"Nyota la Guérisseuse","color":"dark_green"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:umvuthana_crane"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Nyota",
+        Texts:[{Text:"Assieds-toi près du feu, voyageur. Ici on raconte les histoires des donjons lointains… et de ceux qui n'en sont jamais revenus."}],
+        Buttons:[{
+          Label:"conseil",
+          Name:"Un conseil ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"conseil"}]
+        },{
+          Label:"bye",
+          Name:"À plus tard",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"conseil",
+        Name:"Conseil",
+        Texts:[{Text:"Dors dans la Grande Cabane avant de partir loin : ton lit là-bas te fera revenir. Et garde toujours ton téléphone : on ne sait jamais qui il faudra appeler."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Merci Nyota",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

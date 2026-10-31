@@ -76,7 +76,7 @@ public class BlackjackScreen extends Screen {
     }
 
     private void action(int action) {
-        PacketDistributor.sendToServer(new Blackjack.Action(action, mise));
+        PacketDistributor.sendToServer(new Blackjack.Action(action, mise, ClientCasino.machine));
     }
 
     private void carte(GuiGraphics g, int x, int y, int c, boolean dos) {
@@ -108,8 +108,8 @@ public class BlackjackScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panneau(g, left, top, W, H);
-        g.fill(left + 6, top + 28, left + W - 6, top + H - 34, 0xFF14532D);
+        CasinoUi.table(g, font, "Blackjack", left, top, W, H);
+        g.fill(left + 6, top + H - 34, left + W - 6, top + H - 33, 0x40E8C15A);
     }
 
     @Override

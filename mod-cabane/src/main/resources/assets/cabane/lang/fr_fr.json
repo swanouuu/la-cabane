@@ -1,11 +1,11 @@
 {
-  "itemGroup.cabane": "La Cabane",
+  "itemGroup.cabane": "Beauvais",
   "item.cabane.telephone": "Téléphone",
   "item.cabane.telephone.desc": "Clic droit ou touche N : choisis ton numéro et appelle tes potes.",
   "item.cabane.relique": "Relique de la Cabane",
   "screen.cabane.telephone": "Téléphone",
   "key.cabane.telephone": "Ouvrir le téléphone",
-  "key.categories.cabane": "La Cabane",
+  "key.categories.cabane": "Beauvais",
   "item.cabane.scarabee_dor": "Scarabée d'Or",
   "item.cabane.scarabee_dor.desc": "Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert.",
   "item.cabane.idole_de_jade": "Idole de Jade",
@@ -34,5 +34,10 @@
   "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune",
   "block.cabane.table_pile_ou_face": "Table de pile ou face",
-  "entity.cabane.parachute": "Parachute"
+  "entity.cabane.parachute": "Parachute",
+  "item.cabane.puff_rose": "Puff fraise",
+  "item.cabane.puff_bleue": "Puff myrtille glacée",
+  "item.cabane.puff_menthe": "Puff menthe",
+  "item.cabane.tuyau": "Tuyau de chicha",
+  "block.cabane.chicha": "Chicha"
 }

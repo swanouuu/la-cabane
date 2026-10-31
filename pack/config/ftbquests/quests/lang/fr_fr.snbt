@@ -2,7 +2,7 @@
 	chapter.44CD4C5260BE1635.title: "&eLes Sept Reliques"
 	chapter.775508E513569867.title: "&aLe Village"
 	chapter.7849F1A38AA6D284.title: "&cLes Grands Donjons"
-	chapter.7DF581286AE72B3C.title: "&6La Cabane"
+	chapter.7DF581286AE72B3C.title: "&6Beauvais"
 	quest.03F6D4DFAA073670.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -158,7 +158,7 @@
 	quest.52E14CF141DF0919.quest_desc: [
 		"Les sept reliques sont de retour sur le comptoir."
 		""
-		"La Confrérie des Explorateurs renaît : vous êtes les nouveaux Gardiens de la Cabane."
+		"La Confrérie des Explorateurs renaît : vous êtes les nouveaux Gardiens de Beauvais."
 	]
 	quest.52E14CF141DF0919.quest_subtitle: "Les sept reliques sont réunies"
 	quest.52E14CF141DF0919.title: "&6&lLe Réveil de la Cabane"
@@ -173,7 +173,7 @@
 	quest.568AFD2416050B14.quest_desc: [
 		"Votre avion s'est écrasé, mais vous avez sauté à temps. Vous voilà dans la Grande Cabane, au centre de la map."
 		""
-		"C'est ici que vous construirez votre base. Allez parler au &6Vieux Gardien&r près du porche, lisez son journal sur le pupitre, puis cochez cette quête."
+		"C'est ici que vous construirez votre base. Allez parler au &6Hejj du Village&r sur le porche, lisez son journal sur le pupitre, puis cochez cette quête."
 	]
 	quest.568AFD2416050B14.quest_subtitle: "Le début de tout"
 	quest.568AFD2416050B14.title: "Bienvenue à la Cabane"
@@ -194,7 +194,7 @@
 	]
 	quest.5B29BBCFB6E40493.title: "&cScylla"
 	quest.5BC229FB0DEDF5E5.quest_desc: [
-		"Bako, au marché, propose trois contrats qui changent toutes les heures. Remplis-en un !"
+		"Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures. Remplis-en un !"
 	]
 	quest.5BC229FB0DEDF5E5.title: "Premier contrat"
 	quest.61BC56987E3E4478.quest_desc: [

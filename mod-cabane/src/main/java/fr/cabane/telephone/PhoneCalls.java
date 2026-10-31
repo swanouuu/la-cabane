@@ -1,6 +1,7 @@
 package fr.cabane.telephone;
 
 import fr.cabane.Cabane;
+import fr.cabane.CabaneComponents;
 import fr.cabane.CabaneItems;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +16,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -23,6 +26,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class PhoneCalls {
     public static final Pattern NUMBER = Pattern.compile("\\d{3,4}");
+    /** Ce que voit celui qui reçoit un appel masqué. */
+    public static final String MASQUE = "Masqué";
     private static final int RING_TICKS = 30 * 20;
 
     private enum Etat { SONNE, EN_LIGNE }
@@ -30,12 +35,23 @@ public final class PhoneCalls {
     private static final class Call {
         final UUID caller;
         final UUID callee;
+        final String numeroAppelant;
+        final String numeroAppele;
+        final boolean masque;
         volatile Etat etat = Etat.SONNE;
         int ticks;
 
-        Call(UUID caller, UUID callee) {
+        Call(UUID caller, UUID callee, String numeroAppelant, String numeroAppele, boolean masque) {
             this.caller = caller;
             this.callee = callee;
+            this.numeroAppelant = numeroAppelant;
+            this.numeroAppele = numeroAppele;
+            this.masque = masque;
+        }
+
+        /** Le numéro de ce participant, vu par l'autre (masqué si l'appelant l'a demandé). */
+        String numeroDe(UUID player) {
+            return caller.equals(player) ? (masque ? MASQUE : numeroAppelant) : numeroAppele;
         }
 
         UUID other(UUID player) {
@@ -55,67 +71,86 @@ public final class PhoneCalls {
     public static void handle(ServerPlayer player, PhoneNetwork.Action action) {
         switch (action.action()) {
             case PhoneNetwork.Action.CHOISIR_NUMERO -> setNumber(player, action.arg());
-            case PhoneNetwork.Action.APPELER -> dial(player, action.arg());
+            case PhoneNetwork.Action.APPELER -> {
+                String[] parts = action.arg().split("\\|");
+                dial(player, parts[0], parts.length > 1 && parts[1].equals("masque"));
+            }
             case PhoneNetwork.Action.DECROCHER -> answer(player);
             case PhoneNetwork.Action.RACCROCHER -> hangUp(player);
             case PhoneNetwork.Action.AJOUTER_CONTACT -> {
                 String[] parts = action.arg().split("\\|", 2);
                 String nom = parts.length > 1 ? parts[1].strip().replace("§", "") : "";
-                if (parts.length == 2 && NUMBER.matcher(parts[0]).matches() && !nom.isEmpty() && nom.length() <= 24) {
-                    PhoneData.get(player.server).ajouterContact(player.getUUID(), parts[0], nom);
+                String sim = numero(player);
+                if (sim != null && parts.length == 2 && NUMBER.matcher(parts[0]).matches() && !nom.isEmpty() && nom.length() <= 24) {
+                    PhoneData.get(player.server).ajouterContact(sim, parts[0], nom);
                 }
                 sendState(player);
             }
             case PhoneNetwork.Action.SUPPRIMER_CONTACT -> {
-                PhoneData.get(player.server).supprimerContact(player.getUUID(), action.arg());
+                String sim = numero(player);
+                if (sim != null) {
+                    PhoneData.get(player.server).supprimerContact(sim, action.arg());
+                }
                 sendState(player);
             }
             default -> sendState(player);
         }
     }
 
+    /** Active la SIM du téléphone utilisé : une seule fois, le numéro ne change plus jamais. */
     public static void setNumber(ServerPlayer player, String number) {
-        if (!NUMBER.matcher(number).matches()) {
+        ItemStack telephone = telephoneActif(player);
+        PhoneData data = PhoneData.get(player.server);
+        if (telephone == null) {
+            info(player, "Il te faut un téléphone.");
+        } else if (telephone.has(CabaneComponents.NUMERO)) {
+            info(player, "Ce téléphone a déjà sa SIM : le " + telephone.get(CabaneComponents.NUMERO)
+                    + ". Pour un autre numéro, il faut un autre téléphone.");
+        } else if (!NUMBER.matcher(number).matches()) {
             info(player, "Ton numéro doit faire 3 ou 4 chiffres.");
-        } else if (CALLS.containsKey(player.getUUID())) {
-            info(player, "Raccroche d'abord avant de changer de numéro.");
-        } else if (!PhoneData.get(player.server).assign(player.getUUID(), player.getGameProfile().getName(), number)) {
+        } else if (!data.activer(number, player.getGameProfile().getName())) {
             info(player, "Le " + number + " est déjà pris, choisis-en un autre.");
         } else {
-            player.displayClientMessage(Component.literal("☎ Ton numéro est maintenant le " + number + ".").withStyle(ChatFormatting.GREEN), false);
+            telephone.set(CabaneComponents.NUMERO, number);
+            player.displayClientMessage(Component.literal("☎ SIM activée : ce téléphone a le numéro " + number + ", pour toujours.")
+                    .withStyle(ChatFormatting.GREEN), false);
         }
         sendState(player);
     }
 
     public static void dial(ServerPlayer caller, String number) {
+        dial(caller, number, false);
+    }
+
+    public static void dial(ServerPlayer caller, String number, boolean masque) {
         MinecraftServer server = caller.server;
         PhoneData data = PhoneData.get(server);
-        String myNumber = data.numberOf(caller.getUUID());
-        UUID calleeId = data.ownerOf(number);
-        ServerPlayer callee = calleeId == null ? null : server.getPlayerList().getPlayer(calleeId);
+        String myNumber = numero(caller);
+        ServerPlayer callee = porteur(server, number);
 
-        if (myNumber == null) {
-            info(caller, "Choisis d'abord ton numéro.");
-        } else if (!hasPhone(caller)) {
+        if (telephoneActif(caller) == null) {
             info(caller, "Il te faut un téléphone dans l'inventaire.");
+        } else if (myNumber == null) {
+            info(caller, "Active d'abord la SIM de ton téléphone.");
         } else if (CALLS.containsKey(caller.getUUID())) {
             info(caller, "Tu es déjà en ligne.");
-        } else if (calleeId == null) {
+        } else if (!data.existe(number)) {
             info(caller, "Le " + number + " n'est pas attribué.");
-        } else if (calleeId.equals(caller.getUUID())) {
+        } else if (number.equals(myNumber) || callee == caller) {
             info(caller, "Tu ne peux pas t'appeler toi-même.");
-        } else if (callee == null || !hasPhone(callee)) {
+        } else if (callee == null) {
             info(caller, "Le " + number + " est injoignable pour le moment.");
-        } else if (CALLS.containsKey(calleeId)) {
+        } else if (CALLS.containsKey(callee.getUUID())) {
             info(caller, "Ça sonne occupé…");
         } else {
-            Call call = new Call(caller.getUUID(), calleeId);
+            UUID calleeId = callee.getUUID();
+            Call call = new Call(caller.getUUID(), calleeId, myNumber, number, masque);
             CALLS.put(caller.getUUID(), call);
             CALLS.put(calleeId, call);
-            data.ajouterRecent(caller.getUUID(), number, PhoneData.SORTANT);
-            data.ajouterRecent(calleeId, myNumber, PhoneData.ENTRANT);
-            String qui = data.contacts(calleeId).getOrDefault(myNumber, "du " + myNumber);
-            callee.displayClientMessage(Component.literal("☎ Appel entrant " + (qui.startsWith("du ") ? qui : "de " + qui)
+            data.ajouterRecent(myNumber, number, PhoneData.SORTANT);
+            data.ajouterRecent(number, masque ? MASQUE : myNumber, PhoneData.ENTRANT);
+            String qui = masque ? "d'un numéro masqué" : data.contacts(number).getOrDefault(myNumber, "du " + myNumber);
+            callee.displayClientMessage(Component.literal("☎ Appel entrant " + (qui.startsWith("du ") || qui.startsWith("d'un") ? qui : "de " + qui)
                     + " : ouvre ton téléphone (touche N) pour décrocher !").withStyle(ChatFormatting.YELLOW), false);
             sendState(callee);
         }
@@ -180,7 +215,7 @@ public final class PhoneCalls {
                 } else {
                     ring(caller, callee, call.ticks % 40);
                 }
-            } else if (!hasPhone(caller) || !hasPhone(callee)) {
+            } else if (!aLeNumero(caller, call.numeroAppelant) || !aLeNumero(callee, call.numeroAppele)) {
                 end(server, call, "Un téléphone a quitté l'inventaire : appel coupé.");
             }
         }
@@ -204,11 +239,7 @@ public final class PhoneCalls {
         CALLS.remove(call.caller, call);
         CALLS.remove(call.callee, call);
         if (call.etat == Etat.SONNE) {
-            PhoneData data = PhoneData.get(server);
-            String numeroAppelant = data.numberOf(call.caller);
-            if (numeroAppelant != null) {
-                data.marquerManque(call.callee, numeroAppelant);
-            }
+            PhoneData.get(server).marquerManque(call.numeroAppele, call.masque ? MASQUE : call.numeroAppelant);
         }
         for (UUID id : List.of(call.caller, call.callee)) {
             ServerPlayer p = server.getPlayerList().getPlayer(id);
@@ -221,13 +252,12 @@ public final class PhoneCalls {
 
     public static void sendState(ServerPlayer player) {
         PhoneData data = PhoneData.get(player.server);
-        String myNumber = data.numberOf(player.getUUID());
+        String myNumber = numero(player);
         Call call = CALLS.get(player.getUUID());
         int state = PhoneNetwork.State.LIBRE;
         String other = "";
         if (call != null) {
-            UUID otherId = call.other(player.getUUID());
-            other = data.numberOf(otherId) == null ? "???" : data.numberOf(otherId);
+            other = call.numeroDe(call.other(player.getUUID()));
             if (call.etat == Etat.EN_LIGNE) {
                 state = PhoneNetwork.State.EN_LIGNE;
             } else {
@@ -235,15 +265,48 @@ public final class PhoneCalls {
             }
         }
         PacketDistributor.sendToPlayer(player, new PhoneNetwork.State(myNumber == null ? "" : myNumber, state, other));
-        List<PhoneNetwork.Contact> contacts = data.contacts(player.getUUID()).entrySet().stream()
+        String sim = myNumber == null ? "" : myNumber;
+        List<PhoneNetwork.Contact> contacts = data.contacts(sim).entrySet().stream()
                 .map(e -> new PhoneNetwork.Contact(e.getKey(), e.getValue())).toList();
-        List<PhoneNetwork.Appel> recents = data.recents(player.getUUID()).stream()
+        List<PhoneNetwork.Appel> recents = data.recents(sim).stream()
                 .map(r -> new PhoneNetwork.Appel(r.numero(), r.type(), r.temps())).toList();
         PacketDistributor.sendToPlayer(player, new PhoneNetwork.Carnet(contacts, recents));
     }
 
-    static boolean hasPhone(ServerPlayer player) {
-        return player.getInventory().hasAnyMatching(stack -> stack.is(CabaneItems.TELEPHONE.get()));
+    /** Le téléphone qu'on utilise : celui en main, sinon le premier de l'inventaire. */
+    public static ItemStack telephoneActif(ServerPlayer player) {
+        for (InteractionHand main : InteractionHand.values()) {
+            if (player.getItemInHand(main).is(CabaneItems.TELEPHONE.get())) {
+                return player.getItemInHand(main);
+            }
+        }
+        for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(CabaneItems.TELEPHONE.get())) {
+                return stack;
+            }
+        }
+        return null;
+    }
+
+    /** Le numéro de la SIM du téléphone utilisé, ou null. */
+    public static String numero(ServerPlayer player) {
+        ItemStack telephone = telephoneActif(player);
+        return telephone == null ? null : telephone.get(CabaneComponents.NUMERO);
+    }
+
+    static boolean aLeNumero(ServerPlayer player, String numero) {
+        return player.getInventory().hasAnyMatching(stack -> stack.is(CabaneItems.TELEPHONE.get())
+                && numero.equals(stack.get(CabaneComponents.NUMERO)));
+    }
+
+    /** Le joueur connecté qui a sur lui le téléphone de ce numéro. */
+    static ServerPlayer porteur(MinecraftServer server, String numero) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (aLeNumero(p, numero)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     private static void premierAppel(ServerPlayer player) {

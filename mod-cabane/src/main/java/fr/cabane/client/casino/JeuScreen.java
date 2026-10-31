@@ -32,7 +32,7 @@ public abstract class JeuScreen extends Screen {
     protected int animation = -1;
     protected String message = "";
     protected int couleurMessage = Ui.GRIS;
-    private Button jouer;
+    private fr.cabane.client.ui.Ios.Bouton jouer;
 
     protected JeuScreen(String titre, int jeu) {
         super(Component.literal(titre));
@@ -59,11 +59,11 @@ public abstract class JeuScreen extends Screen {
         left = (width - W) / 2;
         top = (height - H) / 2;
         int y = top + H - 26;
-        addRenderableWidget(Button.builder(Component.literal("-100"), b -> changerMise(-100)).bounds(left + 8, y, 32, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("-10"), b -> changerMise(-10)).bounds(left + 42, y, 28, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("+10"), b -> changerMise(10)).bounds(left + 136, y, 28, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("+100"), b -> changerMise(100)).bounds(left + 166, y, 32, 18).build());
-        jouer = addRenderableWidget(Button.builder(Component.literal("Jouer"), b -> jouer()).bounds(left + W - 110, y, 102, 18).build());
+        addRenderableWidget(fr.cabane.client.ui.Ios.Bouton.plein(left + 8, y, 32, 18, "-100", 0xFF5A1414, () -> changerMise(-100)));
+        addRenderableWidget(fr.cabane.client.ui.Ios.Bouton.plein(left + 42, y, 28, 18, "-10", 0xFF5A1414, () -> changerMise(-10)));
+        addRenderableWidget(fr.cabane.client.ui.Ios.Bouton.plein(left + 136, y, 28, 18, "+10", 0xFF14402A, () -> changerMise(10)));
+        addRenderableWidget(fr.cabane.client.ui.Ios.Bouton.plein(left + 166, y, 32, 18, "+100", 0xFF14402A, () -> changerMise(100)));
+        jouer = addRenderableWidget(fr.cabane.client.ui.Ios.Bouton.plein(left + W - 110, y, 102, 18, "★ JOUER ★", 0xFFB8862B, this::jouer));
         ajouterBoutons();
     }
 
@@ -87,7 +87,7 @@ public abstract class JeuScreen extends Screen {
             return;
         }
         message = "";
-        PacketDistributor.sendToServer(new Casino.Jouer(jeu, mise, choix()));
+        PacketDistributor.sendToServer(new Casino.Jouer(jeu, mise, choix(), ClientCasino.machine));
     }
 
     void resultat(List<Integer> tirage, long gain) {
@@ -130,17 +130,20 @@ public abstract class JeuScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panneau(g, left, top, W, H);
+        CasinoUi.table(g, font, title.getString(), left, top, W, H);
+        g.fill(left + 6, top + H - 52, left + W - 6, top + H - 51, 0x40E8C15A);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        Ui.titre(g, font, title.getString(), left + 10, top + 10);
         Ui.solde(g, font, left + W - 10, top + 10);
+        long caisse = minecraft.level != null && minecraft.level.getBlockEntity(ClientCasino.machine) instanceof fr.cabane.bloc.InteractifBlockEntity be ? be.caisse() : 0;
+        g.drawString(font, "Caisse : " + Economie.format(caisse), left + 10, top + 10, caisse > 0 ? 0xFFBFE8C8 : Ui.ROUGE, true);
         dessinerJeu(g, mouseX, mouseY, partialTick);
-        g.drawCenteredString(font, "Mise", left + 103, top + H - 36, Ui.GRIS);
-        g.drawCenteredString(font, Economie.format(mise), left + 103, top + H - 21, Ui.OR);
+        CasinoUi.jeton(g, font, left + 103, top + H - 17, 11, CasinoUi.couleurJeton(mise), "");
+        g.drawCenteredString(font, "MISE", left + 103, top + H - 44, CasinoUi.OR);
+        g.drawCenteredString(font, Economie.format(mise), left + 103, top + H - 21, 0xFFFFFFFF);
         String pari = nomChoix();
         if (!pari.isEmpty()) {
             g.drawString(font, "Pari : " + pari, left + W - 110, top + H - 36, Ui.GRIS, false);

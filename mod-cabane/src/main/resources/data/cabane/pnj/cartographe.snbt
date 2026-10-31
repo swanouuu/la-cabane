@@ -1,21 +1,22 @@
 {
   id:"easy_npc:witch",
   UUID:[I;1365483136,-867177340,-1625606551,-696587307],
-  CustomName:'{"text":"Mira la Cartographe","color":"aqua"}',
+  CustomName:'{"text":"Karim le Chouf","color":"aqua"}',
   CustomNameVisible:1b,
   Invulnerable:1b,
   PersistenceRequired:1b,
   EasyNPCVersion:3,
   VariantType:"WITCH",
   SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"cataclysm:nameless_sorcerer"},
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
-        Name:"Mira",
-        Texts:[{Text:"Des cartes, des cartes, encore des cartes ! Chaque relique a la sienne. Complète les quêtes d'indice dans ton livre et je te les donne."}],
+        Name:"Karim",
+        Texts:[{Text:"Chouf, chouf ! Des cartes, encore des cartes ! Regarde le grand panneau derrière moi : c'est tout le monde connu. Chaque relique a sa carte. Complète les quêtes d'indice dans ton livre et je te les donne."}],
         Buttons:[{
           Label:"conseil",
           Name:"Un conseil ?",
@@ -23,7 +24,7 @@
           Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"conseil"}]
         },{
           Label:"bye",
-          Name:"Merci Mira",
+          Name:"Merci Karim",
           Type:"CLOSE"
         }]
       },{

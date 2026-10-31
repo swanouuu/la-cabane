@@ -62,6 +62,7 @@ public final class PhotoTour {
             String[] e = etapes.get(index);
             Screenshot.grab(mc.gameDirectory, (ecran ? e[1] : e[0]) + ".png", mc.getMainRenderTarget(), message -> { });
             if (ecran && !(e.length > 4 && e[e.length - 1].equals("garder"))) {
+                ClientCamera.fermer();
                 mc.setScreen(null);
                 mc.options.hideGui = true;
             }
@@ -92,24 +93,48 @@ public final class PhotoTour {
             switch (e[2]) {
                 case "cmd" -> commande(mc, String.join(" ", java.util.Arrays.copyOfRange(e, 3, e.length)));
                 case "jouer" -> {
-                    ouvrir(mc, e[3]);
+                    ouvrir(mc, e[3], e);
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(
-                            new fr.cabane.casino.Casino.Jouer(Integer.parseInt(e[4]), 50, Integer.parseInt(e[5])));
+                            new fr.cabane.casino.Casino.Jouer(Integer.parseInt(e[4]), 50, Integer.parseInt(e[5]), fr.cabane.client.casino.ClientCasino.machine));
                     attente = Integer.parseInt(e[6]);
                 }
                 case "rien" -> attente = Integer.parseInt(e[3]);
-                default -> ouvrir(mc, e[3]);
+                default -> ouvrir(mc, e[3], e);
             }
             return;
         }
         point = e;
         commande(mc, "time set " + (e.length > 6 ? e[6] : "6000"));
+        ClientCamera.fermer();
         commande(mc, "tp @s " + e[1] + " " + e[2] + " " + e[3] + " " + e[4] + " " + e[5]);
         attente = ATTENTE_POINT;
     }
 
-    private static void ouvrir(Minecraft mc, String nom) {
+    /** Une position donnée en fin de ligne (x y z), pour les machines du casino. */
+    private static net.minecraft.core.BlockPos position(String[] e) {
+        try {
+            int n = e.length;
+            return new net.minecraft.core.BlockPos(Integer.parseInt(e[n - 3]), Integer.parseInt(e[n - 2]), Integer.parseInt(e[n - 1]));
+        } catch (RuntimeException ex) {
+            return fr.cabane.client.casino.ClientCasino.machine;
+        }
+    }
+
+    private static void ouvrir(Minecraft mc, String nom, String[] e) {
+        fr.cabane.client.casino.ClientCasino.machine = position(e);
         switch (nom) {
+            case "camera" -> ClientCamera.ouvrir();
+            case "reglages" -> mc.setScreen(new ClientPiaf.Reglages());
+            case "caisse" -> fr.cabane.client.casino.CaisseScreen.ouvrir(position(e));
+            case "ticket" -> {
+                var t = new fr.cabane.client.casino.TicketScreen(new fr.cabane.casino.Ticket.Gratte(List.of(50, 10, 50, 20, 100, 50, 5, 20, 10), 50));
+                mc.setScreen(t);
+                t.demo();
+            }
+            case "booster-scelle" -> {
+                var ids = fr.cabane.tcg.Cartes.toutes().stream().map(fr.cabane.tcg.Cartes.Def::id).toList();
+                mc.setScreen(new ClientCartes.BoosterScreen(List.of(ids.get(0), ids.get(5), ids.get(9), ids.get(14), ids.get(18))));
+            }
             case "telephone" -> mc.setScreen(new ClientPiaf.Accueil());
             case "contacts" -> mc.setScreen(new ClientPiaf.Contacts());
             case "recents" -> mc.setScreen(new ClientPiaf.Recents());
@@ -149,6 +174,10 @@ public final class PhotoTour {
             case "photo" -> ClientPiaf.prendrePhoto();
             case "publier" -> ClientPiaf.demander(2, reste, ClientPiaf.galerie.isEmpty() ? 0 : ClientPiaf.galerie.getLast());
             case "texte" -> ClientPiaf.demander(2, reste, 0);
+            case "utiliser" -> {
+                Minecraft mc = Minecraft.getInstance();
+                mc.gameMode.useItem(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND);
+            }
             case "attendre" -> {
                 return Integer.parseInt(e[2]);
             }

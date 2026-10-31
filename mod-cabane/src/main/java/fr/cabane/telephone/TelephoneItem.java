@@ -31,6 +31,10 @@ public class TelephoneItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        String numero = stack.get(fr.cabane.CabaneComponents.NUMERO);
+        tooltip.add(numero == null
+                ? Component.literal("SIM à activer : choisis ton numéro (définitif)").withStyle(ChatFormatting.YELLOW)
+                : Component.literal("☎ " + numero).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("item.cabane.telephone.desc").withStyle(ChatFormatting.GRAY));
     }
 }

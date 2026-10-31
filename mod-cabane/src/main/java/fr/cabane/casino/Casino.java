@@ -58,12 +58,13 @@ public final class Casino {
 
     // ---------------------------------------------------------------- réseau
 
-    public record Jouer(int jeu, long mise, int choix) implements CustomPacketPayload {
+    public record Jouer(int jeu, long mise, int choix, net.minecraft.core.BlockPos machine) implements CustomPacketPayload {
         public static final Type<Jouer> TYPE = new Type<>(Cabane.id("casino_jouer"));
         public static final StreamCodec<ByteBuf, Jouer> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, Jouer::jeu,
                 ByteBufCodecs.VAR_LONG, Jouer::mise,
                 ByteBufCodecs.VAR_INT, Jouer::choix,
+                net.minecraft.core.BlockPos.STREAM_CODEC, Jouer::machine,
                 Jouer::new);
 
         @Override
@@ -86,11 +87,30 @@ public final class Casino {
         }
     }
 
+    /** Le gérant remplit (montant positif) ou vide (négatif) la caisse de sa machine. */
+    public record Caisse(net.minecraft.core.BlockPos machine, long montant) implements CustomPacketPayload {
+        public static final Type<Caisse> TYPE = new Type<>(Cabane.id("casino_caisse"));
+        public static final StreamCodec<ByteBuf, Caisse> CODEC = StreamCodec.composite(
+                net.minecraft.core.BlockPos.STREAM_CODEC, Caisse::machine,
+                ByteBufCodecs.VAR_LONG, Caisse::montant,
+                Caisse::new);
+
+        @Override
+        public Type<Caisse> type() {
+            return TYPE;
+        }
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
                 .playToServer(Jouer.TYPE, Jouer.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur) {
-                        jouer(joueur, p.jeu(), p.mise(), p.choix());
+                        jouer(joueur, p.jeu(), p.mise(), p.choix(), p.machine());
+                    }
+                }))
+                .playToServer(Caisse.TYPE, Caisse.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer joueur) {
+                        gererCaisse(joueur, p.machine(), p.montant());
                     }
                 }))
                 .playToClient(Resultat.TYPE, Resultat.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientCasino.resultat(p)));
@@ -98,17 +118,86 @@ public final class Casino {
         Ticket.register(event);
     }
 
-    static boolean miseValide(ServerPlayer joueur, long mise) {
+    // ---------------------------------------------------------------- la caisse de chaque machine
+
+    /** La machine visée, si c'est bien un jeu du casino à portée de main. */
+    static fr.cabane.bloc.InteractifBlockEntity machine(ServerPlayer joueur, net.minecraft.core.BlockPos pos) {
+        if (pos == null || joueur.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64
+                || !(joueur.level().getBlockState(pos).getBlock() instanceof fr.cabane.bloc.BlocInteractif bloc) || !bloc.ouverture().casino()
+                || !(joueur.level().getBlockEntity(pos) instanceof fr.cabane.bloc.InteractifBlockEntity be)) {
+            return null;
+        }
+        return be;
+    }
+
+    /**
+     * Prendre la mise : refusée si la caisse ne peut pas payer le pire cas (gainMax, mise comprise).
+     * La mise va dans la caisse.
+     */
+    static boolean miser(ServerPlayer joueur, fr.cabane.bloc.InteractifBlockEntity machine, long mise, long gainMax) {
+        if (machine == null) {
+            return false;
+        }
         if (mise < MISE_MIN || mise > MISE_MAX) {
             joueur.displayClientMessage(Component.literal("Mise entre " + Economie.format(MISE_MIN) + " et " + Economie.format(MISE_MAX) + ".")
                     .withStyle(ChatFormatting.RED), true);
             return false;
         }
-        return Economie.payer(joueur, mise);
+        if (machine.caisse() + mise < gainMax) {
+            String gerant = machine.nomProprietaire().isEmpty() ? "le gérant" : machine.nomProprietaire();
+            joueur.displayClientMessage(Component.literal("La caisse ne couvre pas cette mise (il faudrait " + Economie.format(gainMax - mise)
+                    + " dedans). " + gerant + " doit la remplir.").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        if (!Economie.payer(joueur, mise)) {
+            return false;
+        }
+        machine.ajouterCaisse(mise);
+        return true;
     }
 
-    private static void jouer(ServerPlayer joueur, int jeu, long mise, int choix) {
-        if (jeu < MACHINE || jeu > PILE_OU_FACE || !miseValide(joueur, mise)) {
+    /** Payer un gain depuis la caisse de la machine. */
+    static void payer(ServerPlayer joueur, fr.cabane.bloc.InteractifBlockEntity machine, long gain) {
+        if (gain <= 0) {
+            return;
+        }
+        machine.ajouterCaisse(-gain);
+        Economie.crediter(joueur.server, joueur.getUUID(), gain);
+    }
+
+    private static void gererCaisse(ServerPlayer joueur, net.minecraft.core.BlockPos pos, long montant) {
+        fr.cabane.bloc.InteractifBlockEntity m = machine(joueur, pos);
+        if (m == null || !m.estProprietaire(joueur.getUUID()) || montant == 0) {
+            return;
+        }
+        if (montant > 0) {
+            if (Economie.payer(joueur, montant)) {
+                m.ajouterCaisse(montant);
+                joueur.displayClientMessage(Component.literal("Caisse remplie : ").append(Economie.texte(m.caisse())).withStyle(ChatFormatting.GREEN), true);
+            }
+        } else {
+            long retrait = Math.min(-montant, m.caisse());
+            m.ajouterCaisse(-retrait);
+            Economie.crediter(joueur.server, joueur.getUUID(), retrait);
+            joueur.displayClientMessage(Component.literal("Tu récupères ").append(Economie.texte(retrait)).withStyle(ChatFormatting.GREEN), true);
+        }
+        Economie.sync(joueur);
+    }
+
+    /** Le plus gros gain possible pour une mise (mise comprise), selon le jeu et le pari. */
+    static long gainMax(int jeu, long mise, int choix) {
+        return switch (jeu) {
+            case MACHINE -> mise * SYMBOLES_GAIN[SYMBOLES_GAIN.length - 1];
+            case ROULETTE -> choix >= 0 && choix <= 36 ? mise * 36 : choix >= PARI_DOUZAINE_1 ? mise * 3 : mise * 2;
+            case DES -> choix == 1 ? mise * 11 / 2 : mise * 23 / 10;
+            case ROUE -> mise * 4;
+            default -> mise * 195 / 100;
+        };
+    }
+
+    private static void jouer(ServerPlayer joueur, int jeu, long mise, int choix, net.minecraft.core.BlockPos pos) {
+        fr.cabane.bloc.InteractifBlockEntity machine = machine(joueur, pos);
+        if (jeu < MACHINE || jeu > PILE_OU_FACE || !miser(joueur, machine, mise, gainMax(jeu, mise, choix))) {
             return;
         }
         RandomSource rnd = joueur.getRandom();
@@ -120,9 +209,7 @@ public final class Casino {
             case ROUE -> roue(rnd, mise, tirage);
             default -> pileOuFace(rnd, mise, choix, tirage);
         };
-        if (gain > 0) {
-            Economie.crediter(joueur.server, joueur.getUUID(), gain);
-        }
+        payer(joueur, machine, gain);
         PacketDistributor.sendToPlayer(joueur, new Resultat(jeu, tirage, gain));
     }
 

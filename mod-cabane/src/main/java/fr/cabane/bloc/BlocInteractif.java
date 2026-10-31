@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
 
 /** Un bloc qui ouvre un écran au clic droit : boutique, contrats, ou un jeu du casino. */
-public class BlocInteractif extends HorizontalDirectionalBlock {
+public class BlocInteractif extends HorizontalDirectionalBlock implements net.minecraft.world.level.block.EntityBlock {
 
     public enum Ouverture {
         BOUTIQUE(false), CONTRATS(false),
@@ -27,6 +27,26 @@ public class BlocInteractif extends HorizontalDirectionalBlock {
 
         Ouverture(boolean coteClient) {
             this.cote_client = coteClient;
+        }
+
+        public boolean casino() {
+            return cote_client;
+        }
+    }
+
+    public Ouverture ouverture() {
+        return ouverture;
+    }
+
+    @Override
+    public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new InteractifBlockEntity(pos, state);
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        if (!level.isClientSide && placer instanceof ServerPlayer joueur && level.getBlockEntity(pos) instanceof InteractifBlockEntity be) {
+            be.definirProprietaire(joueur.getUUID(), joueur.getGameProfile().getName());
         }
     }
 
@@ -57,12 +77,24 @@ public class BlocInteractif extends HorizontalDirectionalBlock {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide) {
             if (ouverture.cote_client) {
-                ClientCasino.ouvrir(ouverture);
+                // le gérant, accroupi, gère la caisse ; sinon on joue
+                if (player.isShiftKeyDown() && level.getBlockEntity(pos) instanceof InteractifBlockEntity be && be.estProprietaire(player.getUUID())) {
+                    fr.cabane.client.casino.CaisseScreen.ouvrir(pos);
+                } else {
+                    ClientCasino.ouvrir(ouverture, pos);
+                }
             }
         } else if (player instanceof ServerPlayer joueur) {
             switch (ouverture) {
                 case BOUTIQUE -> Boutique.ouvrir(joueur);
-                case CONTRATS -> Contrats.ouvrir(joueur);
+                // clic droit : livrer ce qu'on a ; accroupi : la liste détaillée
+                case CONTRATS -> {
+                    if (joueur.isShiftKeyDown()) {
+                        Contrats.ouvrir(joueur);
+                    } else {
+                        Contrats.livrerTout(joueur);
+                    }
+                }
                 default -> fr.cabane.economie.Economie.sync(joueur);
             }
         }

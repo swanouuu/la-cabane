@@ -1,0 +1,33 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-1594553777,361132170,-99588310,-2086402211],
+  CustomName:'{"text":"Gribbs, cousin de Mouloud","color":"dark_aqua"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"goblintraders:vein_goblin_trader"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Gribbs",
+        Texts:[{Text:"Psst ! Toi ! Les meilleures affaires sont chez mon cousin Mouloud, juste là, au Grand Bazar. Enfin… presque les meilleures. Moi, je vends des secrets. Pas encore, mais bientôt."}],
+        Buttons:[{
+          Label:"boutique",
+          Name:"Voir la boutique",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane boutique",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
+          Label:"bye",
+          Name:"Euh… à plus",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

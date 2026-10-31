@@ -72,10 +72,10 @@ function chapitre(fichier, { titre, icone, ordre, quetes }) {
 }
 
 // ---------------------------------------------------------------- chapitre 1 : la Cabane
-const cabane = chapitre("la_cabane", { titre: "&6La Cabane", icone: "cabane:telephone", ordre: 0, quetes: [
+const cabane = chapitre("la_cabane", { titre: "&6Beauvais", icone: "cabane:telephone", ordre: 0, quetes: [
   quete("bienvenue", { argent: 50, titre: "Bienvenue à la Cabane", sous: "Le début de tout", x: 0, y: 0, forme: "gear", taille: 1.5,
     desc: ["Votre avion s'est écrasé, mais vous avez sauté à temps. Vous voilà dans la Grande Cabane, au centre de la map.", "",
-      "C'est ici que vous construirez votre base. Allez parler au &6Vieux Gardien&r près du porche, lisez son journal sur le pupitre, puis cochez cette quête."],
+      "C'est ici que vous construirez votre base. Allez parler au &6Hejj du Village&r sur le porche, lisez son journal sur le pupitre, puis cochez cette quête."],
     taches: [coche("bienvenue")], recompenses: [xp("bienvenue", 2), donne("bienvenue", "minecraft:cooked_beef", 8)] }),
   quete("telephone", { argent: 50, titre: "Allô ?", sous: "Ton numéro perso", x: 2, y: -1.5, deps: ["bienvenue"],
     desc: ["Appuie sur &eN&r (ou clic droit avec le téléphone) et choisis ton numéro à 3 ou 4 chiffres.", "",
@@ -102,7 +102,7 @@ const village = chapitre("le_village", { titre: "&aLe Village", icone: "minecraf
     desc: ["Votre avion s'est écrasé, mais le village voisin vous accueille dans la Grande Cabane.", "", "Allez saluer les villageois, puis cochez cette quête."],
     taches: [coche("village/accueil")] }),
   quete("village/contrat", { titre: "Premier contrat", x: 2, y: -1.5, deps: ["village/accueil"], argent: 100,
-    desc: ["Bako, au marché, propose trois contrats qui changent toutes les heures. Remplis-en un !"],
+    desc: ["Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures. Remplis-en un !"],
     taches: [succes("village/contrat", "cabane:premier_contrat")] }),
   quete("village/pain", { titre: "Nourrir le village", x: 2, y: 0, deps: ["village/accueil"], argent: 200,
     desc: ["Les villageois ont faim : apporte 32 pains."], taches: [avoir("village/pain", "minecraft:bread", 32)] }),
@@ -137,10 +137,10 @@ RELIQUES.forEach((r, i) => {
 });
 reliques.push(quete("reveil", { argent: 5000, titre: "&6&lLe Réveil de la Cabane", sous: "Les sept reliques sont réunies", x: 6.5, y: 0, forme: "gear", taille: 2,
   deps: RELIQUES.map((r) => `relique/${r.id}`),
-  desc: ["Les sept reliques sont de retour sur le comptoir.", "", "La Confrérie des Explorateurs renaît : vous êtes les nouveaux Gardiens de la Cabane."],
+  desc: ["Les sept reliques sont de retour sur le comptoir.", "", "La Confrérie des Explorateurs renaît : vous êtes les nouveaux Gardiens de Beauvais."],
   taches: [coche("reveil")],
   recompenses: [donne("reveil", "minecraft:elytra"), donne("reveil", "minecraft:diamond", 16),
-    commande("reveil", `/title {p} title {"text":"Gardien de la Cabane","color":"gold"}`)] }));
+    commande("reveil", `/title {p} title {"text":"Gardien de Beauvais","color":"gold"}`)] }));
 const chapReliques = chapitre("reliques", { titre: "&eLes Sept Reliques", icone: "cabane:scarabee_dor", ordre: 2, quetes: reliques });
 
 // ---------------------------------------------------------------- chapitre 3 : les grands donjons

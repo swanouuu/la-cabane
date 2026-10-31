@@ -16,6 +16,8 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(CabaneEntities.PARACHUTE.get(), ParachuteRenderer::new);
+        event.registerBlockEntityRenderer(CabaneBlocks.ETAL_BE.get(), EtalRenderer::new);
+        event.registerBlockEntityRenderer(CabaneBlocks.INTERACTIF_BE.get(), InteractifRenderer::new);
     }
 
     @SubscribeEvent

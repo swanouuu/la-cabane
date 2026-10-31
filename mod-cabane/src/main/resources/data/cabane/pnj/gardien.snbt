@@ -1,13 +1,14 @@
 {
   id:"easy_npc:illusioner",
   UUID:[I;-1032685730,-1512804940,133924635,2027646041],
-  CustomName:'{"text":"Le Vieux Gardien","color":"gold"}',
+  CustomName:'{"text":"Le Hejj du Village","color":"gold"}',
   CustomNameVisible:1b,
   Invulnerable:1b,
   PersistenceRequired:1b,
   EasyNPCVersion:3,
   VariantType:"ILLUSIONER",
   SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:umvuthi"},
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
@@ -15,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Accueil",
-        Texts:[{Text:"Vous avez vu ça ? Votre avion a pris feu au-dessus de la savane ! Le village accepte de vous héberger dans la Grande Cabane… à condition de l'aider."}],
+        Texts:[{Text:"Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais accepte de vous héberger dans la Grande Cabane… à condition de l'aider. Moi, je suis le Hejj : le sage du village."}],
         Buttons:[{
           Label:"aider",
           Name:"Comment aider ?",
@@ -34,7 +35,7 @@
       },{
         Label:"aider",
         Name:"Aider le village",
-        Texts:[{Text:"Bako, au marché, a des contrats qui changent toutes les heures : apportez-lui ce qu'il demande, il paie en SakaiDollars. Et regardez le tableau des quêtes, à côté de la cabane."}],
+        Texts:[{Text:"Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures : apportez ce qu'il demande, le village paie en SakaiDollars. Et regardez le grand panneau de la carte, au milieu du village."}],
         Buttons:[{
           Label:"bye",
           Name:"On s'y met !",
@@ -57,10 +58,10 @@
       },{
         Label:"cartes",
         Name:"Les cartes",
-        Texts:[{Text:"Mira, la cartographe, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones."}],
+        Texts:[{Text:"Karim le Chouf, à côté du grand panneau, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones."}],
         Buttons:[{
           Label:"bye",
-          Name:"Merci, Gardien",
+          Name:"Merci, Hejj",
           Type:"CLOSE"
         }]
       }]

@@ -1,31 +1,27 @@
 {
   id:"easy_npc:wandering_trader",
   UUID:[I;1324909610,-468153482,-198452457,675235941],
-  CustomName:'{"text":"Bako le Marchand","color":"green"}',
+  CustomName:'{"text":"Mouloud le Marchand","color":"green"}',
   CustomNameVisible:1b,
   Invulnerable:1b,
   PersistenceRequired:1b,
   EasyNPCVersion:3,
   VariantType:"WANDERING_TRADER",
   SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"goblintraders:goblin_trader"},
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
-        Name:"Bako",
-        Texts:[{Text:"Bienvenue au marché ! Je vends de tout contre de bons SakaiDollars, et mes contrats changent toutes les heures."}],
+        Name:"Mouloud",
+        Texts:[{Text:"Bienvenue au Grand Bazar ! Hé hé, un gobelin honnête, ça existe : moi. Je vends de tout contre de bons SakaiDollars. Pour du travail, va voir Mehdi, au tableau des contrats."}],
         Buttons:[{
           Label:"boutique",
           Name:"Voir la boutique",
           Type:"ACTION",
           Actions:[{Type:"COMMAND",Cmd:"cabane boutique",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
-        },{
-          Label:"contrats",
-          Name:"Les contrats de l'heure",
-          Type:"ACTION",
-          Actions:[{Type:"COMMAND",Cmd:"cabane contrats",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
         },{
           Label:"bye",
           Name:"À plus",

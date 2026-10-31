@@ -91,42 +91,80 @@ public final class ClientCartes {
         }
     }
 
-    /** Les 5 cartes du booster, face cachée ; on clique pour les retourner une à une. */
-    static final class BoosterScreen extends Screen {
-        private final List<String> cartes;
-        private final int[] retournement = new int[5];
-        private int prochaine;
+    /**
+     * L'ouverture d'un booster, en plusieurs temps : le paquet scellé et brillant ; on clique, il tremble
+     * et se déchire ; les cartes sont distribuées face cachée ; on les retourne une à une. Plus une carte
+     * est rare, plus elle se fait attendre (aura, tremblement), et plus la révélation est belle : rayons,
+     * étincelles, reflet holographique, éclair pour les légendaires. La meilleure carte est toujours la dernière.
+     */
+    public static final class BoosterScreen extends Screen {
+        private enum Phase { SCELLE, DECHIRURE, DISTRIBUTION, REVELATION }
 
-        BoosterScreen(List<String> cartes) {
+        private record Etincelle(float x, float y, float vx, float vy, int couleur, long naissance, float vie) {
+        }
+
+        private final List<String> cartes;
+        private final long[] retournee = new long[5];
+        private final long[] charge = new long[5];
+        private final List<Etincelle> etincelles = new java.util.ArrayList<>();
+        private final java.util.Random alea = new java.util.Random();
+        private Phase phase = Phase.SCELLE;
+        private long debutPhase = System.currentTimeMillis();
+        private long eclair;
+        private int prochaine;
+        private Button toutBouton;
+
+        public BoosterScreen(List<String> cartes) {
             super(Component.literal("Booster"));
             this.cartes = cartes;
         }
 
         @Override
         protected void init() {
-            addRenderableWidget(Button.builder(Component.literal("Tout retourner"), b -> {
-                while (prochaine < cartes.size()) {
-                    retourner();
-                }
-            }).bounds(width / 2 - 60, height / 2 + 80, 120, 18).build());
+            toutBouton = addRenderableWidget(Button.builder(Component.literal("Tout retourner"), b -> toutRetourner())
+                    .bounds(width / 2 - 60, height - 28, 120, 18).build());
+            toutBouton.visible = phase == Phase.REVELATION;
         }
 
-        void toutRetourner() {
-            while (prochaine < cartes.size()) {
-                retourner();
-            }
+        private static long maintenant() {
+            return System.currentTimeMillis();
         }
 
-        private void retourner() {
-            if (prochaine >= cartes.size()) {
-                return;
+        private int rarete(int i) {
+            Cartes.Def def = Cartes.def(cartes.get(i));
+            return def == null ? 0 : def.rarete();
+        }
+
+        /** Le temps d'attente avant de retourner une carte de cette rareté. */
+        private static long attente(int rarete) {
+            return switch (rarete) {
+                case 1 -> 450;
+                case 2 -> 900;
+                case 3 -> 1500;
+                default -> 0;
+            };
+        }
+
+        public void toutRetourner() {
+            if (phase == Phase.SCELLE || phase == Phase.DECHIRURE) {
+                passer(Phase.DISTRIBUTION);
+                debutPhase -= 2000;
+                passer(Phase.REVELATION);
             }
-            retournement[prochaine] = 1;
-            Cartes.Def def = Cartes.def(cartes.get(prochaine));
-            boolean rare = def != null && def.rarete() >= 2;
-            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(
-                    rare ? SoundEvents.PLAYER_LEVELUP : SoundEvents.BOOK_PAGE_TURN, rare ? 1.4F : 1F));
-            prochaine++;
+            long t = maintenant();
+            for (int i = prochaine; i < cartes.size(); i++) {
+                charge[i] = t - 5000;
+                retournee[i] = t - 5000;
+            }
+            prochaine = cartes.size();
+        }
+
+        private void passer(Phase p) {
+            phase = p;
+            debutPhase = maintenant();
+            if (toutBouton != null) {
+                toutBouton.visible = p == Phase.REVELATION;
+            }
         }
 
         @Override
@@ -134,15 +172,84 @@ public final class ClientCartes {
             if (super.mouseClicked(mouseX, mouseY, button)) {
                 return true;
             }
-            retourner();
+            switch (phase) {
+                case SCELLE -> {
+                    passer(Phase.DECHIRURE);
+                    son(SoundEvents.ARMOR_EQUIP_LEATHER.value(), 0.8F);
+                }
+                case REVELATION -> {
+                    if (prochaine < cartes.size() && charge[prochaine] == 0 && (prochaine == 0 || retournee[prochaine - 1] > 0)) {
+                        charge[prochaine] = maintenant();
+                        if (rarete(prochaine) >= 2) {
+                            son(SoundEvents.BEACON_POWER_SELECT, rarete(prochaine) == 3 ? 0.6F : 0.9F);
+                        }
+                    }
+                }
+                default -> {
+                }
+            }
             return true;
+        }
+
+        private static void son(net.minecraft.sounds.SoundEvent s, float hauteur) {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(s, hauteur));
         }
 
         @Override
         public void tick() {
-            for (int i = 0; i < retournement.length; i++) {
-                if (retournement[i] > 0 && retournement[i] < 10) {
-                    retournement[i]++;
+            long t = maintenant();
+            if (phase == Phase.DECHIRURE && t - debutPhase > 900) {
+                passer(Phase.DISTRIBUTION);
+                son(SoundEvents.BOOK_PAGE_TURN, 1.2F);
+            } else if (phase == Phase.DISTRIBUTION && t - debutPhase > 1100) {
+                passer(Phase.REVELATION);
+            }
+            // une carte « chargée » se retourne après son temps d'attente
+            for (int i = 0; i < cartes.size(); i++) {
+                if (charge[i] > 0 && retournee[i] == 0 && t - charge[i] >= attente(rarete(i))) {
+                    retournee[i] = t;
+                    prochaine = Math.max(prochaine, i + 1);
+                    reveler(i);
+                }
+            }
+        }
+
+        private int[] place(int i) {
+            int w = carteW();
+            int h = w * 10 / 7;
+            int total = cartes.size() * w + (cartes.size() - 1) * 10;
+            return new int[] {width / 2 - total / 2 + i * (w + 10), height / 2 - h / 2 + 4, w, h};
+        }
+
+        private int carteW() {
+            return Math.min(70, (width - 60) / cartes.size() - 10);
+        }
+
+        /** La carte se retourne : son, étincelles, rayons, éclair, selon la rareté. */
+        private void reveler(int i) {
+            int r = rarete(i);
+            int[] p = place(i);
+            float cx = p[0] + p[2] / 2F;
+            float cy = p[1] + p[3] / 2F;
+            int nombre = new int[] {8, 30, 70, 140}[r];
+            int couleur = Cartes.COULEURS_RGB[r];
+            for (int k = 0; k < nombre; k++) {
+                double a = alea.nextDouble() * Math.PI * 2;
+                float v = (r + 1) * (0.6F + alea.nextFloat() * 1.6F);
+                int c = r == 3 && alea.nextBoolean() ? 0xFFFFFFFF : couleur;
+                etincelles.add(new Etincelle(cx, cy, (float) Math.cos(a) * v, (float) Math.sin(a) * v - 0.5F, c, maintenant(), 700 + alea.nextInt(700)));
+            }
+            switch (r) {
+                case 0 -> son(SoundEvents.BOOK_PAGE_TURN, 1F);
+                case 1 -> son(SoundEvents.AMETHYST_BLOCK_CHIME, 1.2F);
+                case 2 -> {
+                    son(SoundEvents.PLAYER_LEVELUP, 1.3F);
+                    son(SoundEvents.AMETHYST_CLUSTER_BREAK, 1F);
+                }
+                default -> {
+                    son(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1F);
+                    son(SoundEvents.TOTEM_USE, 1.4F);
+                    eclair = maintenant();
                 }
             }
         }
@@ -150,33 +257,203 @@ public final class ClientCartes {
         @Override
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
-            int w = 70;
-            int h = 100;
-            int x0 = width / 2 - (cartes.size() * (w + 8)) / 2;
-            int y = height / 2 - h / 2 - 10;
-            Ui.titre(g, font, "Ton booster", width / 2 - font.width("Ton booster") / 2, y - 24);
-            for (int i = 0; i < cartes.size(); i++) {
-                int x = x0 + i * (w + 8);
-                float t = retournement[i] == 0 ? 0F : Math.min(1F, (retournement[i] + partialTick) / 10F);
-                float echelle = Math.abs(Mth.cos(t * (float) Math.PI));
-                boolean face = t >= 0.5F;
+            long t = maintenant();
+            float dt = (t - debutPhase) / 1000F;
+            switch (phase) {
+                case SCELLE -> {
+                    dessinerPaquet(g, t, 0F);
+                    texteCentre(g, "Clique pour ouvrir le booster", height / 2 + 82, Ui.GRIS);
+                }
+                case DECHIRURE -> dessinerPaquet(g, t, Math.min(1F, dt / 0.9F));
+                case DISTRIBUTION -> {
+                    for (int i = 0; i < cartes.size(); i++) {
+                        float k = Mth.clamp((dt - i * 0.12F) / 0.45F, 0F, 1F);
+                        k = 1 - (1 - k) * (1 - k) * (1 - k);
+                        int[] p = place(i);
+                        int x = (int) Mth.lerp(k, width / 2F - p[2] / 2F, p[0]);
+                        int y = (int) Mth.lerp(k, height / 2F - p[3] / 2F, p[1]);
+                        dos(g, x, y, p[2], p[3], 0, 0F);
+                    }
+                }
+                case REVELATION -> {
+                    for (int i = 0; i < cartes.size(); i++) {
+                        dessinerCarteBooster(g, i, t);
+                    }
+                    if (prochaine < cartes.size()) {
+                        boolean attend = charge[prochaine] > 0;
+                        texteCentre(g, attend ? "…" : "Clique pour retourner la carte suivante", place(0)[1] + place(0)[3] + 14, Ui.GRIS);
+                    } else if (t - retournee[cartes.size() - 1] > 600) {
+                        texteCentre(g, "Les cartes sont dans ton inventaire. Échap pour fermer.", place(0)[1] + place(0)[3] + 14, Ui.GRIS);
+                    }
+                }
+            }
+            dessinerEtincelles(g, t);
+            if (eclair > 0 && t - eclair < 500) {
+                int a = (int) (200 * (1 - (t - eclair) / 500F));
+                g.fill(0, 0, width, height, a << 24 | 0xFFF3C4);
+            }
+        }
+
+        private void texteCentre(GuiGraphics g, String s, int y, int couleur) {
+            g.drawCenteredString(font, s, width / 2, y, couleur);
+        }
+
+        /** Le paquet scellé : papier métallisé, reflet qui passe ; à l'ouverture il tremble et se déchire. */
+        private void dessinerPaquet(GuiGraphics g, long t, float ouverture) {
+            int w = 92;
+            int h = 132;
+            int x = width / 2 - w / 2;
+            int y = height / 2 - h / 2 - 6;
+            float tremble = ouverture > 0 && ouverture < 0.55F ? (float) Math.sin(t / 18.0) * 3F * ouverture * 2 : 0F;
+            float flotte = (float) Math.sin(t / 400.0) * 2F;
+            g.pose().pushPose();
+            g.pose().translate(tremble, flotte, 0);
+            // halo derrière le paquet
+            for (int k = 6; k > 0; k--) {
+                int a = (int) (18 + 10 * Math.sin(t / 300.0)) * k / 6;
+                g.fill(x - k * 3, y - k * 3, x + w + k * 3, y + h + k * 3, a << 24 | 0xFFC23D);
+            }
+            // le corps du paquet : un dégradé rouge et or
+            for (int dy = 0; dy < h; dy++) {
+                float k = dy / (float) h;
+                int c = 0xFF000000 | (int) Mth.lerp(k, 0xD8, 0x7A) << 16 | (int) Mth.lerp(k, 0x3A, 0x14) << 8 | (int) Mth.lerp(k, 0x2A, 0x1A);
+                g.fill(x, y + dy, x + w, y + dy + 1, c);
+            }
+            g.fill(x, y, x + w, y + 3, 0xFFFFD75E);
+            g.fill(x, y + h - 3, x + w, y + h, 0xFFFFD75E);
+            // le reflet qui balaie le papier
+            float balayage = (t % 2200) / 2200F * (w + h) - h;
+            for (int dy = 0; dy < h; dy++) {
+                int bx = (int) (balayage + dy * 0.6F);
+                int x1 = Math.max(x, x + bx);
+                int x2 = Math.min(x + w, x + bx + 14);
+                if (x2 > x1) {
+                    g.fill(x1, y + dy, x2, y + dy + 1, 0x40FFFFFF);
+                }
+            }
+            g.pose().pushPose();
+            g.pose().translate(width / 2F, y + 34, 0);
+            g.pose().scale(1.6F, 1.6F, 1F);
+            g.drawCenteredString(font, "BEAUVAIS", 0, 0, 0xFFFFE8A3);
+            g.pose().popPose();
+            g.drawCenteredString(font, "Série 1", width / 2, y + 56, 0xFFFFD0C0);
+            g.drawCenteredString(font, "5 cartes", width / 2, y + h - 22, 0xFFFFD0C0);
+            // à l'ouverture, la languette du haut s'envole en tournant
+            if (ouverture > 0.45F) {
+                float k = (ouverture - 0.45F) / 0.55F;
                 g.pose().pushPose();
-                g.pose().translate(x + w / 2F, 0, 0);
-                g.pose().scale(Math.max(0.02F, echelle), 1F, 1F);
-                g.pose().translate(-(x + w / 2F), 0, 0);
-                if (face) {
-                    dessinerCarte(g, font, Cartes.def(cartes.get(i)), x, y, w, h, true, 1);
-                } else {
-                    g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF0B0C10);
-                    g.fill(x, y, x + w, y + h, 0xFF8A1C1C);
-                    g.fill(x + 4, y + 4, x + w - 4, y + h - 4, 0xFFB03A2E);
-                    g.drawCenteredString(font, "LA", x + w / 2, y + h / 2 - 10, 0xFFFFD75E);
-                    g.drawCenteredString(font, "CABANE", x + w / 2, y + h / 2, 0xFFFFD75E);
+                g.pose().translate(x + w / 2F + k * 40, y - k * 60, 0);
+                g.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(k * 40));
+                g.fill(-w / 2, 0, w / 2, 14, 0xFFFFD75E);
+                g.pose().popPose();
+                int lumiere = (int) (230 * k);
+                g.fill(x + 2, y + 10, x + w - 2, y + 14, lumiere << 24 | 0xFFFFFF);
+            } else {
+                g.fill(x, y + 10, x + w, y + 14, 0xFFFFD75E);
+                for (int dx = 0; dx < w; dx += 4) {
+                    g.fill(x + dx, y + 14, x + dx + 2, y + 15, 0xFFB8862B);
+                }
+            }
+            g.pose().popPose();
+        }
+
+        /** Le dos d'une carte ; « aura » : la lueur de rareté qui monte pendant l'attente. */
+        private void dos(GuiGraphics g, int x, int y, int w, int h, int couleurAura, float aura) {
+            if (aura > 0) {
+                for (int k = 8; k > 0; k--) {
+                    int a = (int) (aura * 40 * k / 8);
+                    g.fill(x - k * 2, y - k * 2, x + w + k * 2, y + h + k * 2, a << 24 | couleurAura & 0xFFFFFF);
+                }
+            }
+            g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF0B0C10);
+            g.fill(x, y, x + w, y + h, 0xFF8A1C1C);
+            g.fill(x + 4, y + 4, x + w - 4, y + h - 4, 0xFFB03A2E);
+            g.fill(x + 8, y + 8, x + w - 8, y + h - 8, 0xFF8A1C1C);
+            g.drawCenteredString(font, "BEAUVAIS", x + w / 2, y + h / 2 - 4, 0xFFFFD75E);
+        }
+
+        private void dessinerCarteBooster(GuiGraphics g, int i, long t) {
+            int[] p = place(i);
+            int x = p[0], y = p[1], w = p[2], h = p[3];
+            int r = rarete(i);
+            int couleur = Cartes.COULEURS_RGB[r];
+            if (retournee[i] == 0) {
+                float aura = 0F;
+                float tremble = 0F;
+                if (charge[i] > 0 && r > 0) {
+                    float k = Mth.clamp((t - charge[i]) / (float) attente(r), 0F, 1F);
+                    aura = k * (0.5F + 0.5F * (float) Math.sin(t / 60.0));
+                    tremble = (float) Math.sin(t / 25.0) * k * r * 1.2F;
+                }
+                g.pose().pushPose();
+                g.pose().translate(tremble, -Math.abs(tremble) * 0.5F, 0);
+                dos(g, x, y, w, h, couleur, aura);
+                g.pose().popPose();
+                return;
+            }
+            float k = Mth.clamp((t - retournee[i]) / 350F, 0F, 1F);
+            // les rayons derrière les cartes épiques et légendaires
+            if (r >= 2 && k >= 0.5F) {
+                int rayons = r == 3 ? 16 : 10;
+                float tourne = (t % 8000) / 8000F * 360F;
+                g.pose().pushPose();
+                g.pose().translate(x + w / 2F, y + h / 2F, -1);
+                for (int n = 0; n < rayons; n++) {
+                    g.pose().pushPose();
+                    g.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(tourne + n * 360F / rayons));
+                    g.fill(-3, 0, 3, (int) (h * 1.1F), 0x30000000 | couleur & 0xFFFFFF);
+                    g.pose().popPose();
                 }
                 g.pose().popPose();
             }
-            if (prochaine < cartes.size()) {
-                g.drawCenteredString(font, "Clique pour retourner une carte", width / 2, y + h + 12, Ui.GRIS);
+            // le retournement : la carte s'aplatit puis se redéploie, face visible
+            float echelle = Math.abs(Mth.cos(k * (float) Math.PI));
+            float saut = (float) Math.sin(k * Math.PI) * (6 + r * 4);
+            g.pose().pushPose();
+            g.pose().translate(x + w / 2F, -saut, 0);
+            g.pose().scale(Math.max(0.02F, echelle), 1F, 1F);
+            g.pose().translate(-(x + w / 2F), 0, 0);
+            if (k < 0.5F) {
+                dos(g, x, y, w, h, couleur, r > 0 ? 1F : 0F);
+            } else {
+                if (r > 0) {
+                    for (int n = 4; n > 0; n--) {
+                        int a = (int) ((25 + 15 * Math.sin(t / 250.0)) * n / 4);
+                        g.fill(x - n * 2, y - n * 2, x + w + n * 2, y + h + n * 2, a << 24 | couleur & 0xFFFFFF);
+                    }
+                }
+                dessinerCarte(g, font, Cartes.def(cartes.get(i)), x, y, w, h, true, 1);
+                if (r > 0) {
+                    reflet(g, x, y, w, h, t + i * 400L, r);
+                }
+            }
+            g.pose().popPose();
+        }
+
+        /** Le reflet holographique qui passe en diagonale sur les cartes rares. */
+        private static void reflet(GuiGraphics g, int x, int y, int w, int h, long t, int r) {
+            float periode = 2600F - r * 400F;
+            float pos = (t % (long) periode) / periode * (w + h) - h * 0.6F;
+            int alpha = 0x22 + r * 0x14;
+            for (int dy = 0; dy < h; dy++) {
+                int bx = (int) (pos + dy * 0.6F);
+                int x1 = Math.max(x, x + bx);
+                int x2 = Math.min(x + w, x + bx + 10 + r * 3);
+                if (x2 > x1) {
+                    g.fill(x1, y + dy, x2, y + dy + 1, alpha << 24 | 0xFFFFFF);
+                }
+            }
+        }
+
+        private void dessinerEtincelles(GuiGraphics g, long t) {
+            etincelles.removeIf(e -> t - e.naissance() > e.vie());
+            for (Etincelle e : etincelles) {
+                float age = (t - e.naissance()) / 16F;
+                float x = e.x() + e.vx() * age;
+                float y = e.y() + e.vy() * age + 0.02F * age * age;
+                int a = (int) (255 * (1 - (t - e.naissance()) / e.vie()));
+                int taille = (t / 90 + (long) e.x()) % 3 == 0 ? 2 : 1;
+                g.fill((int) x, (int) y, (int) x + taille, (int) y + taille, Math.max(0, a) << 24 | e.couleur() & 0xFFFFFF);
             }
         }
 

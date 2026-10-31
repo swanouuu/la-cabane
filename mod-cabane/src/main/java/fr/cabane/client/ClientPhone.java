@@ -23,6 +23,10 @@ public final class ClientPhone {
     static String myNumber = "";
     static int state = PhoneNetwork.State.LIBRE;
     static String other = "";
+    /** Appeler en numéro masqué (réglage du clavier). */
+    static boolean masque;
+    /** Quand l'appel en cours a été décroché, pour le chrono. */
+    static long debutAppel;
 
     static java.util.List<PhoneNetwork.Contact> contacts = java.util.List.of();
     static java.util.List<PhoneNetwork.Appel> recents = java.util.List.of();
@@ -42,16 +46,22 @@ public final class ClientPhone {
 
     /** Lance un appel et ouvre l'écran des appels. */
     static void appeler(String numero) {
-        send(PhoneNetwork.Action.APPELER, numero);
+        if (numero.equals(fr.cabane.telephone.PhoneCalls.MASQUE)) {
+            return;
+        }
+        send(PhoneNetwork.Action.APPELER, numero + (masque ? "|masque" : ""));
         Minecraft.getInstance().setScreen(new PhoneScreen());
     }
 
     public static void onState(PhoneNetwork.State payload) {
         myNumber = payload.myNumber();
+        if (payload.state() == PhoneNetwork.State.EN_LIGNE && state != PhoneNetwork.State.EN_LIGNE) {
+            debutAppel = System.currentTimeMillis();
+        }
         state = payload.state();
         other = payload.other();
-        if (Minecraft.getInstance().screen instanceof PhoneScreen screen) {
-            screen.rafraichir();
+        if (Minecraft.getInstance().screen instanceof ClientPiaf.Rafraichissable r) {
+            r.rafraichir();
         }
     }
 
@@ -82,6 +92,10 @@ public final class ClientPhone {
             while (TOUCHE.consumeClick()) {
                 LocalPlayer player = mc.player;
                 if (player == null || mc.screen != null) {
+                    continue;
+                }
+                if (ClientCamera.actif) {
+                    ClientCamera.fermer();
                     continue;
                 }
                 if (player.getInventory().hasAnyMatching(stack -> stack.is(CabaneItems.TELEPHONE.get()))) {

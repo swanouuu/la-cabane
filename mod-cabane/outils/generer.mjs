@@ -185,13 +185,13 @@ for (const [nom, [grille, palette]] of Object.entries(TEXTURES)) {
 
 // ---------------------------------------------------------------- traductions (français pour tout le monde)
 const lang = {
-  "itemGroup.cabane": "La Cabane",
+  "itemGroup.cabane": "Beauvais",
   "item.cabane.telephone": "Téléphone",
   "item.cabane.telephone.desc": "Clic droit ou touche N : choisis ton numéro et appelle tes potes.",
   "item.cabane.relique": "Relique de la Cabane",
   "screen.cabane.telephone": "Téléphone",
   "key.cabane.telephone": "Ouvrir le téléphone",
-  "key.categories.cabane": "La Cabane",
+  "key.categories.cabane": "Beauvais",
 };
 for (const r of RELIQUES) {
   lang[`item.cabane.${r.id}`] = r.nom;
@@ -236,7 +236,7 @@ ecrire("data/neoforge/loot_modifiers/global_loot_modifiers.json", { replace: fal
 
 // ---------------------------------------------------------------- succès
 ecrire("data/cabane/advancement/racine.json", {
-  display: { icon: { id: "cabane:telephone" }, title: { text: "La Cabane" }, description: { text: "Le centre de la map, et de vos aventures." },
+  display: { icon: { id: "cabane:telephone" }, title: { text: "Beauvais" }, description: { text: "Le village au cœur de la jungle, et de vos aventures." },
     background: "minecraft:textures/block/stripped_spruce_log.png", frame: "task", show_toast: false, announce_to_chat: false },
   criteria: { arrivee: { trigger: "minecraft:tick" } },
 });
@@ -257,13 +257,7 @@ ecrire("data/cabane/advancement/sept_reliques.json", {
   criteria: Object.fromEntries(RELIQUES.map((r) => [r.id, { trigger: "minecraft:inventory_changed", conditions: { items: [{ items: `cabane:${r.id}` }] } }])),
 });
 
-// ---------------------------------------------------------------- recette du téléphone
-ecrire("data/cabane/recipe/telephone.json", {
-  type: "minecraft:crafting_shaped", category: "misc",
-  pattern: [" G ", "IRI", "ICI"],
-  key: { G: { item: "minecraft:glass_pane" }, I: { item: "minecraft:iron_ingot" }, R: { item: "minecraft:redstone" }, C: { item: "minecraft:copper_ingot" } },
-  result: { id: "cabane:telephone", count: 1 },
-});
+// pas de recette : le téléphone, comme tout ce qui se vend chez Mouloud, ne s'achète qu'en boutique
 
 // ---------------------------------------------------------------- coffres du centre de map
 const item = (name, poids, min = 1, max = 1) => ({ type: "minecraft:item", name, weight: poids,
@@ -303,7 +297,7 @@ const uuid = (graine) => {
 const snbtTexte = (s) => JSON.stringify(s);
 const nomJson = (texte, couleur) => `'${JSON.stringify({ text: texte, color: couleur }).replace(/'/g, "\\'")}'`;
 
-function pnj({ fichier, nom, couleur, type = "humanoid", variante, dialogues }) {
+function pnj({ fichier, nom, couleur, type = "humanoid", variante, rendu, dialogues }) {
   const entrees = dialogues.map((d) => `{
         Label:${snbtTexte(d.label)},
         Name:${snbtTexte(d.titre)},
@@ -325,7 +319,8 @@ function pnj({ fichier, nom, couleur, type = "humanoid", variante, dialogues }) 
   PersistenceRequired:1b,
   EasyNPCVersion:3,
   VariantType:${snbtTexte(variante)},
-  SkinData:{Type:"DEFAULT"},
+  SkinData:{Type:"DEFAULT"},${rendu ? `
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:${snbtTexte(rendu)}},` : ""}
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
@@ -337,38 +332,64 @@ function pnj({ fichier, nom, couleur, type = "humanoid", variante, dialogues }) 
 `);
 }
 
-pnj({ fichier: "gardien", nom: "Le Vieux Gardien", couleur: "gold", type: "illusioner", variante: "ILLUSIONER", dialogues: [
-  { label: "default", titre: "Accueil", texte: "Vous avez vu ça ? Votre avion a pris feu au-dessus de la savane ! Le village accepte de vous héberger dans la Grande Cabane… à condition de l'aider.",
+// apparences : Mowzie's Mobs (la tribu Umvuthana de la savane), Goblin Traders, L_Ender's Cataclysm
+pnj({ fichier: "gardien", nom: "Le Hejj du Village", couleur: "gold", type: "illusioner", variante: "ILLUSIONER", rendu: "mowziesmobs:umvuthi", dialogues: [
+  { label: "default", titre: "Accueil", texte: "Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais accepte de vous héberger dans la Grande Cabane… à condition de l'aider. Moi, je suis le Hejj : le sage du village.",
     boutons: [{ label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "reliques", texte: "Et cette cabane ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
-  { label: "aider", titre: "Aider le village", texte: "Bako, au marché, a des contrats qui changent toutes les heures : apportez-lui ce qu'il demande, il paie en SakaiDollars. Et regardez le tableau des quêtes, à côté de la cabane.",
+  { label: "aider", titre: "Aider le village", texte: "Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures : apportez ce qu'il demande, le village paie en SakaiDollars. Et regardez le grand panneau de la carte, au milieu du village.",
     boutons: [{ label: "bye", texte: "On s'y met !" }] },
   { label: "reliques", titre: "Les Sept Reliques", texte: "Sept reliques reposaient sur le comptoir. Elles ont été cachées dans les plus grands donjons du monde, parfois très loin d'ici. Ramenez-les, et la Cabane se réveillera. Tout est noté dans votre livre de quêtes.",
     boutons: [{ label: "cartes", texte: "Comment les trouver ?", vers: "cartes" }, { label: "bye", texte: "J'y vais !" }] },
-  { label: "cartes", titre: "Les cartes", texte: "Mira, la cartographe, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones.",
-    boutons: [{ label: "bye", texte: "Merci, Gardien" }] },
+  { label: "cartes", titre: "Les cartes", texte: "Karim le Chouf, à côté du grand panneau, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones.",
+    boutons: [{ label: "bye", texte: "Merci, Hejj" }] },
 ] });
-pnj({ fichier: "cartographe", nom: "Mira la Cartographe", couleur: "aqua", type: "witch", variante: "WITCH", dialogues: [
-  { label: "default", titre: "Mira", texte: "Des cartes, des cartes, encore des cartes ! Chaque relique a la sienne. Complète les quêtes d'indice dans ton livre et je te les donne.",
-    boutons: [{ label: "conseil", texte: "Un conseil ?", vers: "conseil" }, { label: "bye", texte: "Merci Mira" }] },
+pnj({ fichier: "cartographe", nom: "Karim le Chouf", couleur: "aqua", type: "witch", variante: "WITCH", rendu: "cataclysm:nameless_sorcerer", dialogues: [
+  { label: "default", titre: "Karim", texte: "Chouf, chouf ! Des cartes, encore des cartes ! Regarde le grand panneau derrière moi : c'est tout le monde connu. Chaque relique a sa carte. Complète les quêtes d'indice dans ton livre et je te les donne.",
+    boutons: [{ label: "conseil", texte: "Un conseil ?", vers: "conseil" }, { label: "bye", texte: "Merci Karim" }] },
   { label: "conseil", titre: "Conseil", texte: "Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit.",
     boutons: [{ label: "bye", texte: "Noté !" }] },
 ] });
-pnj({ fichier: "marchand", nom: "Bako le Marchand", couleur: "green", type: "wandering_trader", variante: "WANDERING_TRADER", dialogues: [
-  { label: "default", titre: "Bako", texte: "Bienvenue au marché ! Je vends de tout contre de bons SakaiDollars, et mes contrats changent toutes les heures.",
-    boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "contrats", texte: "Les contrats de l'heure", commande: "cabane contrats" }, { label: "bye", texte: "À plus" }] },
+pnj({ fichier: "marchand", nom: "Mouloud le Marchand", couleur: "green", type: "wandering_trader", variante: "WANDERING_TRADER", rendu: "goblintraders:goblin_trader", dialogues: [
+  { label: "default", titre: "Mouloud", texte: "Bienvenue au Grand Bazar ! Hé hé, un gobelin honnête, ça existe : moi. Je vends de tout contre de bons SakaiDollars. Pour du travail, va voir Mehdi, au tableau des contrats.",
+    boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "bye", texte: "À plus" }] },
 ] });
 
-pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", dialogues: [
-  { label: "default", titre: "Brokk", texte: "Hrmpf. Un orc forgeron, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent.",
+pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", rendu: "mowziesmobs:ferrous_wroughtnaut", dialogues: [
+  { label: "default", titre: "Brokk", texte: "CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent.",
     boutons: [{ label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "À plus, Brokk" }] },
-  { label: "travail", titre: "Le travail", texte: "Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Bako changent toutes les heures.",
+  { label: "travail", titre: "Le travail", texte: "Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Mehdi, au Grand Bazar, changent toutes les heures.",
     boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "bye", texte: "Compris" }] },
 ] });
-pnj({ fichier: "fee", nom: "Lumi la Fée", couleur: "light_purple", type: "fairy", variante: "GREEN", dialogues: [
-  { label: "default", titre: "Lumi", texte: "Coucou ! Tu collectionnes les cartes ? Les boosters se vendent chez Bako, et un classeur garde toute ta collection bien rangée.",
-    boutons: [{ label: "casino", texte: "Et le casino ?", vers: "casino" }, { label: "bye", texte: "Merci Lumi !" }] },
-  { label: "casino", titre: "Le casino", texte: "Machines à sous, roulette, blackjack… Bako vend les machines : à vous de construire le plus beau casino de la savane !",
+pnj({ fichier: "fee", nom: "Ovsie la Fée", couleur: "light_purple", type: "fairy", variante: "GREEN", rendu: "mowziesmobs:lantern", dialogues: [
+  { label: "default", titre: "Ovsie", texte: "Coucou ! Oui, je suis une fée-lanterne, je brille la nuit. Tu collectionnes les cartes ? Les boosters se vendent chez Mouloud, et un classeur garde toute ta collection bien rangée.",
+    boutons: [{ label: "casino", texte: "Et le casino ?", vers: "casino" }, { label: "bye", texte: "Merci Ovsie !" }] },
+  { label: "casino", titre: "Le casino", texte: "Machines à sous, roulette, blackjack… Mouloud vend les machines : à vous de construire le plus beau casino de la jungle !",
     boutons: [{ label: "bye", texte: "On s'y met" }] },
+] });
+
+for (const cote of ["est", "ouest"]) {
+  pnj({ fichier: "garde_" + cote, nom: "Garde Umvuthana", couleur: "yellow", rendu: "mowziesmobs:umvuthana", variante: "STEVE", dialogues: [
+    { label: "default", titre: "Garde", texte: "Halte, voyageur ! … Ah, tu viens de l'avion en feu. Entre : le Hejj t'attend devant la Grande Cabane. Nous veillons sur le village, jour et nuit.",
+      boutons: [{ label: "tribu", texte: "Vous êtes qui ?", vers: "tribu" }, { label: "bye", texte: "Merci !" }] },
+    { label: "tribu", titre: "La tribu", texte: "Les Umvuthana, enfants du soleil. Nous gardons Beauvais depuis toujours. Notre chef porte le grand masque d'or. Méfie-toi des autres tribus, dehors : elles ne sont pas toutes aussi accueillantes.",
+      boutons: [{ label: "bye", texte: "Compris" }] },
+  ] });
+}
+pnj({ fichier: "guerisseuse", nom: "Nyota la Guérisseuse", couleur: "dark_green", rendu: "mowziesmobs:umvuthana_crane", variante: "STEVE", dialogues: [
+  { label: "default", titre: "Nyota", texte: "Assieds-toi près du feu, voyageur. Ici on raconte les histoires des donjons lointains… et de ceux qui n'en sont jamais revenus.",
+    boutons: [{ label: "conseil", texte: "Un conseil ?", vers: "conseil" }, { label: "bye", texte: "À plus tard" }] },
+  { label: "conseil", titre: "Conseil", texte: "Dors dans la Grande Cabane avant de partir loin : ton lit là-bas te fera revenir. Et garde toujours ton téléphone : on ne sait jamais qui il faudra appeler.",
+    boutons: [{ label: "bye", texte: "Merci Nyota" }] },
+] });
+pnj({ fichier: "pole_emploi", nom: "Mehdi de Pôle emploi", couleur: "blue", variante: "STEVE", dialogues: [
+  { label: "default", titre: "Mehdi", texte: "Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats du village sont affichés juste au-dessus du tableau, ils changent toutes les heures. Apportez la marchandise, un clic droit sur le tableau, et le village vous paie.",
+    boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "dossier", texte: "Et mon dossier ?", vers: "dossier" }, { label: "bye", texte: "Merci Mehdi" }] },
+  { label: "dossier", titre: "Votre dossier", texte: "Votre dossier ? Il manque une pièce justificative. Il en manque toujours une. Revenez avec un contrat rempli, ça fera une bonne ligne sur votre CV.",
+    boutons: [{ label: "bye", texte: "D'accord…" }] },
+] });
+pnj({ fichier: "cousin", nom: "Gribbs, cousin de Mouloud", couleur: "dark_aqua", rendu: "goblintraders:vein_goblin_trader", variante: "STEVE", dialogues: [
+  { label: "default", titre: "Gribbs", texte: "Psst ! Toi ! Les meilleures affaires sont chez mon cousin Mouloud, juste là, au Grand Bazar. Enfin… presque les meilleures. Moi, je vends des secrets. Pas encore, mais bientôt.",
+    boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "bye", texte: "Euh… à plus" }] },
 ] });
 
 // ================================================================ économie, marché, casino, cartes, parachute
@@ -425,8 +446,11 @@ ecrire("assets/cabane/models/item/carte.json", {
 });
 
 // ---- blocs (orientés : face avant, côtés, dessus)
-const bloc = (nom, { front, side, top }) => {
-  ecrire(`assets/cabane/models/block/${nom}.json`, { parent: "minecraft:block/orientable", textures: { front, side, top } });
+const bloc = (nom, { front, side, top, deuxFaces = false }) => {
+  // deuxFaces : la face avant aussi à l'arrière (un comptoir se voit des deux côtés)
+  ecrire(`assets/cabane/models/block/${nom}.json`, deuxFaces
+    ? { parent: "minecraft:block/cube", textures: { north: front, south: front, east: side, west: side, up: top, down: side, particle: side } }
+    : { parent: "minecraft:block/orientable", textures: { front, side, top } });
   ecrire(`assets/cabane/models/item/${nom}.json`, { parent: `cabane:block/${nom}` });
   ecrire(`assets/cabane/blockstates/${nom}.json`, { variants: Object.fromEntries(
     [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: `cabane:block/${nom}`, ...(y ? { y } : {}) }])) });
@@ -477,8 +501,8 @@ tex("block/roue_fortune_front", [
   "LLLLLLLLLLLLLLLL", "L.....RRRB.....L", "L...OORRRBBA...L", "L..OOORRBBBAA..L", "L.YYYOORBBAAAG.L", "L.YYYYOTTAAGGG.L",
   "LYYYYYTYYTGGGGGL", "LRRRRRTYYTVVVVVL", "LBBBBBTYYTSSSSSL", "L.BBBBOTTRRSSS.L", "L.AAAGGORRRVVS.L", "L..AAGGGORRVV...L",
   "L...AGGGOOVV...L", "L.....GGOV.....L", "LLLLLLLRRLLLLLLL", "LLLLLLLLLLLLLLLL"].map((l) => l.length > 16 ? l.slice(0, 16) : l.padEnd(16, "L")));
-bloc("comptoir", { front: "cabane:block/comptoir_front", side: "minecraft:block/spruce_planks", top: "cabane:block/comptoir_top" });
-bloc("tableau_contrats", { front: "cabane:block/tableau_contrats_front", side: "minecraft:block/spruce_planks", top: "minecraft:block/spruce_planks" });
+bloc("comptoir", { front: "cabane:block/comptoir_front", side: "minecraft:block/spruce_planks", top: "cabane:block/comptoir_top", deuxFaces: true });
+bloc("tableau_contrats", { front: "cabane:block/tableau_contrats_front", side: "minecraft:block/spruce_planks", top: "minecraft:block/spruce_planks", deuxFaces: true });
 bloc("etal", { front: "cabane:block/etal_front", side: "minecraft:block/barrel_side", top: "minecraft:block/barrel_top" });
 bloc("machine_a_sous", { front: "cabane:block/machine_a_sous_front", side: "cabane:block/machine_a_sous_side", top: "cabane:block/machine_a_sous_top" });
 for (const t of ["roulette", "blackjack", "des", "pile_ou_face"]) {
@@ -494,6 +518,8 @@ Object.assign(lang, {
   "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
   "entity.cabane.parachute": "Parachute",
+  "item.cabane.puff_rose": "Puff fraise", "item.cabane.puff_bleue": "Puff myrtille glacée", "item.cabane.puff_menthe": "Puff menthe",
+  "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
@@ -503,10 +529,30 @@ const offres = [
   ["telephone", "cabane:telephone", 1, 750], ["parachute", "cabane:parachute", 1, 150],
   ["booster", "cabane:booster", 1, 120], ["classeur", "cabane:classeur", 1, 300], ["ticket", "cabane:ticket_a_gratter", 1, 20],
   ["etal", "cabane:etal", 1, 400], ["pain", "minecraft:bread", 8, 30], ["torches", "minecraft:torch", 16, 25],
-  ["machine_a_sous", "cabane:machine_a_sous", 1, 2500], ["table_roulette", "cabane:table_roulette", 1, 3500],
-  ["table_blackjack", "cabane:table_blackjack", 1, 3500], ["table_des", "cabane:table_des", 1, 2000],
-  ["roue_fortune", "cabane:roue_fortune", 1, 3000], ["table_pile_ou_face", "cabane:table_pile_ou_face", 1, 1500],
+  // le casino coûte cher : c'est un vrai investissement (et il faut encore remplir la caisse)
+  ["machine_a_sous", "cabane:machine_a_sous", 1, 8000], ["table_roulette", "cabane:table_roulette", 1, 12000],
+  ["table_blackjack", "cabane:table_blackjack", 1, 12000], ["table_des", "cabane:table_des", 1, 6000],
+  ["roue_fortune", "cabane:roue_fortune", 1, 10000], ["table_pile_ou_face", "cabane:table_pile_ou_face", 1, 4000],
 ];
+offres.push(["puff_rose", "cabane:puff_rose", 1, 60], ["puff_bleue", "cabane:puff_bleue", 1, 60], ["puff_menthe", "cabane:puff_menthe", 1, 60],
+  ["chicha", "cabane:chicha", 1, 900]);
+for (const nom of ["puff_rose", "puff_bleue", "puff_menthe", "tuyau"]) itemGenere(nom);
+// la chicha : un modèle en plusieurs morceaux (vase de verre, tige dorée, plateau, foyer, tuyau)
+const morceau = (de, a, texture) => ({ from: de, to: a, faces: Object.fromEntries(["north", "south", "east", "west", "up", "down"].map((f) => [f, { texture }])) });
+ecrire("assets/cabane/models/block/chicha.json", {
+  parent: "minecraft:block/block", render_type: "minecraft:translucent",
+  textures: { verre: "minecraft:block/purple_stained_glass", or: "minecraft:block/gold_block", fer: "minecraft:block/iron_block",
+    terre: "minecraft:block/terracotta", braise: "minecraft:block/magma", tuyau: "minecraft:block/black_wool", particle: "minecraft:block/purple_stained_glass" },
+  elements: [
+    morceau([4, 0, 4], [12, 7, 12], "#verre"), morceau([6.5, 7, 6.5], [9.5, 9, 9.5], "#or"), morceau([7.25, 9, 7.25], [8.75, 12, 8.75], "#or"),
+    morceau([5, 12, 5], [11, 12.5, 11], "#fer"), morceau([6.5, 12.5, 6.5], [9.5, 14.5, 9.5], "#terre"), morceau([7, 14.5, 7], [9, 15.2, 9], "#braise"),
+    morceau([9.5, 8, 7.5], [12.5, 9, 8.5], "#tuyau"), morceau([12, 2, 7.5], [13, 9, 8.5], "#tuyau"), morceau([10, 1, 7.5], [13, 2, 8.5], "#tuyau"),
+  ],
+});
+ecrire("assets/cabane/models/item/chicha.json", { parent: "cabane:block/chicha" });
+ecrire("assets/cabane/blockstates/chicha.json", { variants: Object.fromEntries(
+  [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: "cabane:block/chicha", ...(y ? { y } : {}) }])) });
+ecrire("data/cabane/loot_table/blocks/chicha.json", { type: "minecraft:block", pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: "cabane:chicha" }] }] });
 offres.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i }));
 
 // ---- les contrats horaires du marché
@@ -523,26 +569,26 @@ contrats.forEach(([id, item, min, max, prix]) => ecrire(`data/cabane/contrats/${
 
 // ---- la première série de cartes (à remplacer par les vôtres)
 const cartes = [
-  ["la_cabane", "La Cabane", "Le refuge de la Confrérie des Explorateurs.", "commune"],
+  ["la_cabane", "La Grande Cabane", "Le refuge de la Confrérie des Explorateurs, à Beauvais.", "commune"],
   ["feu_de_camp", "Le Feu de Camp", "Là où l'on se raconte les expéditions.", "commune"],
   ["tour_de_guet", "La Tour de Guet", "Sa fumée se voit à des kilomètres.", "commune"],
   ["telephone", "Le Téléphone", "3 ou 4 chiffres, et le monde entier au bout du fil.", "commune"],
-  ["bako", "Bako le Marchand", "Toujours une bonne affaire… pour lui.", "commune"],
+  ["bako", "Mouloud le Marchand", "Toujours une bonne affaire… pour lui.", "commune"],
   ["lion", "Le Lion de la Savane", "Le vrai roi de la savane (ne le dites pas à Umvuthi).", "commune"],
   ["zebre", "Le Zèbre", "Noir sur blanc ou blanc sur noir ?", "commune"],
   ["sakaidollar", "Le SakaiDollar", "La monnaie du serveur.", "commune"],
-  ["mira", "Mira la Cartographe", "Une carte pour chaque relique.", "rare"],
-  ["avion", "L'Avion en Feu", "Mayday ! On saute au-dessus de la savane.", "rare"],
+  ["mira", "Karim le Chouf", "Une carte pour chaque relique.", "rare"],
+  ["avion", "L'Avion en Feu", "Mayday ! On saute au-dessus de la jungle.", "rare"],
   ["elephant", "L'Éléphant", "Il n'oublie jamais une dette.", "rare"],
   ["scarabee", "Le Scarabée d'Or", "Gardé par le Pharaon.", "rare"],
   ["idole", "L'Idole de Jade", "Au cœur de la jungle.", "rare"],
-  ["gardien", "Le Vieux Gardien", "Il en sait plus qu'il ne le dit.", "epique"],
+  ["gardien", "Le Hejj du Village", "Il en sait plus qu'il ne le dit.", "epique"],
   ["umvuthi", "Umvuthi", "Le roi masqué de la savane.", "epique"],
   ["perle", "La Perle des Abysses", "Elle brille au fond de l'océan.", "epique"],
   ["plume", "La Plume Céleste", "Tombée d'une citadelle des nuages.", "epique"],
   ["ignis", "Ignis", "Le chevalier de flammes.", "legendaire"],
   ["leviathan", "Le Léviathan", "Ce qui dort sous la Cité Engloutie.", "legendaire"],
 ];
-cartes.forEach(([id, nom, description, rarete], i) => ecrire(`data/cabane/cartes/${id}.json`, { nom, description, rarete, numero: i + 1, serie: "Série 1 — La Cabane" }));
+cartes.forEach(([id, nom, description, rarete], i) => ecrire(`data/cabane/cartes/${id}.json`, { nom, description, rarete, numero: i + 1, serie: "Série 1 — Beauvais" }));
 
 console.log("Ressources générées dans", RES);

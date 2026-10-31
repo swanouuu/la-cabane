@@ -105,7 +105,7 @@ public final class CabaneCommands {
                 joueur.drop(stack, false);
             }
         }
-        joueur.sendSystemMessage(Component.literal("Mira te tend une carte au trésor : le donjon est à environ "
+        joueur.sendSystemMessage(Component.literal("Karim le Chouf te tend une carte au trésor : le donjon est à environ "
                 + distance + " blocs de la cabane.").withStyle(ChatFormatting.AQUA));
         return 1;
     }

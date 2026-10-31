@@ -116,7 +116,7 @@ public final class Cartes extends SimpleJsonResourceReloadListener {
 
     /** Tire une carte : rareté d'abord, puis une carte de cette rareté. */
     public static Def tirer(RandomSource rnd, boolean garantieRare) {
-        int[] poids = garantieRare ? new int[] {0, 75, 21, 4} : new int[] {64, 26, 9, 1};
+        int[] poids = garantieRare ? new int[] {0, 75, 21, 4} : new int[] {72, 21, 6, 1};
         int r = rnd.nextInt(100);
         int rarete = 0;
         while (r >= poids[rarete]) {

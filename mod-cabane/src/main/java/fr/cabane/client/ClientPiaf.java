@@ -2,6 +2,7 @@ package fr.cabane.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import fr.cabane.Cabane;
+import fr.cabane.client.ui.Ios;
 import fr.cabane.client.ui.Ui;
 import fr.cabane.economie.Economie;
 import fr.cabane.telephone.Piaf;
@@ -14,10 +15,10 @@ import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -34,7 +35,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/** Le téléphone côté client : écran d'accueil, Piaf, appareil photo, galerie, portefeuille. */
+/** Le téléphone côté client, façon iPhone : écran d'accueil, contacts, récents, Piaf, photos, portefeuille, réglages. */
 @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
 public final class ClientPiaf {
     static String monPseudo = "";
@@ -92,12 +93,12 @@ public final class ClientPiaf {
         void rafraichir();
     }
 
-    // ---------------------------------------------------------------- appareil photo
+    // ---------------------------------------------------------------- photo directe (outil de captures)
 
     private static int photoDans = -1;
     private static boolean guiAvant;
 
-    /** Ferme le téléphone, masque l'interface, et prend la photo deux images plus tard. */
+    /** Prend tout de suite une photo de l'écran entier (utilisé par l'outil de captures). */
     static void prendrePhoto() {
         Minecraft mc = Minecraft.getInstance();
         mc.setScreen(null);
@@ -126,7 +127,6 @@ public final class ClientPiaf {
             }
             ecran.resizeSubRectTo((ecran.getWidth() - w) / 2, y, w, h, photo);
             envoyer(photo.asByteArray());
-            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, 1.8F));
         } catch (Exception e) {
             Cabane.LOGGER.warn("Photo ratée : {}", e.toString());
         } finally {
@@ -134,7 +134,7 @@ public final class ClientPiaf {
         }
     }
 
-    private static void envoyer(byte[] png) {
+    static void envoyer(byte[] png) {
         int taille = Piaf.tailleMorceau();
         int total = (png.length + taille - 1) / taille;
         envoi++;
@@ -145,56 +145,108 @@ public final class ClientPiaf {
         }
     }
 
-    // ---------------------------------------------------------------- écrans
+    // ---------------------------------------------------------------- le cadre commun
 
-    /** Le cadre commun : un téléphone en portrait, avec un bouton d'accueil en bas. */
-    abstract static class Ecran extends Screen implements Rafraichissable {
-        static final int W = 190;
-        static final int H = 310;
+    /** Un iPhone en portrait : barre d'état, grand titre, contenu, barre d'accueil en bas. */
+    public abstract static class Ecran extends Screen implements Rafraichissable {
+        int W;
+        int H;
         int left;
         int top;
+        /** Les champs de saisie, pour leur dessiner un fond arrondi. */
+        private final List<EditBox> champs = new ArrayList<>();
 
         Ecran(String titre) {
             super(Component.literal(titre));
         }
 
         int x0() {
-            return left + 8;
+            return left + 12;
         }
 
         int y0() {
-            return top + 26;
+            return top + (title.getString().isEmpty() ? 22 : 48);
         }
 
         int largeur() {
-            return W - 16;
+            return W - 24;
+        }
+
+        int bas() {
+            return top + H - 18;
         }
 
         int hauteur() {
-            return H - 58;
+            return bas() - y0();
         }
 
         @Override
         protected void init() {
+            champs.clear();
+            H = Math.min(340, height - 10);
+            W = H / 2 + 6;
             left = (width - W) / 2;
             top = (height - H) / 2;
-            addRenderableWidget(Button.builder(Component.literal("⌂"), b -> minecraft.setScreen(new Accueil()))
-                    .bounds(left + W / 2 - 14, top + H - 26, 28, 18).build());
+            // la barre d'accueil, en bas : retour à l'écran d'accueil
+            addRenderableWidget(Ios.Bouton.texte(left + W / 2 - 34, top + H - 14, 68, 12, "", 0, () -> minecraft.setScreen(new Accueil())));
         }
 
+        /** Un champ de saisie sans bordure, sur fond arrondi. */
+        EditBox champ(int x, int y, int w, String indice) {
+            EditBox e = addRenderableWidget(new EditBox(font, x + 7, y + 6, w - 14, 12, Component.literal(indice)));
+            e.setBordered(false);
+            e.setHint(Component.literal(indice).withColor(Ios.GRIS));
+            e.setTextColor(Ios.BLANC);
+            champs.add(e);
+            return e;
+        }
+
+        /** Un lien bleu en haut à droite, à la hauteur du grand titre (« + », « Modifier »…). */
+        void boutonHaut(String texte, Runnable action) {
+            int w = font.width(texte) + 8;
+            addRenderableWidget(Ios.Bouton.texte(left + W - 10 - w, top + 24, w, 12, texte, Ios.BLEU, action));
+        }
+
+        /** Garde ce qui est tapé quand l'écran se met à jour (un paquet du serveur arrive). */
         @Override
         public void rafraichir() {
+            List<String> valeurs = champs.stream().map(EditBox::getValue).toList();
+            int focus = champs.indexOf(getFocused());
             rebuildWidgets();
+            if (valeurs.size() == champs.size()) {
+                for (int i = 0; i < valeurs.size(); i++) {
+                    champs.get(i).setValue(valeurs.get(i));
+                }
+                if (focus >= 0) {
+                    setFocused(champs.get(focus));
+                }
+            }
+        }
+
+        int fond() {
+            return Ios.NOIR;
+        }
+
+        void dessinerFond(GuiGraphics g) {
+            Ios.rond(g, left, top, W, H, 24, fond());
         }
 
         @Override
         public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.renderBackground(g, mouseX, mouseY, partialTick);
-            g.fill(left - 4, top - 4, left + W + 4, top + H + 4, 0xFF0B0B0F);
-            g.fill(left, top, left + W, top + H, 0xFF14161B);
-            g.fill(left + W / 2 - 18, top + 6, left + W / 2 + 18, top + 9, 0xFF2A2E36);
-            g.drawString(font, title.getString(), x0(), top + 12, 0xFFFFFFFF, false);
-            Ui.solde(g, font, left + W - 8, top + 12);
+            Ios.rond(g, left - 6, top - 6, W + 12, H + 12, 30, 0xFF4A4A4E);
+            Ios.rond(g, left - 4, top - 4, W + 8, H + 8, 28, 0xFF0A0A0A);
+            dessinerFond(g);
+            Ios.barreEtat(g, font, left, top + 2, W, Ios.BLANC);
+            if (!title.getString().isEmpty()) {
+                Ios.texte(g, font, title.getString(), x0(), top + 24, 1.6F, Ios.BLANC, true);
+            }
+            for (EditBox e : champs) {
+                if (e.visible) {
+                    Ios.rond(g, e.getX() - 7, e.getY() - 6, e.getWidth() + 14, 24, 8, Ios.GROUPE_CLAIR);
+                }
+            }
+            Ios.rond(g, left + W / 2 - 28, top + H - 8, 56, 3, 2, Ios.BLANC);
         }
 
         @Override
@@ -203,47 +255,92 @@ public final class ClientPiaf {
         }
     }
 
-    /** L'écran d'accueil : une grille d'applis. */
+    // ---------------------------------------------------------------- l'écran d'accueil
+
     public static final class Accueil extends Ecran {
         public Accueil() {
-            super("Mon téléphone");
+            super("");
         }
 
         @Override
         protected void init() {
             super.init();
-            String[] noms = {"Clavier", "Contacts", "Récents", "Piaf", "Photo", "Galerie", "Argent"};
-            Runnable[] actions = {
-                    () -> minecraft.setScreen(new PhoneScreen()),
-                    () -> minecraft.setScreen(new Contacts()),
-                    () -> minecraft.setScreen(new Recents()),
-                    () -> minecraft.setScreen(new Fil()),
-                    ClientPiaf::prendrePhoto,
-                    () -> minecraft.setScreen(new Galerie(false)),
-                    () -> minecraft.setScreen(new Portefeuille())};
-            for (int i = 0; i < noms.length; i++) {
-                int col = i % 3;
-                int lig = i / 3;
-                Runnable a = actions[i];
-                addRenderableWidget(Button.builder(Component.literal(noms[i]), b -> a.run())
-                        .bounds(x0() + 4 + col * 56, y0() + 30 + lig * 48, 52, 40).build());
+            int taille = Math.min(32, (W - 24 - 3 * 10) / 4);
+            int ecart = (W - 4 * taille) / 5;
+            String[][] grille = {{"contacts", "Contacts"}, {"recents", "Récents"}, {"galerie", "Photos"}, {"reglages", "Réglages"}};
+            Runnable[] actions = {() -> minecraft.setScreen(new Contacts()), () -> minecraft.setScreen(new Recents()),
+                    () -> minecraft.setScreen(new Galerie(false)), () -> minecraft.setScreen(new Reglages())};
+            int yGrille = top + 96;
+            for (int i = 0; i < grille.length; i++) {
+                addRenderableWidget(Ios.Bouton.appli(left + ecart + i * (taille + ecart), yGrille, taille, grille[i][0], grille[i][1], true, actions[i]));
+            }
+            String[] dock = {"telephone", "piaf", "photo", "argent"};
+            String[] noms = {"Téléphone", "Piaf", "Appareil photo", "Portefeuille"};
+            Runnable[] actionsDock = {() -> minecraft.setScreen(new PhoneScreen()), () -> minecraft.setScreen(new Fil()),
+                    ClientCamera::ouvrir, () -> minecraft.setScreen(new Portefeuille())};
+            int yDock = top + H - 20 - taille - 6;
+            for (int i = 0; i < dock.length; i++) {
+                addRenderableWidget(Ios.Bouton.appli(left + ecart + i * (taille + ecart), yDock, taille, dock[i], noms[i], false, actionsDock[i]));
             }
             demander(0, "", 0);
             ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
         }
 
         @Override
-        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-            super.render(g, mouseX, mouseY, partialTick);
-            g.drawCenteredString(font, monPseudo.isEmpty() ? "" : "@" + monPseudo, left + W / 2, y0() + 8, 0xFF7FB7FF);
-            String numero = ClientPhone.myNumber.isEmpty() ? "pas encore de numéro" : "mon n° : " + ClientPhone.myNumber;
-            g.drawCenteredString(font, numero, left + W / 2, y0() + 18, Ui.GRIS);
+        void dessinerFond(GuiGraphics g) {
+            // fond d'écran : un dégradé violet → bleu nuit, avec deux halos
+            for (int dy = 0; dy < H; dy++) {
+                float t = dy / (float) H;
+                int c = 0xFF000000 | melange(0x5B2A86, 0x0F2A5C, t);
+                int retrait = 0;
+                int r = 24;
+                if (dy < r || dy >= H - r) {
+                    double d = dy < r ? r - dy - 0.5 : dy - (H - r) + 0.5;
+                    retrait = (int) Math.round(r - Math.sqrt(Math.max(0, r * r - d * d)));
+                }
+                g.fill(left + retrait, top + dy, left + W - retrait, top + dy + 1, c);
+            }
+            Ios.disque(g, left + W - 30, top + 70, 38, 0x30FF7AD9);
+            Ios.disque(g, left + 26, top + H - 110, 44, 0x2840C8FF);
+            // les deux widgets : l'heure et le jour, le solde
+            int ww = (W - 30) / 2;
+            Ios.rond(g, left + 10, top + 22, ww, 62, 14, 0x55000000);
+            Ios.texte(g, font, Ios.heure(), left + 18, top + 32, 2F, Ios.BLANC, true);
+            long jour = minecraft.level == null ? 1 : minecraft.level.getDayTime() / 24000 + 1;
+            Ios.texte(g, font, "Jour " + jour, left + 18, top + 56, 0.75F, 0xFFD0D0FF, false);
+            Ios.texte(g, font, "Beauvais", left + 18, top + 66, 0.75F, Ios.GRIS, false);
+            int x2 = left + 20 + ww;
+            Ios.rond(g, x2, top + 22, ww, 62, 14, 0x55000000);
+            Ios.texte(g, font, "Solde", x2 + 8, top + 30, 0.75F, Ios.GRIS, false);
+            String solde = ClientEconomie.solde < 0 ? "…" : Economie.format(ClientEconomie.solde);
+            Ios.texte(g, font, solde, x2 + 8, top + 44, solde.length() > 8 ? 0.85F : 1.2F, Ui.OR, true);
+            String numero = ClientPhone.myNumber.isEmpty() ? "SIM à activer" : "☎ " + ClientPhone.myNumber;
+            Ios.texte(g, font, numero, x2 + 8, top + 66, 0.75F, ClientPhone.myNumber.isEmpty() ? Ios.ORANGE : 0xFFD0D0FF, false);
+            // le dock, en verre dépoli
+            int taille = Math.min(32, (W - 24 - 3 * 10) / 4);
+            Ios.rond(g, left + 6, top + H - 20 - taille - 12, W - 12, taille + 12, 18, 0x40FFFFFF);
+        }
+
+        private static int melange(int a, int b, float t) {
+            int r = (int) ((a >> 16 & 0xFF) + ((b >> 16 & 0xFF) - (a >> 16 & 0xFF)) * t);
+            int v = (int) ((a >> 8 & 0xFF) + ((b >> 8 & 0xFF) - (a >> 8 & 0xFF)) * t);
+            int bl = (int) ((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
+            return r << 16 | v << 8 | bl;
         }
     }
 
-    /** Le carnet : un nom et un numéro, appeler en un clic, ajouter, supprimer. */
+    // ---------------------------------------------------------------- contacts
+
+    static final int[] AVATARS = {0xFF5E5CE6, 0xFFFF9F0A, 0xFF30D158, 0xFFFF375F, 0xFF64D2FF, 0xFFBF5AF2};
+
+    static void avatar(GuiGraphics g, net.minecraft.client.gui.Font font, String nom, int cx, int cy, int r) {
+        Ios.disque(g, cx, cy, r, AVATARS[Math.floorMod(nom.hashCode(), AVATARS.length)]);
+        String initiale = nom.isEmpty() ? "?" : nom.substring(0, 1).toUpperCase();
+        Ios.texteCentre(g, font, initiale, cx, cy - r * 0.45F, r / 7F, Ios.BLANC, true);
+    }
+
+    /** Le carnet : toucher un contact l'appelle ; « + » pour en ajouter. */
     static final class Contacts extends Ecran {
-        private static final int PAR_PAGE = 8;
         private boolean ajout;
         private int page;
         private EditBox nom;
@@ -253,59 +350,60 @@ public final class ClientPiaf {
             super("Contacts");
         }
 
+        private int parPage() {
+            return Math.max(1, (hauteur() - 20) / 30);
+        }
+
         @Override
         protected void init() {
             super.init();
             ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
             if (ajout) {
-                nom = addRenderableWidget(new EditBox(font, x0() + 6, y0() + 24, largeur() - 12, 18, Component.literal("nom")));
+                nom = champ(x0(), y0() + 20, largeur(), "nom du contact");
                 nom.setMaxLength(24);
-                nom.setHint(Component.literal("nom du contact"));
-                numero = addRenderableWidget(new EditBox(font, x0() + 6, y0() + 48, largeur() - 12, 18, Component.literal("numéro")));
+                numero = champ(x0(), y0() + 50, largeur(), "numéro (3 ou 4 chiffres)");
                 numero.setFilter(s -> s.matches("\\d{0,4}"));
-                numero.setHint(Component.literal("numéro (3 ou 4 chiffres)"));
-                addRenderableWidget(Button.builder(Component.literal("Enregistrer"), b -> {
+                addRenderableWidget(Ios.Bouton.plein(x0(), y0() + 84, largeur(), 22, "Enregistrer", Ios.BLEU, () -> {
                     if (!nom.getValue().isBlank() && numero.getValue().length() >= 3) {
                         ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.AJOUTER_CONTACT, numero.getValue() + "|" + nom.getValue().strip());
                         ajout = false;
                         rebuildWidgets();
                     }
-                }).bounds(x0() + 6, y0() + 74, largeur() - 12, 18).build());
-                addRenderableWidget(Button.builder(Component.literal("Annuler"), b -> {
+                }));
+                addRenderableWidget(Ios.Bouton.texte(x0(), y0() + 112, largeur(), 14, "Annuler", Ios.BLEU, () -> {
                     ajout = false;
                     rebuildWidgets();
-                }).bounds(x0() + 6, y0() + 96, largeur() - 12, 18).build());
+                }));
+                setInitialFocus(nom);
                 return;
             }
-            addRenderableWidget(Button.builder(Component.literal("+ Ajouter"), b -> {
+            boutonHaut("+", () -> {
                 ajout = true;
                 rebuildWidgets();
-            }).bounds(left + W - 70, top + H - 26, 62, 18).build());
+            });
             var liste = ClientPhone.contacts;
-            int pages = Math.max(1, (liste.size() + PAR_PAGE - 1) / PAR_PAGE);
+            int pages = Math.max(1, (liste.size() + parPage() - 1) / parPage());
             page = Math.min(page, pages - 1);
-            for (int k = 0; k < PAR_PAGE; k++) {
-                int i = page * PAR_PAGE + k;
+            for (int k = 0; k < parPage(); k++) {
+                int i = page * parPage() + k;
                 if (i >= liste.size()) {
                     break;
                 }
                 var c = liste.get(i);
-                int y = y0() + 4 + k * 26;
-                addRenderableWidget(Button.builder(Component.literal("☎"), b -> ClientPhone.appeler(c.numero()))
-                        .bounds(x0() + largeur() - 44, y, 20, 20).build());
-                addRenderableWidget(Button.builder(Component.literal("✕"), b ->
-                        ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.SUPPRIMER_CONTACT, c.numero()))
-                        .bounds(x0() + largeur() - 22, y, 20, 20).build());
+                int y = y0() + k * 30;
+                addRenderableWidget(Ios.Bouton.texte(x0(), y, largeur() - 22, 28, "", 0, () -> ClientPhone.appeler(c.numero())));
+                addRenderableWidget(Ios.Bouton.texte(x0() + largeur() - 20, y + 6, 18, 16, "✕", Ios.GRIS,
+                        () -> ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.SUPPRIMER_CONTACT, c.numero())));
             }
             if (pages > 1) {
-                addRenderableWidget(Button.builder(Component.literal("<"), b -> {
+                addRenderableWidget(Ios.Bouton.texte(x0(), bas() - 14, 30, 12, "‹", Ios.BLEU, () -> {
                     page = Math.floorMod(page - 1, pages);
                     rebuildWidgets();
-                }).bounds(left + 8, top + H - 26, 18, 18).build());
-                addRenderableWidget(Button.builder(Component.literal(">"), b -> {
+                }));
+                addRenderableWidget(Ios.Bouton.texte(x0() + largeur() - 30, bas() - 14, 30, 12, "›", Ios.BLEU, () -> {
                     page = Math.floorMod(page + 1, pages);
                     rebuildWidgets();
-                }).bounds(left + 28, top + H - 26, 18, 18).build());
+                }));
             }
         }
 
@@ -313,31 +411,36 @@ public final class ClientPiaf {
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
             if (ajout) {
-                g.drawString(font, "Nouveau contact", x0() + 6, y0() + 8, 0xFFFFFFFF, false);
+                Ios.texte(g, font, "Nouveau contact", x0(), y0() + 4, 1F, Ios.GRIS, false);
                 return;
             }
             var liste = ClientPhone.contacts;
             if (liste.isEmpty()) {
-                Ui.paragraphe(g, font, "Aucun contact. Ajoute le numéro de tes potes avec « + Ajouter ».", x0() + 6, y0() + 20, largeur() - 12, Ui.GRIS);
+                Ui.paragraphe(g, font, "Aucun contact. Touche « + » pour ajouter le numéro de tes potes.", x0(), y0() + 20, largeur(), Ios.GRIS);
             }
-            for (int k = 0; k < PAR_PAGE; k++) {
-                int i = page * PAR_PAGE + k;
+            for (int k = 0; k < parPage(); k++) {
+                int i = page * parPage() + k;
                 if (i >= liste.size()) {
                     break;
                 }
                 var c = liste.get(i);
-                int y = y0() + 4 + k * 26;
-                g.fill(x0(), y - 2, x0() + largeur(), y + 22, 0xFF1B1E25);
-                g.drawString(font, Ui.couper(font, c.nom(), largeur() - 56), x0() + 4, y + 2, 0xFFFFFFFF, false);
-                g.drawString(font, c.numero(), x0() + 4, y + 12, 0xFF7FB7FF, false);
+                int y = y0() + k * 30;
+                avatar(g, font, c.nom(), x0() + 12, y + 14, 11);
+                g.drawString(font, Ui.couper(font, c.nom(), largeur() - 60), x0() + 30, y + 5, Ios.BLANC, false);
+                Ios.texte(g, font, c.numero(), x0() + 30, y + 16, 0.75F, Ios.GRIS, false);
+                g.fill(x0() + 30, y + 28, x0() + largeur(), y + 29, Ios.SEPARATEUR);
             }
         }
     }
 
-    /** Les appels récents : sortants, entrants, manqués ; rappeler en un clic. */
+    /** Les appels récents : toucher une ligne rappelle. */
     static final class Recents extends Ecran {
         Recents() {
             super("Récents");
+        }
+
+        private int lignes() {
+            return Math.max(1, hauteur() / 28);
         }
 
         @Override
@@ -345,10 +448,9 @@ public final class ClientPiaf {
             super.init();
             ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
             var liste = ClientPhone.recents;
-            for (int i = 0; i < Math.min(9, liste.size()); i++) {
+            for (int i = 0; i < Math.min(lignes(), liste.size()); i++) {
                 var a = liste.get(i);
-                addRenderableWidget(Button.builder(Component.literal("☎"), b -> ClientPhone.appeler(a.numero()))
-                        .bounds(x0() + largeur() - 22, y0() + 4 + i * 26, 20, 20).build());
+                addRenderableWidget(Ios.Bouton.texte(x0(), y0() + i * 28, largeur(), 26, "", 0, () -> ClientPhone.appeler(a.numero())));
             }
         }
 
@@ -357,22 +459,23 @@ public final class ClientPiaf {
             super.render(g, mouseX, mouseY, partialTick);
             var liste = ClientPhone.recents;
             if (liste.isEmpty()) {
-                g.drawCenteredString(font, "Aucun appel pour l'instant.", left + W / 2, y0() + 30, Ui.GRIS);
+                Ios.texteCentre(g, font, "Aucun appel pour l'instant.", left + W / 2F, y0() + 30, 1F, Ios.GRIS, false);
             }
-            for (int i = 0; i < Math.min(9, liste.size()); i++) {
+            for (int i = 0; i < Math.min(lignes(), liste.size()); i++) {
                 var a = liste.get(i);
-                int y = y0() + 4 + i * 26;
-                g.fill(x0(), y - 2, x0() + largeur(), y + 22, 0xFF1B1E25);
-                String icone = a.type() == 0 ? "↗" : a.type() == 1 ? "↙" : "✗";
-                int couleur = a.type() == 0 ? Ui.VERT : a.type() == 1 ? 0xFF7FB7FF : Ui.ROUGE;
-                g.drawString(font, icone, x0() + 4, y + 6, couleur, false);
-                g.drawString(font, Ui.couper(font, ClientPhone.nom(a.numero()), largeur() - 44), x0() + 16, y + 2,
-                        a.type() == 2 ? Ui.ROUGE : 0xFFFFFFFF, false);
-                String detail = (a.type() == 0 ? "sortant" : a.type() == 1 ? "entrant" : "manqué") + " · " + Fil.ilYa(a.temps());
-                g.drawString(font, detail, x0() + 16, y + 12, Ui.GRIS, false);
+                int y = y0() + i * 28;
+                String nom = ClientPhone.nom(a.numero());
+                g.drawString(font, Ui.couper(font, nom, largeur() - 50), x0(), y + 4, a.type() == 2 ? Ios.ROUGE : Ios.BLANC, false);
+                String detail = (a.type() == 0 ? "↗ sortant" : a.type() == 1 ? "↙ entrant" : "✗ manqué");
+                Ios.texte(g, font, detail, x0(), y + 15, 0.75F, Ios.GRIS, false);
+                String quand = Fil.ilYa(a.temps());
+                Ios.texte(g, font, quand, x0() + largeur() - font.width(quand) * 0.75F, y + 6, 0.75F, Ios.GRIS, false);
+                g.fill(x0(), y + 26, x0() + largeur(), y + 27, Ios.SEPARATEUR);
             }
         }
     }
+
+    // ---------------------------------------------------------------- Piaf
 
     /** Le fil Piaf, façon X : avatar, pseudo, texte, photo, « j'aime ». */
     static final class Fil extends Ecran {
@@ -388,15 +491,14 @@ public final class ClientPiaf {
         protected void init() {
             super.init();
             if (monPseudo.isEmpty()) {
-                champPseudo = addRenderableWidget(new EditBox(font, x0() + 10, y0() + 70, largeur() - 20, 18, Component.literal("pseudo")));
+                champPseudo = champ(x0(), y0() + 70, largeur(), "ton pseudo");
                 champPseudo.setMaxLength(16);
-                champPseudo.setFilter(s -> s.matches("[A-Za-z0-9_]*"));
-                champPseudo.setHint(Component.literal("ton pseudo"));
-                addRenderableWidget(Button.builder(Component.literal("Créer mon compte"), b -> demander(1, champPseudo.getValue(), 0))
-                        .bounds(x0() + 10, y0() + 94, largeur() - 20, 18).build());
+                champPseudo.setFilter(s -> s.matches("[\\p{L}0-9_.\\- ]*"));
+                addRenderableWidget(Ios.Bouton.plein(x0(), y0() + 100, largeur(), 22, "Créer mon compte", Ios.BLEU,
+                        () -> demander(1, champPseudo.getValue().strip().replace(' ', '_'), 0)));
+                setInitialFocus(champPseudo);
             } else {
-                addRenderableWidget(Button.builder(Component.literal("+ Publier"), b -> minecraft.setScreen(new Publier(0)))
-                        .bounds(left + W - 70, top + H - 26, 62, 18).build());
+                boutonHaut("+ Publier", () -> minecraft.setScreen(new Publier(0)));
             }
             demander(0, "", 0);
         }
@@ -423,29 +525,30 @@ public final class ClientPiaf {
             super.render(g, mouseX, mouseY, partialTick);
             if (monPseudo.isEmpty()) {
                 Ui.paragraphe(g, font, "Bienvenue sur Piaf ! Choisis ton pseudo pour publier et voir ce que les autres racontent.",
-                        x0() + 10, y0() + 20, largeur() - 20, 0xFFFFFFFF);
+                        x0(), y0() + 10, largeur(), Ios.BLANC);
+                Ios.texte(g, font, "lettres, chiffres, _ . - (3 à 16)", x0(), y0() + 58, 0.7F, Ios.GRIS, false);
                 return;
             }
             zonesJaime.clear();
-            g.enableScissor(x0(), y0(), x0() + largeur(), y0() + hauteur());
+            g.enableScissor(x0(), y0(), x0() + largeur(), bas());
             int y = y0() + 2 - (int) defilement;
             if (posts.isEmpty()) {
-                g.drawCenteredString(font, "Personne n'a encore publié.", left + W / 2, y0() + 40, Ui.GRIS);
+                Ios.texteCentre(g, font, "Personne n'a encore publié.", left + W / 2F, y0() + 40, 1F, Ios.GRIS, false);
             }
             for (int i = 0; i < posts.size(); i++) {
                 y = dessinerPost(g, i, posts.get(i), y);
             }
             g.disableScissor();
-            defilement = Math.min(defilement, Math.max(0, y + defilement - (y0() + hauteur())));
+            defilement = Math.min(defilement, Math.max(0, y + defilement - bas()));
         }
 
         private int dessinerPost(GuiGraphics g, int index, Piaf.Vue p, int y) {
-            int x = x0() + 2;
-            int w = largeur() - 4;
+            int x = x0();
+            int w = largeur();
             PlayerInfo info = minecraft.getConnection() == null ? null : minecraft.getConnection().getPlayerInfo(p.auteur());
             PlayerFaceRenderer.draw(g, info != null ? info.getSkin() : DefaultPlayerSkin.get(p.auteur()), x, y + 2, 16);
-            g.drawString(font, Component.literal(p.pseudo()).withStyle(s -> s.withBold(true)), x + 20, y + 2, 0xFFFFFFFF, false);
-            g.drawString(font, "@" + p.pseudo() + " · " + ilYa(p.temps()), x + 20, y + 11, 0xFF8899A6, false);
+            g.drawString(font, Component.literal(p.pseudo()).withStyle(s -> s.withBold(true)), x + 20, y + 2, Ios.BLANC, false);
+            Ios.texte(g, font, "@" + p.pseudo() + " · " + ilYa(p.temps()), x + 20, y + 12, 0.75F, 0xFF8899A6, false);
             int ty = y + 22;
             for (FormattedCharSequence ligne : font.split(Component.literal(p.texte()), w)) {
                 g.drawString(font, ligne, x, ty, 0xFFE7E9EA, false);
@@ -457,8 +560,8 @@ public final class ClientPiaf {
                 if (rl != null) {
                     g.blit(rl, x, ty + 2, w, ph, 0, 0, 320, 180, 320, 180);
                 } else {
-                    g.fill(x, ty + 2, x + w, ty + 2 + ph, 0xFF22262E);
-                    g.drawCenteredString(font, "📷 …", x + w / 2, ty + ph / 2, Ui.GRIS);
+                    Ios.rond(g, x, ty + 2, w, ph, 8, 0xFF22262E);
+                    Ios.texteCentre(g, font, "📷 …", x + w / 2F, ty + ph / 2F, 1F, Ios.GRIS, false);
                 }
                 ty += ph + 4;
             }
@@ -470,7 +573,7 @@ public final class ClientPiaf {
             return fin;
         }
 
-        private static String ilYa(long temps) {
+        static String ilYa(long temps) {
             long s = (System.currentTimeMillis() - temps) / 1000;
             if (s < 60) {
                 return "à l'instant";
@@ -487,29 +590,36 @@ public final class ClientPiaf {
 
     /** Écrire une publication, éventuellement avec une photo de la galerie. */
     static final class Publier extends Ecran {
-        private long photo;
+        private final long photo;
         private MultiLineEditBox champ;
         private String brouillon = "";
 
         Publier(long photo) {
-            super("Nouvelle publication");
+            super("Publier");
             this.photo = photo;
         }
 
         @Override
         protected void init() {
             super.init();
-            champ = addRenderableWidget(new MultiLineEditBox(font, x0(), y0(), largeur(), 90, Component.literal("Quoi de neuf ?"), Component.empty()));
+            champ = addRenderableWidget(new MultiLineEditBox(font, x0(), y0(), largeur(), 80, Component.literal("Quoi de neuf ?"), Component.empty()));
             champ.setCharacterLimit(Piaf.TEXTE_MAX);
             champ.setValue(brouillon);
-            addRenderableWidget(Button.builder(Component.literal(photo == 0 ? "📷 Joindre une photo" : "Changer de photo"), b -> {
+            setInitialFocus(champ);
+            addRenderableWidget(Ios.Bouton.texte(x0(), y0() + 84, largeur(), 14, photo == 0 ? "📷 Joindre une photo" : "Changer de photo", Ios.BLEU, () -> {
                 brouillon = champ.getValue();
                 minecraft.setScreen(new Galerie(true));
-            }).bounds(x0(), y0() + 96, largeur(), 18).build());
-            addRenderableWidget(Button.builder(Component.literal("Publier"), b -> {
+            }));
+            boutonHaut("Publier", () -> {
                 demander(2, champ.getValue(), photo);
                 minecraft.setScreen(new Fil());
-            }).bounds(left + W - 70, top + H - 26, 62, 18).build());
+            });
+        }
+
+        @Override
+        public void rafraichir() {
+            brouillon = champ == null ? brouillon : champ.getValue();
+            super.rafraichir();
         }
 
         @Override
@@ -517,27 +627,29 @@ public final class ClientPiaf {
             super.render(g, mouseX, mouseY, partialTick);
             if (photo != 0) {
                 ResourceLocation rl = photo(photo);
-                int w = largeur();
                 if (rl != null) {
-                    g.blit(rl, x0(), y0() + 120, w, w * 9 / 16, 0, 0, 320, 180, 320, 180);
+                    g.blit(rl, x0(), y0() + 102, largeur(), largeur() * 9 / 16, 0, 0, 320, 180, 320, 180);
                 }
             }
-            g.drawString(font, champ.getValue().length() + "/" + Piaf.TEXTE_MAX, x0(), top + H - 40, Ui.GRIS, false);
+            Ios.texte(g, font, champ.getValue().length() + "/" + Piaf.TEXTE_MAX, x0(), bas() - 10, 0.75F, Ios.GRIS, false);
         }
     }
 
-    /** Les photos prises. En mode « choisir », un clic renvoie vers la publication. */
+    // ---------------------------------------------------------------- photos
+
+    /** Les photos prises. Toucher une photo la publie sur Piaf. */
     static final class Galerie extends Ecran {
         private final boolean choisir;
 
         Galerie(boolean choisir) {
-            super(choisir ? "Choisis une photo" : "Galerie");
+            super(choisir ? "Choisir" : "Photos");
             this.choisir = choisir;
         }
 
         @Override
         protected void init() {
             super.init();
+            boutonHaut("📷", ClientCamera::ouvrir);
             demander(0, "", 0);
         }
 
@@ -557,13 +669,14 @@ public final class ClientPiaf {
         private List<Long> galerieInverse() {
             List<Long> l = new ArrayList<>(galerie);
             java.util.Collections.reverse(l);
-            return l.subList(0, Math.min(12, l.size()));
+            int max = Math.max(2, 2 * (hauteur() - 14) / (vignette(0)[3] + 3));
+            return l.subList(0, Math.min(max, l.size()));
         }
 
         private int[] vignette(int i) {
-            int w = (largeur() - 4) / 2;
+            int w = (largeur() - 3) / 2;
             int h = w * 9 / 16;
-            return new int[] {x0() + (i % 2) * (w + 4), y0() + (i / 2) * (h + 4), w, h};
+            return new int[] {x0() + (i % 2) * (w + 3), y0() + (i / 2) * (h + 3), w, h};
         }
 
         @Override
@@ -571,7 +684,7 @@ public final class ClientPiaf {
             super.render(g, mouseX, mouseY, partialTick);
             List<Long> liste = galerieInverse();
             if (liste.isEmpty()) {
-                Ui.paragraphe(g, font, "Aucune photo. Ouvre l'appli Photo, vise, et c'est dans la boîte !", x0() + 4, y0() + 20, largeur() - 8, Ui.GRIS);
+                Ui.paragraphe(g, font, "Aucune photo. Ouvre l'appareil photo (📷), vise, clic gauche : c'est dans la boîte !", x0(), y0() + 20, largeur(), Ios.GRIS);
             }
             for (int i = 0; i < liste.size(); i++) {
                 int[] r = vignette(i);
@@ -583,12 +696,14 @@ public final class ClientPiaf {
                 }
             }
             if (!liste.isEmpty()) {
-                g.drawCenteredString(font, "Clique sur une photo pour la publier", left + W / 2, top + H - 40, Ui.GRIS);
+                Ios.texteCentre(g, font, "Touche une photo pour la publier", left + W / 2F, bas() - 10, 0.75F, Ios.GRIS, false);
             }
         }
     }
 
-    /** Le portefeuille : ton solde, et envoyer de l'argent à quelqu'un. */
+    // ---------------------------------------------------------------- portefeuille et réglages
+
+    /** Le portefeuille : la carte SakaiDollars, et envoyer de l'argent à quelqu'un. */
     static final class Portefeuille extends Ecran {
         private EditBox joueur;
         private EditBox montant;
@@ -600,29 +715,76 @@ public final class ClientPiaf {
         @Override
         protected void init() {
             super.init();
-            joueur = addRenderableWidget(new EditBox(font, x0() + 6, y0() + 80, largeur() - 12, 18, Component.literal("joueur")));
-            joueur.setHint(Component.literal("nom du joueur"));
-            montant = addRenderableWidget(new EditBox(font, x0() + 6, y0() + 104, largeur() - 12, 18, Component.literal("montant")));
+            int y = y0() + 92;
+            joueur = champ(x0(), y + 14, largeur(), "nom du joueur");
+            montant = champ(x0(), y + 42, largeur(), "montant en $");
             montant.setFilter(s -> s.matches("\\d{0,9}"));
-            montant.setHint(Component.literal("montant en $"));
-            addRenderableWidget(Button.builder(Component.literal("Envoyer"), b -> {
+            addRenderableWidget(Ios.Bouton.plein(x0(), y + 72, largeur(), 22, "Envoyer", Ios.BLEU, () -> {
                 if (!joueur.getValue().isBlank() && !montant.getValue().isEmpty()) {
                     minecraft.player.connection.sendCommand("payer " + joueur.getValue().trim() + " " + montant.getValue());
                     montant.setValue("");
                 }
-            }).bounds(x0() + 6, y0() + 128, largeur() - 12, 18).build());
+            }));
         }
 
         @Override
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
-            g.drawCenteredString(font, Economie.MONNAIE, left + W / 2, y0() + 14, Ui.GRIS);
-            g.pose().pushPose();
-            g.pose().translate(left + W / 2F, y0() + 30, 0);
-            g.pose().scale(2F, 2F, 1F);
-            g.drawCenteredString(font, ClientEconomie.solde < 0 ? "…" : Economie.format(ClientEconomie.solde), 0, 0, Ui.OR);
-            g.pose().popPose();
-            g.drawString(font, "Envoyer de l'argent", x0() + 6, y0() + 68, 0xFFFFFFFF, false);
+            int x = x0();
+            int y = y0();
+            int w = largeur();
+            // la carte, avec un dégradé vert sapin et une puce dorée
+            for (int dy = 0; dy < 80; dy++) {
+                int c = 0xFF000000 | (int) (0x0E + dy * 0.2) << 16 | (int) (0x5C - dy * 0.3) << 8 | (int) (0x3A - dy * 0.2);
+                g.fill(x + (dy < 6 ? 6 - dy : dy > 73 ? dy - 73 : 0), y + dy, x + w - (dy < 6 ? 6 - dy : dy > 73 ? dy - 73 : 0), y + dy + 1, c);
+            }
+            Ios.rond(g, x + 10, y + 12, 18, 13, 3, 0xFFD4AF37);
+            Ios.texte(g, font, Economie.MONNAIE, x + 34, y + 15, 0.8F, 0xFFE6FFE9, true);
+            String solde = ClientEconomie.solde < 0 ? "…" : Economie.format(ClientEconomie.solde);
+            Ios.texte(g, font, solde, x + 10, y + 40, 1.8F, Ui.OR, true);
+            Ios.texte(g, font, minecraft.player.getGameProfile().getName().toUpperCase(), x + 10, y + 66, 0.7F, 0xFFBFE8C8, false);
+            Ios.texte(g, font, "Envoyer de l'argent", x, y + 92, 0.85F, Ios.GRIS, false);
+        }
+    }
+
+    /** Les réglages : la SIM (liée au téléphone pour toujours), le pseudo Piaf, le solde. */
+    static final class Reglages extends Ecran {
+        Reglages() {
+            super("Réglages");
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            if (ClientPhone.myNumber.isEmpty()) {
+                addRenderableWidget(Ios.Bouton.plein(x0(), y0() + 100, largeur(), 22, "Activer la SIM", Ios.VERT,
+                        () -> minecraft.setScreen(new PhoneScreen())));
+            }
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.render(g, mouseX, mouseY, partialTick);
+            int x = x0();
+            int y = y0();
+            int w = largeur();
+            Ios.rond(g, x, y, w, 84, 10, Ios.GROUPE);
+            String[][] lignes = {
+                    {"Mon numéro", ClientPhone.myNumber.isEmpty() ? "non activée" : ClientPhone.myNumber},
+                    {"Pseudo Piaf", monPseudo.isEmpty() ? "—" : "@" + monPseudo},
+                    {"Solde", ClientEconomie.solde < 0 ? "…" : Economie.format(ClientEconomie.solde)}};
+            for (int i = 0; i < lignes.length; i++) {
+                int ly = y + 8 + i * 26;
+                g.drawString(font, lignes[i][0], x + 8, ly + 2, Ios.BLANC, false);
+                String v = lignes[i][1];
+                g.drawString(font, v, x + w - 8 - font.width(v), ly + 2, Ios.GRIS, false);
+                if (i < lignes.length - 1) {
+                    g.fill(x + 8, ly + 18, x + w, ly + 19, Ios.SEPARATEUR);
+                }
+            }
+            Ui.paragraphe(g, font, "La SIM est gravée dans ce téléphone pour toujours. Pour un autre numéro, il faut un autre téléphone.",
+                    x, y + (ClientPhone.myNumber.isEmpty() ? 128 : 96), w, Ios.GRIS);
         }
     }
 

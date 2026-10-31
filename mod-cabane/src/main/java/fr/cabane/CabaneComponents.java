@@ -23,6 +23,15 @@ public final class CabaneComponents {
                     .persistent(Codec.unboundedMap(Codec.STRING, Codec.INT))
                     .networkSynchronized(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)));
 
+    /** Le numéro gravé dans un téléphone (sa carte SIM), choisi une seule fois. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> NUMERO =
+            COMPONENTS.registerComponentType("numero", b -> b.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8));
+
+    /** La chicha à laquelle un tuyau est accroché. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<net.minecraft.core.BlockPos>> CHICHA =
+            COMPONENTS.registerComponentType("chicha", b -> b.persistent(net.minecraft.core.BlockPos.CODEC)
+                    .networkSynchronized(net.minecraft.core.BlockPos.STREAM_CODEC));
+
     static void register(IEventBus modBus) {
         COMPONENTS.register(modBus);
     }

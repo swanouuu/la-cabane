@@ -77,6 +77,20 @@ public final class Contrats extends SimpleJsonResourceReloadListener {
         }
     }
 
+    /** Les contrats affichés au-dessus des tableaux, envoyés régulièrement à chaque joueur. */
+    public record Affiche(List<Vue> contrats, long msRestantes) implements CustomPacketPayload {
+        public static final Type<Affiche> TYPE = new Type<>(Cabane.id("contrats_affiche"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, Affiche> CODEC = StreamCodec.composite(
+                Vue.CODEC.apply(ByteBufCodecs.list()), Affiche::contrats,
+                ByteBufCodecs.VAR_LONG, Affiche::msRestantes,
+                Affiche::new);
+
+        @Override
+        public Type<Affiche> type() {
+            return TYPE;
+        }
+    }
+
     public record Livrer(int index) implements CustomPacketPayload {
         public static final Type<Livrer> TYPE = new Type<>(Cabane.id("contrats_livrer"));
         public static final StreamCodec<ByteBuf, Livrer> CODEC = ByteBufCodecs.VAR_INT.map(Livrer::new, Livrer::index);
@@ -111,6 +125,7 @@ public final class Contrats extends SimpleJsonResourceReloadListener {
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
                 .playToClient(Ouvrir.TYPE, Ouvrir.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientBoutique.contrats(p.contrats(), p.msRestantes())))
+                .playToClient(Affiche.TYPE, Affiche.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientBoutique.affiche(p.contrats(), p.msRestantes())))
                 .playToServer(Livrer.TYPE, Livrer.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur) {
                         livrer(joueur, p.index());
@@ -148,6 +163,61 @@ public final class Contrats extends SimpleJsonResourceReloadListener {
         }
         Economie.sync(joueur);
         PacketDistributor.sendToPlayer(joueur, new Ouvrir(vues, HEURE - System.currentTimeMillis() % HEURE));
+    }
+
+    private static List<Vue> vues(ServerPlayer joueur) {
+        Faits faits = Faits.get(joueur.server);
+        List<Contrat> actuels = actuels();
+        List<Vue> vues = new ArrayList<>();
+        for (int i = 0; i < actuels.size(); i++) {
+            vues.add(new Vue(actuels.get(i).demande(), actuels.get(i).recompense(), faits.fait(joueur, i)));
+        }
+        return vues;
+    }
+
+    /** Toutes les 5 secondes : les contrats et le temps restant, pour l'affichage au-dessus des tableaux. */
+    public static void tick(net.minecraft.server.MinecraftServer server) {
+        if (server.getTickCount() % 100 != 0) {
+            return;
+        }
+        for (ServerPlayer joueur : server.getPlayerList().getPlayers()) {
+            afficher(joueur);
+        }
+    }
+
+    public static void afficher(ServerPlayer joueur) {
+        PacketDistributor.sendToPlayer(joueur, new Affiche(vues(joueur), HEURE - System.currentTimeMillis() % HEURE));
+    }
+
+    /** Clic droit sur un tableau : livre tous les contrats qu'on peut remplir avec ce qu'on a sur soi. */
+    public static void livrerTout(ServerPlayer joueur) {
+        List<Contrat> actuels = actuels();
+        Faits faits = Faits.get(joueur.server);
+        int livres = 0;
+        List<String> manque = new ArrayList<>();
+        for (int i = 0; i < actuels.size(); i++) {
+            if (faits.fait(joueur, i)) {
+                continue;
+            }
+            Contrat c = actuels.get(i);
+            int possede = 0;
+            for (ItemStack s : joueur.getInventory().items) {
+                if (s.is(c.demande().getItem())) {
+                    possede += s.getCount();
+                }
+            }
+            if (possede >= c.demande().getCount()) {
+                livrer(joueur, i);
+                livres++;
+            } else {
+                manque.add((c.demande().getCount() - possede) + " × " + c.demande().getHoverName().getString());
+            }
+        }
+        if (livres == 0) {
+            joueur.displayClientMessage(Component.literal(manque.isEmpty() ? "Tous les contrats de l'heure sont remplis, reviens plus tard !"
+                    : "Rien à livrer. Il te manque : " + String.join(", ", manque)).withStyle(ChatFormatting.YELLOW), true);
+        }
+        afficher(joueur);
     }
 
     private static void livrer(ServerPlayer joueur, int index) {

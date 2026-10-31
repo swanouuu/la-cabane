@@ -1,128 +1,94 @@
 package fr.cabane.client;
 
+import fr.cabane.client.ui.Ios;
 import fr.cabane.telephone.PhoneNetwork.Action;
 import fr.cabane.telephone.PhoneNetwork.State;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * L'écran du téléphone : un clavier, ton numéro, et les boutons vert / rouge.
- * On peut aussi taper les chiffres au clavier, Entrée pour appeler, Retour pour effacer.
+ * L'appli Téléphone, façon iPhone : le clavier rond, la touche verte pour appeler ; pendant un
+ * appel, l'écran d'appel (décrocher, raccrocher). Si la SIM n'est pas encore activée, on choisit
+ * ici son numéro, une fois pour toutes. Les chiffres se tapent aussi au clavier.
  */
-public class PhoneScreen extends Screen {
-    private static final int W = 132;
-    private static final int H = 236;
+public class PhoneScreen extends ClientPiaf.Ecran {
+    private static final String[] TOUCHES = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"};
+    private static final String[] LETTRES = {"", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ", "", "+", ""};
 
     private String saisie = "";
-    private boolean modeNumero;
-    private int left;
-    private int top;
-    private Button vert;
-    private Button rouge;
-    private Button changer;
 
     public PhoneScreen() {
-        super(Component.translatable("screen.cabane.telephone"));
-        ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+        super("");
+        ClientPhone.send(Action.ETAT, "");
+    }
+
+    private boolean activation() {
+        return ClientPhone.myNumber.isEmpty();
+    }
+
+    private boolean enAppel() {
+        return ClientPhone.state != State.LIBRE;
     }
 
     @Override
     protected void init() {
-        left = (width - W) / 2;
-        top = (height - H) / 2;
-        String[] touches = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "←"};
-        for (int i = 0; i < touches.length; i++) {
-            String touche = touches[i];
-            int x = left + 14 + (i % 3) * 36;
-            int y = top + 82 + (i / 3) * 24;
-            addRenderableWidget(Button.builder(Component.literal(touche), b -> appuyer(touche)).bounds(x, y, 32, 20).build());
-        }
-        vert = addRenderableWidget(Button.builder(Component.empty(), b -> vert()).bounds(left + 14, top + 182, 50, 20).build());
-        rouge = addRenderableWidget(Button.builder(Component.empty(), b -> rouge()).bounds(left + 68, top + 182, 50, 20).build());
-        changer = addRenderableWidget(Button.builder(Component.literal("Changer de numéro"), b -> {
-            modeNumero = !modeNumero;
-            saisie = "";
-            rafraichir();
-        }).bounds(left + 14, top + 208, 104, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("⌂"), b -> minecraft.setScreen(new ClientPiaf.Accueil()))
-                .bounds(left + W - 22, top + 12, 14, 14).build());
-        rafraichir();
-    }
-
-    void rafraichir() {
-        if (vert == null) {
+        super.init();
+        int cx = left + W / 2;
+        int r = Math.min(17, (W - 40) / 6);
+        int pas = r * 2 + 10;
+        if (enAppel() && !activation()) {
+            int y = top + H - 70;
+            if (ClientPhone.state == State.APPEL_ENTRANT) {
+                addRenderableWidget(Ios.Bouton.touche(cx - pas, y, r + 2, "✕", "refuser", Ios.ROUGE, () -> ClientPhone.send(Action.RACCROCHER, "")));
+                addRenderableWidget(Ios.Bouton.touche(cx + pas, y, r + 2, "☎", "répondre", Ios.VERT, () -> ClientPhone.send(Action.DECROCHER, "")));
+            } else {
+                addRenderableWidget(Ios.Bouton.touche(cx, y, r + 2, "☎", "raccrocher", Ios.ROUGE, () -> ClientPhone.send(Action.RACCROCHER, "")));
+            }
             return;
         }
-        if (ClientPhone.myNumber.isEmpty()) {
-            modeNumero = true;
+        int y0 = top + (activation() ? 112 : 92);
+        for (int i = 0; i < TOUCHES.length; i++) {
+            String touche = TOUCHES[i];
+            if (activation() && (touche.equals("*") || touche.equals("#"))) {
+                continue;
+            }
+            addRenderableWidget(Ios.Bouton.touche(cx + (i % 3 - 1) * pas, y0 + (i / 3) * pas, r, touche, LETTRES[i], Ios.TOUCHE, () -> appuyer(touche)));
         }
-        boolean libre = ClientPhone.state == State.LIBRE;
-        changer.visible = libre && !ClientPhone.myNumber.isEmpty();
-        changer.setMessage(Component.literal(modeNumero ? "Annuler" : "Changer de numéro"));
-        vert.active = true;
-        if (modeNumero) {
-            vert.setMessage(Component.literal("Valider").withStyle(ChatFormatting.GREEN));
-            rouge.setMessage(Component.literal("Effacer").withStyle(ChatFormatting.RED));
-            return;
+        int yBas = y0 + 4 * pas;
+        if (activation()) {
+            addRenderableWidget(Ios.Bouton.plein(left + 16, yBas - r + 2, W - 32, 22, "Activer ce numéro", Ios.VERT, this::vert));
+        } else {
+            addRenderableWidget(Ios.Bouton.touche(cx, yBas, r, "☎", "", Ios.VERT, this::vert));
         }
-        switch (ClientPhone.state) {
-            case State.APPEL_ENTRANT -> {
-                vert.setMessage(Component.literal("Décrocher").withStyle(ChatFormatting.GREEN));
-                rouge.setMessage(Component.literal("Refuser").withStyle(ChatFormatting.RED));
-            }
-            case State.APPEL_SORTANT -> {
-                vert.active = false;
-                vert.setMessage(Component.literal("Ça sonne…"));
-                rouge.setMessage(Component.literal("Annuler").withStyle(ChatFormatting.RED));
-            }
-            case State.EN_LIGNE -> {
-                vert.active = false;
-                vert.setMessage(Component.literal("En ligne"));
-                rouge.setMessage(Component.literal("Raccrocher").withStyle(ChatFormatting.RED));
-            }
-            default -> {
-                vert.setMessage(Component.literal("Appeler").withStyle(ChatFormatting.GREEN));
-                rouge.setMessage(Component.literal("Effacer").withStyle(ChatFormatting.RED));
-            }
+        addRenderableWidget(Ios.Bouton.texte(cx + pas - r, yBas - 8, 2 * r, 16, "←", Ios.GRIS, () -> appuyer("←")));
+        if (!activation()) {
+            addRenderableWidget(Ios.Bouton.texte(left + 10, top + 22, W - 20, 12,
+                    ClientPhone.masque ? "☑ Appel en numéro masqué" : "☐ Appel en numéro masqué",
+                    ClientPhone.masque ? Ios.ORANGE : Ios.GRIS, () -> {
+                        ClientPhone.masque = !ClientPhone.masque;
+                        rebuildWidgets();
+                    }));
         }
     }
 
     private void appuyer(String touche) {
-        switch (touche) {
-            case "C" -> saisie = "";
-            case "←" -> saisie = saisie.isEmpty() ? "" : saisie.substring(0, saisie.length() - 1);
-            default -> {
-                if (saisie.length() < 4) {
-                    saisie += touche;
-                }
-            }
+        if (touche.equals("←")) {
+            saisie = saisie.isEmpty() ? "" : saisie.substring(0, saisie.length() - 1);
+        } else if (touche.matches("\\d") && saisie.length() < 4) {
+            saisie += touche;
         }
     }
 
     private void vert() {
-        if (modeNumero) {
+        if (activation()) {
             if (saisie.length() >= 3) {
                 ClientPhone.send(Action.CHOISIR_NUMERO, saisie);
-                modeNumero = false;
                 saisie = "";
             }
         } else if (ClientPhone.state == State.APPEL_ENTRANT) {
             ClientPhone.send(Action.DECROCHER, "");
         } else if (ClientPhone.state == State.LIBRE && saisie.length() >= 3) {
-            ClientPhone.send(Action.APPELER, saisie);
-        }
-        rafraichir();
-    }
-
-    private void rouge() {
-        if (modeNumero || ClientPhone.state == State.LIBRE) {
-            saisie = "";
-        } else {
-            ClientPhone.send(Action.RACCROCHER, "");
+            ClientPhone.send(Action.APPELER, saisie + (ClientPhone.masque ? "|masque" : ""));
         }
     }
 
@@ -149,59 +115,52 @@ public class PhoneScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(left - 3, top - 3, left + W + 3, top + H + 3, 0xFF0B0B0F);
-        g.fill(left, top, left + W, top + H, 0xFF24272E);
-        g.fill(left + W / 2 - 14, top + 4, left + W / 2 + 14, top + 6, 0xFF4A4E58);
-        g.fill(left + 8, top + 10, left + W - 8, top + 74, 0xFF0E2A2E);
+    int fond() {
+        return enAppel() && !activation() ? 0xFF1A2230 : Ios.NOIR;
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         int cx = left + W / 2;
-        String haut = ClientPhone.myNumber.isEmpty() ? "Pas encore de numéro" : "Mon n° : " + ClientPhone.myNumber;
-        g.drawCenteredString(font, haut, cx, top + 15, 0xFF9FE8C8);
-
-        String statut;
-        String grand;
-        int couleur = 0xFFFFFFFF;
-        if (modeNumero) {
-            statut = "Choisis ton numéro (3-4 chiffres)";
-            grand = saisie.isEmpty() ? "____" : saisie;
-        } else {
-            switch (ClientPhone.state) {
-                case State.APPEL_ENTRANT -> {
-                    statut = "Appel de " + ClientPhone.nom(ClientPhone.other);
-                    grand = ClientPhone.other;
-                    couleur = 0xFFFFD75E;
-                }
-                case State.APPEL_SORTANT -> {
-                    statut = "On appelle " + ClientPhone.nom(ClientPhone.other) + "…";
-                    grand = ClientPhone.other;
-                }
-                case State.EN_LIGNE -> {
-                    statut = "En ligne avec " + ClientPhone.nom(ClientPhone.other);
-                    grand = ClientPhone.other;
-                    couleur = 0xFF7CFF9B;
-                }
-                default -> {
-                    statut = "Compose un numéro";
-                    grand = saisie.isEmpty() ? "____" : saisie;
-                }
-            }
+        if (activation()) {
+            Ios.texteCentre(g, font, "Activer la SIM", cx, top + 26, 1.3F, Ios.BLANC, true);
+            fr.cabane.client.ui.Ui.paragraphe(g, font, "Choisis ton numéro (3 ou 4 chiffres). Il sera gravé dans ce téléphone pour toujours.",
+                    left + 14, top + 44, W - 28, Ios.GRIS);
+            Ios.texteCentre(g, font, saisie.isEmpty() ? "_ _ _ _" : saisie, cx, top + 74, 2F, Ios.BLANC, false);
+            return;
         }
-        g.drawCenteredString(font, statut, cx, top + 28, 0xFFB8C4CC);
-        g.pose().pushPose();
-        g.pose().translate(cx, top + 44, 0);
-        g.pose().scale(2F, 2F, 1F);
-        g.drawCenteredString(font, grand, 0, 0, couleur);
-        g.pose().popPose();
+        if (enAppel()) {
+            String nom = ClientPhone.nom(ClientPhone.other);
+            ClientPiaf.avatar(g, font, nom, cx, top + 80, 28);
+            Ios.texteCentre(g, font, nom, cx, top + 118, 1.5F, Ios.BLANC, false);
+            String statut = switch (ClientPhone.state) {
+                case State.APPEL_ENTRANT -> "appel entrant…";
+                case State.APPEL_SORTANT -> "appel…";
+                default -> chrono();
+            };
+            Ios.texteCentre(g, font, statut, cx, top + 136, 1F, Ios.GRIS, false);
+            if (!nom.equals(ClientPhone.other)) {
+                Ios.texteCentre(g, font, ClientPhone.other, cx, top + 148, 0.85F, Ios.GRIS, false);
+            }
+            return;
+        }
+        String affichage = saisie.isEmpty() ? "" : saisie;
+        Ios.texteCentre(g, font, affichage, cx, top + 46, 2.2F, Ios.BLANC, false);
+        if (!saisie.isEmpty() && !ClientPhone.nom(saisie).equals(saisie)) {
+            Ios.texteCentre(g, font, ClientPhone.nom(saisie), cx, top + 66, 1F, Ios.BLEU, false);
+        }
+        Ios.texteCentre(g, font, "mon n° " + ClientPhone.myNumber, cx, top + H - 30, 0.75F, Ios.GRIS, false);
     }
 
+    private static String chrono() {
+        long s = (System.currentTimeMillis() - ClientPhone.debutAppel) / 1000;
+        return String.format("%02d:%02d", s / 60, s % 60);
+    }
+
+    /** L'écran change de forme (activation, appel, clavier) quand l'état du téléphone change. */
     @Override
-    public boolean isPauseScreen() {
-        return false;
+    public void rafraichir() {
+        rebuildWidgets();
     }
 }

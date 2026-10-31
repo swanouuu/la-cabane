@@ -735,7 +735,7 @@
 					type: "item"
 				}
 				{
-					command: "/title {p} title {\"text\":\"Gardien de la Cabane\",\"color\":\"gold\"}"
+					command: "/title {p} title {\"text\":\"Gardien de Beauvais\",\"color\":\"gold\"}"
 					elevate_perms: true
 					id: "35DEB07BC9588C0A"
 					permission_level: 2

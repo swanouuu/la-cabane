@@ -8,6 +8,7 @@
   EasyNPCVersion:3,
   VariantType:"ORC_WARRIOR",
   SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:ferrous_wroughtnaut"},
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
@@ -15,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Brokk",
-        Texts:[{Text:"Hrmpf. Un orc forgeron, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent."}],
+        Texts:[{Text:"CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent."}],
         Buttons:[{
           Label:"travail",
           Name:"Du travail ?",
@@ -29,7 +30,7 @@
       },{
         Label:"travail",
         Name:"Le travail",
-        Texts:[{Text:"Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Bako changent toutes les heures."}],
+        Texts:[{Text:"Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Mehdi, au Grand Bazar, changent toutes les heures."}],
         Buttons:[{
           Label:"contrats",
           Name:"Voir les contrats",

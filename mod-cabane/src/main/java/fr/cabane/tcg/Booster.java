@@ -13,7 +13,10 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-/** Ouvrir un booster : 5 cartes, dont au moins une rare (ou mieux) en dernière position. */
+/**
+ * Ouvrir un booster : 5 cartes tirées chacune selon sa rareté (pas de rare garantie), rangées de la
+ * plus commune à la plus rare : la meilleure arrive toujours en dernier.
+ */
 public final class Booster {
     public static final int CARTES = 5;
 
@@ -36,12 +39,13 @@ public final class Booster {
     public static boolean ouvrir(ServerPlayer joueur) {
         List<String> tirees = new ArrayList<>();
         for (int i = 0; i < CARTES; i++) {
-            Cartes.Def def = Cartes.tirer(joueur.getRandom(), i == CARTES - 1);
+            Cartes.Def def = Cartes.tirer(joueur.getRandom(), false);
             if (def == null) {
                 return false;
             }
             tirees.add(def.id());
         }
+        tirees.sort(java.util.Comparator.comparingInt(id -> Cartes.def(id) == null ? 0 : Cartes.def(id).rarete()));
         for (String id : tirees) {
             ItemStack carte = Cartes.carte(id);
             if (!joueur.getInventory().add(carte)) {

@@ -4,10 +4,10 @@
       "id": "cabane:telephone"
     },
     "title": {
-      "text": "La Cabane"
+      "text": "Beauvais"
     },
     "description": {
-      "text": "Le centre de la map, et de vos aventures."
+      "text": "Le village au cœur de la jungle, et de vos aventures."
     },
     "background": "minecraft:textures/block/stripped_spruce_log.png",
     "frame": "task",

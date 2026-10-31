@@ -19,6 +19,15 @@ public final class ClientBoutique {
         Minecraft.getInstance().setScreen(new BoutiqueScreen(offres));
     }
 
+    /** Les contrats affichés au-dessus des tableaux, et quand ils changent (heure locale du client). */
+    public static List<Contrats.Vue> contratsAffiches = List.of();
+    public static long finContrats;
+
+    public static void affiche(List<Contrats.Vue> contrats, long msRestantes) {
+        contratsAffiches = contrats;
+        finContrats = System.currentTimeMillis() + msRestantes;
+    }
+
     public static void contrats(List<Contrats.Vue> contrats, long msRestantes) {
         Minecraft.getInstance().setScreen(new ContratsScreen(contrats, msRestantes));
     }

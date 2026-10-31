@@ -9,6 +9,14 @@ import net.minecraft.client.Minecraft;
 /** Point d'entrée côté client des jeux du casino. */
 public final class ClientCasino {
 
+    /** La machine ou la table qu'on a ouverte (pour sa caisse). */
+    public static net.minecraft.core.BlockPos machine = net.minecraft.core.BlockPos.ZERO;
+
+    public static void ouvrir(BlocInteractif.Ouverture jeu, net.minecraft.core.BlockPos pos) {
+        machine = pos;
+        ouvrir(jeu);
+    }
+
     public static void ouvrir(BlocInteractif.Ouverture jeu) {
         Minecraft mc = Minecraft.getInstance();
         switch (jeu) {

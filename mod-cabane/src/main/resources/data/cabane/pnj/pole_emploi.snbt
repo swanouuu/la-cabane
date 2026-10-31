@@ -1,0 +1,46 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;687795277,1818698594,-610903286,1050746021],
+  CustomName:'{"text":"Mehdi de Pôle emploi","color":"blue"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"DEFAULT"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Mehdi",
+        Texts:[{Text:"Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats du village sont affichés juste au-dessus du tableau, ils changent toutes les heures. Apportez la marchandise, un clic droit sur le tableau, et le village vous paie."}],
+        Buttons:[{
+          Label:"contrats",
+          Name:"Voir les contrats",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane contrats",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
+          Label:"dossier",
+          Name:"Et mon dossier ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"dossier"}]
+        },{
+          Label:"bye",
+          Name:"Merci Mehdi",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"dossier",
+        Name:"Votre dossier",
+        Texts:[{Text:"Votre dossier ? Il manque une pièce justificative. Il en manque toujours une. Revenez avec un contrat rempli, ça fera une bonne ligne sur votre CV."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"D'accord…",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

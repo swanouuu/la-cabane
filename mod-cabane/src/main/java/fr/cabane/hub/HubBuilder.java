@@ -72,7 +72,7 @@ import net.neoforged.neoforge.common.Tags;
  * Le centre de map. On s'installe à côté d'un village de savane (« le village qui nous héberge »),
  * loin des structures hostiles, et on y construit le nôtre, en grand : au centre une place avec le
  * grand panneau de la carte du monde ; au nord la Grande Cabane (notre base, trois niveaux et deux
- * tours) ; à l'ouest le Grand Bazar de Bako ; à l'est la rue du village, ses maisons et la forge ;
+ * tours) ; à l'ouest le Grand Bazar de Mouloud ; à l'est la rue du village, ses maisons et la forge ;
  * au sud les champs, le feu de camp, la tour de guet et la grande porte. Au-dessus, l'avion en feu
  * dont on saute en parachute.
  *
@@ -1175,7 +1175,7 @@ public class HubBuilder {
     }
 
     private void bazarInterieur() {
-        // le grand comptoir de Bako, en U
+        // le grand comptoir de Mouloud, en U
         for (int z = -6; z <= 6; z++) {
             pose(-52, 1, z, pilier(Blocks.STRIPPED_DARK_OAK_LOG, Direction.Axis.Z));
         }
@@ -1247,10 +1247,9 @@ public class HubBuilder {
         pose(-34, 1, 9, Blocks.HAY_BLOCK.defaultBlockState());
         pose(-33, 1, 6, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
         texte(-52.5, 4.6, 0.5, 90F, "[{\"text\":\"LA BOUTIQUE DE BAKO\\n\",\"color\":\"gold\",\"bold\":true},{\"text\":\"clic droit sur le comptoir\",\"color\":\"gray\",\"bold\":false}]", 1.3F, 0x99000000, false);
-        texte(-34.5, 5.8, -8.4, 180F, "[{\"text\":\"CONTRATS\\n\",\"color\":\"aqua\",\"bold\":true},{\"text\":\"nouveaux toutes les heures\",\"color\":\"gray\",\"bold\":false}]", 1.0F, 0x99000000, false);
     }
 
-    /** Un emplacement d'étal (3 x 3) avec sa toile ; le joueur y pose l'étal acheté chez Bako. */
+    /** Un emplacement d'étal (3 x 3) avec sa toile ; le joueur y pose l'étal acheté chez Mouloud. */
     private void etalLibre(int cx, int cz, Block toile1, Block toile2) {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
@@ -1267,7 +1266,7 @@ public class HubBuilder {
         pose(cx, 3, cz, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
         pose(cx - 1, 5, cz - 1, Blocks.LANTERN.defaultBlockState());
         pose(cx + 1, 5, cz + 1, Blocks.LANTERN.defaultBlockState());
-        texte(cx + 0.5, 1.6, cz + 0.5, 0F, "[{\"text\":\"EMPLACEMENT LIBRE\\n\",\"color\":\"white\",\"bold\":true},{\"text\":\"Achète un étal chez Bako\",\"color\":\"gray\",\"bold\":false}]", 0.55F, 0x99000000, true);
+        texte(cx + 0.5, 1.6, cz + 0.5, 0F, "[{\"text\":\"EMPLACEMENT LIBRE\\n\",\"color\":\"white\",\"bold\":true},{\"text\":\"Achète un étal chez Mouloud\",\"color\":\"gray\",\"bold\":false}]", 0.55F, 0x99000000, true);
     }
 
     // ------------------------------------------------------------------ le début du village
@@ -1849,7 +1848,7 @@ public class HubBuilder {
                 pose(x, 6, CZ1 + 2, avec(taverne, "hanging", "true"));
             }
         }
-        // le Grand Bazar : panneaux d'annonces autour des contrats, horloge sur la façade, cageots chez Bako
+        // le Grand Bazar : panneaux d'annonces autour des contrats, horloge sur la façade, cageots chez Mouloud
         objet(-36, 1, -8, "supplementaries:notice_board", Direction.SOUTH);
         objet(-34, 1, -8, "supplementaries:notice_board", Direction.SOUTH);
         BlockState horloge = modOuNull("supplementaries:clock_block");
@@ -2008,8 +2007,8 @@ public class HubBuilder {
     private void textes() {
         texte(0.5, 15.5, CZ1 + 1.6, 180F, "{\"text\":\"LA GRANDE CABANE\",\"color\":\"gold\",\"bold\":true}", 3.5F, 0x55000000, false);
         texte(BX1 + 1.2, 12.5, 0.5, 90F, "{\"text\":\"GRAND BAZAR\",\"color\":\"gold\",\"bold\":true}", 3.5F, 0x55000000, false);
-        texte(0.5, 11.4, 61.6, 180F, "{\"text\":\"LA CABANE\",\"color\":\"gold\",\"bold\":true}", 2.5F, 0x00000000, false);
-        texte(0.5, 11.4, 58.4, 0F, "{\"text\":\"LA CABANE\",\"color\":\"gold\",\"bold\":true}", 2.5F, 0x00000000, false);
+        texte(0.5, 11.4, 61.6, 180F, "{\"text\":\"BEAUVAIS\",\"color\":\"gold\",\"bold\":true}", 2.5F, 0x00000000, false);
+        texte(0.5, 11.4, 58.4, 0F, "{\"text\":\"BEAUVAIS\",\"color\":\"gold\",\"bold\":true}", 2.5F, 0x00000000, false);
         texte(-1.5, HAUTEUR_AVION + 2.2, 0.5, 90F, "[{\"text\":\"MAYDAY ! L'AVION EST EN FEU !\\n\",\"color\":\"red\",\"bold\":true},{\"text\":\"Prends un parachute dans le coffre au fond\\npuis saute par la porte !\",\"color\":\"white\",\"bold\":false}]", 0.5F, 0xAA000000, false);
     }
 
@@ -2293,15 +2292,15 @@ public class HubBuilder {
     private void journal(int x, int y, int z) {
         BlockPos p = c.offset(x, y, z);
         List<Filterable<Component>> pages = List.of(
-                "Journal du Gardien\n\nMayday… votre avion s'est écrasé au-dessus de la savane. Le village voisin accepte de vous héberger dans cette Grande Cabane.",
+                "Journal du Hejj\n\nMayday… votre avion s'est écrasé au-dessus de la jungle. Le village de Beauvais accepte de vous héberger dans cette Grande Cabane.",
                 "En échange, aidez-le : les contrats du marché, les quêtes du tableau. Le village paie en SakaiDollars.",
                 "Autrefois, la Confrérie des Explorateurs vivait ici. Sept reliques reposaient sur ce comptoir, puis ont été cachées au cœur de donjons lointains.",
                 "Le Scarabée d'Or, sous le sable.\nL'Idole de Jade, dans la jungle.\nLa Perle des Abysses, sous la mer.\nLa Plume Céleste, dans le ciel.",
-                "La Couronne Illageoise, chez nos ennemis.\nL'Œil du Gardien, sous la terre.\nL'Engrenage Ancien, dans les fonderies.\n\nRamenez-les.\n— Le Vieux Gardien")
+                "La Couronne Illageoise, chez nos ennemis.\nL'Œil du Gardien, sous la terre.\nL'Engrenage Ancien, dans les fonderies.\n\nRamenez-les.\n— Le Hejj du Village")
                 .stream().map(t -> Filterable.passThrough((Component) Component.literal(t))).toList();
         ItemStack livre = new ItemStack(Items.WRITTEN_BOOK);
         livre.set(DataComponents.WRITTEN_BOOK_CONTENT,
-                new WrittenBookContent(Filterable.passThrough("Journal du Gardien"), "Le Vieux Gardien", 0, pages, true));
+                new WrittenBookContent(Filterable.passThrough("Journal du Hejj"), "Le Hejj du Village", 0, pages, true));
         LecternBlock.tryPlaceBook(null, level, p, level.getBlockState(p), livre);
     }
 

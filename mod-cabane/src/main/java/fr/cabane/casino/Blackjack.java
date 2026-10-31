@@ -32,6 +32,7 @@ public final class Blackjack {
         final List<Integer> joueur = new ArrayList<>();
         final List<Integer> croupier = new ArrayList<>();
         long mise;
+        fr.cabane.bloc.InteractifBlockEntity table;
         int etat = AUCUNE;
         long gain;
 
@@ -48,11 +49,12 @@ public final class Blackjack {
 
     private static final Map<UUID, Partie> PARTIES = new HashMap<>();
 
-    public record Action(int action, long mise) implements CustomPacketPayload {
+    public record Action(int action, long mise, net.minecraft.core.BlockPos table) implements CustomPacketPayload {
         public static final Type<Action> TYPE = new Type<>(Cabane.id("blackjack_action"));
         public static final StreamCodec<ByteBuf, Action> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, Action::action,
                 ByteBufCodecs.VAR_LONG, Action::mise,
+                net.minecraft.core.BlockPos.STREAM_CODEC, Action::table,
                 Action::new);
 
         @Override
@@ -82,7 +84,7 @@ public final class Blackjack {
         event.registrar("1")
                 .playToServer(Action.TYPE, Action.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur) {
-                        agir(joueur, p.action(), p.mise());
+                        agir(joueur, p.action(), p.mise(), p.table());
                     }
                 }))
                 .playToClient(Etat.TYPE, Etat.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientCasino.blackjack(p)));
@@ -108,13 +110,16 @@ public final class Blackjack {
         return total;
     }
 
-    private static void agir(ServerPlayer joueur, int action, long mise) {
+    private static void agir(ServerPlayer joueur, int action, long mise, net.minecraft.core.BlockPos pos) {
         Partie p = PARTIES.computeIfAbsent(joueur.getUUID(), id -> new Partie());
         switch (action) {
             case DISTRIBUER -> {
-                if (p.etat == EN_COURS || !Casino.miseValide(joueur, mise)) {
+                var table = Casino.machine(joueur, pos);
+                // la caisse doit pouvoir payer une main doublée gagnante (4 fois la mise)
+                if (p.etat == EN_COURS || !Casino.miser(joueur, table, mise, mise * 4)) {
                     break;
                 }
+                p.table = table;
                 p.joueur.clear();
                 p.croupier.clear();
                 p.mise = mise;
@@ -143,9 +148,10 @@ public final class Blackjack {
                 }
             }
             case DOUBLER -> {
-                if (p.etat != EN_COURS || p.joueur.size() != 2 || !Economie.payer(joueur, p.mise)) {
+                if (p.etat != EN_COURS || p.joueur.size() != 2 || p.table == null || !Economie.payer(joueur, p.mise)) {
                     break;
                 }
+                p.table.ajouterCaisse(p.mise);
                 p.mise *= 2;
                 p.joueur.add(p.tirer());
                 if (valeur(p.joueur) > 21) {
@@ -177,8 +183,8 @@ public final class Blackjack {
             case EGALITE -> p.mise;
             default -> 0;
         };
-        if (p.gain > 0) {
-            Economie.crediter(joueur.server, joueur.getUUID(), p.gain);
+        if (p.gain > 0 && p.table != null) {
+            Casino.payer(joueur, p.table, p.gain);
         }
     }
 

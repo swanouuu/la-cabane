@@ -33,17 +33,27 @@ public final class CabaneBlocks {
     public static final DeferredBlock<BlocInteractif> ROUE_FORTUNE = interactif("roue_fortune", Ouverture.ROUE);
     public static final DeferredBlock<BlocInteractif> TABLE_PILE_OU_FACE = interactif("table_pile_ou_face", Ouverture.PILE_OU_FACE);
 
+    public static final DeferredBlock<fr.cabane.fumee.Fumee.ChichaBlock> CHICHA = BLOCKS.registerBlock("chicha", fr.cabane.fumee.Fumee.ChichaBlock::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1F).sound(SoundType.GLASS).noOcclusion());
+
     public static final DeferredBlock<EtalBlock> ETAL = BLOCKS.registerBlock("etal", EtalBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F, 3_600_000F).sound(SoundType.WOOD).noOcclusion());
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EtalBlockEntity>> ETAL_BE = BLOCK_ENTITIES.register("etal",
             () -> BlockEntityType.Builder.of(EtalBlockEntity::new, ETAL.get()).build(null));
 
+    /** La mémoire des blocs interactifs (propriétaire, caisse du casino), et l'affichage des contrats. */
+    @SuppressWarnings("DataFlowIssue")
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<fr.cabane.bloc.InteractifBlockEntity>> INTERACTIF_BE =
+            BLOCK_ENTITIES.register("interactif", () -> BlockEntityType.Builder.of(fr.cabane.bloc.InteractifBlockEntity::new,
+                    COMPTOIR.get(), TABLEAU_CONTRATS.get(), MACHINE_A_SOUS.get(), TABLE_ROULETTE.get(), TABLE_BLACKJACK.get(),
+                    TABLE_DES.get(), ROUE_FORTUNE.get(), TABLE_PILE_OU_FACE.get()).build(null));
+
     public static final DeferredHolder<MenuType<?>, MenuType<EtalMenu>> ETAL_MENU = MENUS.register("etal",
             () -> IMenuTypeExtension.create(EtalMenu::new));
 
     public static final List<DeferredBlock<?>> TOUS = List.of(COMPTOIR, TABLEAU_CONTRATS, ETAL, MACHINE_A_SOUS, TABLE_ROULETTE,
-            TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE);
+            TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE, CHICHA);
 
     private static DeferredBlock<BlocInteractif> interactif(String nom, Ouverture ouverture) {
         return BLOCKS.registerBlock(nom, p -> new BlocInteractif(p, ouverture),

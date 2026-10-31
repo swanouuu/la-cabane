@@ -53,6 +53,9 @@ public class EtalBlockEntity extends BlockEntity {
             prix[i] = Math.max(0, Math.min(1_000_000_000L, nouveaux[i]));
         }
         setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     public UUID proprietaire() {

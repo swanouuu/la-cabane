@@ -1,0 +1,42 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;726771826,-1469836844,-325141525,-1390122847],
+  CustomName:'{"text":"Garde Umvuthana","color":"yellow"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"DEFAULT"},
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:umvuthana"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Garde",
+        Texts:[{Text:"Halte, voyageur ! … Ah, tu viens de l'avion en feu. Entre : le Hejj t'attend devant la Grande Cabane. Nous veillons sur le village, jour et nuit."}],
+        Buttons:[{
+          Label:"tribu",
+          Name:"Vous êtes qui ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"tribu"}]
+        },{
+          Label:"bye",
+          Name:"Merci !",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"tribu",
+        Name:"La tribu",
+        Texts:[{Text:"Les Umvuthana, enfants du soleil. Nous gardons Beauvais depuis toujours. Notre chef porte le grand masque d'or. Méfie-toi des autres tribus, dehors : elles ne sont pas toutes aussi accueillantes."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Compris",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

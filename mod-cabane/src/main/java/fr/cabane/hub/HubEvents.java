@@ -43,7 +43,12 @@ public final class HubEvents {
             new Pnj("cartographe", -9.5, 4.5, 0F),     // à côté du grand panneau de la carte
             new Pnj("marchand", -54.5, 0.5, -90F),     // derrière son comptoir, au Grand Bazar
             new Pnj("forgeron", 58.5, 0.5, 90F),       // dans sa forge, au bout de la rue
-            new Pnj("fee", -27.5, 4.5, 0F));           // devant le Grand Bazar
+            new Pnj("fee", -27.5, 4.5, 0F),            // devant le Grand Bazar
+            new Pnj("pole_emploi", -37.5, -7.5, 0F),   // au tableau des contrats, dans le bazar
+            new Pnj("cousin", -27.5, -4.5, -90F),      // l'autre côté de l'entrée du bazar
+            new Pnj("garde_ouest", -3.5, 62.5, 0F),    // à la grande porte, côté dehors
+            new Pnj("garde_est", 3.5, 62.5, 0F),
+            new Pnj("guerisseuse", -15.5, 30.5, 90F)); // au feu de camp
 
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
     private static final int RAYON_CHUNKS = 6;
@@ -269,9 +274,9 @@ public final class HubEvents {
         player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
         player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("MAYDAY !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
         player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Prends un parachute dans le coffre et saute !").withStyle(ChatFormatting.YELLOW)));
-        player.sendSystemMessage(Component.literal("Ton avion est en feu au-dessus de la savane !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+        player.sendSystemMessage(Component.literal("Ton avion est en feu au-dessus de la jungle !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         player.sendSystemMessage(Component.literal("• Prends un parachute dans le coffre, saute, puis clic droit en l'air pour l'ouvrir.").withStyle(ChatFormatting.YELLOW));
-        player.sendSystemMessage(Component.literal("• En bas, le village t'accueille dans la Grande Cabane. Parle au Vieux Gardien.").withStyle(ChatFormatting.YELLOW));
+        player.sendSystemMessage(Component.literal("• En bas, le village de Beauvais t'accueille dans la Grande Cabane. Parle au Hejj du Village.").withStyle(ChatFormatting.YELLOW));
         player.sendSystemMessage(Component.literal("• Téléphone : touche N. Ton argent s'affiche à droite de l'écran.").withStyle(ChatFormatting.YELLOW));
     }
 
