@@ -19,6 +19,8 @@ public class HubData extends SavedData {
     private BlockPos centre;
     /** La partie a-t-elle commencé (/start) ? Avant, on attend dans la salle d'embarquement. */
     private boolean demarre;
+    /** La version des PNJ posés (voir HubEvents.VERSION_PNJ). */
+    private int versionPnj;
     private final Set<UUID> kits = new HashSet<>();
 
     public static HubData get(MinecraftServer server) {
@@ -30,6 +32,7 @@ public class HubData extends SavedData {
         HubData data = new HubData();
         NbtUtils.readBlockPos(tag, "centre").ifPresent(pos -> data.centre = pos);
         data.demarre = tag.getBoolean("demarre");
+        data.versionPnj = tag.getInt("versionPnj");
         ListTag list = tag.getList("kits", Tag.TAG_INT_ARRAY);
         for (Tag entry : list) {
             data.kits.add(NbtUtils.loadUUID(entry));
@@ -43,10 +46,20 @@ public class HubData extends SavedData {
             tag.put("centre", NbtUtils.writeBlockPos(centre));
         }
         tag.putBoolean("demarre", demarre);
+        tag.putInt("versionPnj", versionPnj);
         ListTag list = new ListTag();
         kits.forEach(id -> list.add(NbtUtils.createUUID(id)));
         tag.put("kits", list);
         return tag;
+    }
+
+    public int versionPnj() {
+        return versionPnj;
+    }
+
+    public void setVersionPnj(int version) {
+        versionPnj = version;
+        setDirty();
     }
 
     public boolean demarre() {

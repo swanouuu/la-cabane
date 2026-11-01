@@ -155,6 +155,12 @@ public final class ClientPiaf {
         int top;
         /** Les champs de saisie, pour leur dessiner un fond arrondi. */
         private final List<EditBox> champs = new ArrayList<>();
+        /**
+         * Vrai seulement à l'ouverture : les demandes au serveur se font une fois, pas à chaque mise à jour
+         * (sinon chaque réponse redemande, et ça tourne en boucle).
+         */
+        boolean premiere;
+        private boolean ouvert;
 
         Ecran(String titre) {
             super(Component.literal(titre));
@@ -182,6 +188,8 @@ public final class ClientPiaf {
 
         @Override
         protected void init() {
+            premiere = !ouvert;
+            ouvert = true;
             champs.clear();
             H = Math.min(340, height - 10);
             W = H / 2 + 6;
@@ -282,8 +290,12 @@ public final class ClientPiaf {
             for (int i = 0; i < dock.length; i++) {
                 addRenderableWidget(Ios.Bouton.appli(left + ecart + i * (taille + ecart), yDock, taille, dock[i], noms[i], false, actionsDock[i]));
             }
-            demander(0, "", 0);
-            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            if (premiere) {
+                demander(0, "", 0);
+            }
+            if (premiere) {
+                ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            }
         }
 
         @Override
@@ -357,7 +369,9 @@ public final class ClientPiaf {
         @Override
         protected void init() {
             super.init();
-            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            if (premiere) {
+                ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            }
             if (ajout) {
                 nom = champ(x0(), y0() + 20, largeur(), "nom du contact");
                 nom.setMaxLength(24);
@@ -446,7 +460,9 @@ public final class ClientPiaf {
         @Override
         protected void init() {
             super.init();
-            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            if (premiere) {
+                ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            }
             var liste = ClientPhone.recents;
             for (int i = 0; i < Math.min(lignes(), liste.size()); i++) {
                 var a = liste.get(i);
@@ -500,7 +516,9 @@ public final class ClientPiaf {
             } else {
                 boutonHaut("+ Publier", () -> minecraft.setScreen(new Publier(0)));
             }
-            demander(0, "", 0);
+            if (premiere) {
+                demander(0, "", 0);
+            }
         }
 
         @Override
@@ -650,7 +668,9 @@ public final class ClientPiaf {
         protected void init() {
             super.init();
             boutonHaut("📷", ClientCamera::ouvrir);
-            demander(0, "", 0);
+            if (premiere) {
+                demander(0, "", 0);
+            }
         }
 
         @Override
@@ -756,7 +776,9 @@ public final class ClientPiaf {
         @Override
         protected void init() {
             super.init();
-            ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            if (premiere) {
+                ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+            }
             if (ClientPhone.myNumber.isEmpty()) {
                 addRenderableWidget(Ios.Bouton.plein(x0(), y0() + 100, largeur(), 22, "Activer la SIM", Ios.VERT,
                         () -> minecraft.setScreen(new PhoneScreen())));

@@ -38,19 +38,15 @@ public final class ClientCasino {
 
     public static void resultat(Casino.Resultat resultat) {
         Minecraft mc = Minecraft.getInstance();
-        boolean grandeTable = resultat.jeu() == Casino.ROULETTE || resultat.jeu() == Casino.ROUE;
-        if (grandeTable && mc.level != null && (mc.screen instanceof JeuxScreens.Roulette || mc.screen instanceof JeuxScreens.Roue)) {
+        // tous les jeux se regardent en 3D sur la machine ou la table
+        if (mc.level != null && mc.screen instanceof JeuScreen) {
             // on ferme l'écran : le tirage se regarde en vrai, sur la table
             mc.setScreen(null);
             annonceGagnee = resultat.gain() > 0;
             annonce = annonceGagnee
                     ? net.minecraft.network.chat.Component.literal("Gagné ! +" + fr.cabane.economie.Economie.format(resultat.gain())).withStyle(net.minecraft.ChatFormatting.GREEN, net.minecraft.ChatFormatting.BOLD)
                     : net.minecraft.network.chat.Component.literal("Perdu… retente ta chance !").withStyle(net.minecraft.ChatFormatting.RED);
-            annonceA = mc.level.getGameTime() + (resultat.jeu() == Casino.ROULETTE ? Casino.DUREE_ROULETTE : Casino.DUREE_ROUE);
-            return;
-        }
-        if (mc.screen instanceof JeuScreen ecran) {
-            ecran.resultat(resultat.tirage(), resultat.gain());
+            annonceA = mc.level.getGameTime() + Casino.duree(resultat.jeu());
         }
     }
 

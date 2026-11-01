@@ -2,7 +2,7 @@
 
 Survie moddée en **NeoForge 1.21.1** (la même base que CrazyTown S3). Votre avion prend feu au-dessus de la jungle ; vous sautez en parachute et vous atterrissez à **Beauvais**, un village perdu au milieu d'arbres géants. Des PNJ, une grande quête qui envoie dans des donjons partout sur la map, des téléphones avec numéros perso et vocal, un casino, une police, et un président.
 
-Le dépôt et le mod s'appellent encore `la-cabane` / `mod-cabane` : c'est le nom de départ, ça ne se voit pas en jeu.
+Le modpack et notre mod maison s'appellent **SakaiMod**. Le dépôt et le dossier s'appellent encore `la-cabane` / `mod-cabane` : ça ne se voit pas en jeu.
 
 ## Aperçu en jeu
 
@@ -15,6 +15,12 @@ Captures prises automatiquement dans le jeu de test (`docs/apercu/`).
 ![La roulette](docs/apercu/beauvais-5-roulette.jpg)
 ![La roue de la fortune](docs/apercu/beauvais-6-roue.jpg)
 ![Le blackjack](docs/apercu/beauvais-7-blackjack.jpg)
+![Les arbres géants autour du village](docs/apercu/beauvais-8-arbres-geants.jpg)
+![La forge de Brokk et de ses orques](docs/apercu/beauvais-9-forge-des-orques.jpg)
+![Machine à sous, dés et pile ou face en 3D](docs/apercu/beauvais-10-casino-3d.jpg)
+![Karim le Chouf](docs/apercu/beauvais-11-karim.jpg)
+![Le ticket PENALTY !](docs/apercu/beauvais-12-ticket-penalty.jpg)
+![Le booster, carte par carte](docs/apercu/beauvais-13-booster.jpg)
 
 ## Comment ça marche
 
@@ -31,7 +37,7 @@ Toi (Prism)  ──publier.bat──►  GitHub (pack/)  ◄──au lancement�
 ## Pour tes potes (une seule fois)
 
 1. Installer [Prism Launcher](https://prismlauncher.org) et se connecter avec son compte Microsoft (il faut posséder Minecraft Java).
-2. Importer `La Cabane.zip` dans Prism (Ajouter une instance → Importer).
+2. Importer `SakaiMod.zip` dans Prism (Ajouter une instance → Importer).
 3. Lancer. Les mods se téléchargent tout seuls, et à chaque lancement ils se mettent à jour.
 
 Prévoir 8 Go de RAM pour l'instance (réglé par défaut).
@@ -43,7 +49,7 @@ Prévoir 8 Go de RAM pour l'instance (réglé par défaut).
 | `installer-outils.bat` | Installe Java 21, Go et packwiz dans `.outils/` (seulement sur un nouveau PC). |
 | `compiler.bat` | Compile le mod maison et le met dans le pack. |
 | `publier.bat` | Compare les mods de **ton** instance Prism avec le pack, met le pack à jour et l'envoie sur GitHub. `publier.bat --essai` montre seulement ce qui changerait. |
-| `construire-instance.bat` | Refait `dist/La Cabane.zip`, à envoyer aux potes. |
+| `construire-instance.bat` | Refait `dist/SakaiMod.zip`, à envoyer aux potes. |
 | `tester-en-jeu.bat` | Lance le jeu de développement avec tous les mods du pack et la dernière version du mod maison (compilée au passage). Le compte est un compte de test hors ligne : pas de serveur en ligne avec. |
 
 **Ajouter ou retirer un mod** : fais-le dans ton Prism, puis double-clique sur `publier.bat` **avant** de relancer le jeu. Sinon, au lancement, le pack remet les mods comme avant. Les mods qui ne sont que sur CurseForge doivent être ajoutés à la main :
@@ -79,7 +85,13 @@ Les PNJ (Easy NPC) :
 - **Brokk le Forgeron**, et sa **forge spéciale** : il fabrique des armes et armures rares des mods (lance Umvuthana, épée d'acier noir, hache du Wroughtnaut, gantelet de la Terre, masque du Soleil, forge infernale…). Il faut lui rapporter les matériaux et payer le travail ; lui seul sait les faire. Les recettes sont dans `mod-cabane/src/main/resources/data/cabane/forge/` ;
 - **Ovsie la Fée**, **Nyota la Guérisseuse**, les gardes de la grande porte ;
 - **les habitants** : Jean, Jacques, Francis, Louis, Bernard, Gérard, Ginette, Monique, Martine et Thierry. Ils se baladent autour de chez eux et se méfient des nouveaux ;
+- **Vegeta**, qui s'entraîne près de la tour de guet (« ma stupide fierté… ») ;
+- les **orques de Brokk** (Grosh, Mog et Urga), qui travaillent dans sa forge ;
 - **Macron, Président de Beauvais**, sur la place, et ses **quatre gardes présidentiels**. Ils sont invincibles : qui frappe le Président (ou un garde) est pris en chasse pendant deux minutes. Ils finissent par se calmer.
+
+Chaque PNJ a plusieurs répliques, tirées au hasard à chaque fois qu'on lui parle. On peut les frapper (ils rougissent et reculent), mais ils ne meurent jamais. Quand le mod est mis à jour, les PNJ du village sont remplacés tout seuls au démarrage suivant.
+
+Autour du village, aucune structure (village, donjon, ruine…) ne s'installe dans un rayon de 400 blocs : le spawn reste propre. Et dans toutes les jungles du monde poussent des **arbres géants** au tronc de 4 x 4.
 
 Commandes admin :
 
@@ -90,7 +102,7 @@ Commandes admin :
 
 ## Le téléphone
 
-- Chaque nouveau joueur en reçoit un ; les suivants s'achètent chez Mouloud (pas de recette). Touche **N** ou clic droit.
+- Chaque nouveau joueur en reçoit un ; les suivants s'achètent chez Mouloud (pas de recette). Touche **N** ou clic droit : la première fois, on choisit tout de suite son numéro.
 - **La SIM est gravée dans le téléphone** : la première fois, tu choisis un numéro à 3 ou 4 chiffres, et il ne changera plus. Un autre numéro, c'est un autre téléphone. Le téléphone garde sa mémoire (contacts, récents, photos, compte Piaf) : si on te le vole, on peut se faire passer pour toi.
 - Compose un numéro → ça sonne chez l'autre (les joueurs autour l'entendent aussi). On peut appeler **en numéro masqué**. Vous vous entendez partout sur la map grâce à Simple Voice Chat.
 - Les applis, façon iPhone : **Clavier**, **Contacts**, **Récents**, **Piaf** (le réseau social), **Photo** (un viseur, puis clic pour déclencher) et **Galerie**, **Argent**, **Réglages**.
@@ -99,17 +111,43 @@ Commandes admin :
 
 - La monnaie : les SakaiDollars ($). On en gagne avec les contrats de Mehdi, on se paie entre joueurs avec `/payer`.
 - La boutique de Mouloud vend le téléphone, les boosters de cartes (animations de révélation, la carte la plus rare toujours en dernier), les puffs et la chicha, les étals, la police… et le casino.
-- **Le casino** coûte cher (4 000 à 12 000 $ la table) : c'est le gérant qui l'installe. Chaque jeu a sa **caisse** : le gérant la remplit et récupère l'argent (accroupi + clic droit). Si la caisse ne couvre pas le gain possible, la mise est refusée.
+- **Le casino** coûte cher (4 000 à 12 000 $ la table) : c'est le gérant qui l'installe. Chaque jeu a sa **caisse**, qui paie les gagnants et garde les mises.
+- **Remplir une caisse** : le joueur qui a posé la machine (ou un admin) s'accroupit et fait clic droit dessus. Un écran s'ouvre : on y met de l'argent, ou on récupère tout. Si la caisse ne peut pas payer le plus gros gain possible, la mise est refusée (« le gérant doit la remplir »).
+- **Tout est en 3D** : la machine à sous (rouleaux qui défilent, levier), la roulette, la roue de la fortune, la table de dés (les dés roulent), le pile ou face (la pièce saute) et le blackjack avec son croupier. On choisit sa mise sur l'écran, puis on regarde le tirage en vrai sur la table, comme tout le monde autour.
 - **Les grandes tables** : la **roulette** (2 x 2) avec son cylindre qui tourne en vrai et la bille qui tombe dans la case, la **roue de la fortune** (5 x 5) avec ses lumières et son feu d'artifice au jackpot, et le **blackjack** (3 x 2) avec un croupier : jusqu'à trois joueurs assis, les cartes de chacun sont posées sur le tapis.
-- Les **tickets à gratter**, à gratter vraiment à la souris.
+- Les **tickets à gratter**, à gratter vraiment à la souris : trois modèles tirés au hasard, BEAUVAIS MILLIONS (trois montants identiques), PENALTY ! (3 buts sur 5 tirs) et MORPION D'OR (3 étoiles alignées).
+- Les **boosters** s'ouvrent carte par carte, la plus rare en dernier.
+- Les **puffs** et la **chicha** ont un goût surprise (Love 66, Lady Killer, Double Pomme, Blue Mist… 24 goûts), avec la fumée de la bonne couleur.
 
 ## La police
 
-Chez Mouloud : les **menottes** (clic droit sur un joueur : il est menotté et suit son policier ; encore un clic pour le libérer), le **pistolet** (100 balles, rechargement infini, aucun dégât : la cible brille et ralentit), la **tenue de police** (clic droit : on l'enfile d'un coup ; presque aucune protection) et la **voiture de police** (sans essence, quatre places, ZQSD pour conduire, **H** pour la sirène, accroupi + frapper pour la ranger).
+Chez Mouloud : les **menottes** (clic droit sur un joueur : il est menotté et suit son policier ; encore un clic pour le libérer), le **pistolet** (munitions infinies, une balle toutes les 0,7 s, aucun dégât : la cible brille et ralentit), le **gilet de police** (il s'enfile comme un plastron, par-dessus les habits : on garde son skin) et la **voiture de police** (sans essence, quatre places, ZQSD pour conduire, **H** pour la sirène, le gyrophare tourne dès qu'on conduit, accroupi + frapper pour la ranger).
+
+## Les émotes et les petits mods marrants
+
+- **Emotecraft** : ses émotes de base (backflip, applaudir, pleurer, facepalm, kazotsky kick…) plus les nôtres : le Dab, la T-pose, les muscles, le floss, « bof », le salut militaire et le headbang (`outils/emotes.mjs`).
+- **PoopSky** : pour faire caca. Voilà.
+
+## Les voix des PNJ
+
+Chaque PNJ dit une réplique enregistrée quand on lui parle (s'il en a). Pour ajouter des voix :
+
+1. Enregistre-toi (téléphone, micro du PC…), une réplique par fichier, quelques secondes chacune. Les voix drôles sont les bienvenues.
+2. Nomme chaque fichier avec le nom du PNJ, puis un numéro : `macron-1`, `macron-2`, `vegeta-fierte`, `gardien-1`… S'il en a plusieurs, il en dit une au hasard.
+3. Mets-les dans le dossier `voix/` à la racine du projet, au format `.ogg` (Audacity sait exporter en OGG, gratuit). Sinon, envoie-les-moi dans n'importe quel format et je les convertis.
+4. Lance `node mod-cabane/outils/generer.mjs`, puis `compiler.bat` et `publier.bat`.
+
+Les noms des PNJ : `gardien` (le Hejj), `cartographe` (Karim), `marchand` (Mouloud), `cousin` (Gribbs), `pole_emploi` (Mehdi), `forgeron` (Brokk), `orque` (les orques), `fee` (Ovsie), `guerisseuse` (Nyota), `garde_est`, `garde_ouest`, `macron`, `garde_president`, `vegeta`, et les habitants `jean`, `jacques`, `francis`, `louis`, `bernard`, `gerard`, `ginette`, `monique`, `martine`, `thierry`.
+
+## Les skins des personnages
+
+Les skins des personnages principaux sont dessinés par `mod-cabane/outils/persos.mjs`, avec plusieurs versions pour chacun. Les aperçus sont dans `docs/skins/` : choisis une version (par exemple `karim_b`), change-la dans la liste `CHOIX` en bas du fichier, puis relance `node mod-cabane/outils/persos.mjs`.
 
 ## Les quêtes (FTB Quests)
 
 - **Beauvais** : l'arrivée, le premier coup de fil, les Waystones, le sac à dos, la cuisine, Create.
+- **Agrandir Beauvais** : le grand chantier du Hejj. On s'installe juste à côté du village, hors de l'enceinte, et on le fait grandir : le quartier neuf, le pont, le port, la gare, le marché couvert, l'école de Ginette, le rond-point et la statue du Président… jusqu'à « Beauvais, capitale de la jungle ».
+- **Les gens de Beauvais** : une petite quête par habitant (le balai de Jacques, le singe de Bernard, l'entraînement de Vegeta, le dossier complet de Mehdi…).
 - **Les Sept Reliques** : pour chaque relique, un indice qui donne une carte au trésor, puis le donjon à trouver, puis la relique (cachée dans le coffre au trésor de ce donjon). Avec les sept, on obtient « Le Réveil de la Cabane » et des élytres.
 - **Les Grands Donjons** : 12 donjons géants à visiter et 12 boss (Cataclysm, Mowzie's Mobs).
 
@@ -128,7 +166,7 @@ La liste complète est dans `pack/mods/`.
 
 On choisira l'hébergeur plus tard. Il devra accepter nos propres mods (donc pas Aternos) et ouvrir le **port UDP 24454** pour Simple Voice Chat.
 
-**La map est prête à l'avance** : `dist/Beauvais - monde.zip` contient le monde avec Beauvais déjà construit, ses PNJ, et 1 000 blocs de jungle tout autour déjà générés (pas d'attente au premier lancement, tout le monde voit la même map). Au-delà, le monde continue de se générer normalement quand on explore. Pour l'installer sur le serveur : décompresser le zip dans le dossier du serveur, puis dans `server.properties` :
+**La map est prête à l'avance** : `dist/Beauvais - monde.zip` contient le monde avec Beauvais déjà construit, ses PNJ, et 3 000 blocs dans chaque direction déjà générés (jungle géante autour du village, désert, badlands, savane, neige et volcans plus loin) (pas d'attente au premier lancement, tout le monde voit la même map). Au-delà, le monde continue de se générer normalement quand on explore. Pour l'installer sur le serveur : décompresser le zip dans le dossier du serveur, puis dans `server.properties` :
 
 ```
 level-name=monde-beauvais

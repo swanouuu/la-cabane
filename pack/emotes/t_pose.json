@@ -1,0 +1,57 @@
+{
+  "name": "T-pose",
+  "author": "Beauvais",
+  "description": "Pour asserter sa dominance.",
+  "uuid": "4c66fdc4-ae03-b963-4c57-9ee01f45d9d8",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 6,
+    "beginTick": 6,
+    "endTick": 40,
+    "stopTick": 43,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "roll": 90
+        },
+        "leftArm": {
+          "roll": -90
+        },
+        "head": {
+          "pitch": 0
+        }
+      },
+      {
+        "tick": 40,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 90
+        },
+        "leftArm": {
+          "roll": -90
+        },
+        "head": {
+          "pitch": 0
+        }
+      }
+    ]
+  }
+}

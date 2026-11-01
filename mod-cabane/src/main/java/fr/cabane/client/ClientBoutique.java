@@ -20,6 +20,8 @@ public final class ClientBoutique {
     }
 
     /** Les contrats affichés au-dessus des tableaux, et quand ils changent (heure locale du client). */
+    /** Les articles de la boutique, pour la vitrine qui tourne au-dessus du comptoir. */
+    public static List<fr.cabane.boutique.Boutique.Vue> vitrine = List.of();
     public static List<Contrats.Vue> contratsAffiches = List.of();
     public static long finContrats;
 

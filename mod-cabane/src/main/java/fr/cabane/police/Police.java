@@ -1,7 +1,6 @@
 package fr.cabane.police;
 
 import fr.cabane.Cabane;
-import fr.cabane.CabaneItems;
 import fr.cabane.hub.Gardes;
 import io.netty.buffer.ByteBuf;
 import java.util.EnumMap;
@@ -24,7 +23,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -78,68 +76,23 @@ public final class Police {
         modBus.addListener(Police::registerPayloads);
     }
 
-    // ------------------------------------------------------------------ la tenue
-
-    /** Clic droit : on enfile toute la tenue d'un coup (ce qu'on portait part dans l'inventaire). */
-    public static class TenueItem extends Item {
-        public TenueItem(Properties properties) {
-            super(properties);
-        }
-
-        @Override
-        public InteractionResultHolder<ItemStack> use(Level level, Player joueur, InteractionHand main) {
-            ItemStack tenue = joueur.getItemInHand(main);
-            if (!level.isClientSide) {
-                habiller(joueur, EquipmentSlot.HEAD, CabaneItems.CASQUETTE_POLICE.get());
-                habiller(joueur, EquipmentSlot.CHEST, CabaneItems.VESTE_POLICE.get());
-                habiller(joueur, EquipmentSlot.LEGS, CabaneItems.PANTALON_POLICE.get());
-                habiller(joueur, EquipmentSlot.FEET, CabaneItems.CHAUSSURES_POLICE.get());
-                level.playSound(null, joueur.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.PLAYERS, 1F, 1F);
-                joueur.displayClientMessage(Component.literal("👮 Police de Beauvais, en service !").withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD), true);
-                tenue.consume(1, joueur);
-            }
-            return InteractionResultHolder.sidedSuccess(tenue, level.isClientSide);
-        }
-
-        private static void habiller(Player joueur, EquipmentSlot place, Item piece) {
-            ItemStack avant = joueur.getItemBySlot(place);
-            if (!avant.isEmpty() && !joueur.getInventory().add(avant)) {
-                joueur.drop(avant, false);
-            }
-            joueur.setItemSlot(place, new ItemStack(piece));
-        }
-
-        @Override
-        public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lignes, TooltipFlag flag) {
-            lignes.add(Component.literal("Clic droit : enfiler toute la tenue").withStyle(ChatFormatting.GRAY));
-        }
-    }
-
     // ------------------------------------------------------------------ le pistolet
 
-    /** Chargeur de 100 balles, rechargé sans fin. Ne blesse pas : la cible brille et ralentit. */
+    /** Munitions infinies, une balle toutes les 0,7 s. Ne blesse pas : la cible brille et ralentit. */
     public static class PistoletItem extends Item {
-        public static final int CHARGEUR = 100;
         private static final double PORTEE = 48;
+        private static final int CADENCE = 14;
 
         public PistoletItem(Properties properties) {
-            super(properties.durability(CHARGEUR));
+            super(properties.stacksTo(1));
         }
 
         @Override
         public InteractionResultHolder<ItemStack> use(Level level, Player joueur, InteractionHand main) {
             ItemStack pistolet = joueur.getItemInHand(main);
             if (level instanceof ServerLevel serveur && joueur instanceof ServerPlayer tireur) {
-                if (pistolet.getDamageValue() >= CHARGEUR) {
-                    pistolet.setDamageValue(0);
-                    tireur.getCooldowns().addCooldown(this, 40);
-                    serveur.playSound(null, tireur.blockPosition(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 1F, 1.4F);
-                    tireur.displayClientMessage(Component.literal("Rechargement… 100 balles").withStyle(ChatFormatting.GRAY), true);
-                } else {
-                    tirer(serveur, tireur);
-                    pistolet.setDamageValue(pistolet.getDamageValue() + 1);
-                    tireur.getCooldowns().addCooldown(this, 4);
-                }
+                tirer(serveur, tireur);
+                tireur.getCooldowns().addCooldown(this, CADENCE);
             }
             return InteractionResultHolder.consume(pistolet);
         }
@@ -166,8 +119,8 @@ public final class Police {
             }
             level.sendParticles(ParticleTypes.SMOKE, canon.x, canon.y, canon.z, 3, 0.03, 0.03, 0.03, 0.01);
             level.sendParticles(ParticleTypes.ELECTRIC_SPARK, fin.x, fin.y, fin.z, 6, 0.08, 0.08, 0.08, 0.15);
-            level.playSound(null, tireur.blockPosition(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 1.2F, 1.9F);
-            level.playSound(null, tireur.blockPosition(), SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 0.6F, 1.6F);
+            level.playSound(null, tireur.blockPosition(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 0.45F, 1.9F);
+            level.playSound(null, tireur.blockPosition(), SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 0.25F, 1.6F);
             if (touche != null && touche.getEntity() instanceof LivingEntity cible) {
                 cible.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, false, false));
                 cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 1, false, false));
@@ -181,18 +134,8 @@ public final class Police {
         }
 
         @Override
-        public boolean isBarVisible(ItemStack stack) {
-            return true;
-        }
-
-        @Override
-        public boolean isEnchantable(ItemStack stack) {
-            return false;
-        }
-
-        @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lignes, TooltipFlag flag) {
-            lignes.add(Component.literal("Balles : " + (CHARGEUR - stack.getDamageValue()) + " / " + CHARGEUR + " (recharge infinie)").withStyle(ChatFormatting.GRAY));
+            lignes.add(Component.literal("Munitions infinies").withStyle(ChatFormatting.GRAY));
             lignes.add(Component.literal("Ne blesse personne : la cible brille et ralentit.").withStyle(ChatFormatting.DARK_GRAY));
         }
     }

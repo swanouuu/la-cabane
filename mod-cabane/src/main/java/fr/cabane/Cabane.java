@@ -27,6 +27,8 @@ public class Cabane {
         CabaneItems.register(modBus);
         CabaneComponents.register(modBus);
         CabaneEntities.register(modBus);
+        CabaneSons.register(modBus);
+        fr.cabane.monde.CabaneMonde.register(modBus);
         modBus.addListener(PhoneNetwork::register);
         modBus.addListener(Economie::register);
         modBus.addListener(Boutique::register);

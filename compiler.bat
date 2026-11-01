@@ -7,7 +7,7 @@ if not defined JAVA_HOME (
   echo Java 21 introuvable dans .outils\jdk21 : lance d'abord installer-outils.bat
   pause & exit /b 1
 )
-echo === Compilation du mod La Cabane ===
+echo === Compilation de SakaiMod ===
 call mod-cabane\gradlew.bat -p mod-cabane build --no-configuration-cache
 if errorlevel 1 (
   echo La compilation a échoué.

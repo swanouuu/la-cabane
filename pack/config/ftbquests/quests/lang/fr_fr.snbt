@@ -1,5 +1,7 @@
 {
+	chapter.0F76A38B1018536B.title: "&2Agrandir Beauvais"
 	chapter.44CD4C5260BE1635.title: "&eLes Sept Reliques"
+	chapter.74547F9A4ABCA689.title: "&bLes gens de Beauvais"
 	chapter.775508E513569867.title: "&aLe Village"
 	chapter.7849F1A38AA6D284.title: "&cLes Grands Donjons"
 	chapter.7DF581286AE72B3C.title: "&6Beauvais"
@@ -7,20 +9,54 @@
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
 	quest.03F6D4DFAA073670.title: "Le Palais de Shiraz"
+	quest.04572A8ED20384A1.quest_desc: [
+		"« Une ville moderne, c'est un rond-point. » — Macron, Président de Beauvais."
+		""
+		"Construisez un rond-point fleuri à l'entrée du quartier neuf, puis cochez cette quête."
+	]
+	quest.04572A8ED20384A1.quest_subtitle: "C'est notre projet !"
+	quest.04572A8ED20384A1.title: "Le rond-point du Président"
 	quest.070F6BEE2B0A62E3.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.070F6BEE2B0A62E3.title: "&cLe Gardien de l'End"
+	quest.08D5B1720E4DEAD6.quest_desc: [
+		"Un vrai port, avec un ponton et des bateaux. Thierry dit que c'est « une preuve ». Thierry a raison."
+		""
+		"Construisez le port, puis cochez cette quête."
+	]
+	quest.08D5B1720E4DEAD6.title: "Le port"
+	quest.0981060BFF9B3A80.quest_desc: [
+		"Monique veut tout noter. Absolument tout. Un livre et une plume, vite."
+	]
+	quest.0981060BFF9B3A80.title: "Les potins de Monique"
+	quest.0C4DD23C76CDC05A.quest_desc: [
+		"Pour une fois, ton dossier sera complet. Mehdi demande : du papier, une étiquette et une horloge (« pour la ponctualité »)."
+	]
+	quest.0C4DD23C76CDC05A.title: "Le dossier complet"
 	quest.0C5B8DC2684CD88F.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
 	quest.0C5B8DC2684CD88F.title: "L'Usine Ancienne"
+	quest.0ED2F75EB32984DE.quest_desc: [
+		"Le Président veut une statue. En or. « Petite, mais en or. »"
+		"Livrez l'or, construisez la statue sur la place du quartier neuf, puis cochez cette quête."
+	]
+	quest.0ED2F75EB32984DE.title: "La statue du Président"
+	quest.118C2DEDB64B2488.quest_desc: [
+		"Les charpentiers du village ont besoin de bois. Beaucoup de bois."
+	]
+	quest.118C2DEDB64B2488.title: "Des planches pour le quartier neuf"
 	quest.1313B185449CA3E3.quest_desc: [
 		"Vestige des fonderies et des citadelles mécaniques."
 		""
 		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 5000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.1313B185449CA3E3.title: "Indice : Fonderies Oubliées"
+	quest.138C1D24FD05722C.quest_desc: [
+		"Grosh a « un peu » mangé le charbon de la forge. Brokk est furieux. Remplace-le vite."
+	]
+	quest.138C1D24FD05722C.title: "Le charbon de Grosh"
 	quest.1452DDA22E67B185.quest_desc: [
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
@@ -35,6 +71,10 @@
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
 	quest.161721A13AF5F233.title: "La Flèche du Nécromancien"
+	quest.161DB3E801CC763B.quest_desc: [
+		"« Ici, faut faire ses preuves. » Thierry veut que tu nettoies la jungle des zombies."
+	]
+	quest.161DB3E801CC763B.title: "Faire ses preuves"
 	quest.171408FDF42922B0.quest_desc: [
 		"Les villageois ont faim : apporte 32 pains."
 	]
@@ -69,12 +109,21 @@
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.1E02703E34C70F9F.title: "&cLe Léviathan"
+	quest.1E4DAB441F609283.quest_desc: [
+		"Louis regarde les nuages toute la journée. Avec une longue-vue, il les verrait de plus près."
+	]
+	quest.1E4DAB441F609283.title: "Les nuages de Louis"
 	quest.1FD30F90AE282C8F.quest_desc: [
 		"Cachée dans les forteresses qui flottent au-dessus des nuages."
 		""
 		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
 	]
 	quest.1FD30F90AE282C8F.title: "&6Plume Céleste"
+	quest.218D1602B8B42AE0.quest_desc: [
+		"Les fontaines de la place n'ont jamais marché. Thierry s'en plaint depuis dix ans."
+		"Construisez une belle fontaine avec de l'eau qui coule dans le quartier neuf."
+	]
+	quest.218D1602B8B42AE0.title: "Une fontaine qui marche"
 	quest.23ABBB9F0B1999B1.quest_desc: [
 		"Create permet de construire des machines, des moulins, des trains…"
 		"Fabrique 16 alliages d'andésite pour commencer."
@@ -84,12 +133,20 @@
 		"Procure-toi un classeur : il range toutes tes cartes à collectionner."
 	]
 	quest.241FDFC2883E4E5A.title: "Collectionneur"
+	quest.24B3EA48F5667552.quest_desc: [
+		"Ginette veut ouvrir une école « pour que les jeunes arrêtent de faire des bêtises ». Il faut des livres."
+	]
+	quest.24B3EA48F5667552.title: "L'école de Ginette"
+	quest.2851541B37712639.quest_desc: [
+		"Ginette trouve que tout le monde est trop maigre. Elle prépare une soupe géante."
+	]
+	quest.2851541B37712639.title: "Mange une carotte"
 	quest.2DC0C447D1E4AB1D.quest_desc: [
 		"Appuie sur &eN&r (ou clic droit avec le téléphone) et choisis ton numéro à 3 ou 4 chiffres."
 		""
-		"Donne-le à tes potes… ou garde-le secret ! Puis appelle quelqu'un : la voix passe par Simple Voice Chat, où que vous soyez sur la map."
+		"Le numéro est gravé dans le téléphone : il ne changera plus. Donne-le à tes potes… ou garde-le secret ! Puis appelle quelqu'un : la voix passe par Simple Voice Chat, où que vous soyez sur la map."
 		""
-		"Pas de téléphone ? Il se fabrique avec du fer, du cuivre, de la redstone et une vitre."
+		"Perdu ton téléphone ? Mouloud en vend au Grand Bazar."
 	]
 	quest.2DC0C447D1E4AB1D.quest_subtitle: "Ton numéro perso"
 	quest.2DC0C447D1E4AB1D.title: "Allô ?"
@@ -97,18 +154,46 @@
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
 	quest.30546597D6492C6A.title: "Trouver : Fonderies Oubliées"
+	quest.3171F4C0D66FBE1B.quest_desc: [
+		"Des pierres taillées pour les fondations, les murs et les routes."
+	]
+	quest.3171F4C0D66FBE1B.title: "La carrière"
 	quest.33B200AA18D79663.quest_desc: [
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
 	quest.33B200AA18D79663.title: "Trouver : Temple du Désert"
+	quest.389EAB4D73BEB741.quest_desc: [
+		"Le Président veut un pont « jusqu'à la lune ». Le Hejj propose de commencer par la rivière."
+		""
+		"Livrez les pierres, construisez un vrai pont sur la rivière la plus proche, puis cochez cette quête."
+	]
+	quest.389EAB4D73BEB741.title: "Le pont de la rivière"
 	quest.397C706B2F73B8B6.quest_desc: [
 		"Fabrique une marmite (Farmer's Delight). Les bons plats nourrissent beaucoup plus longtemps."
 	]
 	quest.397C706B2F73B8B6.title: "Aux fourneaux"
+	quest.3A6BE1D1755F30ED.quest_desc: [
+		"Bernard (l'habitant) cherche de quoi nourrir Bernard (le singe). Le singe adore les baies."
+	]
+	quest.3A6BE1D1755F30ED.title: "Le singe de Bernard"
+	quest.3AAF104E2F5E2BEB.quest_desc: [
+		"« Ton niveau de puissance est ridicule. Va combattre cinquante monstres, et on en reparlera. Hmph. »"
+	]
+	quest.3AAF104E2F5E2BEB.quest_subtitle: "L'entraînement du prince"
+	quest.3AAF104E2F5E2BEB.title: "&9Ma stupide fierté"
 	quest.3B258B2628A0EE6F.quest_desc: [
 		"Achète un étal à la boutique et pose-le au marché : les autres pourront acheter ce que tu vends."
 	]
 	quest.3B258B2628A0EE6F.title: "Une place au marché"
+	quest.3B3D0695C73A80A5.quest_desc: [
+		"Nyota prépare des remèdes pour les explorateurs qui partent loin."
+	]
+	quest.3B3D0695C73A80A5.title: "Les remèdes de Nyota"
+	quest.3CC4A709D08884FC.quest_desc: [
+		"Martine veut que tu dises à Vegeta, près de la tour de guet, que sa coiffure est ridicule."
+		"Va lui parler (à tes risques), puis coche la quête."
+	]
+	quest.3CC4A709D08884FC.title: "Message pour Vegeta"
 	quest.3DD5D5059BE6D774.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -120,13 +205,17 @@
 	]
 	quest.3E245369C09E7B82.title: "Indice : Citadelles du Ciel"
 	quest.401F3F3D38522062.quest_desc: [
-		"La map est immense. Fabrique une &bWaystone&r et pose-la près de la Cabane : vous pourrez y revenir de très loin."
+		"La map est immense. Fabrique une &bWaystone&r et pose-la près du village : vous pourrez y revenir de très loin."
 	]
 	quest.401F3F3D38522062.title: "Pierres de voyage"
 	quest.4040726D0528310B.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.4040726D0528310B.title: "&cLe Héraut"
+	quest.41AAB9DFC7CC4D19.quest_desc: [
+		"Mouloud rêve d'un marché couvert, avec des toiles de toutes les couleurs. Mouloud rêve beaucoup."
+	]
+	quest.41AAB9DFC7CC4D19.title: "Le marché couvert"
 	quest.44EDE10E469B20B0.quest_desc: [
 		"Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert."
 		""
@@ -139,6 +228,28 @@
 		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
 	]
 	quest.45A9B3AB9BA55F7F.title: "&6Idole de Jade"
+	quest.46E951E0C9BD2820.quest_desc: [
+		"« Le cœur du village appartient aux habitants. Vous, installez-vous juste à côté, hors de l'enceinte. Et aidez Beauvais à pousser jusqu'à vous. »"
+		""
+		"Chaque chantier de ce chapitre agrandit le village : livrez les matériaux (ils sont pris), construisez, et le village vous paie."
+		""
+		"Construisez vos maisons à l'extérieur de l'enceinte, et faites grandir Beauvais vers elles !"
+	]
+	quest.46E951E0C9BD2820.quest_subtitle: "Faire grandir le village"
+	quest.46E951E0C9BD2820.title: "&6Le grand plan du Hejj"
+	quest.47A7652B7F5C287E.quest_desc: [
+		"« Du travail ? Je traverse la rue et je vous en trouve ! » Le Président veut que tu remplisses trois contrats de Mehdi."
+		"Fais-le, puis coche la quête."
+	]
+	quest.47A7652B7F5C287E.quest_subtitle: "pour trouver du travail"
+	quest.47A7652B7F5C287E.title: "Traverser la rue"
+	quest.482CB649D83791DA.quest_desc: [
+		"Construisez trois vraies maisons juste à côté du village, hors de l'enceinte : c'est le début du quartier neuf."
+		""
+		"Montrez-les au Hejj, puis cochez cette quête."
+	]
+	quest.482CB649D83791DA.quest_subtitle: "Trois maisons hors de l'enceinte"
+	quest.482CB649D83791DA.title: "Le quartier neuf"
 	quest.48F2088D4FD8A8BD.quest_desc: [
 		"Elle repose dans un monument au fond de l'océan."
 		""
@@ -149,6 +260,10 @@
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
 	quest.49A7BD08274ACF97.title: "Trouver : Monument des Profondeurs"
+	quest.4EB5D2C754679374.quest_desc: [
+		"Urga porte des lingots. Elle en veut plus. Toujours plus."
+	]
+	quest.4EB5D2C754679374.title: "Les lingots d'Urga"
 	quest.510D385C84B27B4C.quest_desc: [
 		"Scellé dans la salle du trésor d'une forteresse enfouie."
 		""
@@ -170,13 +285,21 @@
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.54C6F739E6B19F28.title: "&cUmvuthi, roi de la savane"
+	quest.54FAA7A9B44FD282.quest_desc: [
+		"Ovsie veut refaire sa couronne de fleurs. Des coquelicots et des pissenlits, s'il te plaît !"
+	]
+	quest.54FAA7A9B44FD282.title: "La couronne d'Ovsie"
 	quest.568AFD2416050B14.quest_desc: [
-		"Votre avion s'est écrasé, mais vous avez sauté à temps. Vous voilà dans la Grande Cabane, au centre de la map."
+		"Votre avion a pris feu au-dessus de la jungle, mais vous avez sauté à temps. Vous voilà à Beauvais."
 		""
-		"C'est ici que vous construirez votre base. Allez parler au &6Hejj du Village&r sur le porche, lisez son journal sur le pupitre, puis cochez cette quête."
+		"Allez parler au &6Hejj du Village&r devant la Grande Cabane : il vous expliquera tout. Puis cochez cette quête."
 	]
 	quest.568AFD2416050B14.quest_subtitle: "Le début de tout"
-	quest.568AFD2416050B14.title: "Bienvenue à la Cabane"
+	quest.568AFD2416050B14.title: "Bienvenue à Beauvais"
+	quest.58089F70BF263FD2.quest_desc: [
+		"Jacques a cassé son balai à force de balayer. Il lui faut de quoi en faire un neuf."
+	]
+	quest.58089F70BF263FD2.title: "Le balai de Jacques"
 	quest.59A5D271A3B2BC7F.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
@@ -197,6 +320,10 @@
 		"Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures. Remplis-en un !"
 	]
 	quest.5BC229FB0DEDF5E5.title: "Premier contrat"
+	quest.5D347F22EEDC08B3.quest_desc: [
+		"Francis veut des tapis partout « pour étouffer les pas des gens de l'avion »."
+	]
+	quest.5D347F22EEDC08B3.title: "Pas de bruit après minuit"
 	quest.61BC56987E3E4478.quest_desc: [
 		"Vestige des fonderies et des citadelles mécaniques."
 		""
@@ -204,15 +331,29 @@
 	]
 	quest.61BC56987E3E4478.title: "&6Engrenage Ancien"
 	quest.62BD944D28455283.quest_desc: [
-		"Votre avion s'est écrasé, mais le village voisin vous accueille dans la Grande Cabane."
+		"Beauvais vous accueille. Les habitants se méfient un peu des gens du ciel : à vous de faire vos preuves."
 		""
 		"Allez saluer les villageois, puis cochez cette quête."
 	]
 	quest.62BD944D28455283.title: "Le village qui nous héberge"
+	quest.62EB8B71CE88A6BB.quest_desc: [
+		"Avec Create, construisez une gare et une ligne de train qui part du village."
+		"Livrez des rails pour la première voie, puis cochez la quête quand le premier train roule."
+	]
+	quest.62EB8B71CE88A6BB.title: "La gare de Beauvais"
 	quest.630B39043A0588F3.quest_desc: [
 		"64 bûches d'acacia pour réparer les maisons."
 	]
 	quest.630B39043A0588F3.title: "Du bois pour l'hiver"
+	quest.6561CC20FB12373F.quest_desc: [
+		"« Encore un de l'avion… » Jean aime le poisson grillé. Apporte-lui-en, ça l'adoucira peut-être."
+	]
+	quest.6561CC20FB12373F.title: "Jean se méfie"
+	quest.66A15EBE9D8C3E3E.quest_desc: [
+		"Ginette a peur du noir. Le Président aussi, mais il ne le dira pas."
+		"Livrez des lanternes pour éclairer les nouvelles rues."
+	]
+	quest.66A15EBE9D8C3E3E.title: "Que la lumière soit"
 	quest.675D84D08440B854.quest_desc: [
 		"Elle repose dans un monument au fond de l'océan."
 		""
@@ -237,6 +378,12 @@
 		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 3000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.6AD7B0781F8385FC.title: "Indice : Forteresses Illageoises"
+	quest.6B09984DCFEFAC34.quest_desc: [
+		"Le petit village est devenu une ville. Les habitants vous saluent enfin dans la rue."
+		""
+		"Même Gérard. Même Vegeta (de loin)."
+	]
+	quest.6B09984DCFEFAC34.title: "&6&lBeauvais, capitale de la jungle"
 	quest.6B2B8507B9BF412E.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -245,6 +392,10 @@
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.6DA30A5BEC4F2CB0.title: "&cIgnis"
+	quest.6F388D8748978BE5.quest_desc: [
+		"Mouloud aime les clients fidèles. Achète-lui un booster de cartes (au moins un)."
+	]
+	quest.6F388D8748978BE5.title: "Client fidèle"
 	quest.6FEF7F7E3D26E56D.quest_desc: [
 		"Le trésor le mieux gardé des forteresses illageoises."
 		""
@@ -255,6 +406,14 @@
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.71228EE420BFC212.title: "&cLa Monstruosité de Netherite"
+	quest.7134CABD05CABA0E.quest_desc: [
+		"Gribbs a besoin de « matière première » pour ses « œuvres d'art ». C'est de la terre cuite colorée."
+	]
+	quest.7134CABD05CABA0E.title: "Les cailloux peints de Gribbs"
+	quest.71CB784E1E953B8D.quest_desc: [
+		"Plus d'habitants, plus de bouches à nourrir. Livrez des récoltes pour les nouveaux greniers."
+	]
+	quest.71CB784E1E953B8D.title: "Les champs du village"
 	quest.73A740F15D08ECBE.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -263,6 +422,19 @@
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
 	quest.758C2C41EB15DFBC.title: "La Prison Gelée"
+	quest.75AA1053086B1788.quest_desc: [
+		"Quelqu'un s'est assis sur le tronc de Gérard. Il en veut un nouveau. Un beau."
+	]
+	quest.75AA1053086B1788.title: "Le tronc de Gérard"
+	quest.76B1F2887A20E368.quest_desc: [
+		"Karim veut une carte des environs dessinée par toi. « Chouf, on verra si tu sais tenir une boussole. »"
+	]
+	quest.76B1F2887A20E368.title: "Une carte pour Karim"
+	quest.788DD4E54A6A6223.quest_desc: [
+		"Le Hejj a rêvé d'une tour plus haute que les arbres géants. Construisez-la : au moins 60 blocs de haut."
+	]
+	quest.788DD4E54A6A6223.quest_subtitle: "La tour de Beauvais"
+	quest.788DD4E54A6A6223.title: "Plus haut que les arbres"
 	quest.7A91D8D132FC3B06.quest_desc: [
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]

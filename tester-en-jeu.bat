@@ -9,7 +9,7 @@ if not defined JAVA_HOME (
 )
 rem le fichier de captures automatiques de Claude ne doit pas se lancer pendant tes tests
 del /q "mod-cabane\run\cabane-photos.txt" 2>nul
-echo === Minecraft de test : tous les mods du pack + la derniere version du mod La Cabane ===
+echo === Minecraft de test : tous les mods du pack + la derniere version de SakaiMod ===
 echo (la premiere fois, compter 1 a 2 minutes de chargement)
 call mod-cabane\gradlew.bat -p mod-cabane runClient --no-configuration-cache
 pause

@@ -38,6 +38,8 @@ const objet = (nom, n = 1) => ({ count: n, id: nom });
 // ---------------------------------------------------------------- tâches et récompenses
 const coche = (k) => ({ id: id(k + "/t"), type: "checkmark" });
 const avoir = (k, item, n = 1) => ({ id: id(k + "/t"), type: "item", item: objet(item), count: L(n) });
+/** Livrer : les objets sont pris (ils partent au village). Plusieurs livraisons dans une quête : suffixe différent. */
+const livrer = (k, item, n = 1, suffixe = "") => ({ id: id(k + "/t" + suffixe), type: "item", item: objet(item), count: L(n), consume_items: "true" });
 const visiter = (k, structure) => ({ id: id(k + "/t"), type: "structure", structure });
 const tuer = (k, entite, n = 1) => ({ id: id(k + "/t"), type: "kill", entity: entite, value: L(n) });
 const succes = (k, adv) => ({ id: id(k + "/t"), type: "advancement", advancement: adv, criterion: "" });
@@ -73,17 +75,17 @@ function chapitre(fichier, { titre, icone, ordre, quetes }) {
 
 // ---------------------------------------------------------------- chapitre 1 : la Cabane
 const cabane = chapitre("la_cabane", { titre: "&6Beauvais", icone: "cabane:telephone", ordre: 0, quetes: [
-  quete("bienvenue", { argent: 50, titre: "Bienvenue à la Cabane", sous: "Le début de tout", x: 0, y: 0, forme: "gear", taille: 1.5,
-    desc: ["Votre avion s'est écrasé, mais vous avez sauté à temps. Vous voilà dans la Grande Cabane, au centre de la map.", "",
-      "C'est ici que vous construirez votre base. Allez parler au &6Hejj du Village&r sur le porche, lisez son journal sur le pupitre, puis cochez cette quête."],
+  quete("bienvenue", { argent: 50, titre: "Bienvenue à Beauvais", sous: "Le début de tout", x: 0, y: 0, forme: "gear", taille: 1.5,
+    desc: ["Votre avion a pris feu au-dessus de la jungle, mais vous avez sauté à temps. Vous voilà à Beauvais.", "",
+      "Allez parler au &6Hejj du Village&r devant la Grande Cabane : il vous expliquera tout. Puis cochez cette quête."],
     taches: [coche("bienvenue")], recompenses: [xp("bienvenue", 2), donne("bienvenue", "minecraft:cooked_beef", 8)] }),
   quete("telephone", { argent: 50, titre: "Allô ?", sous: "Ton numéro perso", x: 2, y: -1.5, deps: ["bienvenue"],
     desc: ["Appuie sur &eN&r (ou clic droit avec le téléphone) et choisis ton numéro à 3 ou 4 chiffres.", "",
-      "Donne-le à tes potes… ou garde-le secret ! Puis appelle quelqu'un : la voix passe par Simple Voice Chat, où que vous soyez sur la map.", "",
-      "Pas de téléphone ? Il se fabrique avec du fer, du cuivre, de la redstone et une vitre."],
+      "Le numéro est gravé dans le téléphone : il ne changera plus. Donne-le à tes potes… ou garde-le secret ! Puis appelle quelqu'un : la voix passe par Simple Voice Chat, où que vous soyez sur la map.", "",
+      "Perdu ton téléphone ? Mouloud en vend au Grand Bazar."],
     taches: [succes("telephone", "cabane:premier_appel")], recompenses: [donne("telephone", "minecraft:emerald", 5)] }),
   quete("waystone", { argent: 75, titre: "Pierres de voyage", x: 4, y: -1.5, deps: ["bienvenue"],
-    desc: ["La map est immense. Fabrique une &bWaystone&r et pose-la près de la Cabane : vous pourrez y revenir de très loin."],
+    desc: ["La map est immense. Fabrique une &bWaystone&r et pose-la près du village : vous pourrez y revenir de très loin."],
     taches: [avoir("waystone", "waystones:waystone")], recompenses: [xp("waystone", 3), donne("waystone", "minecraft:ender_pearl", 4)] }),
   quete("sac", { argent: 50, titre: "Bien équipé", x: 2, y: 1.5, deps: ["bienvenue"],
     desc: ["Un sac à dos, c'est la base pour partir en expédition."],
@@ -99,7 +101,7 @@ const cabane = chapitre("la_cabane", { titre: "&6Beauvais", icone: "cabane:telep
 // ---------------------------------------------------------------- chapitre : le village qui nous héberge
 const village = chapitre("le_village", { titre: "&aLe Village", icone: "minecraft:bell", ordre: 1, quetes: [
   quete("village/accueil", { titre: "Le village qui nous héberge", x: 0, y: 0, deps: ["bienvenue"], forme: "gear", taille: 1.3, argent: 50,
-    desc: ["Votre avion s'est écrasé, mais le village voisin vous accueille dans la Grande Cabane.", "", "Allez saluer les villageois, puis cochez cette quête."],
+    desc: ["Beauvais vous accueille. Les habitants se méfient un peu des gens du ciel : à vous de faire vos preuves.", "", "Allez saluer les villageois, puis cochez cette quête."],
     taches: [coche("village/accueil")] }),
   quete("village/contrat", { titre: "Premier contrat", x: 2, y: -1.5, deps: ["village/accueil"], argent: 100,
     desc: ["Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures. Remplis-en un !"],
@@ -116,6 +118,114 @@ const village = chapitre("le_village", { titre: "&aLe Village", icone: "minecraf
   quete("village/cartes", { titre: "Collectionneur", x: 4, y: 0, deps: ["village/pain"],
     desc: ["Procure-toi un classeur : il range toutes tes cartes à collectionner."],
     taches: [avoir("village/cartes", "cabane:classeur")], recompenses: [donne("village/cartes", "cabane:booster", 2)] }),
+] });
+
+// ---------------------------------------------------------------- chapitre : agrandir Beauvais (les chantiers du Hejj)
+const chantier = (k, o) => quete("grandir/" + k, { ...o, deps: (o.deps ?? ["plan"]).map((d) => "grandir/" + d) });
+const grandir = chapitre("agrandir_beauvais", { titre: "&2Agrandir Beauvais", icone: "minecraft:bricks", ordre: 2, quetes: [
+  chantier("plan", { titre: "&6Le grand plan du Hejj", sous: "Faire grandir le village", x: 0, y: 0, forme: "gear", taille: 1.6, deps: [], argent: 200,
+    desc: ["« Le cœur du village appartient aux habitants. Vous, installez-vous juste à côté, hors de l'enceinte. Et aidez Beauvais à pousser jusqu'à vous. »", "",
+      "Chaque chantier de ce chapitre agrandit le village : livrez les matériaux (ils sont pris), construisez, et le village vous paie.", "",
+      "Construisez vos maisons à l'extérieur de l'enceinte, et faites grandir Beauvais vers elles !"],
+    taches: [coche("grandir/plan")] }),
+  chantier("planches", { titre: "Des planches pour le quartier neuf", x: 2, y: -3, argent: 1500,
+    desc: ["Les charpentiers du village ont besoin de bois. Beaucoup de bois."],
+    taches: [livrer("grandir/planches", "minecraft:jungle_planks", 256)] }),
+  chantier("carriere", { titre: "La carrière", x: 2, y: -1.5, argent: 1500,
+    desc: ["Des pierres taillées pour les fondations, les murs et les routes."],
+    taches: [livrer("grandir/carriere", "minecraft:stone_bricks", 256)] }),
+  chantier("quartier", { titre: "Le quartier neuf", sous: "Trois maisons hors de l'enceinte", x: 4, y: -2.25, deps: ["planches", "carriere"], argent: 3000,
+    desc: ["Construisez trois vraies maisons juste à côté du village, hors de l'enceinte : c'est le début du quartier neuf.", "", "Montrez-les au Hejj, puis cochez cette quête."],
+    taches: [coche("grandir/quartier")] }),
+  chantier("lampadaires", { titre: "Que la lumière soit", x: 2, y: 0, argent: 1500,
+    desc: ["Ginette a peur du noir. Le Président aussi, mais il ne le dira pas.", "Livrez des lanternes pour éclairer les nouvelles rues."],
+    taches: [livrer("grandir/lampadaires", "minecraft:lantern", 64)] }),
+  chantier("ferme", { titre: "Les champs du village", x: 2, y: 1.5, argent: 2000,
+    desc: ["Plus d'habitants, plus de bouches à nourrir. Livrez des récoltes pour les nouveaux greniers."],
+    taches: [livrer("grandir/ferme", "minecraft:wheat", 256, "/a"), livrer("grandir/ferme", "minecraft:carrot", 64, "/b")] }),
+  chantier("marche", { titre: "Le marché couvert", x: 2, y: 3, argent: 2500,
+    desc: ["Mouloud rêve d'un marché couvert, avec des toiles de toutes les couleurs. Mouloud rêve beaucoup."],
+    taches: [livrer("grandir/marche", "minecraft:white_wool", 64, "/a"), livrer("grandir/marche", "minecraft:red_wool", 32, "/b"), livrer("grandir/marche", "minecraft:spruce_planks", 128, "/c")] }),
+  chantier("pont", { titre: "Le pont de la rivière", x: 6, y: -3, deps: ["quartier"], argent: 4000,
+    desc: ["Le Président veut un pont « jusqu'à la lune ». Le Hejj propose de commencer par la rivière.", "",
+      "Livrez les pierres, construisez un vrai pont sur la rivière la plus proche, puis cochez cette quête."],
+    taches: [livrer("grandir/pont", "minecraft:stone_bricks", 192, "/a"), livrer("grandir/pont", "minecraft:oak_log", 64, "/b"), coche("grandir/pont")] }),
+  chantier("port", { titre: "Le port", x: 8, y: -3, deps: ["pont"], argent: 5000,
+    desc: ["Un vrai port, avec un ponton et des bateaux. Thierry dit que c'est « une preuve ». Thierry a raison.", "",
+      "Construisez le port, puis cochez cette quête."],
+    taches: [livrer("grandir/port", "minecraft:oak_boat", 6, "/a"), livrer("grandir/port", "minecraft:oak_planks", 256, "/b"), coche("grandir/port")] }),
+  chantier("fontaine", { titre: "Une fontaine qui marche", x: 4, y: 0, deps: ["lampadaires"], argent: 1500,
+    desc: ["Les fontaines de la place n'ont jamais marché. Thierry s'en plaint depuis dix ans.", "Construisez une belle fontaine avec de l'eau qui coule dans le quartier neuf."],
+    taches: [coche("grandir/fontaine")] }),
+  chantier("ecole", { titre: "L'école de Ginette", x: 4, y: 1.5, deps: ["ferme"], argent: 2500,
+    desc: ["Ginette veut ouvrir une école « pour que les jeunes arrêtent de faire des bêtises ». Il faut des livres."],
+    taches: [livrer("grandir/ecole", "minecraft:book", 48, "/a"), livrer("grandir/ecole", "minecraft:bookshelf", 16, "/b")] }),
+  chantier("rondpoint", { titre: "Le rond-point du Président", sous: "C'est notre projet !", x: 6, y: 0, deps: ["fontaine"], argent: 3000,
+    desc: ["« Une ville moderne, c'est un rond-point. » — Macron, Président de Beauvais.", "",
+      "Construisez un rond-point fleuri à l'entrée du quartier neuf, puis cochez cette quête."],
+    taches: [livrer("grandir/rondpoint", "minecraft:poppy", 32, "/a"), livrer("grandir/rondpoint", "minecraft:polished_andesite", 64, "/b"), coche("grandir/rondpoint")] }),
+  chantier("gare", { titre: "La gare de Beauvais", x: 8, y: 0, deps: ["rondpoint", "port"], argent: 6000,
+    desc: ["Avec Create, construisez une gare et une ligne de train qui part du village.", "Livrez des rails pour la première voie, puis cochez la quête quand le premier train roule."],
+    taches: [livrer("grandir/gare", "create:track", 128, "/a"), coche("grandir/gare")] }),
+  chantier("statue", { titre: "La statue du Président", x: 6, y: 1.5, deps: ["ecole", "marche"], argent: 8000,
+    desc: ["Le Président veut une statue. En or. « Petite, mais en or. »", "Livrez l'or, construisez la statue sur la place du quartier neuf, puis cochez cette quête."],
+    taches: [livrer("grandir/statue", "minecraft:gold_block", 16, "/a"), coche("grandir/statue")],
+    recompenses: [commande("grandir/statue", '/title {p} title {"text":"Ami du Président","color":"gold"}')] }),
+  chantier("tour", { titre: "Plus haut que les arbres", sous: "La tour de Beauvais", x: 10, y: -1.5, deps: ["gare"], argent: 8000,
+    desc: ["Le Hejj a rêvé d'une tour plus haute que les arbres géants. Construisez-la : au moins 60 blocs de haut."],
+    taches: [coche("grandir/tour")] }),
+  chantier("capitale", { titre: "&6&lBeauvais, capitale de la jungle", x: 12, y: 0, forme: "gear", taille: 2, deps: ["tour", "statue", "gare"], argent: 20000,
+    desc: ["Le petit village est devenu une ville. Les habitants vous saluent enfin dans la rue.", "", "Même Gérard. Même Vegeta (de loin)."],
+    taches: [coche("grandir/capitale")],
+    recompenses: [donne("grandir/capitale", "minecraft:diamond_block", 2), commande("grandir/capitale", '/title {p} title {"text":"Bâtisseur de Beauvais","color":"gold"}')] }),
+] });
+
+// ---------------------------------------------------------------- chapitre : les gens de Beauvais (une petite quête par personne)
+const service = (k, o) => quete("gens/" + k, { deps: ["village/accueil"], ...o });
+const gens = chapitre("les_gens", { titre: "&bLes gens de Beauvais", icone: "minecraft:cake", ordre: 3, quetes: [
+  service("jean", { titre: "Jean se méfie", x: 0, y: -3, argent: 300, desc: ["« Encore un de l'avion… » Jean aime le poisson grillé. Apporte-lui-en, ça l'adoucira peut-être."],
+    taches: [livrer("gens/jean", "minecraft:cooked_cod", 16)] }),
+  service("jacques", { titre: "Le balai de Jacques", x: 2, y: -3, argent: 250, desc: ["Jacques a cassé son balai à force de balayer. Il lui faut de quoi en faire un neuf."],
+    taches: [livrer("gens/jacques", "minecraft:stick", 32, "/a"), livrer("gens/jacques", "minecraft:wheat", 16, "/b")] }),
+  service("francis", { titre: "Pas de bruit après minuit", x: 4, y: -3, argent: 300, desc: ["Francis veut des tapis partout « pour étouffer les pas des gens de l'avion »."],
+    taches: [livrer("gens/francis", "minecraft:brown_carpet", 32)] }),
+  service("louis", { titre: "Les nuages de Louis", x: 6, y: -3, argent: 400, desc: ["Louis regarde les nuages toute la journée. Avec une longue-vue, il les verrait de plus près."],
+    taches: [livrer("gens/louis", "minecraft:spyglass", 1)] }),
+  service("bernard", { titre: "Le singe de Bernard", x: 8, y: -3, argent: 300, desc: ["Bernard (l'habitant) cherche de quoi nourrir Bernard (le singe). Le singe adore les baies."],
+    taches: [livrer("gens/bernard", "minecraft:sweet_berries", 48)] }),
+  service("gerard", { titre: "Le tronc de Gérard", x: 0, y: -1.5, argent: 250, desc: ["Quelqu'un s'est assis sur le tronc de Gérard. Il en veut un nouveau. Un beau."],
+    taches: [livrer("gens/gerard", "minecraft:jungle_log", 16)] }),
+  service("ginette", { titre: "Mange une carotte", x: 2, y: -1.5, argent: 250, desc: ["Ginette trouve que tout le monde est trop maigre. Elle prépare une soupe géante."],
+    taches: [livrer("gens/ginette", "minecraft:carrot", 48, "/a"), livrer("gens/ginette", "minecraft:potato", 48, "/b")] }),
+  service("monique", { titre: "Les potins de Monique", x: 4, y: -1.5, argent: 300, desc: ["Monique veut tout noter. Absolument tout. Un livre et une plume, vite."],
+    taches: [livrer("gens/monique", "minecraft:writable_book", 1)] }),
+  service("martine", { titre: "Message pour Vegeta", x: 6, y: -1.5, argent: 200, desc: ["Martine veut que tu dises à Vegeta, près de la tour de guet, que sa coiffure est ridicule.", "Va lui parler (à tes risques), puis coche la quête."],
+    taches: [coche("gens/martine")] }),
+  service("thierry", { titre: "Faire ses preuves", x: 8, y: -1.5, argent: 500, desc: ["« Ici, faut faire ses preuves. » Thierry veut que tu nettoies la jungle des zombies."],
+    taches: [tuer("gens/thierry", "minecraft:zombie", 20)] }),
+  service("vegeta", { titre: "&9Ma stupide fierté", sous: "L'entraînement du prince", x: 0, y: 0, argent: 1000, forme: "diamond",
+    desc: ["« Ton niveau de puissance est ridicule. Va combattre cinquante monstres, et on en reparlera. Hmph. »"],
+    taches: [tuer("gens/vegeta", "minecraft:skeleton", 25, ), tuer("gens/vegeta2", "minecraft:creeper", 10)],
+    recompenses: [commande("gens/vegeta", '/title {p} title {"text":"Digne du prince","color":"dark_blue"}')] }),
+  service("macron", { titre: "Traverser la rue", sous: "pour trouver du travail", x: 2, y: 0, argent: 500,
+    desc: ["« Du travail ? Je traverse la rue et je vous en trouve ! » Le Président veut que tu remplisses trois contrats de Mehdi.", "Fais-le, puis coche la quête."],
+    taches: [coche("gens/macron")] }),
+  service("mouloud", { titre: "Client fidèle", x: 4, y: 0, argent: 300, desc: ["Mouloud aime les clients fidèles. Achète-lui un booster de cartes (au moins un)."],
+    taches: [avoir("gens/mouloud", "cabane:booster")] }),
+  service("gribbs", { titre: "Les cailloux peints de Gribbs", x: 6, y: 0, argent: 300, desc: ["Gribbs a besoin de « matière première » pour ses « œuvres d'art ». C'est de la terre cuite colorée."],
+    taches: [livrer("gens/gribbs", "minecraft:orange_terracotta", 16, "/a"), livrer("gens/gribbs", "minecraft:cyan_terracotta", 16, "/b")] }),
+  service("mehdi", { titre: "Le dossier complet", x: 8, y: 0, argent: 600, desc: ["Pour une fois, ton dossier sera complet. Mehdi demande : du papier, une étiquette et une horloge (« pour la ponctualité »)."],
+    taches: [livrer("gens/mehdi", "minecraft:paper", 16, "/a"), livrer("gens/mehdi", "minecraft:name_tag", 1, "/b"), livrer("gens/mehdi", "minecraft:clock", 1, "/c")] }),
+  service("grosh", { titre: "Le charbon de Grosh", x: 0, y: 1.5, argent: 400, desc: ["Grosh a « un peu » mangé le charbon de la forge. Brokk est furieux. Remplace-le vite."],
+    taches: [livrer("gens/grosh", "minecraft:coal", 64)] }),
+  service("ovsie", { titre: "La couronne d'Ovsie", x: 2, y: 1.5, argent: 300, desc: ["Ovsie veut refaire sa couronne de fleurs. Des coquelicots et des pissenlits, s'il te plaît !"],
+    taches: [livrer("gens/ovsie", "minecraft:poppy", 16, "/a"), livrer("gens/ovsie", "minecraft:dandelion", 16, "/b")] }),
+  service("nyota", { titre: "Les remèdes de Nyota", x: 4, y: 1.5, argent: 500, desc: ["Nyota prépare des remèdes pour les explorateurs qui partent loin."],
+    taches: [livrer("gens/nyota", "minecraft:golden_carrot", 8, "/a"), livrer("gens/nyota", "minecraft:glow_berries", 16, "/b")] }),
+  service("karim", { titre: "Une carte pour Karim", x: 6, y: 1.5, argent: 400, desc: ["Karim veut une carte des environs dessinée par toi. « Chouf, on verra si tu sais tenir une boussole. »"],
+    taches: [livrer("gens/karim", "minecraft:filled_map", 1)] }),
+  service("urga", { titre: "Les lingots d'Urga", x: 8, y: 1.5, argent: 600, desc: ["Urga porte des lingots. Elle en veut plus. Toujours plus."],
+    taches: [livrer("gens/urga", "minecraft:iron_ingot", 32, "/a"), livrer("gens/urga", "minecraft:gold_ingot", 8, "/b")] }),
 ] });
 
 // ---------------------------------------------------------------- chapitre 2 : les Sept Reliques
@@ -141,7 +251,7 @@ reliques.push(quete("reveil", { argent: 5000, titre: "&6&lLe Réveil de la Caban
   taches: [coche("reveil")],
   recompenses: [donne("reveil", "minecraft:elytra"), donne("reveil", "minecraft:diamond", 16),
     commande("reveil", `/title {p} title {"text":"Gardien de Beauvais","color":"gold"}`)] }));
-const chapReliques = chapitre("reliques", { titre: "&eLes Sept Reliques", icone: "cabane:scarabee_dor", ordre: 2, quetes: reliques });
+const chapReliques = chapitre("reliques", { titre: "&eLes Sept Reliques", icone: "cabane:scarabee_dor", ordre: 4, quetes: reliques });
 
 // ---------------------------------------------------------------- chapitre 3 : les grands donjons
 const DONJONS = [
@@ -168,7 +278,7 @@ const donjons = [
     desc: ["Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."],
     taches: [tuer(`boss/${e}`, e)], recompenses: [xp(`boss/${e}`, 10 + diamants), donne(`boss/${e}`, "minecraft:diamond", diamants)] })),
 ];
-const chapDonjons = chapitre("donjons", { titre: "&cLes Grands Donjons", icone: "minecraft:netherite_sword", ordre: 3, quetes: donjons });
+const chapDonjons = chapitre("donjons", { titre: "&cLes Grands Donjons", icone: "minecraft:netherite_sword", ordre: 5, quetes: donjons });
 
 // ---------------------------------------------------------------- écriture
 fs.rmSync(SORTIE, { recursive: true, force: true });
@@ -179,9 +289,9 @@ ecrire("data.snbt", snbt({
   lock_message: "", pause_game: false, progression_mode: "linear", version: 13,
 }));
 ecrire("chapter_groups.snbt", snbt({ chapter_groups: [] }));
-for (const [fichier, chap] of [cabane, village, chapReliques, chapDonjons]) ecrire(`chapters/${fichier}.snbt`, snbt(chap));
+for (const [fichier, chap] of [cabane, village, grandir, gens, chapReliques, chapDonjons]) ecrire(`chapters/${fichier}.snbt`, snbt(chap));
 const langTxt = snbt(lang);
 ecrire("lang/fr_fr.snbt", langTxt);
 ecrire("lang/en_us.snbt", langTxt);
-const n = [cabane, village, chapReliques, chapDonjons].reduce((s, [, c]) => s + c.quests.length, 0);
+const n = [cabane, village, grandir, gens, chapReliques, chapDonjons].reduce((s, [, c]) => s + c.quests.length, 0);
 console.log(`${n} quêtes écrites dans ${SORTIE}`);

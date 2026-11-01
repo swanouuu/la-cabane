@@ -3,11 +3,12 @@
   UUID:[I;-779001874,-180623356,355204855,-544392687],
   CustomName:'{"text":"Bernard","color":"gray"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/bernard.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.bernard",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.55},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
@@ -15,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Bernard",
-        Texts:[{Text:"De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien."}],
+        Texts:[{Text:"De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien."},{Text:"Mon singe s'appelle Bernard aussi. C'est pratique quand on crie."},{Text:"Les jeunes, avec leur Piaf… moi j'ai des vrais piafs. Ils font caca partout."}],
         Buttons:[{
           Label:"bye",
           Name:"C'est noté, Bernard",

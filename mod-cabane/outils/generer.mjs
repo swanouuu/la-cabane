@@ -1,5 +1,6 @@
 // Génère les ressources du mod (textures, modèles, traductions, butins, tags, succès, PNJ).
 // Lancer depuis n'importe où :  node mod-cabane/outils/generer.mjs
+import { genererPnj } from "./pnj.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -40,23 +41,25 @@ function png(grille, palette) {
 }
 
 const TEXTURES = {
+  // un smartphone moderne : cadre titane, Dynamic Island, fond d'écran et icônes d'applis
   telephone: [[
     "................",
-    "....KKKKKKKK....",
-    "...KDDDDDDDDK...",
-    "...KDLLLLLLDK...",
-    "...KDLSSLLLDK...",
-    "...KDLSLLLLDK...",
-    "...KDLLLLLLDK...",
-    "...KDLLLLLLDK...",
-    "...KDDDDDDDDK...",
-    "...KDBDBDBDDK...",
-    "...KDDDDDDDDK...",
-    "...KDBDBDBDDK...",
-    "...KDDDDDDDDK...",
-    "...KDDDGGDDDK...",
-    "....KKKKKKKK....",
-    "................"], { K: [12, 12, 16], D: [52, 56, 66], L: [64, 170, 160], S: [190, 245, 230], B: [120, 126, 140], G: [90, 200, 110] }],
+    ".....FFFFFF.....",
+    "....FSSKKSSF....",
+    "....FPPPPPPF....",
+    "....FPRPGPYF....",
+    "....FPPPPPPF....",
+    "....FQBQAQRF....",
+    "....FQQQQQQF....",
+    "....FQGQYQBF....",
+    "....FUUUUUUF....",
+    "....FUUUUUUF....",
+    "....FUAUAUAF....",
+    "....FUUUUUUF....",
+    "....FUUHHUUF....",
+    ".....FFFFFF.....",
+    "................"], { F: [150, 152, 162], K: [12, 12, 16], S: [36, 26, 82], P: [72, 50, 160], Q: [58, 78, 188], U: [40, 118, 200],
+    R: [255, 80, 80], G: [80, 220, 120], Y: [255, 210, 70], B: [90, 170, 255], A: [235, 235, 245], H: [225, 225, 235] }],
   scarabee_dor: [[
     "................",
     "......K..K......",
@@ -185,7 +188,7 @@ for (const [nom, [grille, palette]] of Object.entries(TEXTURES)) {
 
 // ---------------------------------------------------------------- traductions (français pour tout le monde)
 const lang = {
-  "itemGroup.cabane": "Beauvais",
+  "itemGroup.cabane": "SakaiMod",
   "item.cabane.telephone": "Téléphone",
   "item.cabane.telephone.desc": "Clic droit ou touche N : choisis ton numéro et appelle tes potes.",
   "item.cabane.relique": "Relique de la Cabane",
@@ -283,156 +286,8 @@ ecrire("data/cabane/loot_table/coffres/tour.json", {
   ],
 });
 
-// ---------------------------------------------------------------- PNJ (Easy NPC)
-const uuid = (graine) => {
-  // UUID fixe par PNJ, pour que les quêtes puissent le retrouver
-  let h = 2166136261;
-  const ints = [];
-  for (let i = 0; i < 4; i++) {
-    for (const ch of `${graine}#${i}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-    ints.push(h | 0);
-  }
-  return `[I;${ints.join(",")}]`;
-};
-const snbtTexte = (s) => JSON.stringify(s);
-const nomJson = (texte, couleur) => `'${JSON.stringify({ text: texte, color: couleur }).replace(/'/g, "\\'")}'`;
-
-function pnj({ fichier, nom, couleur, type = "humanoid", variante, rendu, peau, objectifs, extra = "", dialogues }) {
-  const entrees = dialogues.map((d) => `{
-        Label:${snbtTexte(d.label)},
-        Name:${snbtTexte(d.titre)},
-        Texts:[{Text:${snbtTexte(d.texte)}}],
-        Buttons:[${d.boutons.map((b) => `{
-          Label:${snbtTexte(b.label)},
-          Name:${snbtTexte(b.texte)},
-          Type:${snbtTexte(b.vers || b.commande ? "ACTION" : "CLOSE")}${b.vers ? `,
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:${snbtTexte(b.vers)}}]` : b.commande ? `,
-          Actions:[{Type:"COMMAND",Cmd:${snbtTexte(b.commande)},ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]` : ""}
-        }`).join(",")}]
-      }`).join(",");
-  ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
-  id:${snbtTexte("easy_npc:" + type)},
-  UUID:${uuid(fichier)},
-  CustomName:${nomJson(nom, couleur)},
-  CustomNameVisible:1b,
-  Invulnerable:1b,
-  PersistenceRequired:1b,
-  EasyNPCVersion:3,
-  VariantType:${snbtTexte(variante)},
-  SkinData:${peau ? `{Type:"RESOURCE_LOCATION",Texture:${snbtTexte(`cabane:textures/entity/pnj/${peau}.png`)}}` : `{Type:"DEFAULT"}`},${rendu ? `
-  RenderData:{Type:"CUSTOM_ENTITY",EntityType:${snbtTexte(rendu)}},` : ""}
-  ObjectiveData:{ObjectiveDataSet:[${objectifs || `{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}`}]},${extra}
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[${entrees}]
-  },
-  Status:{finalized:1b}
-}
-`);
-}
-
-// apparences : Mowzie's Mobs (la tribu Umvuthana de la savane), Goblin Traders, L_Ender's Cataclysm
-pnj({ fichier: "gardien", nom: "Le Hejj du Village", couleur: "gold", type: "illusioner", variante: "ILLUSIONER", rendu: "mowziesmobs:umvuthi", dialogues: [
-  { label: "default", titre: "Accueil", texte: "Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais accepte de vous héberger dans la Grande Cabane… à condition de l'aider. Moi, je suis le Hejj : le sage du village.",
-    boutons: [{ label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "reliques", texte: "Et cette cabane ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
-  { label: "aider", titre: "Aider le village", texte: "Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures : apportez ce qu'il demande, le village paie en SakaiDollars. Et regardez le grand panneau de la carte, au milieu du village.",
-    boutons: [{ label: "bye", texte: "On s'y met !" }] },
-  { label: "reliques", titre: "Les Sept Reliques", texte: "Sept reliques reposaient sur le comptoir. Elles ont été cachées dans les plus grands donjons du monde, parfois très loin d'ici. Ramenez-les, et la Cabane se réveillera. Tout est noté dans votre livre de quêtes.",
-    boutons: [{ label: "cartes", texte: "Comment les trouver ?", vers: "cartes" }, { label: "bye", texte: "J'y vais !" }] },
-  { label: "cartes", titre: "Les cartes", texte: "Karim le Chouf, à côté du grand panneau, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones.",
-    boutons: [{ label: "bye", texte: "Merci, Hejj" }] },
-] });
-pnj({ fichier: "cartographe", nom: "Karim le Chouf", couleur: "aqua", type: "witch", variante: "WITCH", rendu: "cataclysm:nameless_sorcerer", dialogues: [
-  { label: "default", titre: "Karim", texte: "Chouf, chouf ! Des cartes, encore des cartes ! Regarde le grand panneau derrière moi : c'est tout le monde connu. Chaque relique a sa carte. Complète les quêtes d'indice dans ton livre et je te les donne.",
-    boutons: [{ label: "conseil", texte: "Un conseil ?", vers: "conseil" }, { label: "bye", texte: "Merci Karim" }] },
-  { label: "conseil", titre: "Conseil", texte: "Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit.",
-    boutons: [{ label: "bye", texte: "Noté !" }] },
-] });
-pnj({ fichier: "marchand", nom: "Mouloud le Marchand", couleur: "green", type: "wandering_trader", variante: "WANDERING_TRADER", rendu: "goblintraders:goblin_trader", dialogues: [
-  { label: "default", titre: "Mouloud", texte: "Bienvenue au Grand Bazar ! Hé hé, un gobelin honnête, ça existe : moi. Je vends de tout contre de bons SakaiDollars. Pour du travail, va voir Mehdi, au tableau des contrats.",
-    boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "bye", texte: "À plus" }] },
-] });
-
-pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", rendu: "mowziesmobs:ferrous_wroughtnaut", dialogues: [
-  { label: "default", titre: "Brokk", texte: "CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte-moi les matériaux, paie le travail, et je te forge une merveille.",
-    boutons: [{ label: "forge", texte: "La forge spéciale", commande: "cabane forge" }, { label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "À plus, Brokk" }] },
-  { label: "travail", titre: "Le travail", texte: "Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Mehdi, au Grand Bazar, changent toutes les heures.",
-    boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "bye", texte: "Compris" }] },
-] });
-pnj({ fichier: "fee", nom: "Ovsie la Fée", couleur: "light_purple", type: "fairy", variante: "GREEN", rendu: "mowziesmobs:lantern", dialogues: [
-  { label: "default", titre: "Ovsie", texte: "Coucou ! Oui, je suis une fée-lanterne, je brille la nuit. Tu collectionnes les cartes ? Les boosters se vendent chez Mouloud, et un classeur garde toute ta collection bien rangée.",
-    boutons: [{ label: "casino", texte: "Et le casino ?", vers: "casino" }, { label: "bye", texte: "Merci Ovsie !" }] },
-  { label: "casino", titre: "Le casino", texte: "Machines à sous, roulette, blackjack… Mouloud vend les machines : à vous de construire le plus beau casino de la jungle !",
-    boutons: [{ label: "bye", texte: "On s'y met" }] },
-] });
-
-for (const cote of ["est", "ouest"]) {
-  pnj({ fichier: "garde_" + cote, nom: "Garde Umvuthana", couleur: "yellow", rendu: "mowziesmobs:umvuthana", variante: "STEVE", dialogues: [
-    { label: "default", titre: "Garde", texte: "Halte, voyageur ! … Ah, tu viens de l'avion en feu. Entre : le Hejj t'attend devant la Grande Cabane. Nous veillons sur le village, jour et nuit.",
-      boutons: [{ label: "tribu", texte: "Vous êtes qui ?", vers: "tribu" }, { label: "bye", texte: "Merci !" }] },
-    { label: "tribu", titre: "La tribu", texte: "Les Umvuthana, enfants du soleil. Nous gardons Beauvais depuis toujours. Notre chef porte le grand masque d'or. Méfie-toi des autres tribus, dehors : elles ne sont pas toutes aussi accueillantes.",
-      boutons: [{ label: "bye", texte: "Compris" }] },
-  ] });
-}
-pnj({ fichier: "guerisseuse", nom: "Nyota la Guérisseuse", couleur: "dark_green", rendu: "mowziesmobs:umvuthana_crane", variante: "STEVE", dialogues: [
-  { label: "default", titre: "Nyota", texte: "Assieds-toi près du feu, voyageur. Ici on raconte les histoires des donjons lointains… et de ceux qui n'en sont jamais revenus.",
-    boutons: [{ label: "conseil", texte: "Un conseil ?", vers: "conseil" }, { label: "bye", texte: "À plus tard" }] },
-  { label: "conseil", titre: "Conseil", texte: "Dors dans la Grande Cabane avant de partir loin : ton lit là-bas te fera revenir. Et garde toujours ton téléphone : on ne sait jamais qui il faudra appeler.",
-    boutons: [{ label: "bye", texte: "Merci Nyota" }] },
-] });
-pnj({ fichier: "pole_emploi", nom: "Mehdi de Pôle emploi", couleur: "blue", variante: "STEVE", peau: "mehdi", dialogues: [
-  { label: "default", titre: "Mehdi", texte: "Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats du village sont affichés juste au-dessus du tableau, ils changent toutes les heures. Apportez la marchandise, un clic droit sur le tableau, et le village vous paie.",
-    boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "dossier", texte: "Et mon dossier ?", vers: "dossier" }, { label: "bye", texte: "Merci Mehdi" }] },
-  { label: "dossier", titre: "Votre dossier", texte: "Votre dossier ? Il manque une pièce justificative. Il en manque toujours une. Revenez avec un contrat rempli, ça fera une bonne ligne sur votre CV.",
-    boutons: [{ label: "bye", texte: "D'accord…" }] },
-] });
-pnj({ fichier: "cousin", nom: "Gribbs, cousin de Mouloud", couleur: "dark_aqua", rendu: "goblintraders:vein_goblin_trader", variante: "STEVE", dialogues: [
-  { label: "default", titre: "Gribbs", texte: "Psst ! Toi ! Les meilleures affaires sont chez mon cousin Mouloud, juste là, au Grand Bazar. Enfin… presque les meilleures. Moi, je vends des secrets. Pas encore, mais bientôt.",
-    boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "bye", texte: "Euh… à plus" }] },
-] });
-
-// les habitants : ils se baladent autour de chez eux et n'aiment pas trop les nouveaux
-const balade = (vitesse = 0.55) => `{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:${vitesse}},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}`;
-const habitants = [
-  ["jean", "Jean", "Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, il nous faut le temps de vous connaître. Allez, circulez.", "Bonne journée quand même"],
-  ["jacques", "Jacques", "Tu marches sur mon chemin, là. Je l'ai balayé ce matin. … Bon. Ça ira pour cette fois.", "Pardon, Jacques"],
-  ["francis", "Francis", "Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit. Je vous ai à l'œil.", "Promis, on sera sages"],
-  ["louis", "Louis", "Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé.", "D'accord, d'accord"],
-  ["bernard", "Bernard", "De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien.", "C'est noté, Bernard"],
-  ["gerard", "Gérard", "Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là. Celui-là, c'est le mien.", "Pas de souci"],
-  ["ginette", "Ginette", "Mon petit, tu as une tête à faire des bêtises. Je te surveille. Et essuie tes pieds avant d'entrer chez les gens.", "Oui madame"],
-  ["monique", "Monique", "Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez. Pas en bien, pas en mal… On attend de voir.", "On verra bien"],
-  ["martine", "Martine", "Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour.", "Merci du conseil"],
-  ["thierry", "Thierry", "Moi, j'étais là avant l'avion, avant la cabane, avant tout le monde. Les nouveaux, je les regarde de loin. Faut faire ses preuves, ici.", "Je ferai mes preuves"],
-];
-for (const [fichier, nom, texte, reponse] of habitants) {
-  pnj({ fichier, nom, couleur: "gray", variante: "STEVE", peau: fichier, objectifs: balade(), dialogues: [
-    { label: "default", titre: nom, texte, boutons: [{ label: "bye", texte: reponse }] },
-  ] });
-}
-
-// le Président de Beauvais et sa garde rapprochée (HubEvents / Gardes : qui le frappe se fait poursuivre)
-pnj({ fichier: "macron", nom: "Macron, Président de Beauvais", couleur: "gold", variante: "STEVE", peau: "macron", objectifs: balade(0.4),
-  extra: `
-  Tags:["cabane_macron"],`, dialogues: [
-  { label: "default", titre: "Le Président", texte: "Mes chers compatriotes de Beauvais ! Bienvenue. Je suis votre Président. Et votre maire. Et, en même temps, un peu les deux.",
-    boutons: [{ label: "gardes", texte: "Et vos gardes ?", vers: "gardes" }, { label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "Au revoir, Monsieur le Président" }] },
-  { label: "gardes", titre: "La garde", texte: "Ma garde rapprochée : quatre guerriers d'élite de la jungle. Je vous le dis avec bienveillance : ne me touchez pas. Ils finissent toujours par se calmer… mais pas tout de suite.",
-    boutons: [{ label: "bye", texte: "Compris" }] },
-  { label: "travail", titre: "Le travail", texte: "Du travail ? Je traverse la place et je vous en trouve ! Mehdi, au Grand Bazar, affiche des contrats toutes les heures. C'est notre projet !",
-    boutons: [{ label: "bye", texte: "Merci, Monsieur le Président" }] },
-] });
-for (let i = 1; i <= 4; i++) {
-  pnj({ fichier: "garde_president_" + i, nom: "Garde présidentiel", couleur: "dark_red", variante: "STEVE", peau: "garde_" + i,
-    objectifs: `{Type:"FOLLOW_ENTITY_BY_UUID",Prio:3,SpeedModifier:1.1,TargetEntityUUID:${uuid("macron")},StartDistance:5.0f,StopDistance:2.5f},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}`,
-    extra: `
-  Tags:["cabane_garde"],
-  HandItems:[{id:"mowziesmobs:spear",count:1},{}],`, dialogues: [
-    { label: "default", titre: "Garde", texte: "Circulez. Le Président ne reçoit pas sans rendez-vous. Et si vous levez la main sur lui, vous aurez affaire à nous quatre.",
-      boutons: [{ label: "bye", texte: "Pardon" }] },
-  ] });
-}
+// ---------------------------------------------------------------- PNJ (Easy NPC) : voir pnj.mjs
+genererPnj(ecrire);
 
 // ---------------------------------------------------------------- la forge de Brokk : lui seul sait faire ces pièces
 const forge = (fichier, resultat, prix, ingredients, ordre) =>
@@ -576,13 +431,12 @@ Object.assign(lang, {
   "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
   "entity.cabane.parachute": "Parachute",
-  "item.cabane.puff_rose": "Puff fraise", "item.cabane.puff_bleue": "Puff myrtille glacée", "item.cabane.puff_menthe": "Puff menthe",
+  "item.cabane.puff_rose": "Puff rose (goût surprise)", "item.cabane.puff_bleue": "Puff bleue (goût surprise)", "item.cabane.puff_menthe": "Puff verte (goût surprise)",
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
-  "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police",
-  "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police",
-  "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police",
+  "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.gilet_police": "Gilet de police",
   "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
   "key.cabane.sirene": "Sirène de la voiture de police", "block.cabane.partie_table": "Table du casino",
+  "subtitles.cabane.voix": "Un habitant parle", "subtitles.cabane.voiture": "Voiture de police",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
@@ -602,8 +456,43 @@ offres.push(["puff_rose", "cabane:puff_rose", 1, 60], ["puff_bleue", "cabane:puf
 for (const nom of ["puff_rose", "puff_bleue", "puff_menthe", "tuyau"]) itemGenere(nom);
 // la police (textures : outils/police.mjs)
 offres.push(["menottes", "cabane:menottes", 1, 800], ["pistolet", "cabane:pistolet", 1, 2500],
-  ["tenue_police", "cabane:tenue_police", 1, 1200], ["voiture_police", "cabane:voiture_police", 1, 25000]);
-for (const nom of ["menottes", "pistolet", "tenue_police", "casquette_police", "veste_police", "pantalon_police", "chaussures_police", "voiture_police"]) itemGenere(nom);
+  ["gilet_police", "cabane:gilet_police", 1, 1200], ["voiture_police", "cabane:voiture_police", 1, 25000]);
+for (const nom of ["menottes", "gilet_police", "voiture_police"]) itemGenere(nom);
+// le pistolet : un vrai petit modèle 3D en main, l'icône à plat dans l'inventaire
+{
+  const face = (uv) => Object.fromEntries(["north", "south", "east", "west", "up", "down"].map((c) => [c, { texture: "#p", uv }]));
+  const CULASSE = [0, 0, 4, 4], NOIR = [4, 0, 8, 4], REFLET = [8, 0, 12, 4], CROSSE = [12, 0, 16, 4], CARCASSE = [0, 4, 4, 8], ARGENT = [4, 4, 8, 8];
+  const bout = (de, a, uv, rotation) => ({ from: de, to: a, faces: face(uv), ...(rotation ? { rotation } : {}) });
+  ecrire("assets/cabane/models/item/pistolet_3d.json", {
+    textures: { p: "cabane:item/pistolet_3d", particle: "cabane:item/pistolet_3d" },
+    elements: [
+      bout([7, 9, 2], [9, 11, 13], CULASSE),
+      bout([7.5, 9.5, 1], [8.5, 10.5, 2], NOIR),
+      bout([7.4, 11, 3], [8.6, 11.2, 12], REFLET),
+      bout([7.75, 11, 2.5], [8.25, 11.6, 3.2], NOIR),
+      bout([7.5, 11, 12], [8.5, 11.5, 12.8], NOIR),
+      bout([7.1, 8, 4], [8.9, 9, 12.5], CARCASSE),
+      bout([7.1, 2.5, 10], [8.9, 8, 13], CROSSE, { angle: -22.5, axis: "x", origin: [8, 8, 11.5] }),
+      bout([7.4, 6.6, 6.8], [8.6, 7.1, 10], NOIR),
+      bout([7.4, 7.1, 6.8], [8.6, 8, 7.3], NOIR),
+      bout([7.8, 7, 8.3], [8.2, 8, 8.8], ARGENT),
+    ],
+    display: {
+      thirdperson_righthand: { rotation: [0, 0, 0], translation: [0, 2.5, 1.5], scale: [0.6, 0.6, 0.6] },
+      thirdperson_lefthand: { rotation: [0, 0, 0], translation: [0, 2.5, 1.5], scale: [0.6, 0.6, 0.6] },
+      firstperson_righthand: { rotation: [0, 0, 0], translation: [1.5, 2.5, 0], scale: [0.8, 0.8, 0.8] },
+      firstperson_lefthand: { rotation: [0, 0, 0], translation: [1.5, 2.5, 0], scale: [0.8, 0.8, 0.8] },
+      ground: { translation: [0, 2, 0], scale: [0.5, 0.5, 0.5] },
+      fixed: { rotation: [0, 90, 0], scale: [0.9, 0.9, 0.9] },
+      head: { rotation: [0, 180, 0], translation: [0, 13, 7] },
+    },
+  });
+  ecrire("assets/cabane/models/item/pistolet.json", {
+    loader: "neoforge:separate_transforms",
+    base: { parent: "cabane:item/pistolet_3d" },
+    perspectives: { gui: { parent: "minecraft:item/generated", textures: { layer0: "cabane:item/pistolet" } } },
+  });
+}
 // la chicha : un modèle en plusieurs morceaux (vase de verre, tige dorée, plateau, foyer, tuyau)
 const morceau = (de, a, texture) => ({ from: de, to: a, faces: Object.fromEntries(["north", "south", "east", "west", "up", "down"].map((f) => [f, { texture }])) });
 ecrire("assets/cabane/models/block/chicha.json", {
@@ -672,3 +561,47 @@ const cartes = [
 cartes.forEach(([id, nom, description, rarete], i) => ecrire(`data/cabane/cartes/${id}.json`, { nom, description, rarete, numero: i + 1, serie: "Série 1 — Beauvais" }));
 
 console.log("Ressources générées dans", RES);
+
+// ---- les sons : la voiture (synthétisée par le mod) et les voix des PNJ, rangées depuis le dossier voix/ à la racine
+{
+  const sons = { voiture: { sounds: [{ name: "minecraft:random/click", stream: true }] } };
+  const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");
+  const cible = path.join(RES, "assets", "cabane", "sounds", "voix");
+  fs.rmSync(cible, { recursive: true, force: true });
+  const aConvertir = [];
+  if (fs.existsSync(dossierVoix)) {
+    for (const fichier of fs.readdirSync(dossierVoix).sort()) {
+      const m = fichier.toLowerCase().match(/^([a-z_]+?)(?:[-_ ]?\d+|-.+)?\.([a-z0-9]+)$/);
+      if (!m) continue;
+      const [, pnj, ext] = m;
+      if (ext !== "ogg") { aConvertir.push(fichier); continue; }
+      const nom = fichier.toLowerCase().replace(/\.ogg$/, "").replace(/[^a-z0-9_]/g, "_");
+      fs.mkdirSync(path.join(cible, pnj), { recursive: true });
+      fs.copyFileSync(path.join(dossierVoix, fichier), path.join(cible, pnj, nom + ".ogg"));
+      (sons["voix." + pnj] ??= { subtitle: "subtitles.cabane.voix", sounds: [] }).sounds.push({ name: `cabane:voix/${pnj}/${nom}` });
+    }
+  }
+  ecrire("assets/cabane/sounds.json", sons);
+  const nb = Object.keys(sons).length - 1;
+  console.log(`Voix : ${nb} PNJ ont des répliques enregistrées` + (aConvertir.length ? ` (à convertir en .ogg : ${aConvertir.join(", ")})` : ""));
+}
+
+// ---- les arbres géants (tronc 4 x 4) dans toutes les jungles du monde
+ecrire("data/cabane/worldgen/configured_feature/arbre_geant.json", { type: "cabane:arbre_geant", config: {} });
+ecrire("data/cabane/worldgen/placed_feature/arbre_geant.json", {
+  feature: "cabane:arbre_geant",
+  placement: [
+    { type: "minecraft:rarity_filter", chance: 2 },
+    { type: "minecraft:in_square" },
+    { type: "minecraft:heightmap", heightmap: "WORLD_SURFACE_WG" },
+    { type: "minecraft:biome" },
+  ],
+});
+// toutes les forêts tropicales, même celles des mods qui ne les rangent pas dans « jungle »
+const optionnel = (id) => ({ id, required: false });
+ecrire("data/cabane/tags/worldgen/biome/jungles_geantes.json", { replace: false, values: ["#minecraft:is_jungle", optionnel("#c:is_jungle"),
+  ...["biomesoplenty:rainforest", "biomesoplenty:rocky_rainforest", "biomesoplenty:tropics", "biomesoplenty:floodplain", "biomesoplenty:bayou",
+    "terralith:amethyst_rainforest", "terralith:jungle_mountains", "terralith:rocky_jungle", "terralith:tropical_jungle"].map(optionnel)] });
+ecrire("data/cabane/neoforge/biome_modifier/arbres_geants.json", {
+  type: "neoforge:add_features", biomes: "#cabane:jungles_geantes", features: "cabane:arbre_geant", step: "vegetal_decoration",
+});

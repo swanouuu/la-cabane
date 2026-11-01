@@ -1,22 +1,23 @@
 {
-  id:"easy_npc:fairy",
+  id:"easy_npc:humanoid",
   UUID:[I;257933296,1118867928,-1063026391,730673501],
   CustomName:'{"text":"Ovsie la Fée","color":"light_purple"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
   EasyNPCVersion:3,
-  VariantType:"GREEN",
-  SkinData:{Type:"DEFAULT"},
-  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:lantern"},
-  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/ovsie.png"},
+  ModelData:{Scale:{Root:[0.6f,0.6f,0.6f]}},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.fee",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.7},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
         Name:"Ovsie",
-        Texts:[{Text:"Coucou ! Oui, je suis une fée-lanterne, je brille la nuit. Tu collectionnes les cartes ? Les boosters se vendent chez Mouloud, et un classeur garde toute ta collection bien rangée."}],
+        Texts:[{Text:"Coucou ! Tu collectionnes les cartes ? Les boosters se vendent chez Mouloud, et un classeur garde toute ta collection."},{Text:"Je brille la nuit. Le jour aussi, mais personne ne remarque."},{Text:"Si tu trouves une carte légendaire, je te fais un câlin. Un petit. Je suis petite."},{Text:"Le casino ? C'est mal. … Tu m'emmènes ?"}],
         Buttons:[{
           Label:"casino",
           Name:"Et le casino ?",
@@ -30,7 +31,7 @@
       },{
         Label:"casino",
         Name:"Le casino",
-        Texts:[{Text:"Machines à sous, roulette, blackjack… Mouloud vend les machines : à vous de construire le plus beau casino de la jungle !"}],
+        Texts:[{Text:"Roulette, roue de la fortune, blackjack… Mouloud vend les tables : à vous de construire le plus beau casino de la jungle ! Le gérant remplit la caisse, accroupi + clic droit."}],
         Buttons:[{
           Label:"bye",
           Name:"On s'y met",

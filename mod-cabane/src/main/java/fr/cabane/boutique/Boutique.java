@@ -100,8 +100,25 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
         Cabane.LOGGER.info("Boutique : {} offres", offres.size());
     }
 
+    /** La vitrine : les articles qui tournent au-dessus du comptoir, envoyés à la connexion. */
+    public record Vitrine(List<Vue> offres) implements CustomPacketPayload {
+        public static final Type<Vitrine> TYPE = new Type<>(Cabane.id("boutique_vitrine"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, Vitrine> CODEC =
+                Vue.CODEC.apply(ByteBufCodecs.list()).map(Vitrine::new, Vitrine::offres);
+
+        @Override
+        public Type<Vitrine> type() {
+            return TYPE;
+        }
+    }
+
+    public static void envoyerVitrine(ServerPlayer joueur) {
+        PacketDistributor.sendToPlayer(joueur, new Vitrine(offres.stream().map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
+                .playToClient(Vitrine.TYPE, Vitrine.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientBoutique.vitrine = p.offres()))
                 .playToClient(Ouvrir.TYPE, Ouvrir.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientBoutique.ouvrir(p.offres())))
                 .playToServer(Acheter.TYPE, Acheter.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur) {
@@ -112,6 +129,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
 
     public static void ouvrir(ServerPlayer joueur) {
         Economie.sync(joueur);
+        envoyerVitrine(joueur);
         PacketDistributor.sendToPlayer(joueur, new Ouvrir(offres.stream().map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
     }
 

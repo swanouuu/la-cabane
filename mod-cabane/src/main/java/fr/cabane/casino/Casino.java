@@ -146,7 +146,7 @@ public final class Casino {
         if (machine.caisse() + mise < gainMax) {
             String gerant = machine.nomProprietaire().isEmpty() ? "le gérant" : machine.nomProprietaire();
             joueur.displayClientMessage(Component.literal("La caisse ne couvre pas cette mise (il faudrait " + Economie.format(gainMax - mise)
-                    + " dedans). " + gerant + " doit la remplir.").withStyle(ChatFormatting.RED), true);
+                    + " dedans). " + gerant + " doit la remplir : accroupi + clic droit sur la machine.").withStyle(ChatFormatting.RED), true);
             return false;
         }
         if (!Economie.payer(joueur, mise)) {
@@ -167,7 +167,7 @@ public final class Casino {
 
     private static void gererCaisse(ServerPlayer joueur, net.minecraft.core.BlockPos pos, long montant) {
         fr.cabane.bloc.InteractifBlockEntity m = machine(joueur, pos);
-        if (m == null || !m.estProprietaire(joueur.getUUID()) || montant == 0) {
+        if (m == null || !(m.estProprietaire(joueur.getUUID()) || joueur.hasPermissions(2)) || montant == 0) {
             return;
         }
         if (montant > 0) {
@@ -198,12 +198,25 @@ public final class Casino {
     /** Durée du tirage en 3D sur les grandes tables (en ticks). */
     public static final int DUREE_ROULETTE = 130;
     public static final int DUREE_ROUE = 150;
+    public static final int DUREE_MACHINE = 70;
+    public static final int DUREE_DES = 70;
+    public static final int DUREE_PILE = 60;
+
+    public static int duree(int jeu) {
+        return switch (jeu) {
+            case ROULETTE -> DUREE_ROULETTE;
+            case ROUE -> DUREE_ROUE;
+            case MACHINE -> DUREE_MACHINE;
+            case DES -> DUREE_DES;
+            default -> DUREE_PILE;
+        };
+    }
 
     private static void jouer(ServerPlayer joueur, int jeu, long mise, int choix, net.minecraft.core.BlockPos pos) {
         fr.cabane.bloc.InteractifBlockEntity machine = machine(joueur, pos);
-        int duree = jeu == ROULETTE ? DUREE_ROULETTE : jeu == ROUE ? DUREE_ROUE : 0;
-        if (machine != null && duree > 0 && machine.tourne(joueur.level().getGameTime(), duree)) {
-            joueur.displayClientMessage(Component.literal(jeu == ROULETTE ? "Rien ne va plus ! Attends la fin du tour." : "La roue tourne encore, patience !")
+        int duree = duree(jeu);
+        if (machine != null && machine.tourne(joueur.level().getGameTime(), duree)) {
+            joueur.displayClientMessage(Component.literal(jeu == ROULETTE ? "Rien ne va plus ! Attends la fin du tour." : "Ça tourne encore, patience !")
                     .withStyle(ChatFormatting.GOLD), true);
             return;
         }
@@ -220,9 +233,7 @@ public final class Casino {
             default -> pileOuFace(rnd, mise, choix, tirage);
         };
         payer(joueur, machine, gain);
-        if (duree > 0) {
-            machine.annoncer(tirage.get(0), joueur.getGameProfile().getName(), gain);
-        }
+        machine.annoncer(tirage, joueur.getGameProfile().getName(), gain);
         PacketDistributor.sendToPlayer(joueur, new Resultat(jeu, tirage, gain));
     }
 

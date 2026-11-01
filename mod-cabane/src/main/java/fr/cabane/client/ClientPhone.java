@@ -68,8 +68,16 @@ public final class ClientPhone {
     /** Ouvre l'accueil du téléphone, ou directement les appels si ça sonne ou si on est en ligne. */
     public static void openScreen() {
         boolean appel = state == PhoneNetwork.State.APPEL_ENTRANT || state == PhoneNetwork.State.EN_LIGNE;
-        Minecraft.getInstance().setScreen(appel ? new PhoneScreen() : new ClientPiaf.Accueil());
+        // un téléphone neuf : la première chose à faire, c'est choisir son numéro
+        Minecraft.getInstance().setScreen(appel || sansSim() ? new PhoneScreen() : new ClientPiaf.Accueil());
         send(PhoneNetwork.Action.ETAT, "");
+    }
+
+    /** Le téléphone qu'on tient (ou le premier de l'inventaire) n'a pas encore de numéro. */
+    static boolean sansSim() {
+        var joueur = Minecraft.getInstance().player;
+        var tel = joueur == null ? null : fr.cabane.telephone.PhoneCalls.telephoneActif(joueur);
+        return tel != null && tel.get(fr.cabane.CabaneComponents.NUMERO) == null;
     }
 
     static void send(int action, String arg) {

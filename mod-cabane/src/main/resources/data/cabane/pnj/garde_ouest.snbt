@@ -1,39 +1,26 @@
 {
   id:"easy_npc:humanoid",
   UUID:[I;-45672446,-1078894756,434512143,-315296927],
-  CustomName:'{"text":"Garde Umvuthana","color":"yellow"}',
+  CustomName:'{"text":"Garde de Beauvais","color":"yellow"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
-  SkinData:{Type:"DEFAULT"},
-  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:umvuthana"},
-  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/garde_porte_2.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.garde_ouest",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  HandItems:[{id:"minecraft:trident",count:1},{}],
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
         Name:"Garde",
-        Texts:[{Text:"Halte, voyageur ! … Ah, tu viens de l'avion en feu. Entre : le Hejj t'attend devant la Grande Cabane. Nous veillons sur le village, jour et nuit."}],
+        Texts:[{Text:"Halte, voyageur ! … Ah, tu viens de l'avion en feu. Entre : le Hejj t'attend devant la Grande Cabane."},{Text:"Rien à signaler. Sauf un singe qui m'a volé mon casque hier. Si tu le vois, il s'appelle Bernard. Pas l'habitant, le singe."},{Text:"Je garde cette porte depuis dix ans. Personne n'a jamais essayé d'entrer par le mur. Heureusement."},{Text:"Le soir, on entend des choses dans la jungle. Le plus souvent c'est Gérard qui ronfle."}],
         Buttons:[{
-          Label:"tribu",
-          Name:"Vous êtes qui ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"tribu"}]
-        },{
           Label:"bye",
           Name:"Merci !",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"tribu",
-        Name:"La tribu",
-        Texts:[{Text:"Les Umvuthana, enfants du soleil. Nous gardons Beauvais depuis toujours. Notre chef porte le grand masque d'or. Méfie-toi des autres tribus, dehors : elles ne sont pas toutes aussi accueillantes."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"Compris",
           Type:"CLOSE"
         }]
       }]

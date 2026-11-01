@@ -1,0 +1,301 @@
+{
+  "name": "Headbang",
+  "author": "Beauvais",
+  "description": "Ça déménage à Beauvais.",
+  "uuid": "4a8b32a4-9450-d785-d7fd-7c76f6c9b2f6",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 2,
+    "beginTick": 2,
+    "endTick": 42,
+    "stopTick": 45,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 2,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 7,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 9,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 12,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 17,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 19,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 22,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 24,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 27,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 29,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 32,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 34,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      },
+      {
+        "tick": 37,
+        "easing": "inQuad",
+        "turn": 0,
+        "head": {
+          "pitch": 35
+        },
+        "torso": {
+          "pitch": 12
+        },
+        "rightArm": {
+          "roll": 150
+        },
+        "leftArm": {
+          "roll": -40
+        }
+      },
+      {
+        "tick": 39,
+        "easing": "outQuad",
+        "turn": 0,
+        "head": {
+          "pitch": -15
+        },
+        "torso": {
+          "pitch": 0
+        },
+        "rightArm": {
+          "roll": 170
+        },
+        "leftArm": {
+          "roll": -30
+        }
+      }
+    ]
+  }
+}

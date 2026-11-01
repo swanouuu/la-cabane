@@ -81,12 +81,14 @@ public class VoitureRenderer extends EntityRenderer<VoitureEntity> {
         p.pave(VITRE, -0.87F, bas, -1.25F, -0.85F, haut, 0.68F, false);
         p.pave(VITRE, 0.85F, bas, -1.25F, 0.87F, haut, 0.68F, false);
         p.pave(BLANC, -0.9F, haut, -1.3F, 0.9F, haut + 0.1F, 0.72F, false);
-        // le gyrophare
-        boolean sirene = voiture.sirene();
-        boolean phase = (voiture.tickCount / 5) % 2 == 0;
-        p.pave(NOIR, -0.55F, haut + 0.1F, -0.42F, 0.55F, haut + 0.14F, -0.18F, false);
-        p.pave(sirene && phase ? FEU : ROUGE_ETEINT, 0.04F, haut + 0.14F, -0.4F, 0.52F, haut + 0.28F, -0.2F, sirene && phase);
-        p.pave(sirene && !phase ? BLEU_ALLUME : BLEU_ETEINT, -0.52F, haut + 0.14F, -0.4F, -0.04F, haut + 0.28F, -0.2F, sirene && !phase);
+        // le gyrophare : il tourne dès qu'on conduit (et avec la sirène), en éclats rouges et bleus
+        boolean allume = voiture.sirene() || voiture.getControllingPassenger() != null;
+        int eclat = (int) ((voiture.tickCount + partialTick) / 2.5F) % 4;
+        boolean rouge = allume && (eclat == 0 || eclat == 1 && voiture.sirene());
+        boolean bleu = allume && (eclat == 2 || eclat == 3 && voiture.sirene());
+        p.pave(NOIR, -0.6F, haut + 0.1F, -0.45F, 0.6F, haut + 0.15F, -0.15F, false);
+        p.pave(rouge ? FEU : ROUGE_ETEINT, 0.04F, haut + 0.15F, -0.43F, 0.58F, haut + 0.33F, -0.17F, rouge);
+        p.pave(bleu ? BLEU_ALLUME : BLEU_ETEINT, -0.58F, haut + 0.15F, -0.43F, -0.04F, haut + 0.33F, -0.17F, bleu);
         // POLICE sur les portières
         Font font = Minecraft.getInstance().font;
         Component texte = Component.literal("POLICE").withStyle(s -> s.withBold(true));

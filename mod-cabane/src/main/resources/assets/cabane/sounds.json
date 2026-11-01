@@ -1,0 +1,10 @@
+{
+  "voiture": {
+    "sounds": [
+      {
+        "name": "minecraft:random/click",
+        "stream": true
+      }
+    ]
+  }
+}

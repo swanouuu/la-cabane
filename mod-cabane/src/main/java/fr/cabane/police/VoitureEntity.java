@@ -5,8 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -73,7 +71,8 @@ public class VoitureEntity extends Entity {
             return InteractionResult.PASS;
         }
         if (!level().isClientSide) {
-            return joueur.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
+            // « true » : on peut remonter tout de suite après être descendu (sans le délai de Minecraft)
+            return getPassengers().size() < SIEGES.length && joueur.startRiding(this, true) ? InteractionResult.CONSUME : InteractionResult.PASS;
         }
         return InteractionResult.SUCCESS;
     }
@@ -138,6 +137,30 @@ public class VoitureEntity extends Entity {
         passager.setYHeadRot(passager.getYHeadRot() + rotation);
     }
 
+    /** On descend à côté de sa portière, pas dans la carrosserie. */
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passager) {
+        Vec3 droite = new Vec3(-1, 0, 0).yRot(-getYRot() * Mth.DEG_TO_RAD);
+        double cote = passager.position().subtract(position()).dot(droite) >= 0 ? 1 : -1;
+        for (double ecart : new double[] {1.7, 2.4}) {
+            for (double sens : new double[] {cote, -cote}) {
+                Vec3 p = position().add(droite.scale(sens * ecart));
+                Vec3 sur = net.minecraft.world.entity.vehicle.DismountHelper.findSafeDismountLocation(passager.getType(), level(),
+                        net.minecraft.core.BlockPos.containing(p), true);
+                if (sur != null) {
+                    return sur;
+                }
+            }
+        }
+        return super.getDismountLocationForPassenger(passager);
+    }
+
+    /** Pour le son du moteur : la vitesse actuelle, de 0 à 1. */
+    public float regime() {
+        Vec3 v = getDeltaMovement();
+        return (float) Math.min(1, Math.sqrt(v.x * v.x + v.z * v.z) / VITESSE_MAX);
+    }
+
     @Override
     public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
         return false;
@@ -162,10 +185,6 @@ public class VoitureEntity extends Entity {
             setPos(getX() + (lerpX - getX()) / lerpSteps, getY() + (lerpY - getY()) / lerpSteps, getZ() + (lerpZ - getZ()) / lerpSteps);
             setYRot(getYRot() + Mth.wrapDegrees(lerpYRot - getYRot()) / lerpSteps);
             lerpSteps--;
-        }
-        if (!level().isClientSide && sirene() && tickCount % 10 == 0) {
-            // pin-pon
-            level().playSound(null, blockPosition(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.NEUTRAL, 3F, tickCount % 20 == 0 ? 1.19F : 0.89F);
         }
     }
 

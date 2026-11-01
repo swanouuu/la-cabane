@@ -1,4 +1,4 @@
-name = "La Cabane"
+name = "SakaiMod"
 author = "Swan"
 version = "0.1.0"
 pack-format = "packwiz:1.1.0"
@@ -6,7 +6,7 @@ pack-format = "packwiz:1.1.0"
 [index]
 file = "index.toml"
 hash-format = "sha256"
-hash = "b6b0e2b04d169698103b1f0848e4dbb058f19d152b84de5dc215ce623eb1615e"
+hash = "c5069fa9e2924422ac7bd7e2fea675977d3e59d86f4654b3d42c2696e02587eb"
 
 [versions]
 minecraft = "1.21.1"

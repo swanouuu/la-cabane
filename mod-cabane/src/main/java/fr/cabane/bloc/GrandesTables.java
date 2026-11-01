@@ -42,6 +42,8 @@ public final class GrandesTables {
                     }
                 }
             }
+            case MACHINE_A_SOUS -> l.add(new int[] {0, 1, 0});
+            case DES -> l.add(new int[] {1, 0, 0});
             case ROUE -> {
                 for (int d = -2; d <= 2; d++) {
                     for (int h = 0; h <= 4; h++) {
@@ -57,8 +59,9 @@ public final class GrandesTables {
         return l;
     }
 
+    /** Tous les jeux du casino sont dessinés en 3D (la plupart prennent plusieurs cases). */
     public static boolean grande(BlocInteractif.Ouverture jeu) {
-        return jeu == BlocInteractif.Ouverture.ROULETTE || jeu == BlocInteractif.Ouverture.BLACKJACK || jeu == BlocInteractif.Ouverture.ROUE;
+        return jeu.casino();
     }
 
     /** Les positions des parties d'une table posée en {@code pos}, face au joueur vers {@code face}. */

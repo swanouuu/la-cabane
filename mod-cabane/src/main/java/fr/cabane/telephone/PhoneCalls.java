@@ -274,7 +274,7 @@ public final class PhoneCalls {
     }
 
     /** Le téléphone qu'on utilise : celui en main, sinon le premier de l'inventaire. */
-    public static ItemStack telephoneActif(ServerPlayer player) {
+    public static ItemStack telephoneActif(net.minecraft.world.entity.player.Player player) {
         for (InteractionHand main : InteractionHand.values()) {
             if (player.getItemInHand(main).is(CabaneItems.TELEPHONE.get())) {
                 return player.getItemInHand(main);

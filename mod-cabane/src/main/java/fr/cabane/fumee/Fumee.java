@@ -44,38 +44,88 @@ import org.joml.Vector3f;
 public final class Fumee {
     public static final int RAYON_CHICHA = 10;
 
-    /** Un nuage de fumée devant la bouche du joueur, teinté selon le parfum. */
+    /** Les goûts, et la couleur de leur fumée. */
+    public record Gout(String nom, int couleur) {
+    }
+
+    public static final List<Gout> GOUTS = List.of(
+            new Gout("Love 66", 0xFF6FA8), new Gout("Lady Killer", 0xFFB347), new Gout("Double Pomme", 0xB3E05A), new Gout("Blue Mist", 0x6FA8FF),
+            new Gout("Menthe glaciale", 0x9AFFD0), new Gout("Pinkman", 0xFF8FC8), new Gout("Hawaï", 0xFFD75E), new Gout("Mi Amor", 0xFFF27A),
+            new Gout("Raisin menthe", 0xA06FFF), new Gout("Pastèque Ice", 0xFF5A6A), new Gout("Ice Bonbon", 0xC0F0FF), new Gout("Fraise Kiwi", 0x7FE08A),
+            new Gout("Mangue Tango", 0xFFA040), new Gout("Cola Ice", 0x9A6A4A), new Gout("Barbe à papa", 0xFFC0E8), new Gout("Bubble Gum", 0xFF9AD8),
+            new Gout("Blue Razz", 0x4A8AFF), new Gout("Pêche glacée", 0xFFB894), new Gout("Citron vert", 0xC8FF5A), new Gout("Fruit du dragon", 0xE0409A),
+            new Gout("Cactus", 0x5FBF6F), new Gout("Grenade", 0xC0203A), new Gout("Myrtille framboise", 0x8A4AD0), new Gout("Pink Lemonade", 0xFFA0B8));
+
+    static Gout gout(String nom) {
+        return GOUTS.stream().filter(g -> g.nom().equals(nom)).findFirst().orElse(GOUTS.get(0));
+    }
+
+    /** Le goût de cet objet ; un goût surprise est tiré la première fois. */
+    static Gout goutDe(ItemStack stack, net.minecraft.util.RandomSource hasard) {
+        String nom = stack.get(CabaneComponents.GOUT);
+        if (nom == null) {
+            nom = GOUTS.get(hasard.nextInt(GOUTS.size())).nom();
+            stack.set(CabaneComponents.GOUT, nom);
+        }
+        return gout(nom);
+    }
+
+    static Vector3f teinte(Gout g) {
+        int c = g.couleur();
+        return new Vector3f((c >> 16 & 0xFF) / 255F, (c >> 8 & 0xFF) / 255F, (c & 0xFF) / 255F);
+    }
+
+    /** Un nuage de fumée devant la bouche du joueur, teinté selon le goût, et parfois un rond de fumée. */
     static void souffler(ServerPlayer joueur, Vector3f teinte, int volume) {
         ServerLevel level = joueur.serverLevel();
         Vec3 regard = joueur.getLookAngle();
         Vec3 bouche = joueur.getEyePosition().add(regard.scale(0.35)).add(0, -0.12, 0);
+        net.minecraft.util.RandomSource r = joueur.getRandom();
         for (int i = 0; i < volume; i++) {
-            double v = 0.02 + joueur.getRandom().nextDouble() * 0.05;
-            level.sendParticles(ParticleTypes.CLOUD, bouche.x, bouche.y, bouche.z, 0, regard.x, regard.y + 0.15, regard.z, v);
+            double v = 0.02 + r.nextDouble() * 0.06;
+            Vec3 d = regard.add((r.nextDouble() - 0.5) * 0.4, 0.1 + r.nextDouble() * 0.15, (r.nextDouble() - 0.5) * 0.4);
+            level.sendParticles(ParticleTypes.CLOUD, bouche.x, bouche.y, bouche.z, 0, d.x, d.y, d.z, v);
         }
-        level.sendParticles(new DustParticleOptions(teinte, 1.6F), bouche.x, bouche.y, bouche.z, volume, 0.15, 0.1, 0.15, 0.01);
-        if (volume > 12) {
-            level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, bouche.x, bouche.y, bouche.z, 2, 0.1, 0.05, 0.1, 0.005);
+        level.sendParticles(new DustParticleOptions(teinte, 2.2F), bouche.x, bouche.y, bouche.z, volume * 2, 0.25, 0.15, 0.25, 0.01);
+        level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, bouche.x, bouche.y, bouche.z, Math.max(1, volume / 6), 0.12, 0.05, 0.12, 0.004);
+        level.sendParticles(ParticleTypes.WHITE_SMOKE, bouche.x, bouche.y, bouche.z, volume, 0.2, 0.1, 0.2, 0.02);
+        if (r.nextInt(3) == 0) {
+            // un rond de fumée qui part devant soi
+            Vec3 haut = new Vec3(0, 1, 0);
+            Vec3 a = regard.cross(haut).normalize();
+            Vec3 b = regard.cross(a).normalize();
+            Vec3 centre = bouche.add(regard.scale(0.3));
+            for (int i = 0; i < 18; i++) {
+                double t = i * Math.PI * 2 / 18;
+                Vec3 p = centre.add(a.scale(Math.cos(t) * 0.22)).add(b.scale(Math.sin(t) * 0.22));
+                level.sendParticles(ParticleTypes.CLOUD, p.x, p.y, p.z, 0, regard.x, regard.y, regard.z, 0.05);
+            }
         }
-        level.playSound(null, bouche.x, bouche.y, bouche.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.25F, 1.6F + joueur.getRandom().nextFloat() * 0.3F);
+        level.playSound(null, bouche.x, bouche.y, bouche.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.25F, 1.6F + r.nextFloat() * 0.3F);
     }
 
-    /** La puff : un parfum, une couleur de fumée ; elle finit par être vide. */
+    /** La puff : un goût surprise (tiré à la première bouffée), une couleur de fumée ; elle finit par être vide. */
     public static class PuffItem extends Item {
-        private final Vector3f teinte;
-        private final String parfum;
-
         public PuffItem(Properties properties, int couleur, String parfum) {
             super(properties);
-            this.teinte = new Vector3f((couleur >> 16 & 0xFF) / 255F, (couleur >> 8 & 0xFF) / 255F, (couleur & 0xFF) / 255F);
-            this.parfum = parfum;
+        }
+
+        @Override
+        public Component getName(ItemStack stack) {
+            String gout = stack.get(CabaneComponents.GOUT);
+            return gout == null ? super.getName(stack) : Component.literal("Puff " + gout);
         }
 
         @Override
         public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
             ItemStack stack = player.getItemInHand(hand);
             if (player instanceof ServerPlayer joueur) {
-                souffler(joueur, teinte, 8);
+                boolean nouveau = stack.get(CabaneComponents.GOUT) == null;
+                Gout g = goutDe(stack, joueur.getRandom());
+                if (nouveau) {
+                    joueur.displayClientMessage(Component.literal("Goût surprise : " + g.nom() + " !").withColor(g.couleur()), true);
+                }
+                souffler(joueur, teinte(g), 16);
                 stack.hurtAndBreak(1, joueur, hand == InteractionHand.MAIN_HAND
                         ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
             }
@@ -85,7 +135,9 @@ public final class Fumee {
 
         @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-            tooltip.add(Component.literal("Parfum " + parfum).withStyle(ChatFormatting.LIGHT_PURPLE));
+            String gout = stack.get(CabaneComponents.GOUT);
+            tooltip.add(gout == null ? Component.literal("Goût surprise !").withStyle(ChatFormatting.LIGHT_PURPLE)
+                    : Component.literal("Goût " + gout).withColor(gout(gout).couleur()));
             tooltip.add(Component.literal((stack.getMaxDamage() - stack.getDamageValue()) + " bouffées restantes").withStyle(ChatFormatting.GRAY));
         }
     }
@@ -105,7 +157,7 @@ public final class Fumee {
                         || chicha.distToCenterSqr(joueur.position()) > RAYON_CHICHA * RAYON_CHICHA) {
                     decrocher(joueur, stack);
                 } else {
-                    souffler(joueur, new Vector3f(0.9F, 0.9F, 0.95F), 18);
+                    souffler(joueur, teinte(goutDe(stack, joueur.getRandom())), 34);
                     level.playSound(null, chicha, SoundEvents.BUBBLE_COLUMN_BUBBLE_POP, SoundSource.BLOCKS, 0.8F, 0.8F);
                     ((ServerLevel) level).sendParticles(ParticleTypes.BUBBLE_POP, chicha.getX() + 0.5, chicha.getY() + 0.25, chicha.getZ() + 0.5, 6, 0.1, 0.05, 0.1, 0.01);
                 }
@@ -116,6 +168,10 @@ public final class Fumee {
 
         @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+            String gout = stack.get(CabaneComponents.GOUT);
+            if (gout != null) {
+                tooltip.add(Component.literal("Goût " + gout).withColor(gout(gout).couleur()));
+            }
             tooltip.add(Component.literal("Reste à moins de " + RAYON_CHICHA + " blocs de la chicha.").withStyle(ChatFormatting.GRAY));
         }
     }
@@ -160,21 +216,29 @@ public final class Fumee {
             if (!level.isClientSide) {
                 ItemStack tuyau = new ItemStack(CabaneItems.TUYAU.get());
                 tuyau.set(CabaneComponents.CHICHA, pos.immutable());
+                Gout g = goutDe(tuyau, level.random);
                 if (!player.getInventory().add(tuyau)) {
                     player.drop(tuyau, false);
                 }
                 level.playSound(null, pos, SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.BLOCKS, 0.7F, 1.3F);
-                player.displayClientMessage(Component.literal("Tu prends un tuyau : clic droit pour tirer dessus, reste dans les " + RAYON_CHICHA + " blocs.")
-                        .withStyle(ChatFormatting.GRAY), true);
+                player.displayClientMessage(Component.literal("Ce soir à la chicha : " + g.nom() + ". Clic droit pour tirer, reste dans les " + RAYON_CHICHA + " blocs.")
+                        .withColor(g.couleur()), true);
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
         @Override
         public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
-            // le charbon fume doucement au sommet
-            if (random.nextInt(3) == 0) {
-                level.addParticle(ParticleTypes.SMOKE, pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5, 0, 0.01, 0);
+            // le charbon fume au sommet, l'eau fait des bulles dans le vase
+            level.addParticle(ParticleTypes.SMOKE, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 0, 0.015, 0);
+            if (random.nextInt(2) == 0) {
+                level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 0, 0.012, 0);
+            }
+            if (random.nextInt(4) == 0) {
+                level.addParticle(ParticleTypes.BUBBLE_POP, pos.getX() + 0.4 + random.nextDouble() * 0.2, pos.getY() + 0.3, pos.getZ() + 0.4 + random.nextDouble() * 0.2, 0, 0.02, 0);
+            }
+            if (random.nextInt(5) == 0) {
+                level.addParticle(ParticleTypes.SMALL_FLAME, pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, 0, 0.005, 0);
             }
         }
     }

@@ -48,6 +48,9 @@ public final class CabaneEvents {
 
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer joueur) {
+            Boutique.envoyerVitrine(joueur);
+        }
         if (event.getEntity() instanceof ServerPlayer player) {
             Economie.connexion(player);
             HubEvents.accueillir(player);

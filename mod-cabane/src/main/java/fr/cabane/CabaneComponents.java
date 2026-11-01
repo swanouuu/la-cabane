@@ -32,6 +32,10 @@ public final class CabaneComponents {
             COMPONENTS.registerComponentType("chicha", b -> b.persistent(net.minecraft.core.BlockPos.CODEC)
                     .networkSynchronized(net.minecraft.core.BlockPos.STREAM_CODEC));
 
+    /** Le goût d'une puff ou d'un tuyau de chicha (tiré au hasard). */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> GOUT =
+            COMPONENTS.registerComponentType("gout", b -> b.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8));
+
     static void register(IEventBus modBus) {
         COMPONENTS.register(modBus);
     }

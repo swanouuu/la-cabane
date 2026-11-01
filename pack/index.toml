@@ -13,8 +13,12 @@ file = "config/ftbquests/quests/chapter_groups.snbt"
 hash = "e57d8311aec9f524911ed1313cabf138bb7fa5a2d3ba985a00a2a267ff35ef78"
 
 [[files]]
+file = "config/ftbquests/quests/chapters/agrandir_beauvais.snbt"
+hash = "9716b248cf8ef4e453177029a23841e528bd5b032949afe4740b183dd314e090"
+
+[[files]]
 file = "config/ftbquests/quests/chapters/donjons.snbt"
-hash = "3f7e27157d7085480599d66aa45c566090bfd6bea52591265630b66594312016"
+hash = "43a6f01f7cae8ae798af5447ecfc1f0fa165a838cdd19bb5717414e5f9cc90c1"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/la_cabane.snbt"
@@ -25,8 +29,12 @@ file = "config/ftbquests/quests/chapters/le_village.snbt"
 hash = "863ba1b9d63535cf576447757066e3f7926ed994b92f37e38dcd2b640f3600d9"
 
 [[files]]
+file = "config/ftbquests/quests/chapters/les_gens.snbt"
+hash = "d4a4ac6fee7d5b757fd6aca05503171c372cd64d6112801241e9b170bbff7e1b"
+
+[[files]]
 file = "config/ftbquests/quests/chapters/reliques.snbt"
-hash = "99b1df0602afcf7b53c9838c0bf405f7d41914d15227b0a8283c54915ed8f908"
+hash = "4a7e3f9e794e46da09af9af0246ad4921821620012064245f316beb2303ad1be"
 
 [[files]]
 file = "config/ftbquests/quests/data.snbt"
@@ -34,11 +42,39 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "4afe59b1097c1117ee44ed607eb89923450fb1bd15c0643718308d33aef075c8"
+hash = "0a0fc7c54fcc1b288c6433c40a1a0e11b98a54623f2822cf022fc2575a9920ca"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "4afe59b1097c1117ee44ed607eb89923450fb1bd15c0643718308d33aef075c8"
+hash = "0a0fc7c54fcc1b288c6433c40a1a0e11b98a54623f2822cf022fc2575a9920ca"
+
+[[files]]
+file = "emotes/bof.json"
+hash = "fa0024b046aeda8f6aa1a31b625519d9fc83f3724165ae17699620a6978b009a"
+
+[[files]]
+file = "emotes/dab.json"
+hash = "08dceaf47513092fc5f598fc349ca3cf3a2dcf9a18b8915fb5c63ac5989918cb"
+
+[[files]]
+file = "emotes/floss.json"
+hash = "975aeb94e17d05eb684e818b3a72b1be3e83e6eec97de8e9e3796f2eba03e0c9"
+
+[[files]]
+file = "emotes/headbang.json"
+hash = "141148a2c2576a721c64fc39f9f08d8d06b0d72117608aec1c62d63f3bc31329"
+
+[[files]]
+file = "emotes/muscles.json"
+hash = "b4aa9a62894c50fc09e503f5e033b09fd0f66260c09c4b4d993155169ae06e52"
+
+[[files]]
+file = "emotes/salut.json"
+hash = "3a122417d4560ad8a21c457c44fb67af12a9bb0679198f940216e74bac7de48e"
+
+[[files]]
+file = "emotes/t_pose.json"
+hash = "5841369a125cd907160de81dcffd2484cccd1906bd16366a4fd138f9c0df3bf6"
 
 [[files]]
 file = "mods/amendments.pw.toml"
@@ -72,7 +108,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "b6127cbd497bee8b682e5be900c6b8d41874a184bfe6e70c278afc3c870aeaba"
+hash = "4a6134548d78c59dacf1b5a6325eaa57f1f36964abcaf75b6dd764e6d3accf88"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
@@ -447,6 +483,11 @@ metafile = true
 [[files]]
 file = "mods/owo-lib.pw.toml"
 hash = "6514f98b34602b789fc2dbcafe7a67468d1c94d74965a0142a79b7ab23628a9a"
+metafile = true
+
+[[files]]
+file = "mods/poopsky.pw.toml"
+hash = "a0524d1dd38c3043aef9bb1371ec8331c74d2d6f7a6e73c79e8e737a6bc6c515"
 metafile = true
 
 [[files]]

@@ -1,0 +1,165 @@
+{
+  "name": "Floss",
+  "author": "Beauvais",
+  "description": "La danse de la cour de récré.",
+  "uuid": "78348d53-a2d4-8eb8-66a8-297ea9606fda",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 4,
+    "beginTick": 4,
+    "endTick": 36,
+    "stopTick": 39,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": 25,
+          "pitch": 25
+        },
+        "leftArm": {
+          "roll": 25,
+          "pitch": 25
+        },
+        "torso": {
+          "yaw": -12,
+          "roll": -5
+        }
+      },
+      {
+        "tick": 8,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": -15,
+          "pitch": -25
+        },
+        "leftArm": {
+          "roll": -15,
+          "pitch": -25
+        },
+        "torso": {
+          "yaw": 12,
+          "roll": 5
+        }
+      },
+      {
+        "tick": 12,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": -25,
+          "pitch": -25
+        },
+        "leftArm": {
+          "roll": -25,
+          "pitch": -25
+        },
+        "torso": {
+          "yaw": 12,
+          "roll": 5
+        }
+      },
+      {
+        "tick": 16,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": 15,
+          "pitch": 25
+        },
+        "leftArm": {
+          "roll": 15,
+          "pitch": 25
+        },
+        "torso": {
+          "yaw": -12,
+          "roll": -5
+        }
+      },
+      {
+        "tick": 20,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": 25,
+          "pitch": 25
+        },
+        "leftArm": {
+          "roll": 25,
+          "pitch": 25
+        },
+        "torso": {
+          "yaw": -12,
+          "roll": -5
+        }
+      },
+      {
+        "tick": 24,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": -15,
+          "pitch": -25
+        },
+        "leftArm": {
+          "roll": -15,
+          "pitch": -25
+        },
+        "torso": {
+          "yaw": 12,
+          "roll": 5
+        }
+      },
+      {
+        "tick": 28,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": -25,
+          "pitch": -25
+        },
+        "leftArm": {
+          "roll": -25,
+          "pitch": -25
+        },
+        "torso": {
+          "yaw": 12,
+          "roll": 5
+        }
+      },
+      {
+        "tick": 32,
+        "easing": "linear",
+        "turn": 0,
+        "rightArm": {
+          "roll": 15,
+          "pitch": 25
+        },
+        "leftArm": {
+          "roll": 15,
+          "pitch": 25
+        },
+        "torso": {
+          "yaw": -12,
+          "roll": -5
+        }
+      }
+    ]
+  }
+}

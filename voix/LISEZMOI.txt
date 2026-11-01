@@ -1,0 +1,3 @@
+Mets ici les voix des PNJ : un fichier .ogg par réplique, nommé avec le nom du PNJ et un numéro
+(par exemple macron-1.ogg, vegeta-fierte.ogg). La liste des noms est dans le README, partie « Les voix des PNJ ».
+Puis lance : node mod-cabane/outils/generer.mjs

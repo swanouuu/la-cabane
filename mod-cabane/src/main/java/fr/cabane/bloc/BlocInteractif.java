@@ -113,7 +113,8 @@ public class BlocInteractif extends HorizontalDirectionalBlock implements net.mi
         if (level.isClientSide) {
             if (ouverture.cote_client) {
                 // le gérant, accroupi, gère la caisse ; sinon on joue
-                if (player.isShiftKeyDown() && level.getBlockEntity(pos) instanceof InteractifBlockEntity be && be.estProprietaire(player.getUUID())) {
+                if (player.isShiftKeyDown() && level.getBlockEntity(pos) instanceof InteractifBlockEntity be
+                        && (be.estProprietaire(player.getUUID()) || player.hasPermissions(2))) {
                     fr.cabane.client.casino.CaisseScreen.ouvrir(pos);
                 } else {
                     ClientCasino.ouvrir(ouverture, pos);

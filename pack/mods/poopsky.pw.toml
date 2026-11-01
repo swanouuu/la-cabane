@@ -1,0 +1,13 @@
+name = "PoopSky"
+filename = "poopsky-2.2+NeoForge1.21.1-Hotfix2.jar"
+side = "both"
+
+[download]
+url = "https://cdn.modrinth.com/data/78EYx2mh/versions/CEa86OFf/poopsky-2.2%2BNeoForge1.21.1-Hotfix2.jar"
+hash-format = "sha512"
+hash = "8424402a09d479eba389b62dd7ba62e4c657b19171163d55a99d0676c9a0b761388776c39d5150979fc548bf43a850833feac2e811368bbfd8627fc92b828b8d"
+
+[update]
+[update.modrinth]
+mod-id = "78EYx2mh"
+version = "CEa86OFf"

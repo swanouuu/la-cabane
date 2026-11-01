@@ -83,36 +83,13 @@ objet("pistolet", [
   [rect(13, 3, 13.9, 3.9), "#5a5a63"],
   [rect(1, 5, 1.9, 6.9), "#111114"],
 ]);
-objet("tenue_police", [
-  [poly([[2, 4], [6, 2], [10, 2], [14, 4], [13, 8], [11.5, 7.5], [11.5, 14.5], [4.5, 14.5], [4.5, 7.5], [3, 8]]), MARINE],
-  [poly([[6, 2], [8, 5], [10, 2]]), "#d9dde6"],
-  [rect(7.6, 5, 8.4, 14), MARINE_FONCE],
-  [rect(9.5, 6.5, 10.5, 7.5), OR],
-  [rect(4.5, 12, 11.5, 12.9), NOIR],
-  [rect(7.5, 12, 8.5, 12.9), ARGENT],
-]);
-objet("casquette_police", [
-  [poly([[3, 9], [4, 5], [8, 3.5], [12, 5], [13, 9]]), MARINE],
-  [rect(3, 8, 13, 9.9), NOIR],
-  [poly([[2, 10], [14, 10], [12, 12], [4, 12]]), NOIR],
-  [rect(7.5, 5.5, 8.5, 6.9), OR],
-]);
-objet("veste_police", [
-  [poly([[2, 4], [6, 2], [10, 2], [14, 4], [13, 9], [11.5, 8.5], [11.5, 14.5], [4.5, 14.5], [4.5, 8.5], [3, 9]]), MARINE],
-  [rect(7.6, 3, 8.4, 14), MARINE_FONCE],
-  [rect(9.5, 6, 10.5, 7), OR],
-  [rect(2.5, 5, 3.5, 6), "#2b55c8"], [rect(2.5, 6, 3.5, 7), "#ffffff"], [rect(2.5, 7, 3.5, 8), "#d63a3a"],
-]);
-objet("pantalon_police", [
-  [poly([[4, 2], [12, 2], [13, 14], [9.5, 14], [8, 6], [6.5, 14], [3, 14]]), MARINE],
-  [rect(4, 2, 12, 3), NOIR],
-  [segment(4.3, 4, 3.6, 13.5, 0.35), MARINE_CLAIR],
-  [segment(11.7, 4, 12.4, 13.5, 0.35), MARINE_CLAIR],
-]);
-objet("chaussures_police", [
-  [poly([[2, 8], [5, 8], [5, 10], [7.5, 11], [7.5, 13], [2, 13]]), NOIR],
-  [poly([[8.5, 6], [11.5, 6], [11.5, 8], [14, 9], [14, 11], [8.5, 11]]), NOIR],
-  [rect(2, 12.5, 7.5, 13), "#3a3a42"], [rect(8.5, 10.5, 14, 11), "#3a3a42"],
+objet("gilet_police", [
+  [poly([[3, 3], [6, 2], [6.5, 4], [9.5, 4], [10, 2], [13, 3], [12.5, 14.5], [3.5, 14.5]]), MARINE],
+  [rect(7.6, 4, 8.4, 14), MARINE_FONCE],
+  [rect(4.5, 7, 11.5, 8.4), "#f4f4f4"],
+  [rect(9.5, 5, 10.5, 6), OR],
+  [rect(3.5, 12.5, 12.5, 13.4), NOIR],
+  [rect(7.5, 12.5, 8.5, 13.4), ARGENT],
 ]);
 objet("voiture_police", [
   [poly([[1, 8], [3, 7], [5, 4], [11, 4], [13, 7], [15, 8], [15, 11], [1, 11]]), "#f2f2f2"],
@@ -147,54 +124,47 @@ const bruit = (c, x, y) => { const k = 1 + (((x * 7 + y * 13) % 5) - 2) * 0.025;
 const m = hex(MARINE), mf = hex(MARINE_FONCE), mc = hex(MARINE_CLAIR), or = hex(OR), noir = hex(NOIR), argent = hex(ARGENT), blanc = hex("#f4f4f4");
 
 const l1 = couche();
-// la casquette : calotte marine, bandeau noir, insigne doré devant ; le visage reste visible
-boite(l1, 0, 0, 8, 8, 8, (face, x, y) => {
-  if (face === "haut") return bruit(x > 1 && x < 6 && y > 1 && y < 6 ? mc : m, x, y);
-  if (face === "bas") return null;
-  if (y < 2) return face === "avant" && (x === 3 || x === 4) ? or : bruit(m, x, y);
-  if (y === 2) return noir;
-  if (y === 3 && face === "avant") return noir; // la visière
-  return null;
-});
-// la veste : marine, fermeture au milieu, écusson doré, ceinturon, « POLICE » en blanc dans le dos
+// le gilet seulement : il s'enfile par-dessus les habits, la tête, les bras et les jambes gardent le skin
 boite(l1, 16, 16, 8, 12, 4, (face, x, y) => {
-  if (face === "haut") return bruit(m, x, y);
-  if (face === "bas") return noir;
+  if (face === "haut") return x === 0 || x === 7 ? null : bruit(m, x, y);
+  if (face === "bas") return null;
   if (y === 11) return face === "avant" && (x === 3 || x === 4) ? argent : noir;
   if (face === "avant") {
-    if (x === 3 || x === 4) return y === 0 ? blanc : mf;
+    if (y === 0 && x > 1 && x < 6) return null; // l'encolure
+    if (x === 3 || x === 4) return mf;
     if ((x === 5 || x === 6) && (y === 2 || y === 3)) return or;
+    if (y === 6) return blanc; // bande réfléchissante
     return bruit(m, x, y);
   }
-  if (face === "arriere" && (y === 2 || y === 3)) return x === 0 || x === 7 ? bruit(m, x, y) : (x + y) % 3 === 0 ? mf : blanc;
-  return bruit(m, x, y);
+  if (face === "arriere") {
+    if (y >= 2 && y <= 4) return x === 0 || x === 7 ? bruit(m, x, y) : y === 3 && (x + 1) % 2 === 0 ? mf : blanc; // « POLICE »
+    if (y === 6) return blanc;
+    return bruit(m, x, y);
+  }
+  return y === 6 ? blanc : bruit(m, x, y);
 });
-// les manches : écusson tricolore à l'épaule, les mains restent nues
+// juste les épaules du gilet, avec l'écusson tricolore ; le reste du bras garde le skin
 boite(l1, 40, 16, 4, 12, 4, (face, x, y) => {
-  if (face === "bas" || y >= 10) return null;
+  if (face === "bas" || y > 1) return null;
   if (face === "haut") return bruit(m, x, y);
-  if (face === "droite" && y >= 1 && y <= 3) return [hex("#2b55c8"), blanc, hex("#d63a3a")][Math.min(2, x)] ?? bruit(m, x, y);
-  if (y === 9) return mf;
+  if (face === "droite" && y === 1) return [hex("#2b55c8"), blanc, hex("#d63a3a"), bruit(m, x, y)][x];
   return bruit(m, x, y);
-});
-// les chaussures (le bas des jambes)
-boite(l1, 0, 16, 4, 12, 4, (face, x, y) => {
-  if (face === "bas") return noir;
-  if (face === "haut") return null;
-  if (y >= 9) return y === 11 ? hex("#2a2a30") : noir;
-  return null;
 });
 ecrire("models/armor/police_layer_1.png", png(64, 32, l1.px));
+ecrire("models/armor/police_layer_2.png", png(64, 32, couche().px));
 
-const l2 = couche();
-// le pantalon : marine, une fine bande plus claire sur le côté ; le haut du corps n'a que la taille
-boite(l2, 16, 16, 8, 12, 4, (face, x, y) => (face === "haut" || face === "bas" || y < 9 ? null : bruit(m, x, y)));
-boite(l2, 0, 16, 4, 12, 4, (face, x, y) => {
-  if (face === "haut") return bruit(m, x, y);
-  if (face === "bas") return null;
-  if ((face === "droite" || face === "gauche") && x === 1) return mc;
-  return bruit(m, x, y);
-});
-ecrire("models/armor/police_layer_2.png", png(64, 32, l2.px));
+// ---------------------------------------------------------------- le pistolet en 3D : une petite palette de 16 x 16
+{
+  const n = 16, px = Buffer.alloc(n * n * 4);
+  const zones = [[0, 0, "#2b2b31"], [4, 0, "#151518"], [8, 0, "#4c4c55"], [12, 0, "#1f1f24"], [0, 4, "#3a3a42"], [4, 4, "#c9ced6"], [8, 4, "#ffd75e"], [12, 4, "#e53030"]];
+  for (const [x0, y0, c] of zones) {
+    const col = hex(c);
+    for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 4; x++) {
+      const k = 1 + (((x * 5 + y * 3) % 4) - 1.5) * 0.04;
+      const o = (y * n + x) * 4; px[o] = Math.min(255, col[0] * k); px[o + 1] = Math.min(255, col[1] * k); px[o + 2] = Math.min(255, col[2] * k); px[o + 3] = 255;
+    }
+  }
+  ecrire("item/pistolet_3d.png", png(n, n, px));
+}
 
 console.log("Police dessinée dans", RES);

@@ -133,7 +133,7 @@ public final class PhotoTour {
             case "reglages" -> mc.setScreen(new ClientPiaf.Reglages());
             case "caisse" -> fr.cabane.client.casino.CaisseScreen.ouvrir(position(e));
             case "ticket" -> {
-                var t = new fr.cabane.client.casino.TicketScreen(new fr.cabane.casino.Ticket.Gratte(List.of(50, 10, 50, 20, 100, 50, 5, 20, 10), 50));
+                var t = new fr.cabane.client.casino.TicketScreen(new fr.cabane.casino.Ticket.Gratte(0, List.of(50, 10, 50, 20, 100, 50, 5, 20, 10), 50, 0));
                 mc.setScreen(t);
                 t.demo();
             }
@@ -144,6 +144,20 @@ public final class PhotoTour {
             case "telephone" -> mc.setScreen(new ClientPiaf.Accueil());
             case "contacts" -> mc.setScreen(new ClientPiaf.Contacts());
             case "recents" -> mc.setScreen(new ClientPiaf.Recents());
+            case "booster-demo" -> {
+                var ids = fr.cabane.tcg.Cartes.toutes().stream().map(fr.cabane.tcg.Cartes.Def::id).toList();
+                ClientCartes.BoosterScreen ecranBooster = new ClientCartes.BoosterScreen(List.of(ids.get(0), ids.get(5), ids.get(9), ids.get(14), ids.get(18)));
+                mc.setScreen(ecranBooster);
+                ecranBooster.demo();
+            }
+            case "ticket-penalty", "ticket-morpion" -> {
+                var gratte = nom.equals("ticket-penalty")
+                        ? new fr.cabane.casino.Ticket.Gratte(fr.cabane.casino.Ticket.PENALTY, List.of(1, 0, 1, 1, 0), 100, 100)
+                        : new fr.cabane.casino.Ticket.Gratte(fr.cabane.casino.Ticket.MORPION, List.of(1, 0, 0, 1, 1, 0, 1, 0, 1), 500, 500);
+                var t = new fr.cabane.client.casino.TicketScreen(gratte);
+                mc.setScreen(t);
+                t.demo();
+            }
             case "booster", "booster-ouvert" -> {
                 var ids = fr.cabane.tcg.Cartes.toutes().stream().map(fr.cabane.tcg.Cartes.Def::id).toList();
                 var tirage = List.of(ids.get(0), ids.get(5), ids.get(9), ids.get(14), ids.get(18));

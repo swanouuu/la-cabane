@@ -32,3 +32,6 @@ centre de map avec la cabane abandonnée, reliques cachées dans les donjons.
     versionRange="*"
     ordering="NONE"
     side="BOTH"
+
+[[mixins]]
+config="cabane.mixins.json"

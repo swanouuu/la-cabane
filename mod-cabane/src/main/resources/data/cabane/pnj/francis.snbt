@@ -3,11 +3,12 @@
   UUID:[I;-86345972,2144660416,-1029917963,1934183221],
   CustomName:'{"text":"Francis","color":"gray"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/francis.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.francis",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.55},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
@@ -15,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Francis",
-        Texts:[{Text:"Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit. Je vous ai à l'œil."}],
+        Texts:[{Text:"Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit."},{Text:"Je vous ai à l'œil. L'autre œil est sur Gribbs."},{Text:"Si vous construisez à côté de chez moi, faites une jolie maison. Pas un truc en terre."}],
         Buttons:[{
           Label:"bye",
           Name:"Promis, on sera sages",

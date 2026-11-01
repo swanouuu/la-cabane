@@ -33,6 +33,8 @@ public class InteractifRenderer implements BlockEntityRenderer<InteractifBlockEn
         int clair = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().above());
         if (bloc.ouverture() == BlocInteractif.Ouverture.CONTRATS) {
             contrats(be, ps, buf, clair);
+        } else if (bloc.ouverture() == BlocInteractif.Ouverture.BOUTIQUE) {
+            vitrine(be, partialTick, ps, buf, clair);
         } else if (bloc.ouverture() == BlocInteractif.Ouverture.TERRAIN) {
             if (be.proprietaire() == null) {
                 Rendu3D.etiquette(ps, buf, Component.literal("À VENDRE").withStyle(s -> s.withBold(true)), 0.5, 1.75, 0.5, 0.026F, 0xFFFF5252, 0x70000000, clair);
@@ -51,6 +53,9 @@ public class InteractifRenderer implements BlockEntityRenderer<InteractifBlockEn
                 switch (bloc.ouverture()) {
                     case ROULETTE -> CasinoRendu.roulette(be, partialTick, ps, buf, clair);
                     case ROUE -> CasinoRendu.roue(be, partialTick, ps, buf, clair);
+                    case MACHINE_A_SOUS -> CasinoRendu.machine(be, partialTick, ps, buf, clair);
+                    case DES -> CasinoRendu.des(be, partialTick, ps, buf, clair);
+                    case PILE_OU_FACE -> CasinoRendu.pileOuFace(be, partialTick, ps, buf, clair);
                     default -> CasinoRendu.blackjack(be, partialTick, ps, buf, clair, croupier);
                 }
                 // la caisse, au-dessus du nom du jeu
@@ -58,6 +63,9 @@ public class InteractifRenderer implements BlockEntityRenderer<InteractifBlockEn
                 double[] ou = switch (bloc.ouverture()) {
                     case ROULETTE -> new double[] {0.5, 2.3, -0.5};
                     case ROUE -> new double[] {0, 6.32, 0};
+                    case MACHINE_A_SOUS -> new double[] {0, 2.75, 0};
+                    case DES -> new double[] {0.5, 1.95, 0};
+                    case PILE_OU_FACE -> new double[] {0, 2.25, 0};
                     default -> new double[] {0, 2.72, -2.0};
                 };
                 Rendu3D.etiquette(ps, buf, Component.literal(caisse), ou[0], ou[1], ou[2], 0.014F, be.caisse() > 0 ? 0xFFFFD75E : 0xFFFF6B6B, 0x60000000, clair);
@@ -67,6 +75,37 @@ public class InteractifRenderer implements BlockEntityRenderer<InteractifBlockEn
             String caisse = "Caisse : " + Economie.format(be.caisse());
             Rendu3D.etiquette(ps, buf, Component.literal(caisse), 0.5, 1.45, 0.5, 0.016F, be.caisse() > 0 ? 0xFFFFD75E : 0xFFFF6B6B, 0x60000000, clair);
         }
+    }
+
+    /** Au-dessus du comptoir : les articles de Mouloud tournent, celui du moment est mis en avant avec son prix. */
+    private static void vitrine(InteractifBlockEntity be, float partialTick, PoseStack ps, MultiBufferSource buf, int clair) {
+        var offres = ClientBoutique.vitrine;
+        if (offres.isEmpty()) {
+            return;
+        }
+        float t = be.getLevel().getGameTime() + partialTick;
+        int n = Math.min(offres.size(), 10);
+        int courant = (int) (t / 60F) % offres.size();
+        for (int k = 0; k < n; k++) {
+            var o = offres.get((courant + 1 + k) % offres.size());
+            double angle = Math.toRadians(t * 1.5F + k * 360F / n);
+            ps.pushPose();
+            ps.translate(0.5 + Math.cos(angle) * 0.75, 1.55 + Math.sin(t / 10F + k) * 0.06, 0.5 + Math.sin(angle) * 0.75);
+            Rendu3D.tourner(ps, t * 4F);
+            ps.scale(0.32F, 0.32F, 0.32F);
+            Rendu3D.objet(ps, buf, o.stack(), be.getLevel(), clair);
+            ps.popPose();
+        }
+        var vedette = offres.get(courant);
+        ps.pushPose();
+        ps.translate(0.5, 1.75 + Math.sin(t / 8F) * 0.05, 0.5);
+        Rendu3D.tourner(ps, t * 2.5F);
+        ps.scale(0.75F, 0.75F, 0.75F);
+        Rendu3D.objet(ps, buf, vedette.stack(), be.getLevel(), clair);
+        ps.popPose();
+        Component nom = Component.literal(vedette.stack().getCount() > 1 ? vedette.stack().getCount() + " × " : "").append(vedette.stack().getHoverName());
+        Rendu3D.etiquette(ps, buf, nom.copy().withStyle(s -> s.withBold(true)), 0.5, 2.5, 0.5, 0.02F, 0xFFFFFFFF, 0x70000000, clair);
+        Rendu3D.etiquette(ps, buf, Component.literal(Economie.format(vedette.prix())), 0.5, 2.3, 0.5, 0.022F, 0xFFFFD75E, 0x70000000, clair);
     }
 
     private static void contrats(InteractifBlockEntity be, PoseStack ps, MultiBufferSource buf, int clair) {

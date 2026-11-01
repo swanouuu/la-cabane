@@ -1,0 +1,92 @@
+{
+  "name": "Le Dab",
+  "author": "Beauvais",
+  "description": "Le classique.",
+  "uuid": "ba9ca0d5-8c21-fa5a-84d8-193db13968e1",
+  "emote": {
+    "isLoop": "false",
+    "returnTick": 0,
+    "beginTick": 0,
+    "endTick": 30,
+    "stopTick": 33,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 5,
+        "easing": "outBack",
+        "turn": 0,
+        "rightArm": {
+          "roll": 140,
+          "yaw": 20
+        },
+        "leftArm": {
+          "pitch": -95,
+          "yaw": -55,
+          "roll": -20
+        },
+        "head": {
+          "pitch": 30,
+          "yaw": -35
+        },
+        "torso": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 25,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 140,
+          "yaw": 20
+        },
+        "leftArm": {
+          "pitch": -95,
+          "yaw": -55,
+          "roll": -20
+        },
+        "head": {
+          "pitch": 30,
+          "yaw": -35
+        },
+        "torso": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 30,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 0,
+          "yaw": 0
+        },
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "head": {
+          "pitch": 0,
+          "yaw": 0
+        },
+        "torso": {
+          "roll": 0
+        }
+      }
+    ]
+  }
+}

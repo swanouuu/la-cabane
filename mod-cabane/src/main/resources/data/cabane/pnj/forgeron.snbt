@@ -1,22 +1,24 @@
 {
-  id:"easy_npc:orc_warrior",
+  id:"easy_npc:humanoid",
   UUID:[I;572230892,-2072290118,739222969,-734221735],
   CustomName:'{"text":"Brokk le Forgeron","color":"red"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
   EasyNPCVersion:3,
-  VariantType:"ORC_WARRIOR",
-  SkinData:{Type:"DEFAULT"},
-  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:ferrous_wroughtnaut"},
-  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/brokk.png"},
+  ModelData:{Scale:{Root:[1.5f,1.5f,1.5f]}},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.forgeron",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  HandItems:[{id:"minecraft:mace",count:1},{}],
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
         Name:"Brokk",
-        Texts:[{Text:"CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte-moi les matériaux, paie le travail, et je te forge une merveille."}],
+        Texts:[{Text:"CLANG. Brokk forge. Toi regarde. Toi touche pas l'enclume."},{Text:"Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte les matériaux, paie le travail."},{Text:"Mes orques travaillent bien. Sauf Grosh. Grosh mange le charbon."},{Text:"Un jour, je forgerai une épée si grande qu'il faudra deux villages pour la porter."},{Text:"Tu as des bras de brindille. Reviens quand tu pourras soulever un lingot."}],
         Buttons:[{
           Label:"forge",
           Name:"La forge spéciale",
@@ -35,7 +37,7 @@
       },{
         Label:"travail",
         Name:"Le travail",
-        Texts:[{Text:"Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Mehdi, au Grand Bazar, changent toutes les heures."}],
+        Texts:[{Text:"Le Hejj a un livre de quêtes plein de chantiers. Et Mehdi a ses contrats. Moi, je veux du fer. Beaucoup de fer."}],
         Buttons:[{
           Label:"contrats",
           Name:"Voir les contrats",

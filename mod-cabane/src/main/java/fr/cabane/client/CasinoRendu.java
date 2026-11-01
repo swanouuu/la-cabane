@@ -603,6 +603,262 @@ final class CasinoRendu {
         ps.popPose();
     }
 
+    // ================================================================ la machine à sous (1 x 2, debout)
+
+    private static final net.minecraft.world.item.ItemStack[] SYMBOLES = {
+            new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SWEET_BERRIES), new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.APPLE),
+            new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BELL), new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EMERALD),
+            new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND), new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHER_STAR)};
+
+    static void machine(InteractifBlockEntity be, float partialTick, PoseStack ps, MultiBufferSource buf, int lumiere) {
+        Level level = be.getLevel();
+        float temps = level.getGameTime() + partialTick;
+        float ecoule = temps - be.debut();
+        float u = ecoule / Casino.DUREE_MACHINE;
+        boolean tourne = u < 1F && !be.tirages().isEmpty();
+        Pinceau p = new Pinceau(buf, ps, lumiere);
+        int rouge = 0xFFB3202A, rougeFonce = 0xFF7A141C;
+        // le meuble : socle, caisse rouge, liserés dorés, plateau à pièces
+        p.pave(0xFF2A0F12, -0.46F, 0F, -0.42F, 0.46F, 0.25F, 0.38F);
+        p.pave(rouge, -0.44F, 0.25F, -0.4F, 0.44F, 1.72F, 0.34F);
+        p.pave(OR, -0.45F, 0.6F, -0.41F, 0.45F, 0.64F, 0.35F);
+        p.pave(OR, -0.45F, 1.6F, -0.41F, 0.45F, 1.64F, 0.35F);
+        p.pave(rougeFonce, -0.3F, 0.3F, 0.34F, 0.3F, 0.52F, 0.42F);
+        p.pave(OR, -0.28F, 0.32F, 0.4F, 0.28F, 0.34F, 0.43F);
+        // le tableau de commande et le gros bouton
+        p.pave(0xFF1A1A20, -0.4F, 0.78F, 0.34F, 0.4F, 0.86F, 0.46F);
+        p.pave(tourne ? 0xFFFFE07A : 0xFFE0262E, -0.06F, 0.86F, 0.38F, 0.06F, 0.9F, 0.44F, true);
+        // l'écran des rouleaux
+        p.pave(0xFF0B0C10, -0.38F, 0.94F, 0.33F, 0.38F, 1.44F, 0.35F);
+        p.pave(0xFFF4F0E2, -0.35F, 0.97F, 0.351F, 0.35F, 1.41F, 0.352F);
+        // le fronton et ses ampoules
+        p.pave(OR, -0.48F, 1.72F, -0.38F, 0.48F, 2.02F, 0.32F);
+        p.pave(rougeFonce, -0.44F, 1.75F, 0.32F, 0.44F, 1.99F, 0.33F);
+        texteDebout(ps, buf, gras("JACKPOT"), 0, 1.87F, 0.334F, 0F, 0.012F, 0xFFFFE08A, LightTexture.FULL_BRIGHT);
+        boolean jackpot = !tourne && be.tirages().size() == 3 && be.tirages().get(0).equals(be.tirages().get(1))
+                && be.tirages().get(1).equals(be.tirages().get(2)) && ecoule < Casino.DUREE_MACHINE + 100;
+        for (int i = 0; i < 12; i++) {
+            float bx = -0.44F + i * 0.08F;
+            boolean allume = jackpot ? ((int) (temps / 2) + i) % 2 == 0 : tourne ? ((int) (temps / 1.5F) + i) % 3 == 0 : ((int) (temps / 10) + i) % 4 == 0;
+            int c = allume ? (i % 2 == 0 ? 0xFFFFF6C8 : 0xFFFFC83A) : 0xFF6A5420;
+            p.pave(c, bx, 2.0F, 0.26F, bx + 0.05F, 2.05F, 0.31F, allume);
+        }
+        // le levier, qui s'abaisse au début de la partie
+        float tire = tourne ? Mth.clamp(1F - Math.abs(u - 0.08F) / 0.08F, 0F, 1F) : 0F;
+        p.pave(0xFF8A8A94, 0.44F, 1.0F, -0.05F, 0.5F, 1.1F, 0.05F);
+        ps.pushPose();
+        ps.translate(0.48F, 1.05F, 0F);
+        ps.mulPose(Axis.XP.rotationDegrees(tire * 70F));
+        p.pave(0xFFC9CED6, -0.02F, 0F, -0.02F, 0.02F, 0.42F, 0.02F);
+        p.pave(0xFFE0262E, -0.05F, 0.4F, -0.05F, 0.05F, 0.5F, 0.05F);
+        ps.popPose();
+
+        // les trois rouleaux : ils défilent puis s'arrêtent l'un après l'autre
+        List<Integer> fin = be.tirages().size() == 3 ? be.tirages() : List.of(0, 1, 2);
+        List<Integer> avant = be.precedents().size() == 3 ? be.precedents() : List.of(0, 1, 2);
+        int n = SYMBOLES.length;
+        Direction face = be.getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+        for (int r = 0; r < 3; r++) {
+            float arret = 0.45F + r * 0.2F;
+            float k = Mth.clamp(u / arret, 0F, 1F);
+            float depart = avant.get(r);
+            float pas = n * (3 + r) + Math.floorMod(fin.get(r) - avant.get(r), n);
+            float position = !tourne ? fin.get(r) : depart + pas * ralentir(k, 3);
+            float x = -0.23F + r * 0.23F;
+            for (int j = -1; j <= 1; j++) {
+                float decalage = position - (float) Math.floor(position);
+                int symbole = Math.floorMod((int) Math.floor(position) + j, n);
+                float y = 1.19F - (j - decalage) * 0.15F;
+                if (Math.abs(y - 1.19F) > 0.2F) {
+                    continue;
+                }
+                ps.pushPose();
+                ps.translate(x, y, 0.37F);
+                ps.scale(0.16F, 0.16F, 0.16F);
+                Rendu3D.objet(ps, buf, SYMBOLES[symbole], level, lumiere);
+                ps.popPose();
+            }
+            if (k >= 1F && tourne) {
+                int cle = r + 10 * (int) (be.debut() % 100000);
+                Integer deja = CLOU.get(be.getBlockPos());
+                if (deja == null || deja < cle) {
+                    CLOU.put(be.getBlockPos(), cle);
+                    son(level, monde(be.getBlockPos(), face, x, 1.2F, 0.4F), SoundEvents.NOTE_BLOCK_BASEDRUM.value(), 0.8F, 1F + r * 0.15F);
+                }
+            }
+        }
+        p.pave(0x80E0262E, -0.35F, 1.185F, 0.36F, 0.35F, 1.195F, 0.365F, true);
+
+        Rendu3D.etiquette(ps, buf, gras("MACHINE À SOUS"), 0, 2.35, 0, 0.02F, 0xFFFFD75E, 0x70000000, lumiere);
+        if (!tourne && !be.tirages().isEmpty() && ecoule < Casino.DUREE_MACHINE + 300) {
+            String texte = be.gain() > 0 ? be.joueur() + " gagne " + Economie.format(be.gain()) + (jackpot ? " — JACKPOT !" : "") : be.joueur() + " : perdu";
+            Rendu3D.etiquette(ps, buf, Component.literal(texte), 0, 2.15, 0, 0.014F, be.gain() > 0 ? 0xFF7CFF9B : 0xFFFF6B6B, 0x70000000, lumiere);
+        }
+        if (be.tirages().size() == 3 && feter(be, ecoule, Casino.DUREE_MACHINE)) {
+            Vec3 centre = monde(be.getBlockPos(), face, 0, 1.4F, 0.6F);
+            if (jackpot) {
+                gerbe(level, centre, ParticleTypes.FIREWORK, 70, 0.3);
+                gerbe(level, centre, ParticleTypes.TOTEM_OF_UNDYING, 40, 0.4);
+                son(level, centre, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, 1.5F, 1F);
+                son(level, centre, SoundEvents.PLAYER_LEVELUP, 1.2F, 0.9F);
+            } else if (be.gain() > 0) {
+                gerbe(level, centre, ParticleTypes.HAPPY_VILLAGER, 15, 0.15);
+                son(level, centre, SoundEvents.EXPERIENCE_ORB_PICKUP, 1F, 1.2F);
+            } else {
+                son(level, centre, SoundEvents.NOTE_BLOCK_BASS.value(), 0.8F, 0.6F);
+            }
+        }
+    }
+
+    // ================================================================ la table de dés (2 x 1)
+
+    /** Les points d'une face de dé (positions sur une grille 3 x 3). */
+    private static final int[][] POINTS = {{}, {4}, {0, 8}, {0, 4, 8}, {0, 2, 6, 8}, {0, 2, 4, 6, 8}, {0, 2, 3, 5, 6, 8}};
+
+    /** Un dé de côté c centré à l'origine, la valeur v sur le dessus (les faces opposées font 7). */
+    private static void de(Pinceau p, float c, int v) {
+        float h = c / 2;
+        p.pave(0xFFF8F6F0, -h, -h, -h, h, h, h);
+        int devant = v == 2 || v == 5 ? 1 : 2;
+        int cote = 1;
+        while (cote == v || cote == 7 - v || cote == devant || cote == 7 - devant) {
+            cote++;
+        }
+        // dessus, dessous, devant, derrière, les deux côtés
+        points(p, v, h, 0);
+        points(p, 7 - v, h, 1);
+        points(p, devant, h, 2);
+        points(p, 7 - devant, h, 3);
+        points(p, cote, h, 4);
+        points(p, 7 - cote, h, 5);
+    }
+
+    private static void points(Pinceau p, int n, float h, int quelleFace) {
+        int couleur = n == 1 ? 0xFFC0182A : 0xFF141414;
+        float pas = h * 0.55F, d = h * 0.17F, e = h + 0.002F;
+        for (int k : POINTS[n]) {
+            float a = ((k % 3) - 1) * pas, b = ((k / 3) - 1) * pas;
+            switch (quelleFace) {
+                case 0 -> p.pave(couleur, a - d, e - 0.003F, b - d, a + d, e, b + d);
+                case 1 -> p.pave(couleur, a - d, -e, b - d, a + d, -e + 0.003F, b + d);
+                case 2 -> p.pave(couleur, a - d, b - d, e - 0.003F, a + d, b + d, e);
+                case 3 -> p.pave(couleur, a - d, b - d, -e, a + d, b + d, -e + 0.003F);
+                case 4 -> p.pave(couleur, e - 0.003F, a - d, b - d, e, a + d, b + d);
+                default -> p.pave(couleur, -e, a - d, b - d, -e + 0.003F, a + d, b + d);
+            }
+        }
+    }
+
+    static void des(InteractifBlockEntity be, float partialTick, PoseStack ps, MultiBufferSource buf, int lumiere) {
+        Level level = be.getLevel();
+        float temps = level.getGameTime() + partialTick;
+        float ecoule = temps - be.debut();
+        float u = ecoule / Casino.DUREE_DES;
+        boolean roule = u < 1F && be.tirages().size() == 2;
+        Pinceau p = new Pinceau(buf, ps, lumiere);
+        pieds(p, -0.45F, -0.45F, 1.45F, 0.45F);
+        plateau(p, -0.48F, -0.48F, 1.48F, 0.48F);
+        // les bandes rembourrées tout autour (les dés rebondissent dessus)
+        int bande = 0xFF3A1A10;
+        p.pave(bande, -0.48F, 0.93F, -0.48F, 1.48F, 1.02F, -0.4F);
+        p.pave(bande, -0.48F, 0.93F, 0.4F, 1.48F, 1.02F, 0.48F);
+        p.pave(bande, -0.48F, 0.93F, -0.4F, -0.4F, 1.02F, 0.4F);
+        p.pave(bande, 1.4F, 0.93F, -0.4F, 1.48F, 1.02F, 0.4F);
+        texteAPlat(ps, buf, gras("7"), 0.5F, 0.9335F, 0F, 0, 0.04F, 0xFFE8C15A, lumiere);
+        texteAPlat(ps, buf, Component.literal("MOINS DE 7  ×2,3     PILE 7  ×5,5     PLUS DE 7  ×2,3"), 0.5F, 0.9335F, 0.28F, 0, 0.0045F, 0xFFE8D9A0, lumiere);
+        List<Integer> valeurs = be.tirages().size() == 2 ? be.tirages() : List.of(3, 4);
+        for (int i = 0; i < 2; i++) {
+            float k = Mth.clamp(u * 1.15F - i * 0.08F, 0F, 1F);
+            float e = ralentir(k, 2);
+            float xFin = 0.25F + i * 0.45F, zFin = -0.12F + i * 0.2F;
+            float x = roule ? Mth.lerp(e, 1.3F, xFin) : xFin;
+            float z = roule ? Mth.lerp(e, 0.25F - i * 0.4F, zFin) : zFin;
+            float saut = roule ? Math.abs(Mth.sin(k * Mth.PI * 3.5F)) * 0.22F * (1 - k) : 0F;
+            float tour = roule ? (1 - e) * 900F : 0F;
+            ps.pushPose();
+            ps.translate(x, 0.93F + 0.08F + saut, z);
+            ps.mulPose(Axis.YP.rotationDegrees(i * 25F + tour * 0.3F));
+            ps.mulPose(Axis.XP.rotationDegrees(tour));
+            ps.mulPose(Axis.ZP.rotationDegrees(tour * 0.7F));
+            de(p, 0.16F, valeurs.get(i));
+            ps.popPose();
+        }
+        Rendu3D.etiquette(ps, buf, gras("LES DÉS"), 0.5, 1.75, 0, 0.02F, 0xFFFFD75E, 0x70000000, lumiere);
+        if (!roule && be.tirages().size() == 2 && ecoule < Casino.DUREE_DES + 300) {
+            int total = be.tirages().get(0) + be.tirages().get(1);
+            String texte = be.joueur() + " fait " + total + (be.gain() > 0 ? " : gagné " + Economie.format(be.gain()) : " : perdu");
+            Rendu3D.etiquette(ps, buf, Component.literal(texte), 0.5, 1.55, 0, 0.014F, be.gain() > 0 ? 0xFF7CFF9B : 0xFFFF6B6B, 0x70000000, lumiere);
+        }
+        Direction face = be.getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+        if (roule) {
+            int rebond = (int) (u * 1.15F * 3.5F);
+            Integer avant = CLOU.get(be.getBlockPos());
+            int cle = rebond + 100 * (int) (be.debut() % 100000);
+            if (avant == null || avant != cle) {
+                CLOU.put(be.getBlockPos(), cle);
+                son(level, monde(be.getBlockPos(), face, 0.6F, 1F, 0F), SoundEvents.WOOD_HIT, 0.6F, 1.6F);
+            }
+        }
+        if (be.tirages().size() == 2 && feter(be, ecoule, Casino.DUREE_DES) && be.gain() > 0) {
+            Vec3 centre = monde(be.getBlockPos(), face, 0.5F, 1.1F, 0F);
+            gerbe(level, centre, ParticleTypes.HAPPY_VILLAGER, 18, 0.15);
+            son(level, centre, SoundEvents.PLAYER_LEVELUP, 1F, 1.3F);
+        }
+    }
+
+    // ================================================================ pile ou face (1 x 1)
+
+    static void pileOuFace(InteractifBlockEntity be, float partialTick, PoseStack ps, MultiBufferSource buf, int lumiere) {
+        Level level = be.getLevel();
+        float temps = level.getGameTime() + partialTick;
+        float ecoule = temps - be.debut();
+        float u = ecoule / Casino.DUREE_PILE;
+        boolean vole = u < 1F && !be.tirages().isEmpty();
+        Pinceau p = new Pinceau(buf, ps, lumiere);
+        // un guéridon : pied doré, plateau rond de velours
+        p.pave(0xFF2A0F12, -0.3F, 0F, -0.3F, 0.3F, 0.08F, 0.3F);
+        p.pave(OR, -0.06F, 0.08F, -0.06F, 0.06F, 0.85F, 0.06F);
+        for (int i = 0; i < 32; i++) {
+            p.secteurH(0xFF6A1424, 0, 0.9F, 0, 0F, 0.45F, i * 11.25F, i * 11.25F + 11.25F, false);
+            p.paroiH(OR, 0, 0, 0.45F, 0.85F, 0.9F, i * 11.25F, i * 11.25F + 11.25F);
+        }
+        // la pièce : elle saute, tourne sur elle-même et retombe
+        int cote = be.tirages().isEmpty() ? 1 : be.tirages().get(0);
+        float hauteur = vole ? 4 * 1.3F * u * (1 - u) : 0F;
+        float angle = (vole ? (1 - u) * 1440F : 0F) + (cote == 0 ? 180F : 0F);
+        ps.pushPose();
+        ps.translate(0, 0.92F + 0.02F + hauteur, 0);
+        ps.mulPose(Axis.XP.rotationDegrees(angle));
+        for (int i = 0; i < 32; i++) {
+            float a0 = i * 11.25F, a1 = a0 + 11.25F;
+            p.secteurH(0xFFE8C04A, 0, 0.02F, 0, 0F, 0.2F, a0, a1, false);
+            p.secteurH(0xFFD4AF37, 0, -0.02F, 0, 0F, 0.2F, a0, a1, false);
+            p.paroiH(0xFFB08A2A, 0, 0, 0.2F, -0.02F, 0.02F, a0, a1);
+        }
+        texteAPlat(ps, buf, gras("FACE"), 0, 0.021F, 0.06F, 0, 0.012F, 0xFF7A5A10, lumiere);
+        texteAPlat(ps, buf, Component.literal("☺"), 0, 0.021F, -0.05F, 0, 0.022F, 0xFF7A5A10, lumiere);
+        ps.pushPose();
+        ps.mulPose(Axis.XP.rotationDegrees(180));
+        texteAPlat(ps, buf, gras("PILE"), 0, 0.021F, 0.06F, 0, 0.012F, 0xFF7A5A10, lumiere);
+        texteAPlat(ps, buf, gras("1 $"), 0, 0.021F, -0.05F, 0, 0.016F, 0xFF7A5A10, lumiere);
+        ps.popPose();
+        ps.popPose();
+        Rendu3D.etiquette(ps, buf, gras("PILE OU FACE"), 0, 1.75, 0, 0.018F, 0xFFFFD75E, 0x70000000, lumiere);
+        if (!vole && !be.tirages().isEmpty() && ecoule < Casino.DUREE_PILE + 300) {
+            String texte = (cote == 0 ? "PILE" : "FACE") + " — " + be.joueur() + (be.gain() > 0 ? " gagne " + Economie.format(be.gain()) : " perd");
+            Rendu3D.etiquette(ps, buf, Component.literal(texte), 0, 1.55, 0, 0.013F, be.gain() > 0 ? 0xFF7CFF9B : 0xFFFF6B6B, 0x70000000, lumiere);
+        }
+        Direction face = be.getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+        if (!be.tirages().isEmpty() && feter(be, ecoule, Casino.DUREE_PILE)) {
+            Vec3 centre = monde(be.getBlockPos(), face, 0, 1.0F, 0);
+            son(level, centre, SoundEvents.CHAIN_PLACE, 0.8F, 1.8F);
+            if (be.gain() > 0) {
+                gerbe(level, centre, ParticleTypes.HAPPY_VILLAGER, 12, 0.12);
+                son(level, centre, SoundEvents.EXPERIENCE_ORB_PICKUP, 1F, 1F);
+            }
+        }
+    }
+
     private CasinoRendu() {
     }
 }

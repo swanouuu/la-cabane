@@ -1,4 +1,4 @@
-// Fabrique dist/La Cabane.zip : l'instance Prism Launcher à envoyer aux potes.
+// Fabrique dist/SakaiMod.zip : l'instance Prism Launcher à envoyer aux potes.
 // À chaque lancement, Prism exécute packwiz-installer, qui met les mods à jour depuis urlDuPack.
 //   node outils/construire-instance.mjs
 import fs from "node:fs";

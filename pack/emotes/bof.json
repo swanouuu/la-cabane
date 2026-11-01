@@ -1,0 +1,86 @@
+{
+  "name": "Bof",
+  "author": "Beauvais",
+  "description": "Aucune idée.",
+  "uuid": "72a61213-0e7b-b427-7b65-2b4903ef381e",
+  "emote": {
+    "isLoop": "false",
+    "returnTick": 0,
+    "beginTick": 0,
+    "endTick": 26,
+    "stopTick": 29,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outBack",
+        "turn": 0,
+        "rightArm": {
+          "roll": 35,
+          "pitch": -30
+        },
+        "leftArm": {
+          "roll": -35,
+          "pitch": -30
+        },
+        "head": {
+          "roll": 14
+        },
+        "torso": {
+          "y": -0.4
+        }
+      },
+      {
+        "tick": 20,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 35,
+          "pitch": -30
+        },
+        "leftArm": {
+          "roll": -35,
+          "pitch": -30
+        },
+        "head": {
+          "roll": 14
+        },
+        "torso": {
+          "y": -0.4
+        }
+      },
+      {
+        "tick": 26,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 0,
+          "pitch": 0
+        },
+        "leftArm": {
+          "roll": 0,
+          "pitch": 0
+        },
+        "head": {
+          "roll": 0
+        },
+        "torso": {
+          "y": 0
+        }
+      }
+    ]
+  }
+}

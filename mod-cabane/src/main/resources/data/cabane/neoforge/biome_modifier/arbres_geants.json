@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#cabane:jungles_geantes",
+  "features": "cabane:arbre_geant",
+  "step": "vegetal_decoration"
+}

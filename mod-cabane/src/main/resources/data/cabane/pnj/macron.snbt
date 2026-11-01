@@ -3,30 +3,30 @@
   UUID:[I;-1294708460,2086157822,-1162702043,1387589293],
   CustomName:'{"text":"Macron, Président de Beauvais","color":"gold"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj","cabane_macron"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/macron.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.macron",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.4},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
-  Tags:["cabane_macron"],
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
         Name:"Le Président",
-        Texts:[{Text:"Mes chers compatriotes de Beauvais ! Bienvenue. Je suis votre Président. Et votre maire. Et, en même temps, un peu les deux."}],
+        Texts:[{Text:"Mes chers compatriotes de Beauvais ! Je suis votre Président. Et votre maire. Et, en même temps, un peu les deux."},{Text:"Du travail ? Je traverse la place et je vous en trouve ! Mehdi, au Grand Bazar, en a plein."},{Text:"C'est notre projeeeet ! … Pardon. Je m'emporte quand il y a du monde."},{Text:"Je suis le maître des horloges. Celle de la Grande Cabane retarde de cinq minutes, mais c'est voulu."},{Text:"Beauvais sera une start-up nation. Une jungle-up nation. Notez-le, Mehdi, notez."},{Text:"Les gens qui ne sont rien, ça n'existe pas à Beauvais. Ici, même Gribbs est quelque chose. On ne sait pas quoi."},{Text:"Le blackjack coûte un pognon de dingue. Et pourtant, les gens jouent. C'est fascinant."},{Text:"Pensez printemps ! … Ici c'est la jungle, il fait toujours printemps. Ça marche à tous les coups."},{Text:"Qu'ils viennent me chercher ! … Non, les gardes, rasseyez-vous, c'était une image."},{Text:"Poudre de perlimpinpin ! Ovsie m'en a vendu un sac. Ça ne fait rien du tout."},{Text:"Gaulois réfractaire ? Vous ? Non… Vous avez plutôt une tête de Beauvaisien coopératif."}],
         Buttons:[{
           Label:"gardes",
           Name:"Et vos gardes ?",
           Type:"ACTION",
           Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"gardes"}]
         },{
-          Label:"travail",
-          Name:"Du travail ?",
+          Label:"projet",
+          Name:"Votre projet ?",
           Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"travail"}]
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"projet"}]
         },{
           Label:"bye",
           Name:"Au revoir, Monsieur le Président",
@@ -35,19 +35,19 @@
       },{
         Label:"gardes",
         Name:"La garde",
-        Texts:[{Text:"Ma garde rapprochée : quatre guerriers d'élite de la jungle. Je vous le dis avec bienveillance : ne me touchez pas. Ils finissent toujours par se calmer… mais pas tout de suite."}],
+        Texts:[{Text:"Ma garde rapprochée : quatre guerriers d'élite de la jungle. Je vous le dis avec bienveillance : ne me touchez pas."},{Text:"Ils sont invincibles. Je leur ai demandé comment. Ils ont dit : « en même temps ». Je n'ai pas compris non plus."}],
         Buttons:[{
           Label:"bye",
           Name:"Compris",
           Type:"CLOSE"
         }]
       },{
-        Label:"travail",
-        Name:"Le travail",
-        Texts:[{Text:"Du travail ? Je traverse la place et je vous en trouve ! Mehdi, au Grand Bazar, affiche des contrats toutes les heures. C'est notre projet !"}],
+        Label:"projet",
+        Name:"Le grand projet",
+        Texts:[{Text:"Mon grand projet : un pont jusqu'à la lune. On commence par un pont jusqu'à la rivière. Le Hejj a les plans, dans votre livre de quêtes."},{Text:"Faire de Beauvais la plus grande ville de la jungle. Avec un port, une gare, et un rond-point. Surtout un rond-point."}],
         Buttons:[{
           Label:"bye",
-          Name:"Merci, Monsieur le Président",
+          Name:"Ambitieux",
           Type:"CLOSE"
         }]
       }]

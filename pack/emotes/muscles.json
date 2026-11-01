@@ -1,0 +1,101 @@
+{
+  "name": "Les muscles",
+  "author": "Beauvais",
+  "description": "Regarde-moi ces biceps.",
+  "uuid": "689dec0b-c758-b155-3232-961a3d871ffd",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 8,
+    "beginTick": 8,
+    "endTick": 32,
+    "stopTick": 35,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 8,
+        "easing": "outBack",
+        "turn": 0,
+        "rightArm": {
+          "roll": 95,
+          "pitch": -10
+        },
+        "leftArm": {
+          "roll": -95,
+          "pitch": -10
+        },
+        "torso": {
+          "pitch": -4
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 120
+        },
+        "leftArm": {
+          "roll": -120
+        },
+        "head": {
+          "roll": 6
+        }
+      },
+      {
+        "tick": 20,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 95
+        },
+        "leftArm": {
+          "roll": -95
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 26,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 120
+        },
+        "leftArm": {
+          "roll": -120
+        },
+        "head": {
+          "roll": 6
+        }
+      },
+      {
+        "tick": 32,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 95
+        },
+        "leftArm": {
+          "roll": -95
+        },
+        "head": {
+          "roll": 0
+        }
+      }
+    ]
+  }
+}

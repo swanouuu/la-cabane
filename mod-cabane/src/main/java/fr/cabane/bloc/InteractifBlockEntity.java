@@ -25,8 +25,8 @@ public class InteractifBlockEntity extends BlockEntity {
     private long caisse;
 
     // ce que montrent les grandes tables : le dernier tirage (roulette, roue), les mains (blackjack)
-    private int tirage = -1;
-    private int precedent = -1;
+    private List<Integer> tirage = List.of();
+    private List<Integer> precedent = List.of();
     private long debut = -1000;
     private String joueur = "";
     private long gain;
@@ -67,10 +67,10 @@ public class InteractifBlockEntity extends BlockEntity {
         modifie();
     }
 
-    /** Un tirage de roulette ou de roue : tout le casino le voit tourner. */
-    public void annoncer(int tirage, String joueur, long gain) {
+    /** Un tirage (roulette, roue, rouleaux, dés, pièce) : tout le casino le voit en 3D. */
+    public void annoncer(List<Integer> tirage, String joueur, long gain) {
         precedent = this.tirage;
-        this.tirage = tirage;
+        this.tirage = List.copyOf(tirage);
         this.joueur = joueur;
         this.gain = gain;
         debut = level == null ? 0 : level.getGameTime();
@@ -82,10 +82,18 @@ public class InteractifBlockEntity extends BlockEntity {
     }
 
     public int tirage() {
-        return tirage;
+        return tirage.isEmpty() ? -1 : tirage.get(0);
     }
 
     public int precedent() {
+        return precedent.isEmpty() ? -1 : precedent.get(0);
+    }
+
+    public List<Integer> tirages() {
+        return tirage;
+    }
+
+    public List<Integer> precedents() {
         return precedent;
     }
 
@@ -125,8 +133,8 @@ public class InteractifBlockEntity extends BlockEntity {
         }
         tag.putString("nom", nomProprietaire);
         tag.putLong("caisse", caisse);
-        tag.putInt("tirage", tirage);
-        tag.putInt("precedent", precedent);
+        tag.putIntArray("tirages", tirage);
+        tag.putIntArray("precedents", precedent);
         tag.putLong("debut", debut);
         tag.putString("joueur", joueur);
         tag.putLong("gain", gain);
@@ -153,8 +161,8 @@ public class InteractifBlockEntity extends BlockEntity {
         proprietaire = tag.hasUUID("proprietaire") ? tag.getUUID("proprietaire") : null;
         nomProprietaire = tag.getString("nom");
         caisse = tag.getLong("caisse");
-        tirage = tag.contains("tirage") ? tag.getInt("tirage") : -1;
-        precedent = tag.contains("precedent") ? tag.getInt("precedent") : -1;
+        tirage = entiers(tag.getIntArray("tirages"));
+        precedent = entiers(tag.getIntArray("precedents"));
         debut = tag.contains("debut") ? tag.getLong("debut") : -1000;
         joueur = tag.getString("joueur");
         gain = tag.getLong("gain");

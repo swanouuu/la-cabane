@@ -1,0 +1,77 @@
+{
+  "name": "Salut militaire",
+  "author": "Beauvais",
+  "description": "À vos ordres, Monsieur le Président !",
+  "uuid": "61182302-9e64-15ae-335e-aa7aee804908",
+  "emote": {
+    "isLoop": "false",
+    "returnTick": 0,
+    "beginTick": 0,
+    "endTick": 34,
+    "stopTick": 37,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -135,
+          "yaw": -40,
+          "roll": 30
+        },
+        "head": {
+          "pitch": -5
+        },
+        "torso": {
+          "pitch": -3
+        }
+      },
+      {
+        "tick": 28,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -135,
+          "yaw": -40,
+          "roll": 30
+        },
+        "head": {
+          "pitch": -5
+        },
+        "torso": {
+          "pitch": -3
+        }
+      },
+      {
+        "tick": 34,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "head": {
+          "pitch": 0
+        },
+        "torso": {
+          "pitch": 0
+        }
+      }
+    ]
+  }
+}

@@ -1,30 +1,35 @@
 {
-  id:"easy_npc:illusioner",
+  id:"easy_npc:humanoid",
   UUID:[I;-1032685730,-1512804940,133924635,2027646041],
   CustomName:'{"text":"Le Hejj du Village","color":"gold"}',
   CustomNameVisible:1b,
-  Invulnerable:1b,
   PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
   EasyNPCVersion:3,
-  VariantType:"ILLUSIONER",
-  SkinData:{Type:"DEFAULT"},
-  RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:umvuthi"},
-  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/hejj.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.gardien",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
     DialogDataSet:[{
         Label:"default",
-        Name:"Accueil",
-        Texts:[{Text:"Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais accepte de vous héberger dans la Grande Cabane… à condition de l'aider. Moi, je suis le Hejj : le sage du village."}],
+        Name:"Le Hejj",
+        Texts:[{Text:"Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais vous accueille… à condition de l'aider à grandir."},{Text:"Ah, les gens du ciel. Asseyez-vous. Non, pas là, c'est le banc de Gérard."},{Text:"Un village, c'est comme un arbre géant : il pousse lentement, mais il faut l'arroser tous les jours. Vous êtes l'arrosoir."},{Text:"J'ai rêvé d'un Beauvais avec un port, un pont, une tour plus haute que les arbres. Mon rêve a besoin de vos bras."},{Text:"Le Président dit que c'est lui qui décide. Je le laisse dire. C'est moi qui sais où sont les clés."}],
         Buttons:[{
           Label:"aider",
           Name:"Comment aider ?",
           Type:"ACTION",
           Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"aider"}]
         },{
+          Label:"maison",
+          Name:"Où s'installer ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"maison"}]
+        },{
           Label:"reliques",
-          Name:"Et cette cabane ?",
+          Name:"Et les reliques ?",
           Type:"ACTION",
           Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"reliques"}]
         },{
@@ -34,34 +39,29 @@
         }]
       },{
         Label:"aider",
-        Name:"Aider le village",
-        Texts:[{Text:"Mehdi, de Pôle emploi, affiche au Grand Bazar des contrats qui changent toutes les heures : apportez ce qu'il demande, le village paie en SakaiDollars. Et regardez le grand panneau de la carte, au milieu du village."}],
+        Name:"Agrandir Beauvais",
+        Texts:[{Text:"Le village doit grandir : des maisons, un marché, un pont, un port… Ouvrez votre livre de quêtes, chapitre « Agrandir Beauvais ». Chaque chantier fini, le village vous paie."},{Text:"Mehdi affiche des contrats toutes les heures au Grand Bazar, et chaque habitant a un petit service à vous demander. Regardez le livre de quêtes : tout y est."}],
         Buttons:[{
           Label:"bye",
           Name:"On s'y met !",
           Type:"CLOSE"
         }]
       },{
-        Label:"reliques",
-        Name:"Les Sept Reliques",
-        Texts:[{Text:"Sept reliques reposaient sur le comptoir. Elles ont été cachées dans les plus grands donjons du monde, parfois très loin d'ici. Ramenez-les, et la Cabane se réveillera. Tout est noté dans votre livre de quêtes."}],
+        Label:"maison",
+        Name:"Vos maisons",
+        Texts:[{Text:"Le cœur du village appartient aux habitants. Vous, installez-vous juste à côté, hors de l'enceinte : construisez vos maisons, vos fermes, vos usines. Et aidez Beauvais à pousser jusqu'à vous."},{Text:"Les terrains à vendre, dans le village, sont pour les commerces. Pour vivre, sortez par la grande porte et choisissez un coin de jungle. Pas trop près de Gérard."}],
         Buttons:[{
-          Label:"cartes",
-          Name:"Comment les trouver ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"cartes"}]
-        },{
           Label:"bye",
-          Name:"J'y vais !",
+          Name:"Compris",
           Type:"CLOSE"
         }]
       },{
-        Label:"cartes",
-        Name:"Les cartes",
-        Texts:[{Text:"Karim le Chouf, à côté du grand panneau, vous guidera : chaque quête d'indice vous donne une carte au trésor. Prenez des provisions… et vos téléphones."}],
+        Label:"reliques",
+        Name:"Les Sept Reliques",
+        Texts:[{Text:"Sept reliques reposaient sur le comptoir. Elles ont été cachées dans les plus grands donjons du monde, parfois très loin d'ici. Ramenez-les, et le village se réveillera. Karim, au grand panneau, a les cartes."}],
         Buttons:[{
           Label:"bye",
-          Name:"Merci, Hejj",
+          Name:"J'y vais !",
           Type:"CLOSE"
         }]
       }]

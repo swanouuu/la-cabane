@@ -23,7 +23,7 @@ public class PhoneScreen extends ClientPiaf.Ecran {
     }
 
     private boolean activation() {
-        return ClientPhone.myNumber.isEmpty();
+        return ClientPhone.sansSim() || ClientPhone.myNumber.isEmpty();
     }
 
     private boolean enAppel() {

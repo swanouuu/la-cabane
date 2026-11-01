@@ -65,7 +65,12 @@ public final class HubEvents {
             new Pnj("ginette", 6.5, -14.5, 0F),
             new Pnj("monique", -7.5, 24.5, -90F),      // l'avenue de la grande porte
             new Pnj("martine", 29.5, 3.5, 180F),
-            new Pnj("thierry", 0.5, 40.5, 0F));
+            new Pnj("thierry", 0.5, 40.5, 0F),
+            // Vegeta s'entraîne près de la tour de guet ; les orques travaillent à la forge de Brokk
+            new Pnj("vegeta", -30.5, 42.5, 90F),
+            new Pnj("orque_1", 55.5, -5.5, 0F),
+            new Pnj("orque_2", 58.5, -3.5, 90F),
+            new Pnj("orque_3", 55.5, 5.5, 180F));
 
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
     private static final int RAYON_CHUNKS = 6;
@@ -88,7 +93,19 @@ public final class HubEvents {
     private static int indexEtape;
     private static long debutConstruction;
 
+    /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
+    public static final int VERSION_PNJ = 2;
+    private static int rafraichir = -1;
+
     public static void onServerStarted(MinecraftServer server) {
+        HubData donnees = HubData.get(server);
+        rafraichir = -1;
+        fr.cabane.monde.CabaneMonde.zoneCalme(donnees.centre());
+        if (donnees.centre() != null && donnees.versionPnj() != VERSION_PNJ) {
+            // on charge le village, on laisse aux PNJ le temps d'apparaître, puis on les remplace
+            forcerVillage(server.overworld(), donnees.centre(), true);
+            rafraichir = 100;
+        }
         // en solo, on peut ouvrir plusieurs mondes de suite : rien ne doit rester du précédent
         recherche = null;
         etapes = null;
@@ -103,7 +120,23 @@ public final class HubEvents {
         return HubData.get(server).centre() != null;
     }
 
+    private static void forcerVillage(ServerLevel level, BlockPos centre, boolean forcer) {
+        for (int cx = (centre.getX() >> 4) - 5; cx <= (centre.getX() >> 4) + 5; cx++) {
+            for (int cz = (centre.getZ() >> 4) - 5; cz <= (centre.getZ() >> 4) + 5; cz++) {
+                level.setChunkForced(cx, cz, forcer);
+            }
+        }
+    }
+
     public static void tick(MinecraftServer server) {
+        if (rafraichir > 0 && --rafraichir == 0) {
+            ServerLevel level = server.overworld();
+            HubData donnees = HubData.get(server);
+            int n = spawnNpcs(level);
+            donnees.setVersionPnj(VERSION_PNJ);
+            forcerVillage(level, donnees.centre(), false);
+            Cabane.LOGGER.info("PNJ du village mis à jour (version {}) : {} PNJ", VERSION_PNJ, n);
+        }
         if (etape == Etape.RIEN || --attente > 0) {
             return;
         }
@@ -121,6 +154,8 @@ public final class HubEvents {
                 }
                 site = recherche.resultat();
                 recherche = null;
+                // plus aucune structure ne s'installera autour du village (ses chunks ne sont pas encore générés)
+                fr.cabane.monde.CabaneMonde.zoneCalme(site == null ? null : site.centre());
                 if (site == null) {
                     BlockPos spawn = level.getSharedSpawnPos();
                     level.getChunk(spawn.getX() >> 4, spawn.getZ() >> 4);
@@ -216,6 +251,7 @@ public final class HubEvents {
         // la cabane devient le vrai centre de la map : la bordure du monde se centre dessus
         level.getWorldBorder().setCenter(centre.getX() + 0.5, centre.getZ() + 0.5);
         int npcs = spawnNpcs(level);
+        data.setVersionPnj(VERSION_PNJ);
         Cabane.LOGGER.info("Centre de map construit en {} : {} ms, {} PNJ", centre, System.currentTimeMillis() - start, npcs);
     }
 
