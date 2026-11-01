@@ -451,21 +451,13 @@ ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
 
 // ---- la boutique du marché (prix modifiables ici ou directement dans les fichiers)
+// Mouloud ne vend pas tout : le casino, les puffs, la chicha, la police et le bar passent par l'hôte ; les cartes, par Jean-Mi
 const offres = [
-  ["telephone", "cabane:telephone", 1, 750], ["parachute", "cabane:parachute", 1, 150],
-  ["booster", "cabane:booster", 1, 120], ["classeur", "cabane:classeur", 1, 300], ["ticket", "cabane:ticket_a_gratter", 1, 20],
+  ["telephone", "cabane:telephone", 1, 750], ["parachute", "cabane:parachute", 1, 150], ["ticket", "cabane:ticket_a_gratter", 1, 20],
   ["etal", "cabane:etal", 1, 400], ["pain", "minecraft:bread", 8, 30], ["torches", "minecraft:torch", 16, 25],
-  // le casino coûte cher : c'est un vrai investissement (et il faut encore remplir la caisse)
-  ["machine_a_sous", "cabane:machine_a_sous", 1, 8000], ["table_roulette", "cabane:table_roulette", 1, 12000],
-  ["table_blackjack", "cabane:table_blackjack", 1, 12000], ["table_des", "cabane:table_des", 1, 6000],
-  ["roue_fortune", "cabane:roue_fortune", 1, 10000], ["table_pile_ou_face", "cabane:table_pile_ou_face", 1, 4000],
 ];
-offres.push(["puff_rose", "cabane:puff_rose", 1, 60], ["puff_bleue", "cabane:puff_bleue", 1, 60], ["puff_menthe", "cabane:puff_menthe", 1, 60],
-  ["chicha", "cabane:chicha", 1, 900]);
 for (const nom of ["puff_rose", "puff_bleue", "puff_menthe", "tuyau"]) itemGenere(nom);
 // la police (textures : outils/police.mjs)
-offres.push(["menottes", "cabane:menottes", 1, 800], ["pistolet", "cabane:pistolet", 1, 2500],
-  ["tenue_police", "cabane:tenue_police", 1, 1200], ["matraque", "cabane:matraque", 1, 600], ["voiture_police", "cabane:voiture_police", 1, 25000]);
 for (const nom of ["menottes", "tenue_police", "casquette_police", "veste_police", "pantalon_police", "chaussures_police", "matraque", "voiture_police"]) itemGenere(nom);
 // la photo imprimée : un polaroid (ciel, soleil, collines)
 tex("item/photo", [
@@ -537,10 +529,13 @@ ecrire("assets/cabane/blockstates/partie_table.json", { variants: { "": { model:
 ecrire("assets/cabane/blockstates/chicha.json", { variants: Object.fromEntries(
   [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: "cabane:block/chicha", ...(y ? { y } : {}) }])) });
 ecrire("data/cabane/loot_table/blocks/chicha.json", { type: "minecraft:block", pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: "cabane:chicha" }] }] });
-offres.push(...OFFRES_BOISSONS, ...OFFRES_ACCESSOIRES);
+offres.push(...OFFRES_ACCESSOIRES);
 offres.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i }));
 // le marché noir : seulement chez le Fourgue
-OFFRES_NOIR.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i, noir: true }));
+OFFRES_NOIR.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i, vendeur: "fourgue" }));
+// Jean-Mi Collector, la boutique de cartes : moins cher que Mouloud ne l'était
+[["cartes_booster", "cabane:booster", 1, 80], ["cartes_booster_x5", "cabane:booster", 5, 360], ["cartes_classeur", "cabane:classeur", 1, 180]]
+  .forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i, vendeur: "vendeur_cartes" }));
 
 // ---- les contrats horaires du marché
 const contrats = [

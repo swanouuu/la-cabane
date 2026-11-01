@@ -38,7 +38,7 @@ public final class Ambiance {
                         PROCHAINE.put(pnj.getUUID(), maintenant + 60 + level.random.nextInt(ATTENTE_HASARD));
                     } else if (maintenant >= prochaine) {
                         SoundEvent son = SoundEvent.createVariableRangeEvent(Cabane.id("ambiance." + nom(pnj)));
-                        level.playSound(null, pnj.getX(), pnj.getEyeY(), pnj.getZ(), son, SoundSource.NEUTRAL, 1.2F, 1F);
+                        level.playSound(null, pnj.getX(), pnj.getEyeY(), pnj.getZ(), son, SoundSource.NEUTRAL, 0.55F, 1F);
                         Cabane.LOGGER.debug("Ambiance : {} parle", nom(pnj));
                         PROCHAINE.put(pnj.getUUID(), maintenant + ATTENTE_MIN + level.random.nextInt(ATTENTE_HASARD));
                     }

@@ -27,6 +27,8 @@ public class HubData extends SavedData {
     private BlockPos forteresse;
     /** L'île du combat de Vegeta, tant qu'elle existe (pour l'effacer même si le serveur s'est arrêté en plein combat). */
     private BlockPos ileVegeta;
+    /** Combien de fois le serveur a démarré (la demande du jour du Hejj change à chaque fois). */
+    private int demarrages;
     /** L'hôte a-t-il ouvert la forteresse (/cabane forteresse ouvrir) ? */
     private boolean forteresseOuverte;
     /** Le combat Vegeta contre Goku : 0 pas encore prévu, 1 armé par l'hôte, 2 joué. */
@@ -48,6 +50,7 @@ public class HubData extends SavedData {
         data.libere = tag.getBoolean("libere");
         NbtUtils.readBlockPos(tag, "forteresse").ifPresent(pos -> data.forteresse = pos);
         NbtUtils.readBlockPos(tag, "ileVegeta").ifPresent(pos -> data.ileVegeta = pos);
+        data.demarrages = tag.getInt("demarrages");
         data.forteresseOuverte = tag.getBoolean("forteresseOuverte");
         data.vegeta = tag.getInt("vegeta");
         data.issueVegeta = tag.getString("issueVegeta");
@@ -69,6 +72,7 @@ public class HubData extends SavedData {
         if (ileVegeta != null) {
             tag.put("ileVegeta", NbtUtils.writeBlockPos(ileVegeta));
         }
+        tag.putInt("demarrages", demarrages);
         if (forteresse != null) {
             tag.put("forteresse", NbtUtils.writeBlockPos(forteresse));
         }
@@ -102,6 +106,12 @@ public class HubData extends SavedData {
     public void setLibere(boolean valeur) {
         libere = valeur;
         setDirty();
+    }
+
+    public int nouveauDemarrage() {
+        demarrages++;
+        setDirty();
+        return demarrages;
     }
 
     public BlockPos ileVegeta() {

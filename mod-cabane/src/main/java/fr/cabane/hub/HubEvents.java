@@ -52,7 +52,7 @@ public final class HubEvents {
             new Pnj("gardien", 3.5, -31.5, 0F),        // sur le porche de la Grande Cabane
             new Pnj("cartographe", -9.5, 4.5, 0F),     // à côté du grand panneau de la carte
             new Pnj("marchand", -54.5, 0.5, -90F),     // derrière son comptoir, au Grand Bazar
-            new Pnj("forgeron", 58.5, 0.5, 90F),       // dans sa forge, au bout de la rue
+            new Pnj("forgeron", 60.5, 0.5, 90F),       // derrière l'enclume monumentale de sa forge, au bout de la rue
             new Pnj("fee", -27.5, 4.5, 0F),            // devant le Grand Bazar
             new Pnj("pole_emploi", -37.5, -7.5, 0F),   // au tableau des contrats, dans le bazar
             new Pnj("cousin", -27.5, -4.5, -90F),      // l'autre côté de l'entrée du bazar
@@ -84,11 +84,13 @@ public final class HubEvents {
             new Pnj("thierry", 0.5, 40.5, 0F),
             // Vegeta s'entraîne près de la tour de guet ; les orques travaillent à la forge de Brokk
             new Pnj("vegeta", -30.5, 42.5, 90F),
+            // Jean-Mi, derrière le comptoir de sa boutique de cartes (au nord-ouest de la place)
+            new Pnj("vendeur_cartes", -26.5, -29.5, 0F),
             // le Fourgue, dans l'ombre derrière la tour de guet : le marché noir
             new Pnj("fourgue", -38.5, 48.5, 135F),
-            new Pnj("orque_1", 55.5, -5.5, 0F),
-            new Pnj("orque_2", 58.5, -3.5, 90F),
-            new Pnj("orque_3", 55.5, 5.5, 180F));
+            new Pnj("orque_1", 55.5, -12.5, 180F),     // devant les hauts-fourneaux
+            new Pnj("orque_2", 63.5, -12.5, 180F),
+            new Pnj("orque_3", 59.5, 12.5, 0F));
 
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
     private static final int RAYON_CHUNKS = 10;
@@ -112,7 +114,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 7;
+    public static final int VERSION_PNJ = 9;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {

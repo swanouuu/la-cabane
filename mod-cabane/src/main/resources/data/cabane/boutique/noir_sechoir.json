@@ -3,5 +3,5 @@
   "nombre": 1,
   "prix": 1500,
   "ordre": 3,
-  "noir": true
+  "vendeur": "fourgue"
 }

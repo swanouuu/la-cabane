@@ -87,9 +87,10 @@ public final class ClientBoutique {
         @Override
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
-            // les offres du Fourgue s'appellent toutes « noir_… »
-            boolean noir = !offres.isEmpty() && offres.get(0).id().contains(":noir_");
-            Ui.titre(g, font, noir ? "Marché noir" : "Boutique du marché", left + 10, top + 10);
+            // les offres des autres vendeurs ont un préfixe : « noir_… » (le Fourgue), « cartes_… » (Jean-Mi)
+            String premiere = offres.isEmpty() ? "" : offres.get(0).id();
+            String titre = premiere.contains(":noir_") ? "Marché noir" : premiere.contains(":cartes_") ? "Jean-Mi Collector" : "Boutique du marché";
+            Ui.titre(g, font, titre, left + 10, top + 10);
             Ui.solde(g, font, left + W - 10, top + 10);
             int debut = page * PAR_PAGE;
             for (int i = debut; i < Math.min(offres.size(), debut + PAR_PAGE); i++) {

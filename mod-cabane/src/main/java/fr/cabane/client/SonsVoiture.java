@@ -72,7 +72,8 @@ public final class SonsVoiture {
             super(CabaneSons.VOITURE.get(), SoundSource.NEUTRAL, SoundInstance.createUnseededRandom());
             this.voiture = voiture;
             this.sirene = sirene;
-            this.volume = sirene ? 1.6F : 0.9F;
+            // assez fort pour s'entendre de loin, sans agresser les oreilles
+            this.volume = sirene ? 0.7F : 0.45F;
             this.pitch = 1F;
             this.attenuation = SoundInstance.Attenuation.LINEAR;
             this.x = voiture.getX();

@@ -5,6 +5,10 @@ file = "config/amendments-common.toml"
 hash = "017189f166cf01fb163f4b2a4f68f6e6cf5b0f57733a7a009ca0986480164eb3"
 
 [[files]]
+file = "config/easy_npc/security.cfg"
+hash = "9bf3eb39632295c34fb771c3da291711b6a907c53b163d67c2b4ea453fe86b69"
+
+[[files]]
 file = "config/fancymenu/options.txt"
 hash = "66918f9cb4ebdcf1a20d73cb6cfbd8906a4c3e72b9b568b1e5315748a7707ca9"
 
@@ -127,7 +131,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "c7bca396d41e787fc1504de7a9749a9bf428044f39fe6649b6de63b9a88578c3"
+hash = "cccb838734d70fce679abd2b30f45cd22c04c4c8fdd39edb965a5a5cf55b398d"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"

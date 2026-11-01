@@ -438,6 +438,19 @@ skin("prisonnier", (img) => {
   jambes(img, (f, x, y) => (y >= 10 ? hex("#d9a57a") : (x + y) % 5 === 0 ? sale : hex("#6a6250")));
 });
 
+// ---- Jean-Mi Collector, le vendeur de cartes : queue de cheval, barbe mal taillée, lunettes, t-shirt à étoile trop petit
+skin("vendeur_cartes", (img) => {
+  tete(img, { teint: "#e2b48a", cheveux: "#4a3424", coupe: "long", lunettes: "#202028", yeux: "#3a2a1a", barbe: { couleur: "#4a3424", style: "courte" } });
+  const tshirt = hex("#6a2c8c"), etoile = hex("#f2d03c"), peau = hex("#e2b48a");
+  corps(img, (f, x, y) => {
+    if (f === "avant" && ((y === 3 && x >= 3 && x <= 4) || (y === 4 && x >= 2 && x <= 5) || (y === 5 && x >= 3 && x <= 4) || (y === 6 && (x === 2 || x === 5)))) return etoile;
+    if (y >= 10) return peau; // le t-shirt est trop court
+    return tshirt;
+  });
+  bras(img, mains(peau, () => tshirt, 5));
+  jambes(img, (f, x, y) => (y >= 11 ? hex("#3a3a40") : y >= 6 ? peau : hex("#5a6a7a")));
+});
+
 // ---- le Fourgue, le dealer : capuche noire, survêt gris, sacoche en bandoulière
 skin("fourgue", (img) => {
   tete(img, { teint: "#a8754e", cheveux: "#151210", coupe: "court", yeux: "#2a1a10", barbe: { couleur: "#151210", style: "courte" } });
@@ -460,7 +473,7 @@ const CHOIX = { hejj: "hejj_a", karim: "karim_a", mouloud: "mouloud_a", gribbs: 
 for (const [nom, version] of Object.entries(CHOIX)) {
   fs.copyFileSync(path.join(DOSSIER, "versions", version + ".png"), path.join(DOSSIER, nom + ".png"));
 }
-for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier", "fourgue"]) {
+for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier", "fourgue", "vendeur_cartes"]) {
   fs.copyFileSync(path.join(DOSSIER, "versions", nom + ".png"), path.join(DOSSIER, nom + ".png"));
 }
 

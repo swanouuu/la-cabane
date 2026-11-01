@@ -55,7 +55,8 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class EvenementVegeta {
-    private static final int DUREE_CINEMA = (int) (ClientCinema.DUREE_REELLE * 20);
+    /** Le serveur ouvre le vote quand la question s'affiche à l'écran (la cinématique dure un peu plus, au cas où). */
+    private static final int DUREE_CINEMA = (int) (ClientCinema.DEBUT_VOTE * 20);
     private static final int DUREE_VOTE = 20 * 20;
     private static final int DUREE_COMBAT = 20 * 60 * 6;
     private static final int RAYON_ILE = 17;

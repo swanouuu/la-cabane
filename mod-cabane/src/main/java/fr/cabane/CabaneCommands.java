@@ -56,9 +56,15 @@ public final class CabaneCommands {
 
         dispatcher.register(Commands.literal("cabane")
                 // utilisables par les PNJ (Easy NPC, « exécuter en tant que joueur ») ou à la main
-                .then(Commands.literal("boutique").executes(ctx -> run(ctx, Boutique::ouvrir)))
+                .then(Commands.literal("boutique").executes(ctx -> run(ctx, Boutique::ouvrir))
+                        // la boutique d'un autre PNJ du village (Jean-Mi et ses cartes…), seulement à côté de lui
+                        .then(Commands.literal("cartes").executes(ctx -> run(ctx, j -> Boutique.ouvrirChez(j, "vendeur_cartes")))))
                 .then(Commands.literal("contrats").executes(ctx -> run(ctx, Contrats::ouvrir)))
                 .then(Commands.literal("forge").executes(ctx -> run(ctx, fr.cabane.boutique.Forge::ouvrir)))
+                // la demande du jour du Hejj
+                .then(Commands.literal("hejj")
+                        .then(Commands.literal("demande").executes(ctx -> run(ctx, fr.cabane.hub.DemandesHejj::demande)))
+                        .then(Commands.literal("livrer").executes(ctx -> run(ctx, fr.cabane.hub.DemandesHejj::livrer))))
                 // le marché noir : seulement à côté du Fourgue
                 .then(Commands.literal("fourgue").executes(ctx -> run(ctx, fr.cabane.drogue.MarcheNoir::ouvrir))
                         .then(Commands.literal("vendre").executes(ctx -> run(ctx, fr.cabane.drogue.MarcheNoir::vendre))))

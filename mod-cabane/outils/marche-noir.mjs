@@ -136,45 +136,80 @@ export function genererMarcheNoir({ ecrire, png, lang }) {
 
   // les postes des labos : deux par produit, chacun en 3D (la marchandise qui travaille est dessinée par PosteRenderer)
   const pieds = (bois, h) => [[0, 0], [14, 0], [0, 14], [14, 14]].map(([x, z]) => morceau([x, 0, z], [x + 2, h, z + 2], bois));
+  const b = (de, a, t) => morceau(de, a, t);
   const POSTES = {
-    sechoir: ["Séchoir à weed", { bois: "minecraft:block/spruce_log", planche: "minecraft:block/spruce_planks", fil: "minecraft:block/white_wool",
-      feuille: "minecraft:block/azalea_leaves" }, false, [
-      morceau([0, 0, 4], [3, 1, 12], "#planche"), morceau([13, 0, 4], [16, 1, 12], "#planche"),
-      morceau([1, 1, 7], [2.5, 14, 9], "#bois"), morceau([13.5, 1, 7], [15, 14, 9], "#bois"),
-      morceau([1, 12.5, 7.4], [15, 13.5, 8.6], "#bois"),
-      ...[3, 6, 9, 12].map((x) => morceau([x, 10.5, 7.9], [x + 0.3, 12.5, 8.1], "#fil")),
-      morceau([2.5, 2, 6], [13.5, 2.5, 10], "#planche"), morceau([4, 2.5, 6.5], [7, 3.5, 9.5], "#feuille"), morceau([9, 2.5, 6.5], [12, 3.2, 9.5], "#feuille")]],
-    presse_hash: ["Presse à hash", { fer: "minecraft:block/iron_block", sombre: "minecraft:block/anvil", plateau: "minecraft:block/smooth_stone",
-      bois: "minecraft:block/stripped_spruce_log" }, false, [
-      morceau([1, 0, 1], [15, 3, 15], "#fer"), morceau([2, 3, 7], [4, 15, 9], "#sombre"), morceau([12, 3, 7], [14, 15, 9], "#sombre"),
-      morceau([2, 13, 6.5], [14, 15, 9.5], "#sombre"), morceau([7.25, 8, 7.25], [8.75, 13, 8.75], "#fer"),
-      morceau([4, 7, 4], [12, 8, 12], "#plateau"), morceau([2, 15, 7.5], [14, 15.6, 8.5], "#bois")]],
-    bac_maceration: ["Bac de macération", { planche: "minecraft:block/spruce_planks", fer: "minecraft:block/iron_block",
-      jus: "minecraft:block/green_concrete_powder" }, false, [
-      morceau([1, 0, 1], [15, 1, 15], "#planche"), morceau([1, 1, 1], [15, 13, 2], "#planche"), morceau([1, 1, 14], [15, 13, 15], "#planche"),
-      morceau([1, 1, 2], [2, 13, 14], "#planche"), morceau([14, 1, 2], [15, 13, 14], "#planche"),
-      morceau([0.8, 2.5, 0.8], [15.2, 3.2, 15.2], "#fer"), morceau([0.8, 10, 0.8], [15.2, 10.7, 15.2], "#fer"),
-      morceau([2, 11.5, 2], [14, 12.2, 14], "#jus")]],
-    table_raffinage: ["Table de raffinage", { bois: "minecraft:block/birch_planks", plateau: "minecraft:block/white_concrete",
-      fer: "minecraft:block/iron_block", verre: "minecraft:block/glass" }, true, [
-      ...pieds("#bois", 13), morceau([0, 13, 0], [16, 15, 16], "#bois"), morceau([3, 15, 3], [13, 15.4, 13], "#plateau"),
-      morceau([12.5, 15, 11.5], [14.5, 15.5, 13.5], "#fer"), morceau([13.25, 15.5, 12.25], [13.75, 17, 12.75], "#fer"),
-      morceau([12, 17, 11.75], [15, 17.3, 13.25], "#fer"), morceau([1, 15, 1], [3, 18, 3], "#verre"), morceau([3.5, 15, 1], [5, 17, 2.5], "#verre")]],
-    reacteur: ["Réacteur de cuisson", { acier: "minecraft:block/iron_block", feu: "minecraft:block/magma", ballon: "minecraft:block/light_blue_stained_glass",
-      cuivre: "minecraft:block/copper_block", vert: "minecraft:block/lime_stained_glass" }, true, [
-      ...pieds("#acier", 11), morceau([0, 11, 0], [16, 13, 16], "#acier"), morceau([5, 13, 5], [11, 14, 11], "#feu"),
-      morceau([4, 14, 4], [12, 22, 12], "#ballon"), morceau([7, 22, 7], [9, 25, 9], "#ballon"),
-      morceau([9, 23.5, 7.5], [14, 24.5, 8.5], "#cuivre"), morceau([13.5, 15, 7.5], [14.5, 24.5, 8.5], "#cuivre"),
-      morceau([12.5, 13, 11], [15.5, 17, 14], "#vert")]],
-    table_decoupe: ["Table de découpe", { pied: "minecraft:block/dark_oak_log", plateau: "minecraft:block/smooth_stone", plaque: "minecraft:block/light_gray_concrete",
-      lame: "minecraft:block/iron_block", manche: "minecraft:block/black_concrete" }, false, [
-      ...pieds("#pied", 13), morceau([0, 13, 0], [16, 15, 16], "#plateau"), morceau([2, 15, 3], [14, 15.3, 13], "#plaque"),
-      morceau([11, 15, 14], [15, 15.2, 15], "#lame"), morceau([8.5, 15, 13.9], [11, 15.5, 15.1], "#manche")]],
+    // le séchoir : un long étendoir à trois poteaux, deux cordes, des bottes de weed pendues (fraîches en bas, sèches en haut)
+    sechoir: ["Séchoir à weed", { bois: "minecraft:block/spruce_log", planche: "minecraft:block/spruce_planks", corde: "minecraft:block/white_wool",
+      frais: "minecraft:block/azalea_leaves", sec: "minecraft:block/moss_block", caisse: "minecraft:block/stripped_spruce_log" }, "cutout", [
+      ...[-13, 8, 29].flatMap((x) => [b([x - 3, 0, 3], [x + 3, 1, 13], "#planche"), b([x - 1, 1, 7], [x + 1, 31, 9], "#bois")]),
+      b([-15, 29, 7], [31, 31, 9], "#bois"),
+      b([-13, 21, 7.75], [29, 21.5, 8.25], "#corde"), b([-13, 12, 7.75], [29, 12.5, 8.25], "#corde"),
+      ...[-11, -6, -1, 3, 12, 17, 22, 26].flatMap((x, k) => [
+        b([x, 16 + (k % 2), 6.5], [x + 3, 20.5, 9.5], "#sec"), b([x + 1.25, 20.5, 7.9], [x + 1.75, 21, 8.1], "#corde"),
+        b([x + (k % 2), 7, 6.5], [x + 3, 11.5, 9.5], "#frais"), b([x + 1.25, 11.5, 7.9], [x + 1.75, 12, 8.1], "#corde")]),
+      b([1, 0, 2], [15, 5, 14], "#caisse"), b([2, 5, 3], [14, 6, 13], "#frais")]],
+    // la presse : un bâti d'acier, deux colonnes, une grosse vis, un plateau qui écrase la weed en briques de hash
+    presse_hash: ["Presse à hash", { acier: "minecraft:block/iron_block", noir: "minecraft:block/polished_blackstone", plateau: "minecraft:block/smooth_stone",
+      lourd: "minecraft:block/netherite_block", bois: "minecraft:block/stripped_spruce_log", hash: "minecraft:block/brown_terracotta" }, null, [
+      b([-15, 0, 1], [15, 3, 15], "#acier"), b([-11, 3, 3], [11, 5, 13], "#plateau"),
+      b([-15, 3, 5], [-11, 31, 11], "#noir"), b([11, 3, 5], [15, 31, 11], "#noir"), b([-15, 27, 4], [15, 31, 12], "#noir"),
+      b([-1.5, 16, 6.5], [1.5, 27, 9.5], "#acier"), b([-10, 13, 3], [10, 16, 13], "#lourd"),
+      b([-12, 31, 7.5], [12, 32, 8.5], "#bois"), b([-0.5, 31, -4], [0.5, 32, 20], "#bois"),
+      b([-14, 3, 0.5], [-11, 5, 2.5], "#hash"), b([-14, 5, 0.5], [-12, 6.5, 2.5], "#hash"), b([11.5, 3, 13.5], [14.5, 5, 15.5], "#hash")]],
+    // la macération : deux grands bacs cerclés (les feuilles, la pâte), une caisse de feuilles et des sacs de sucre
+    bac_maceration: ["Bac de macération", { planche: "minecraft:block/spruce_planks", fer: "minecraft:block/iron_block", jus: "minecraft:block/green_concrete_powder",
+      pate: "minecraft:block/brown_concrete_powder", feuilles: "minecraft:block/azalea_leaves", caisse: "minecraft:block/stripped_oak_log", sac: "minecraft:block/white_wool" }, "cutout", [
+      ...[[1, 1, "#jus"], [-15, 17, "#pate"]].flatMap(([x, z, liquide]) => [
+        b([x, 0, z], [x + 14, 1, z + 14], "#planche"),
+        b([x, 1, z], [x + 14, 14, z + 1], "#planche"), b([x, 1, z + 13], [x + 14, 14, z + 14], "#planche"),
+        b([x, 1, z + 1], [x + 1, 14, z + 13], "#planche"), b([x + 13, 1, z + 1], [x + 14, 14, z + 13], "#planche"),
+        b([x - 0.3, 2, z - 0.3], [x + 14.3, 3, z + 14.3], "#fer"), b([x - 0.3, 10, z - 0.3], [x + 14.3, 11, z + 14.3], "#fer"),
+        b([x + 1, 11.5, z + 1], [x + 13, 12.2, z + 13], liquide)]),
+      b([-15, 0, 2], [-1, 8, 14], "#caisse"), b([-14, 8, 3], [-2, 9.5, 13], "#feuilles"),
+      b([2, 0, 18], [8, 6, 24], "#sac"), b([8, 0, 23], [14, 8, 30], "#sac"), b([3, 6, 19], [7, 7, 23], "#sac")]],
+    // le raffinage : un grand établi blanc, deux plateaux de poudre, une balance, des flacons, un brûleur, une lampe
+    table_raffinage: ["Table de raffinage", { blanc: "minecraft:block/quartz_block_top", fer: "minecraft:block/iron_block", poudre: "minecraft:block/white_concrete_powder",
+      verre: "minecraft:block/glass", vert: "minecraft:block/lime_stained_glass", bouleau: "minecraft:block/birch_planks", carton: "minecraft:block/stripped_birch_log",
+      feu: "minecraft:block/blackstone", lampe: "minecraft:block/glowstone" }, "translucent", [
+      ...[[-15, 1], [-15, 29], [29, 1], [29, 29], [7, 1], [7, 29]].map(([x, z]) => b([x, 0, z], [x + 2, 13, z + 2], "#fer")),
+      b([-16, 13, 0], [32, 15, 32], "#blanc"), b([-14, 4, 2], [30, 5, 30], "#bouleau"),
+      b([-10, 5, 5], [-2, 10, 13], "#carton"), b([18, 5, 18], [26, 9, 26], "#carton"),
+      b([-12, 15, 3], [4, 15.6, 13], "#poudre"), b([12, 15, 3], [28, 15.6, 13], "#poudre"),
+      b([18, 15, 18], [24, 16, 24], "#fer"), b([20.5, 16, 20.5], [21.5, 19, 21.5], "#fer"), b([17, 19, 19], [25, 19.4, 23], "#fer"),
+      b([-12, 15, 20], [-9, 21, 23], "#verre"), b([-7, 15, 22], [-4, 19, 25], "#verre"), b([-2, 15, 20], [1, 20, 23], "#vert"),
+      b([5, 15, 22], [9, 17, 26], "#feu"),
+      b([28, 15, 28], [29, 26, 29], "#fer"), b([25, 26, 25], [31, 28, 31], "#lampe")]],
+    // le réacteur : une plateforme d'acier, une grande cuve de verre cerclée de cuivre, un dôme, une cheminée, des tuyaux,
+    // un pupitre de commande et des bidons de produits
+    reacteur: ["Réacteur de cuisson", { acier: "minecraft:block/iron_block", feu: "minecraft:block/magma", cuve: "minecraft:block/light_blue_stained_glass",
+      cuivre: "minecraft:block/copper_block", vert: "minecraft:block/lime_stained_glass", jaune: "minecraft:block/yellow_stained_glass",
+      pupitre: "minecraft:block/polished_andesite", voyant: "minecraft:block/redstone_lamp_on" }, "translucent", [
+      b([-16, 0, 0], [16, 2, 32], "#acier"), b([-8, 2, 8], [8, 4, 24], "#feu"),
+      b([-10, 4, 6], [10, 24, 26], "#cuve"),
+      b([-10.5, 8, 5.5], [10.5, 9, 26.5], "#cuivre"), b([-10.5, 19, 5.5], [10.5, 20, 26.5], "#cuivre"),
+      b([-8, 24, 8], [8, 27, 24], "#cuivre"), b([-2, 27, 14], [2, 32, 18], "#cuivre"),
+      b([10, 20, 14], [16, 22, 17], "#cuivre"), b([13, 2, 14], [16, 20, 17], "#cuivre"),
+      b([11, 2, 1], [15, 14, 5], "#pupitre"), b([11.5, 10, 0.5], [14.5, 13, 1], "#voyant"),
+      b([-15, 2, 27], [-12, 10, 31], "#vert"), b([-15, 2, 22], [-12, 8, 26], "#jaune")]],
+    // la découpe : une longue table d'acier, deux planches à découper, un tas de cristaux bleus, un couteau, une balance
+    table_decoupe: ["Table de découpe", { pied: "minecraft:block/dark_oak_log", plateau: "minecraft:block/smooth_stone", bouleau: "minecraft:block/birch_planks",
+      cristal: "minecraft:block/light_blue_stained_glass", lame: "minecraft:block/iron_block", manche: "minecraft:block/black_concrete" }, "translucent", [
+      ...[[-15, 2], [-15, 12], [29, 2], [29, 12]].map(([x, z]) => b([x, 0, z], [x + 2, 13, z + 2], "#pied")),
+      b([-16, 13, 1], [32, 15, 15], "#plateau"), b([-14, 4, 2], [30, 5, 14], "#bouleau"),
+      b([-12, 15, 3], [2, 15.5, 13], "#bouleau"), b([14, 15, 3], [28, 15.5, 13], "#bouleau"),
+      b([18, 15.5, 5], [21, 17, 8], "#cristal"), b([21, 15.5, 6], [24, 16.5, 9], "#cristal"), b([19, 15.5, 9], [22, 16, 11], "#cristal"),
+      b([4, 15, 11], [9, 15.3, 11.6], "#lame"), b([9, 15, 10.8], [12, 15.6, 11.8], "#manche"),
+      b([25, 15, 10], [30, 16, 14], "#lame"), b([25.5, 17, 10.5], [29.5, 17.3, 13.5], "#lame"), b([27.25, 16, 11.75], [27.75, 17, 12.25], "#lame")]],
   };
-  for (const [id, [nom, textures, translucide, elements]] of Object.entries(POSTES)) {
-    ecrire(`assets/cabane/models/block/${id}.json`, { parent: "minecraft:block/block", ...(translucide ? { render_type: "minecraft:translucent" } : {}),
+  for (const [id, [nom, textures, rendu, elements]] of Object.entries(POSTES)) {
+    ecrire(`assets/cabane/models/block/${id}.json`, { parent: "minecraft:block/block", ...(rendu ? { render_type: `minecraft:${rendu}` } : {}),
       textures: { ...textures, particle: Object.values(textures)[0] }, elements });
-    ecrire(`assets/cabane/models/item/${id}.json`, { parent: `cabane:block/${id}` });
+    // dans l'inventaire, le grand poste est réduit pour tenir dans sa case
+    ecrire(`assets/cabane/models/item/${id}.json`, { parent: `cabane:block/${id}`, display: {
+      gui: { rotation: [30, 225, 0], translation: [0, 0, 0], scale: [0.32, 0.32, 0.32] },
+      ground: { translation: [0, 3, 0], scale: [0.2, 0.2, 0.2] },
+      firstperson_righthand: { rotation: [0, 45, 0], scale: [0.25, 0.25, 0.25] }, thirdperson_righthand: { rotation: [75, 45, 0], translation: [0, 2.5, 0], scale: [0.2, 0.2, 0.2] },
+      fixed: { scale: [0.3, 0.3, 0.3] } } });
     const variantes = {};
     for (const [f, y] of [["north", 0], ["east", 90], ["south", 180], ["west", 270]]) {
       for (const actif of [false, true]) variantes[`actif=${actif},facing=${f}`] = { model: `cabane:block/${id}`, ...(y ? { y } : {}) };

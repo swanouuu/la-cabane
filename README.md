@@ -123,12 +123,16 @@ Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en
 - Tout s'achète chez Mouloud, et tout se fabrique : bouteille vide + blé + sucre (blonde), + cacao (brune), + sucre, sucre et œil d'araignée fermenté (8.6), trois baies sucrées (vin), sucre + deux fougères (pastis), cannes à sucre (rhum) ; pépite de fer + deux sucres + cacao, colorant orange ou glace pour les canettes.
 - **Pour les vendre** : le marché rachète bières, vin et coca dans ses contrats, et chacun peut tenir son étal (ou ouvrir la taverne du village, une quête d'« Agrandir Beauvais »).
 
+## Le Hejj et sa demande du jour
+
+Chaque jour, et à chaque redémarrage du serveur, le Hejj a besoin de quelque chose pour le village (des œufs, du pain, des lanternes, du charbon pour Brokk…). Demande-lui « Ta demande du jour ? », rapporte ce qu'il faut et dis « J'ai ce qu'il te faut » : il paie. Une fois par joueur et par demande. Les demandes sont dans `mod-cabane/src/main/java/fr/cabane/hub/DemandesHejj.java`, faciles à changer ou à compléter.
+
 ## Le marché noir
 
 Derrière la tour de guet, dans l'ombre : **le Fourgue**. Il vend les graines (weed, coca), le papier à rouler et les postes des labos, et il rachète toute la marchandise cash (« J'ai de la marchandise »). Sa boutique ne s'ouvre qu'à côté de lui.
 
 - **Les champs** : les graines se plantent sur de la terre labourée, comme le blé. La weed donne de la weed fraîche, la coca des feuilles.
-- **Les labos**, deux postes par produit, en 3D (on voit la marchandise travailler sur la table) : le **séchoir** (weed fraîche → weed séchée) puis la **presse à hash** ; le **bac de macération** (feuilles de coca + sucre → pâte) puis la **table de raffinage** (pâte + poudre à canon → cocaïne) ; le **réacteur** (redstone, sucre, poudre de blaze → plaque de meth, il explose parfois) puis la **table de découpe**. Clic droit en tenant le premier ingrédient pour lancer, clic droit pour reprendre le résultat.
+- **Les labos**, deux postes par produit, en grand (de 2 à 6 cases : séchoir, presse, bacs, établi, réacteur, table de découpe), en 3D, et on voit la marchandise travailler dessus : le **séchoir** (weed fraîche → weed séchée) puis la **presse à hash** ; le **bac de macération** (feuilles de coca + sucre → pâte) puis la **table de raffinage** (pâte + poudre à canon → cocaïne) ; le **réacteur** (redstone, sucre, poudre de blaze → plaque de meth, il explose parfois) puis la **table de découpe**. Clic droit en tenant le premier ingrédient pour lancer, clic droit pour reprendre le résultat.
 - **Les joints** se roulent à la main : weed séchée (ou hash) + papier.
 - **Les effets** : une montée courte (on plane et on a faim ; la coke rend très rapide et fait voir tout ce qui bouge à travers les murs pendant 1 min ; la meth rend invincible 45 s)… puis une **descente** longue et pénible (jusqu'à 5 min de lenteur, faiblesse, faim, nausée). En reprendre avant la fin, c'est l'**overdose**. Le lait coupe tout. La drogue, c'est mal.
 
@@ -160,7 +164,8 @@ Une île de roche apparaît alors dans le ciel, 80 blocs au-dessus de vous (elle
 ## L'argent, la boutique et le casino
 
 - La monnaie : les SakaiDollars ($). On en gagne avec les contrats de Mehdi, on se paie entre joueurs avec `/payer`.
-- La boutique de Mouloud vend le téléphone, les boosters de cartes (animations de révélation, la carte la plus rare toujours en dernier), les puffs et la chicha, les étals, la police… et le casino.
+- La boutique de Mouloud vend le téléphone, le parachute, les tickets à gratter, les étals, du pain, des torches et les accessoires. Le casino, les puffs, la chicha, la police et les boissons ne sont pas en vente chez lui : c'est l'hôte qui les distribue.
+- **Jean-Mi Collector**, la petite boutique violette au nord-ouest de la place, vend les boosters (80 $, 360 $ les cinq) et les classeurs (180 $).
 - **Le casino** coûte cher (4 000 à 12 000 $ la table) : c'est le gérant qui l'installe. Chaque jeu a sa **caisse**, qui paie les gagnants et garde les mises.
 - **Remplir une caisse** : le joueur qui a posé la machine (ou un admin) s'accroupit et fait clic droit dessus. Un écran s'ouvre : on y met de l'argent, ou on récupère tout. Si la caisse ne peut pas payer le plus gros gain possible, la mise est refusée (« le gérant doit la remplir »).
 - **Tout est en 3D** : la machine à sous (rouleaux qui défilent, levier), la roulette, la roue de la fortune, la table de dés (les dés roulent), le pile ou face (la pièce saute) et le blackjack avec son croupier. On choisit sa mise sur l'écran, puis on regarde le tirage en vrai sur la table, comme tout le monde autour.

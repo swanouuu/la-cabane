@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Mouloud",
-        Texts:[{Text:"Bienvenue au Grand Bazar ! Ici tout est à vendre. Même le comptoir, si tu payes assez."},{Text:"Mon ami ! Mon frère ! Mon client préféré ! … C'est quoi ton nom déjà ?"},{Text:"Prix d'ami aujourd'hui. Les prix d'ami, c'est les mêmes, mais je souris en plus."},{Text:"Des puffs, des boosters, des voitures de police… et un téléphone pour appeler ta mère. Elle s'inquiète."},{Text:"Mon cousin Gribbs dit qu'il a de meilleurs prix. Mon cousin Gribbs vend des cailloux peints."}],
+        Texts:[{Text:"Bienvenue au Grand Bazar ! Ici tout est à vendre. Même le comptoir, si tu payes assez."},{Text:"Mon ami ! Mon frère ! Mon client préféré ! … C'est quoi ton nom déjà ?"},{Text:"Prix d'ami aujourd'hui. Les prix d'ami, c'est les mêmes, mais je souris en plus."},{Text:"Un téléphone, un parachute, un étal pour vendre tes trucs… et des lunettes de soleil. Pour avoir l'air de quelqu'un."},{Text:"Les cartes à collectionner ? Va voir Jean-Mi, à côté. Moi, je vends des choses utiles."},{Text:"Mon cousin Gribbs dit qu'il a de meilleurs prix. Mon cousin Gribbs vend des cailloux peints."}],
         Buttons:[{
           Label:"boutique",
           Name:"Voir la boutique",

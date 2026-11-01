@@ -99,6 +99,57 @@ public final class Labos {
             this.explosion = explosion;
         }
 
+        /** Les cases en plus du bloc principal : {vers la droite, vers le haut, vers l'arrière}, vues par le joueur qui pose. */
+        public List<int[]> cases() {
+            List<int[]> l = new java.util.ArrayList<>();
+            switch (this) {
+                case SECHOIR -> {
+                    for (int d = -1; d <= 1; d++) {
+                        for (int h = 0; h <= 1; h++) {
+                            if (d != 0 || h != 0) {
+                                l.add(new int[] {d, h, 0});
+                            }
+                        }
+                    }
+                }
+                case PRESSE -> {
+                    l.add(new int[] {1, 0, 0});
+                    l.add(new int[] {0, 1, 0});
+                    l.add(new int[] {1, 1, 0});
+                }
+                case BAC -> {
+                    l.add(new int[] {1, 0, 0});
+                    l.add(new int[] {0, 0, 1});
+                    l.add(new int[] {1, 0, 1});
+                }
+                case RAFFINAGE -> {
+                    for (int d = -1; d <= 1; d++) {
+                        for (int a = 0; a <= 1; a++) {
+                            if (d != 0 || a != 0) {
+                                l.add(new int[] {d, 0, a});
+                            }
+                        }
+                    }
+                }
+                case REACTEUR -> {
+                    for (int d = 0; d <= 1; d++) {
+                        for (int h = 0; h <= 1; h++) {
+                            for (int a = 0; a <= 1; a++) {
+                                if (d != 0 || h != 0 || a != 0) {
+                                    l.add(new int[] {d, h, a});
+                                }
+                            }
+                        }
+                    }
+                }
+                case DECOUPE -> {
+                    l.add(new int[] {-1, 0, 0});
+                    l.add(new int[] {1, 0, 0});
+                }
+            }
+            return l;
+        }
+
         String recette() {
             return String.join(" + ", ingredients.stream().map(Ingredient::texte).toList()) + " → " + nombre + " "
                     + new ItemStack(resultat.get()).getHoverName().getString() + " (" + duree / 20 + " s"
@@ -165,7 +216,53 @@ public final class Labos {
 
         @Override
         public BlockState getStateForPlacement(BlockPlaceContext context) {
-            return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+            BlockState etat = defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+            // un grand poste a besoin de toute sa place
+            for (BlockPos p : parties(context.getClickedPos(), etat)) {
+                if (!context.getLevel().getBlockState(p).canBeReplaced(context) || !context.getLevel().isInWorldBounds(p)) {
+                    if (context.getPlayer() != null && context.getLevel().isClientSide) {
+                        context.getPlayer().displayClientMessage(Component.literal("Pas assez de place pour ce poste.").withStyle(ChatFormatting.RED), true);
+                    }
+                    return null;
+                }
+            }
+            return etat;
+        }
+
+        @Override
+        public void setPlacedBy(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+            if (!level.isClientSide) {
+                for (BlockPos p : parties(pos, state)) {
+                    level.setBlock(p, CabaneBlocks.PARTIE_TABLE.get().defaultBlockState(), Block.UPDATE_ALL);
+                }
+            }
+        }
+
+        @Override
+        protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState nouvel, boolean deplace) {
+            if (!state.is(nouvel.getBlock())) {
+                for (BlockPos p : parties(pos, state)) {
+                    if (level.getBlockState(p).is(CabaneBlocks.PARTIE_TABLE.get())) {
+                        level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 35);
+                    }
+                }
+            }
+            super.onRemove(state, level, pos, nouvel, deplace);
+        }
+
+        /** Les positions des cases d'un poste posé en pos (même logique que les grandes tables du casino). */
+        public static List<BlockPos> parties(BlockPos pos, BlockState etat) {
+            if (!(etat.getBlock() instanceof PosteBlock bloc)) {
+                return List.of();
+            }
+            Direction face = etat.getValue(FACING);
+            Direction droite = face.getCounterClockWise();
+            Direction arriere = face.getOpposite();
+            List<BlockPos> l = new java.util.ArrayList<>();
+            for (int[] c : bloc.poste.cases()) {
+                l.add(pos.relative(droite, c[0]).above(c[1]).relative(arriere, c[2]));
+            }
+            return l;
         }
 
         @Override

@@ -18,6 +18,16 @@
         Name:"Le Hejj",
         Texts:[{Text:"Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais vous accueille… à condition de l'aider à grandir."},{Text:"Ah, les gens du ciel. Asseyez-vous. Non, pas là, c'est le banc de Gérard."},{Text:"Un village, c'est comme un arbre géant : il pousse lentement, mais il faut l'arroser tous les jours. Vous êtes l'arrosoir."},{Text:"J'ai rêvé d'un Beauvais avec un port, un pont, une tour plus haute que les arbres. Mon rêve a besoin de vos bras."},{Text:"Le Président dit que c'est lui qui décide. Je le laisse dire. C'est moi qui sais où sont les clés."},{Text:"J'étais du Conseil des Anciens, avant. Maintenant je suis… le vieux sur le porche. Va voir Marcel, au feu de camp : il raconte l'histoire mieux que moi."},{Text:"Chut. Pas trop fort. Les gardes du Président ont de grandes oreilles sous leurs masques."}],
         Buttons:[{
+          Label:"demande",
+          Name:"Ta demande du jour ?",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane hejj demande",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
+          Label:"livrer",
+          Name:"J'ai ce qu'il te faut",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane hejj livrer",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
           Label:"aider",
           Name:"Comment aider ?",
           Type:"ACTION",

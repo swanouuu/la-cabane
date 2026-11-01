@@ -51,7 +51,10 @@ public final class ClientCinema {
     private static final double INTRO = 4;
     private static final double EXTRAIT = 80.34;
     private static final double FIN = INTRO + EXTRAIT;
-    public static final double DUREE = FIN + 3.5;
+    /** Le vote s'ouvre dès que la question est à l'écran (le serveur l'envoie à ce moment-là). */
+    public static final double DEBUT_VOTE = FIN + 1.2;
+    /** Au plus tard, la cinématique s'arrête ici (si le vote tarde, la question reste affichée). */
+    public static final double DUREE = DEBUT_VOTE + 8;
     public static final double DUREE_REELLE = DUREE;
     /** Les moments clés : Goku charge, Goku passe Super Saiyan 2 (le flash), Vegeta libère sa puissance (le flash). */
     private static final double SSJ = INTRO + 29.37;
@@ -71,6 +74,8 @@ public final class ClientCinema {
     /** Le temps réel (en secondes) : t est le temps du scénario. */
     private static double reel;
     private static double tPrecedent;
+    /** Le temps au dernier tick : les événements (sons, flashs) se déclenchent entre deux ticks, quoi qu'aient calculé les images. */
+    private static double tDernierTick;
     private static Entity objectif;
     private static CameraType vueAvant;
     private static boolean guiAvant;
@@ -136,6 +141,7 @@ public final class ClientCinema {
         debutNanos = System.nanoTime();
         t = 0;
         tPrecedent = 0;
+        tDernierTick = 0;
         ECLATS.clear();
         actif = true;
         mc.setScreen(null);
@@ -529,8 +535,10 @@ public final class ClientCinema {
         Minecraft mc = Minecraft.getInstance();
         ResourceLocation id = Cabane.id(nom);
         if (mc.getSoundManager().getSoundEvent(id) != null) {
-            mc.getSoundManager().play(new SimpleSoundInstance(id, SoundSource.VOICE, 1F, 1F, RandomSource.create(), false, 0,
+            mc.getSoundManager().play(new SimpleSoundInstance(id, SoundSource.MASTER, 1F, 1F, RandomSource.create(), false, 0,
                     SoundInstance.Attenuation.NONE, 0, 0, 0, true));
+        } else {
+            Cabane.LOGGER.warn("Son {} introuvable : le pack de ressources « Beauvais - voix » n'est pas activé", id);
         }
     }
 
@@ -796,9 +804,10 @@ public final class ClientCinema {
                 return;
             }
             ticks++;
-            tPrecedent = t;
             calculer(ecoule());
+            tPrecedent = tDernierTick;
             evenements();
+            tDernierTick = t;
             ambiance();
             if (reel >= DUREE_REELLE) {
                 arreter();
@@ -813,9 +822,7 @@ public final class ClientCinema {
             if (!actif) {
                 return;
             }
-            double sauve = tPrecedent;
             calculer(ecoule());
-            tPrecedent = sauve;
             placerCamera();
         }
 
@@ -887,6 +894,7 @@ public final class ClientCinema {
         debutNanos = System.nanoTime() - (long) (debut * 1e9);
         t = debut;
         tPrecedent = debut;
+        tDernierTick = debut;
     }
 
     private ClientCinema() {

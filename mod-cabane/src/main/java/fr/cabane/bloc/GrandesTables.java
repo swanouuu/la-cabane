@@ -76,6 +76,9 @@ public final class GrandesTables {
     }
 
     public static List<BlockPos> parties(BlockPos pos, BlockState etat) {
+        if (etat.getBlock() instanceof fr.cabane.drogue.Labos.PosteBlock) {
+            return fr.cabane.drogue.Labos.PosteBlock.parties(pos, etat);
+        }
         if (!(etat.getBlock() instanceof BlocInteractif bloc) || !grande(bloc.ouverture())) {
             return List.of();
         }
@@ -86,7 +89,7 @@ public final class GrandesTables {
     public static BlockPos principal(BlockGetter level, BlockPos partie) {
         for (BlockPos p : BlockPos.betweenClosed(partie.offset(-2, -4, -2), partie.offset(2, 0, 2))) {
             BlockState etat = level.getBlockState(p);
-            if (etat.getBlock() instanceof BlocInteractif && parties(p, etat).contains(partie)) {
+            if ((etat.getBlock() instanceof BlocInteractif || etat.getBlock() instanceof fr.cabane.drogue.Labos.PosteBlock) && parties(p, etat).contains(partie)) {
                 return p.immutable();
             }
         }
@@ -128,6 +131,16 @@ public final class GrandesTables {
                 return InteractionResult.PASS;
             }
             return level.getBlockState(principal).useWithoutItem(level, joueur, hit.withPosition(principal));
+        }
+
+        @Override
+        protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack tenu, BlockState state, Level level, BlockPos pos, Player joueur,
+                net.minecraft.world.InteractionHand main, BlockHitResult hit) {
+            BlockPos principal = principal(level, pos);
+            if (principal == null) {
+                return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            }
+            return level.getBlockState(principal).useItemOn(tenu, level, joueur, main, hit.withPosition(principal));
         }
 
         @Override

@@ -117,6 +117,8 @@ public final class ClientCartes {
         private int couleurEclair;
         /** La carte du dessus du paquet (ou celle qui est au centre). */
         private int courante;
+        /** Quand la carte courante a quitté le paquet pour venir au centre (0 : elle y est déjà). */
+        private long arrivee;
         private Button fermer;
 
         public BoosterScreen(List<String> cartes) {
@@ -220,6 +222,7 @@ public final class ClientCartes {
                 rangee[courante] = t;
                 son(SoundEvents.BOOK_PAGE_TURN, 1.4F);
                 courante++;
+                arrivee = t;
                 if (courante >= cartes.size()) {
                     return;
                 }
@@ -279,6 +282,14 @@ public final class ClientCartes {
             int h = Math.min(200, height - 120);
             int w = h * 7 / 10;
             return new int[] {width / 2, height / 2 - 24, w, h};
+        }
+
+        /** Le paquet des cartes qui restent : à gauche, plus petit, pour que rien ne dépasse derrière la carte du centre. */
+        private int[] pile() {
+            int[] c = centre();
+            int w = c[2] * 55 / 100;
+            int h = c[3] * 55 / 100;
+            return new int[] {c[0] - c[2] / 2 - w - 28, c[1] - h / 2, w, h};
         }
 
         /** La place d'une carte dans la rangée du bas. */
@@ -383,14 +394,32 @@ public final class ClientCartes {
                 }
                 g.pose().popPose();
             }
-            // le paquet qui reste au centre
+            // le paquet qui reste, sur le côté
+            int[] p = pile();
+            int restantes = cartes.size() - courante - 1;
             for (int i = cartes.size() - 1; i > courante; i--) {
-                dos(g, c[0] - c[2] / 2 + (i - courante) * 2, c[1] - c[3] / 2 - (i - courante) * 2, c[2], c[3], 0, 0F);
+                int n = cartes.size() - 1 - i;
+                dos(g, p[0] - n * 2, p[1] + n * 2, p[2], p[3], 0, 0F);
+            }
+            if (restantes > 0) {
+                g.drawCenteredString(font, restantes + (restantes > 1 ? " cartes" : " carte"), p[0] + p[2] / 2, p[1] + p[3] + 8, Ui.GRIS);
             }
             // les textes du paquet ne doivent pas passer par-dessus la carte révélée
             g.flush();
             if (courante < cartes.size()) {
+                // la carte glisse du paquet jusqu'au centre
+                float k = arrivee == 0 ? 1F : Mth.clamp((t - arrivee) / 260F, 0F, 1F);
+                k = 1 - (1 - k) * (1 - k);
+                g.pose().pushPose();
+                if (k < 1F) {
+                    float px = p[0] + p[2] / 2F, py = p[1] + p[3] / 2F;
+                    float s = Mth.lerp(k, p[2] / (float) c[2], 1F);
+                    g.pose().translate(Mth.lerp(k, px, c[0]), Mth.lerp(k, py, c[1]), 0);
+                    g.pose().scale(s, s, 1F);
+                    g.pose().translate(-c[0], -c[1], 0);
+                }
                 dessinerCarteCentre(g, courante, t, c);
+                g.pose().popPose();
             }
             if (fini()) {
                 texteCentre(g, "Tes cartes sont dans ton inventaire !", c[1] - 10, 0xFFFFFFFF);
@@ -629,15 +658,28 @@ public final class ClientCartes {
         }
     }
 
-    /** Le classeur : toutes les cartes de la série, celles qu'on a en couleur. */
+    /**
+     * Le classeur : un vrai classeur ouvert, couverture en cuir, anneaux au milieu, deux pages de six pochettes.
+     * Les cartes qu'on a brillent sous leur pochette en plastique ; les autres restent des emplacements vides numérotés.
+     * Une carte choisie s'affiche en grand à côté, avec sa rareté, son texte et combien on en a. Les pages se tournent.
+     */
     static final class ClasseurScreen extends Screen {
-        private static final int W = 300;
+        private static final int W = 400;
         private static final int H = 236;
-        private static final int PAR_PAGE = 8;
-        private int page;
+        private static final int PAR_PAGE = 6;
+        private static final int CW = 46;
+        private static final int CH = 64;
+        private static final int CUIR = 0xFF4A2E1C;
+        private static final int CUIR_CLAIR = 0xFF6B4329;
+        private static final int PAGE = 0xFF20242E;
+        private static final int POCHETTE = 0xFF2A2F3B;
+        private int double_;
         private String choisie;
         private int left;
         private int top;
+        /** Le tournage de page : quand, et dans quel sens. */
+        private long tourne;
+        private int sens;
 
         ClasseurScreen() {
             super(Component.literal("Classeur"));
@@ -661,27 +703,39 @@ public final class ClientCartes {
             return Map.of();
         }
 
+        private int doubles() {
+            return Math.max(1, (Cartes.toutes().size() + 2 * PAR_PAGE - 1) / (2 * PAR_PAGE));
+        }
+
         @Override
         protected void init() {
             left = (width - W) / 2;
-            top = (height - H) / 2;
-            List<Cartes.Def> toutes = Cartes.toutes();
-            int pages = Math.max(1, (toutes.size() + PAR_PAGE - 1) / PAR_PAGE);
-            page = Math.min(page, pages - 1);
+            top = (height - H) / 2 + 8;
+            double_ = Math.min(double_, doubles() - 1);
             addRenderableWidget(Button.builder(Component.literal("Ranger mes cartes"), b ->
-                    PacketDistributor.sendToServer(new Classeur.Action(0, ""))).bounds(left + 8, top + H - 24, 110, 18).build());
-            addRenderableWidget(Button.builder(Component.literal("<"), b -> {
-                page = Math.floorMod(page - 1, pages);
-                rebuildWidgets();
-            }).bounds(left + W / 2 - 10, top + H - 24, 20, 18).build());
-            addRenderableWidget(Button.builder(Component.literal(">"), b -> {
-                page = Math.floorMod(page + 1, pages);
-                rebuildWidgets();
-            }).bounds(left + W / 2 + 14, top + H - 24, 20, 18).build());
+                    PacketDistributor.sendToServer(new Classeur.Action(0, ""))).bounds(left, top + H + 6, 110, 18).build());
+            addRenderableWidget(Button.builder(Component.literal("◀"), b -> tourner(-1)).bounds(left + W / 2 - 46, top + H + 6, 40, 18).build());
+            addRenderableWidget(Button.builder(Component.literal("▶"), b -> tourner(1)).bounds(left + W / 2 + 6, top + H + 6, 40, 18).build());
             if (choisie != null && contenu().getOrDefault(choisie, 0) > 0) {
                 addRenderableWidget(Button.builder(Component.literal("Sortir 1 carte"), b ->
-                        PacketDistributor.sendToServer(new Classeur.Action(1, choisie))).bounds(left + W - 98, top + H - 24, 90, 18).build());
+                        PacketDistributor.sendToServer(new Classeur.Action(1, choisie))).bounds(left + W - 110, top + H + 6, 110, 18).build());
             }
+        }
+
+        private void tourner(int d) {
+            double_ = Math.floorMod(double_ + d, doubles());
+            tourne = System.currentTimeMillis();
+            sens = d;
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.BOOK_PAGE_TURN, 1F));
+            rebuildWidgets();
+        }
+
+        /** Le coin haut-gauche de la pochette k (0-11) de la double page. */
+        private int[] pochette(int k) {
+            int page = k / PAR_PAGE;
+            int j = k % PAR_PAGE;
+            int pageX = left + 14 + page * (W / 2 - 4);
+            return new int[] {pageX + 12 + (j % 3) * (CW + 10), top + 26 + (j / 3) * (CH + 22)};
         }
 
         @Override
@@ -690,20 +744,29 @@ public final class ClientCartes {
                 return true;
             }
             List<Cartes.Def> toutes = Cartes.toutes();
-            for (int k = 0; k < PAR_PAGE; k++) {
-                int i = page * PAR_PAGE + k;
+            for (int k = 0; k < 2 * PAR_PAGE; k++) {
+                int i = double_ * 2 * PAR_PAGE + k;
                 if (i >= toutes.size()) {
                     break;
                 }
-                int x = left + 10 + (k % 4) * 72;
-                int y = top + 26 + (k / 4) * 96;
-                if (mouseX >= x && mouseX < x + 66 && mouseY >= y && mouseY < y + 90) {
-                    choisie = toutes.get(i).id();
+                int[] p = pochette(k);
+                if (mouseX >= p[0] && mouseX < p[0] + CW && mouseY >= p[1] && mouseY < p[1] + CH) {
+                    String id = toutes.get(i).id();
+                    choisie = id.equals(choisie) ? null : id;
+                    Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.4F, 0.4F));
                     rebuildWidgets();
                     return true;
                 }
             }
             return false;
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double dx, double dy) {
+            if (dy != 0) {
+                tourner(dy < 0 ? 1 : -1);
+            }
+            return true;
         }
 
         @Override
@@ -717,7 +780,27 @@ public final class ClientCartes {
         @Override
         public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.renderBackground(g, mouseX, mouseY, partialTick);
-            Ui.panneau(g, left, top, W, H);
+            // la couverture en cuir, ses coutures, et les deux pages
+            g.fill(left - 4, top - 4, left + W + 4, top + H + 2, 0xFF1A0F08);
+            g.fill(left - 2, top - 2, left + W + 2, top + H, CUIR);
+            for (int x = left + 2; x < left + W - 2; x += 6) {
+                g.fill(x, top + 1, x + 3, top + 2, CUIR_CLAIR);
+                g.fill(x, top + H - 3, x + 3, top + H - 2, CUIR_CLAIR);
+            }
+            for (int page = 0; page < 2; page++) {
+                int px = left + 10 + page * (W / 2 - 2);
+                g.fill(px, top + 6, px + W / 2 - 18, top + H - 6, PAGE);
+                g.fill(px, top + 6, px + W / 2 - 18, top + 7, 0xFF2E3442);
+            }
+            // la reliure et ses trois anneaux
+            int cx = left + W / 2;
+            g.fill(cx - 7, top + 4, cx + 7, top + H - 4, 0xFF15100C);
+            for (int k = 0; k < 3; k++) {
+                int ry = top + 40 + k * 70;
+                g.fill(cx - 10, ry, cx + 10, ry + 8, 0xFF9AA0AA);
+                g.fill(cx - 10, ry + 1, cx + 10, ry + 3, 0xFFD8DCE2);
+                g.fill(cx - 10, ry + 6, cx + 10, ry + 8, 0xFF5C626C);
+            }
         }
 
         @Override
@@ -725,25 +808,86 @@ public final class ClientCartes {
             super.render(g, mouseX, mouseY, partialTick);
             Map<String, Integer> contenu = contenu();
             List<Cartes.Def> toutes = Cartes.toutes();
+            long t = System.currentTimeMillis();
+            // l'en-tête : titre, progression, et le détail par rareté
             long possedees = toutes.stream().filter(d -> contenu.getOrDefault(d.id(), 0) > 0).count();
-            Ui.titre(g, font, "Mon classeur", left + 10, top + 10);
-            String progres = possedees + " / " + toutes.size();
-            g.drawString(font, progres, left + W - 10 - font.width(progres), top + 10, Ui.OR, true);
-            for (int k = 0; k < PAR_PAGE; k++) {
-                int i = page * PAR_PAGE + k;
+            Ui.titre(g, font, "Mon classeur", left, top - 30);
+            String progres = possedees + " / " + toutes.size() + " cartes";
+            g.drawString(font, progres, left + W - font.width(progres), top - 30, Ui.OR, true);
+            int barre = W;
+            g.fill(left, top - 18, left + barre, top - 14, 0xFF101218);
+            g.fill(left, top - 18, left + (int) (barre * (toutes.isEmpty() ? 0 : possedees / (double) toutes.size())), top - 14, Ui.OR);
+            int rx = left;
+            for (int r = 0; r < Cartes.RARETES.length; r++) {
+                final int rr = r;
+                long total = toutes.stream().filter(d -> d.rarete() == rr).count();
+                long a = toutes.stream().filter(d -> d.rarete() == rr && contenu.getOrDefault(d.id(), 0) > 0).count();
+                String s = Cartes.RARETES[r] + " " + a + "/" + total;
+                g.drawString(font, s, rx, top - 11, Cartes.COULEURS_RGB[r], false);
+                rx += font.width(s) + 12;
+            }
+            // les pochettes de la double page
+            float apparition = Mth.clamp((t - tourne) / 220F, 0F, 1F);
+            Cartes.Def survolee = null;
+            for (int k = 0; k < 2 * PAR_PAGE; k++) {
+                int i = double_ * 2 * PAR_PAGE + k;
+                int[] p = pochette(k);
+                g.fill(p[0] - 3, p[1] - 3, p[0] + CW + 3, p[1] + CH + 3, POCHETTE);
                 if (i >= toutes.size()) {
-                    break;
+                    continue;
                 }
                 Cartes.Def def = toutes.get(i);
-                int x = left + 10 + (k % 4) * 72;
-                int y = top + 26 + (k / 4) * 96;
                 int n = contenu.getOrDefault(def.id(), 0);
+                boolean dessus = mouseX >= p[0] && mouseX < p[0] + CW && mouseY >= p[1] && mouseY < p[1] + CH;
                 if (def.id().equals(choisie)) {
-                    g.fill(x - 3, y - 3, x + 69, y + 93, Ui.OR);
+                    g.fill(p[0] - 4, p[1] - 4, p[0] + CW + 4, p[1] + CH + 4, Ui.OR);
+                } else if (n > 0 && def.rarete() > 0) {
+                    int a = (int) (40 + 30 * Math.sin(t / 400.0 + i));
+                    g.fill(p[0] - 3, p[1] - 3, p[0] + CW + 3, p[1] + CH + 3, a << 24 | Cartes.COULEURS_RGB[def.rarete()] & 0xFFFFFF);
                 }
-                dessinerCarte(g, font, def, x, y, 66, 90, n > 0, n);
-                if (n > 0 && mouseX >= x && mouseX < x + 66 && mouseY >= y && mouseY < y + 90) {
-                    g.renderComponentTooltip(font, List.of(Component.literal(def.nom()), Component.literal(def.description())), mouseX, mouseY);
+                g.pose().pushPose();
+                // la page qui vient d'être tournée glisse en place
+                float decale = (1 - apparition) * 24 * sens;
+                g.pose().translate(decale, dessus ? -2 : 0, 0);
+                dessinerCarte(g, font, def, p[0], p[1], CW, CH, n > 0, n);
+                // le plastique de la pochette : un reflet en biais
+                g.fill(p[0] + 2, p[1] + 2, p[0] + CW - 2, p[1] + 4, 0x30FFFFFF);
+                g.fill(p[0] + CW - 8, p[1] + 2, p[0] + CW - 5, p[1] + CH - 2, 0x18FFFFFF);
+                g.pose().popPose();
+                String numero = "n° " + def.numero();
+                g.drawCenteredString(font, numero, p[0] + CW / 2, p[1] + CH + 5, n > 0 ? Ui.GRIS : 0xFF5A606C);
+                if (dessus) {
+                    survolee = def;
+                }
+            }
+            if (apparition < 1F) {
+                // l'ombre de la page qui tourne
+                g.fill(left + 10, top + 6, left + W - 10, top + H - 6, (int) ((1 - apparition) * 120) << 24);
+            }
+            String pageTxt = "Pages " + (double_ * 2 + 1) + "-" + (double_ * 2 + 2) + " / " + doubles() * 2;
+            g.drawCenteredString(font, pageTxt, left + W / 2, top + H - 16, 0xFF8A909C);
+            // la carte choisie, en grand, à côté du classeur
+            Cartes.Def montree = choisie != null ? Cartes.def(choisie) : survolee;
+            if (montree != null) {
+                int n = contenu.getOrDefault(montree.id(), 0);
+                int bw = 96, bh = 134;
+                int bx = left + W + 14 > width - bw - 6 ? left + W - bw - 6 : left + W + 14;
+                int by = top + 10;
+                if (bx + bw > width) {
+                    bx = width - bw - 4;
+                }
+                int c = Cartes.COULEURS_RGB[montree.rarete()];
+                for (int halo = 4; halo > 0; halo--) {
+                    g.fill(bx - halo * 2, by - halo * 2, bx + bw + halo * 2, by + bh + halo * 2, (n > 0 ? 18 * halo : 6 * halo) << 24 | c & 0xFFFFFF);
+                }
+                dessinerCarte(g, font, montree, bx, by, bw, bh, n > 0, n);
+                List<FormattedCharSequence> desc = font.split(Component.literal(n > 0 ? montree.description() : "Pas encore trouvée…"), bw + 20);
+                int ty = by + bh + 8;
+                g.drawCenteredString(font, n > 0 ? "Tu en as " + n : "Manquante", bx + bw / 2, ty, n > 0 ? Ui.VERT : Ui.ROUGE);
+                ty += 12;
+                for (FormattedCharSequence l : desc.subList(0, Math.min(4, desc.size()))) {
+                    g.drawCenteredString(font, l, bx + bw / 2, ty, Ui.GRIS);
+                    ty += 10;
                 }
             }
         }

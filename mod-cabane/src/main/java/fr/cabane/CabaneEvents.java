@@ -36,6 +36,7 @@ public final class CabaneEvents {
             event.getServer().getPlayerList().setAllowCommandsForAllPlayers(true);
         }
         HubEvents.onServerStarted(event.getServer());
+        fr.cabane.hub.DemandesHejj.onServerStarted(event.getServer());
     }
 
     @SubscribeEvent

@@ -74,7 +74,9 @@ export function genererPnj(ecrire) {
       "Le Président dit que c'est lui qui décide. Je le laisse dire. C'est moi qui sais où sont les clés.",
       "J'étais du Conseil des Anciens, avant. Maintenant je suis… le vieux sur le porche. Va voir Marcel, au feu de camp : il raconte l'histoire mieux que moi.",
       "Chut. Pas trop fort. Les gardes du Président ont de grandes oreilles sous leurs masques.",
-    ], boutons: [{ label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "maison", texte: "Où s'installer ?", vers: "maison" },
+    ], boutons: [{ label: "demande", texte: "Ta demande du jour ?", commande: "cabane hejj demande" },
+      { label: "livrer", texte: "J'ai ce qu'il te faut", commande: "cabane hejj livrer" },
+      { label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "maison", texte: "Où s'installer ?", vers: "maison" },
       { label: "reliques", texte: "Et les reliques ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
     { label: "aider", titre: "Agrandir Beauvais", texte: [
       "Le village doit grandir : des maisons, un marché, un pont, un port… Ouvrez votre livre de quêtes, chapitre « Agrandir Beauvais ». Chaque chantier fini, le village vous paie.",
@@ -107,7 +109,8 @@ export function genererPnj(ecrire) {
       "Bienvenue au Grand Bazar ! Ici tout est à vendre. Même le comptoir, si tu payes assez.",
       "Mon ami ! Mon frère ! Mon client préféré ! … C'est quoi ton nom déjà ?",
       "Prix d'ami aujourd'hui. Les prix d'ami, c'est les mêmes, mais je souris en plus.",
-      "Des puffs, des boosters, des voitures de police… et un téléphone pour appeler ta mère. Elle s'inquiète.",
+      "Un téléphone, un parachute, un étal pour vendre tes trucs… et des lunettes de soleil. Pour avoir l'air de quelqu'un.",
+      "Les cartes à collectionner ? Va voir Jean-Mi, à côté. Moi, je vends des choses utiles.",
       "Mon cousin Gribbs dit qu'il a de meilleurs prix. Mon cousin Gribbs vend des cailloux peints.",
     ], boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "bye", texte: "À plus" }] },
   ] });
@@ -250,6 +253,22 @@ export function genererPnj(ecrire) {
       "Un prince ne demande jamais son chemin. C'est pour ça que je suis à Beauvais depuis six ans.",
     ], boutons: [{ label: "bye", texte: "Respect, prince" }] },
   ] });
+  // Jean-Mi Collector, la boutique de cartes de la place : il sait tout, il juge tout
+  pnj({ fichier: "vendeur_cartes", nom: "Jean-Mi Collector", couleur: "light_purple", tags: ["vendeur_cartes"], dialogues: [
+    { label: "default", titre: "Jean-Mi", texte: [
+      "Ah. Un client. Laisse-moi deviner : tu ne sais même pas ce qu'est une carte holographique.",
+      "Bienvenue dans le seul vrai commerce culturel de Beauvais. Ne touche pas la vitrine. Ni le comptoir. Ni moi.",
+      "Un booster, c'est cinq cartes. La meilleure arrive toujours en dernier. C'est comme ça, c'est la loi.",
+      "J'ai une légendaire sous plastique depuis quatre ans. Elle ne sort pas. Elle ne sortira jamais.",
+      "Mouloud vendait des boosters, avant. Il les rangeait à côté du pain. À côté du pain ! Une honte.",
+    ], boutons: [{ label: "acheter", texte: "Je veux des boosters", commande: "cabane boutique cartes" },
+      { label: "conseil", texte: "Un conseil de pro ?", vers: "conseil" }, { label: "bye", texte: "Merci Jean-Mi" }] },
+    { label: "conseil", titre: "Jean-Mi", texte: [
+      "Range tes cartes dans un classeur, clic droit avec le classeur en main. Une carte qui traîne dans un inventaire, c'est une carte qui souffre.",
+      "Les rares brillent, les épiques tremblent, les légendaires assombrissent tout. Si ton écran devient noir, ne crie pas. Pleure en silence.",
+    ], boutons: [{ label: "bye", texte: "Noté" }] },
+  ] });
+
   // le Fourgue, dans l'ombre derrière la tour de guet : le marché noir
   pnj({ fichier: "fourgue", nom: "Le Fourgue", couleur: "dark_gray", tags: ["fourgue"], dialogues: [
     { label: "default", titre: "Le Fourgue", texte: [

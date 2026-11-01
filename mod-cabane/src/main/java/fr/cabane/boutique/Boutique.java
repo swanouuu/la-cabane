@@ -38,8 +38,8 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
     public static final Boutique INSTANCE = new Boutique();
     private static List<Offre> offres = List.of();
 
-    /** noir : une offre du marché noir, que seul le Fourgue propose. */
-    public record Offre(String id, ItemStack stack, long prix, int ordre, boolean noir) {
+    /** vendeur : « » pour Mouloud, sinon le tag du PNJ qui la propose (« fourgue », « vendeur_cartes »…), à côté duquel il faut être. */
+    public record Offre(String id, ItemStack stack, long prix, int ordre, String vendeur) {
     }
 
     /** Ce que le client affiche. */
@@ -91,7 +91,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
                     return;
                 }
                 liste.add(new Offre(id.toString(), new ItemStack(item, GsonHelper.getAsInt(o, "nombre", 1)),
-                        GsonHelper.getAsLong(o, "prix"), GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsBoolean(o, "noir", false)));
+                        GsonHelper.getAsLong(o, "prix"), GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsString(o, "vendeur", "")));
             } catch (Exception e) {
                 Cabane.LOGGER.warn("Offre {} illisible : {}", id, e.toString());
             }
@@ -114,7 +114,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
     }
 
     public static void envoyerVitrine(ServerPlayer joueur) {
-        PacketDistributor.sendToPlayer(joueur, new Vitrine(offres.stream().filter(o -> !o.noir()).map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
+        PacketDistributor.sendToPlayer(joueur, new Vitrine(offres.stream().filter(o -> o.vendeur().isEmpty()).map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
@@ -129,14 +129,28 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
     }
 
     public static void ouvrir(ServerPlayer joueur) {
-        ouvrir(joueur, false);
+        ouvrir(joueur, "");
     }
 
-    /** La boutique de Mouloud, ou (noir) celle du Fourgue. */
-    public static void ouvrir(ServerPlayer joueur, boolean noir) {
+    /** La boutique de Mouloud (vendeur « »), ou celle d'un autre PNJ (son tag). */
+    public static void ouvrir(ServerPlayer joueur, String vendeur) {
         Economie.sync(joueur);
         envoyerVitrine(joueur);
-        PacketDistributor.sendToPlayer(joueur, new Ouvrir(offres.stream().filter(o -> o.noir() == noir).map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
+        PacketDistributor.sendToPlayer(joueur, new Ouvrir(offres.stream().filter(o -> o.vendeur().equals(vendeur)).map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
+    }
+
+    /** À côté d'un PNJ portant ce tag ? */
+    public static boolean pres(ServerPlayer joueur, String tag) {
+        return !joueur.level().getEntities(joueur, joueur.getBoundingBox().inflate(8), e -> e.getTags().contains(tag)).isEmpty();
+    }
+
+    /** /cabane boutique <vendeur> : seulement à côté de lui. */
+    public static void ouvrirChez(ServerPlayer joueur, String vendeur) {
+        if (!pres(joueur, vendeur)) {
+            joueur.displayClientMessage(Component.literal("Il n'y a personne pour te vendre ça ici.").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        ouvrir(joueur, vendeur);
     }
 
     private static void acheter(ServerPlayer joueur, String id, int quantite) {
@@ -144,7 +158,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
             return;
         }
         Offre offre = offres.stream().filter(o -> o.id().equals(id)).findFirst().orElse(null);
-        if (offre == null || (offre.noir() && !fr.cabane.drogue.MarcheNoir.presDuFourgue(joueur)) || !Economie.payer(joueur, offre.prix() * quantite)) {
+        if (offre == null || (!offre.vendeur().isEmpty() && !pres(joueur, offre.vendeur())) || !Economie.payer(joueur, offre.prix() * quantite)) {
             return;
         }
         for (int i = 0; i < quantite; i++) {

@@ -360,7 +360,7 @@ public final class MarcheNoir {
             joueur.displayClientMessage(Component.literal("Personne ne vend ça ici…").withStyle(ChatFormatting.GRAY), true);
             return;
         }
-        fr.cabane.boutique.Boutique.ouvrir(joueur, true);
+        fr.cabane.boutique.Boutique.ouvrir(joueur, "fourgue");
     }
 
     /** Le Fourgue rachète toute la marchandise du joueur, cash. */

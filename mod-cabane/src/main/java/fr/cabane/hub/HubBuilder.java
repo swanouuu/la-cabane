@@ -486,6 +486,7 @@ public class HubBuilder {
         e.add(new Etape("grand bazar : murs", this::bazarMurs));
         e.add(new Etape("grand bazar : intérieur", this::bazarInterieur));
         e.add(new Etape("maisons", this::maisons));
+        e.add(new Etape("boutique de cartes et kiosque", this::boutiquesDeLaPlace));
         e.add(new Etape("mairie", this::mairie));
         e.add(new Etape("laboratoire", this::laboratoire));
         e.add(new Etape("forge, puits et champs", this::forgePuitsChamps));
@@ -504,6 +505,7 @@ public class HubBuilder {
         e.add(new Etape("avion", this::avion));
         e.add(new Etape("salle d'embarquement", this::embarquement));
         e.add(new Etape("textes", this::textes));
+        e.add(new Etape("éclairage du village", this::eclairage));
         e.add(new Etape("lumière", this::lumiere));
         return e;
     }
@@ -614,7 +616,11 @@ public class HubBuilder {
 
     private static final double RAYON_PLACE = 18;
 
-    /** Grande place pavée, quatre petites fontaines ; le grand panneau de la carte trône au milieu. */
+    /**
+     * La grande place : un dallage en cercles (andésite polie, pierre taillée, un anneau de terre cuite), une rose des
+     * vents qui pointe vers les quatre rues, quatre jardinières avec un arbre fleuri et des bancs autour, et une couronne
+     * de lampadaires. Le grand panneau de la carte trône au milieu.
+     */
     private void place() {
         int r = (int) Math.ceil(RAYON_PLACE);
         for (int dx = -r; dx <= r; dx++) {
@@ -623,9 +629,21 @@ public class HubBuilder {
                 if (d > RAYON_PLACE + 0.3) {
                     continue;
                 }
-                float f = rnd.nextFloat();
-                BlockState s = d > RAYON_PLACE - 0.9 ? Blocks.STONE_BRICKS.defaultBlockState()
-                        : (f < 0.35F ? Blocks.POLISHED_ANDESITE : f < 0.6F ? Blocks.ANDESITE : f < 0.8F ? Blocks.STONE_BRICKS : Blocks.COBBLESTONE).defaultBlockState();
+                int anneau = (int) d;
+                boolean rose = (Math.abs(dx) <= 1 || Math.abs(dz) <= 1) && d > 6 && d < RAYON_PLACE - 2;
+                BlockState s;
+                if (d > RAYON_PLACE - 0.9) {
+                    s = Blocks.STONE_BRICKS.defaultBlockState();
+                } else if (rose) {
+                    s = (Math.abs(dx) == 0 || Math.abs(dz) == 0 ? Blocks.SMOOTH_STONE : Blocks.POLISHED_DIORITE).defaultBlockState();
+                } else if (anneau == 12 || anneau == 7) {
+                    s = Blocks.TERRACOTTA.defaultBlockState();
+                } else if (anneau % 3 == 0) {
+                    s = Blocks.POLISHED_ANDESITE.defaultBlockState();
+                } else {
+                    float f = rnd.nextFloat();
+                    s = (f < 0.55F ? Blocks.STONE_BRICKS : f < 0.8F ? Blocks.ANDESITE : Blocks.CRACKED_STONE_BRICKS).defaultBlockState();
+                }
                 pose(dx, 0, dz, s);
                 pose(dx, 1, dz, AIR);
                 pose(dx, 2, dz, AIR);
@@ -633,35 +651,58 @@ public class HubBuilder {
         }
         for (int sx : new int[] {-1, 1}) {
             for (int sz : new int[] {-1, 1}) {
-                fontaine(11 * sx, 11 * sz);
-                lampadaire(6 * sx, 15 * sz);
-                lampadaire(15 * sx, 6 * sz);
+                jardiniere(11 * sx, 11 * sz);
             }
+        }
+        // une couronne de lampadaires au bord de la place, sauf devant les quatre rues
+        for (int k = 0; k < 16; k++) {
+            double a = k * Math.PI * 2 / 16 + Math.PI / 16;
+            int lx = (int) Math.round(Math.cos(a) * (RAYON_PLACE - 1.5));
+            int lz = (int) Math.round(Math.sin(a) * (RAYON_PLACE - 1.5));
+            if (Math.abs(lx) <= 3 || Math.abs(lz) <= 3) {
+                continue;
+            }
+            lampadaire(lx, lz);
         }
     }
 
-    private void fontaine(int fx, int fz) {
+    /** Une jardinière de pierre surélevée : un arbre fleuri, des fleurs, et des bancs sur trois côtés. */
+    private void jardiniere(int jx, int jz) {
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 boolean bord = Math.abs(dx) == 2 || Math.abs(dz) == 2;
-                boolean coin = Math.abs(dx) == 2 && Math.abs(dz) == 2;
-                pose(fx + dx, -1, fz + dz, Blocks.STONE_BRICKS.defaultBlockState());
-                if (coin) {
-                    pose(fx + dx, 0, fz + dz, Blocks.STONE_BRICKS.defaultBlockState());
-                    pose(fx + dx, 1, fz + dz, Blocks.STONE_BRICK_WALL.defaultBlockState());
-                    pose(fx + dx, 2, fz + dz, Blocks.LANTERN.defaultBlockState());
-                } else if (bord) {
-                    pose(fx + dx, 0, fz + dz, Blocks.STONE_BRICKS.defaultBlockState());
-                    pose(fx + dx, 1, fz + dz, Blocks.STONE_BRICK_SLAB.defaultBlockState());
-                } else {
-                    pose(fx + dx, 0, fz + dz, Blocks.WATER.defaultBlockState());
+                pose(jx + dx, 0, jz + dz, Blocks.STONE_BRICKS.defaultBlockState());
+                pose(jx + dx, 1, jz + dz, bord ? Blocks.STONE_BRICK_SLAB.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.SlabBlock.TYPE, net.minecraft.world.level.block.state.properties.SlabType.DOUBLE)
+                        : Blocks.GRASS_BLOCK.defaultBlockState());
+                if (!bord && (dx != 0 || dz != 0)) {
+                    Block fleur = (dx + dz) % 2 == 0 ? Blocks.ALLIUM : rnd.nextBoolean() ? Blocks.OXEYE_DAISY : Blocks.CORNFLOWER;
+                    pose(jx + dx, 2, jz + dz, fleur.defaultBlockState());
                 }
             }
         }
-        for (int y = 0; y <= 2; y++) {
-            pose(fx, y, fz, Blocks.STONE_BRICK_WALL.defaultBlockState());
+        // l'arbre : un tronc de chêne noir et une couronne d'azalée fleurie
+        for (int y = 2; y <= 5; y++) {
+            pose(jx, y, jz, pilier(Blocks.DARK_OAK_LOG, Direction.Axis.Y));
         }
-        pose(fx, 3, fz, Blocks.LANTERN.defaultBlockState());
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int y = 5; y <= 7; y++) {
+                    int m = Math.abs(dx) + Math.abs(dz) + (y == 7 ? 2 : y == 5 ? 1 : 0);
+                    if (m <= 3 && !(dx == 0 && dz == 0 && y == 5)) {
+                        pose(jx + dx, y, jz + dz, (rnd.nextInt(3) == 0 ? Blocks.FLOWERING_AZALEA_LEAVES : Blocks.AZALEA_LEAVES).defaultBlockState()
+                                .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+                    }
+                }
+            }
+        }
+        pose(jx, 4, jz + 1, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        // les bancs, tournés vers l'extérieur, du côté de la place
+        int ox = Integer.signum(jx), oz = Integer.signum(jz);
+        for (int d = -1; d <= 1; d++) {
+            pose(jx + d, 1, jz - oz * 3, escalier(Blocks.SPRUCE_STAIRS, oz > 0 ? Direction.SOUTH : Direction.NORTH));
+            pose(jx - ox * 3, 1, jz + d, escalier(Blocks.SPRUCE_STAIRS, ox > 0 ? Direction.EAST : Direction.WEST));
+        }
     }
 
     private void lampadaire(int x, int z) {
@@ -1585,6 +1626,146 @@ public class HubBuilder {
         m(1, 1, 2, Blocks.MOSS_CARPET.defaultBlockState());
     }
 
+    /**
+     * Sur la place : la boutique de cartes de Jean-Mi (une petite échoppe violette, grande vitrine, auvent, comptoir,
+     * étagères et boosters accrochés aux murs), et le kiosque d'infos (où trouver qui, et quoi).
+     */
+    private void boutiquesDeLaPlace() {
+        boutiqueCartes(-31, -31);
+        kiosque(31, -21);
+    }
+
+    /** L'échoppe de Jean-Mi : 9 x 7, la porte et la vitrine au sud. (x0, z0) : son coin nord-ouest. */
+    private void boutiqueCartes(int x0, int z0) {
+        int x1 = x0 + 8, z1 = z0 + 6;
+        vider(x0 - 1, z0 - 1, x1 + 1, z1 + 3, 1, 9);
+        BlockState mur = Blocks.WHITE_TERRACOTTA.defaultBlockState();
+        BlockState violet = Blocks.PURPLE_TERRACOTTA.defaultBlockState();
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                pose(x, 0, z, (x + z) % 2 == 0 ? Blocks.PURPLE_GLAZED_TERRACOTTA.defaultBlockState() : Blocks.WHITE_CONCRETE.defaultBlockState());
+                boolean bord = x == x0 || x == x1 || z == z0 || z == z1;
+                for (int y = 1; y <= 5; y++) {
+                    BlockState b = AIR;
+                    if (bord) {
+                        boolean coin = (x == x0 || x == x1) && (z == z0 || z == z1);
+                        boolean porte = z == z1 && x == x0 + 4 && y <= 2;
+                        boolean vitrine = z == z1 && !coin && Math.abs(x - (x0 + 4)) >= 2 && y >= 1 && y <= 3;
+                        b = porte ? AIR : vitrine ? Blocks.GLASS_PANE.defaultBlockState() : coin ? violet : y == 5 ? violet : mur;
+                    }
+                    pose(x, y, z, b);
+                }
+                pose(x, 6, z, Blocks.PURPLE_CONCRETE.defaultBlockState());
+            }
+        }
+        pose(x0 + 4, 1, z1, Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.SOUTH));
+        pose(x0 + 4, 2, z1, Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.SOUTH)
+                .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+        // l'auvent rayé violet et blanc, au-dessus de la vitrine
+        for (int x = x0; x <= x1; x++) {
+            pose(x, 4, z1 + 1, (x % 2 == 0 ? Blocks.PURPLE_WOOL : Blocks.WHITE_WOOL).defaultBlockState());
+            pose(x, 4, z1 + 2, (x % 2 == 0 ? Blocks.PURPLE_CARPET : Blocks.WHITE_CARPET).defaultBlockState());
+        }
+        pose(x0 + 2, 1, z1 + 1, Blocks.LANTERN.defaultBlockState());
+        pose(x1 - 2, 1, z1 + 1, Blocks.LANTERN.defaultBlockState());
+        // dedans : le comptoir, les étagères, les vitrines à boosters, des lanternes
+        for (int x = x0 + 2; x <= x1 - 2; x++) {
+            pose(x, 1, z0 + 2, x == x0 + 4 ? Blocks.CHISELED_BOOKSHELF.defaultBlockState() : Blocks.POLISHED_ANDESITE.defaultBlockState());
+            pose(x, 2, z0 + 2, Blocks.SMOOTH_STONE_SLAB.defaultBlockState());
+        }
+        for (int x = x0 + 1; x <= x1 - 1; x++) {
+            pose(x, 1, z0 + 1, Blocks.BOOKSHELF.defaultBlockState());
+            pose(x, 2, z0 + 1, Blocks.BOOKSHELF.defaultBlockState());
+        }
+        for (int z = z0 + 3; z <= z1 - 1; z++) {
+            pose(x0 + 1, 1, z, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+            pose(x0 + 1, 2, z, Blocks.GLASS.defaultBlockState());
+            pose(x1 - 1, 1, z, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+            pose(x1 - 1, 2, z, Blocks.GLASS.defaultBlockState());
+        }
+        ItemStack booster = new ItemStack(fr.cabane.CabaneItems.BOOSTER.get());
+        ItemStack classeur = new ItemStack(fr.cabane.CabaneItems.CLASSEUR.get());
+        for (int x = x0 + 1; x <= x1 - 1; x += 2) {
+            cadre(x, 3, z0 + 1, Direction.SOUTH, x == x0 + 4 + 1 ? classeur : booster);
+        }
+        cadre(x0 + 1, 3, z0 + 4, Direction.EAST, booster);
+        cadre(x1 - 1, 3, z0 + 4, Direction.WEST, classeur);
+        for (int[] l : new int[][] {{x0 + 2, z0 + 4}, {x1 - 2, z0 + 4}}) {
+            pose(l[0], 5, l[1], Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+        // l'allée jusqu'à la place
+        chemin(x0 + 3, z1 + 1, x0 + 5, z1 + 6);
+        titre(x0 + 4.5, 7.4, z1 + 0.5, "JEAN-MI COLLECTOR", "cartes · boosters · classeurs", 1.1F);
+    }
+
+    /** Le kiosque d'infos : un petit pavillon ouvert, et un grand tableau qui dit où trouver qui. (x, z) : son centre. */
+    private void kiosque(int kx, int kz) {
+        vider(kx - 4, kz - 4, kx + 4, kz + 4, 1, 8);
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                pose(kx + dx, 0, kz + dz, Math.abs(dx) == 3 || Math.abs(dz) == 3 ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.SPRUCE_PLANKS.defaultBlockState());
+                pose(kx + dx, 5, kz + dz, Math.abs(dx) + Math.abs(dz) <= 4 ? Blocks.SPRUCE_PLANKS.defaultBlockState() : Blocks.SPRUCE_SLAB.defaultBlockState());
+            }
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                pose(kx + dx, 6, kz + dz, Math.abs(dx) + Math.abs(dz) <= 2 ? Blocks.SPRUCE_PLANKS.defaultBlockState() : Blocks.SPRUCE_SLAB.defaultBlockState());
+            }
+        }
+        pose(kx, 7, kz, Blocks.LIGHTNING_ROD.defaultBlockState());
+        for (int[] c : new int[][] {{-3, -3}, {3, -3}, {-3, 3}, {3, 3}}) {
+            for (int y = 1; y <= 4; y++) {
+                pose(kx + c[0], y, kz + c[1], pilier(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Y));
+            }
+            pose(kx + c[0], 4, kz + c[1] + (c[1] < 0 ? 1 : -1), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+        // le tableau d'infos, au milieu, tourné vers la place (au sud-ouest)
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int y = 1; y <= 3; y++) {
+                pose(kx + dx, y, kz - 1, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+            }
+        }
+        texte(kx + 0.5, 3.6, kz + 0.05, 0F, "[{\"text\":\"INFOS DE BEAUVAIS\\n\",\"color\":\"gold\",\"bold\":true},"
+                + "{\"text\":\"Mouloud (Grand Bazar) : téléphone, parachute, étals\\n\",\"color\":\"white\",\"bold\":false},"
+                + "{\"text\":\"Jean-Mi Collector : boosters et classeurs\\n\",\"color\":\"light_purple\",\"bold\":false},"
+                + "{\"text\":\"Brokk (la forge, au bout de la rue) : armes rares\\n\",\"color\":\"white\",\"bold\":false},"
+                + "{\"text\":\"Mehdi : les contrats du marché\\n\",\"color\":\"white\",\"bold\":false},"
+                + "{\"text\":\"Le Hejj : sa demande du jour, et les grands chantiers\\n\",\"color\":\"yellow\",\"bold\":false},"
+                + "{\"text\":\"Terrains à vendre : derrière le boulevard\",\"color\":\"green\",\"bold\":false}]", 0.55F, 0xCC000000, false);
+    }
+
+    /**
+     * Pas un coin sombre dans le village : partout où le sol est libre et qu'aucune lumière n'est proche, une petite
+     * lanterne de jardin (un muret de pierre moussue et sa lanterne). La place, les rues et le boulevard ont déjà les leurs.
+     */
+    private void eclairage() {
+        int pas = 8;
+        for (int gx = -RAYON + 6; gx <= RAYON - 6; gx += pas) {
+            for (int gz = -RAYON + 6; gz <= RAYON - 6; gz += pas) {
+                int x = gx + rnd.nextInt(3) - 1;
+                int z = gz + rnd.nextInt(3) - 1;
+                if (x * x + z * z > (RAYON - 6) * (RAYON - 6) || !sol(x, z) || level.getBlockState(c.offset(x, 0, z)).is(Blocks.DIRT_PATH)) {
+                    continue;
+                }
+                if (!level.getBlockState(c.offset(x, 1, z)).isAir() || !level.getBlockState(c.offset(x, 2, z)).isAir()) {
+                    continue;
+                }
+                boolean eclaire = false;
+                for (int dx = -6; dx <= 6 && !eclaire; dx++) {
+                    for (int dz = -6; dz <= 6 && !eclaire; dz++) {
+                        for (int y = -1; y <= 8 && !eclaire; y++) {
+                            eclaire = level.getBlockState(c.offset(x + dx, y, z + dz)).getLightEmission() >= 10;
+                        }
+                    }
+                }
+                if (!eclaire) {
+                    pose(x, 1, z, Blocks.MOSSY_COBBLESTONE_WALL.defaultBlockState());
+                    pose(x, 2, z, Blocks.LANTERN.defaultBlockState());
+                }
+            }
+        }
+    }
+
     /** Un terrain à bâtir, marqué par quatre poteaux à lanterne. */
     private void parcelle(int x0, int z0, int x1, int z1) {
         for (int x : new int[] {x0, x1}) {
@@ -1605,168 +1786,237 @@ public class HubBuilder {
     }
 
     /**
-     * La forge de Brokk, au bout de la rue : une grande halle de pierre noire, un mur de lave derrière une vitre,
-     * deux cheminées géantes qui fument, une enclume monumentale au centre, les postes des orques (hauts-fourneaux,
-     * meules, bacs de trempe), un râtelier d'armes, des chaînes et des lanternes, des engrenages de Create.
+     * La forge de Brokk, au bout de la rue : une halle monumentale de pierre noire (17 x 31, 12 de haut), une grande arche
+     * gardée par deux braseros, un toit à gradins hérissé de trois cheminées qui fument, des rigoles de lave sous verre
+     * dans le sol, une cascade de lave derrière une vitre au fond, l'enclume monumentale et son marteau géant au centre,
+     * une rangée de hauts-fourneaux allumés de chaque côté, une mezzanine, des lustres de chaînes et de lanternes,
+     * les armes au mur, et dehors la cour : tas de charbon, enclumes, bacs de trempe.
      */
     private void forge() {
-        vider(52, -11, 63, 11, 1, 18);
+        int x0 = 52, x1 = 68, z0 = -15, z1 = 15, haut = 12;
+        vider(x0 - 2, z0 - 2, x1 + 1, z1 + 2, 1, 30);
         BlockState sol1 = Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState();
         BlockState sol2 = Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState();
         BlockState mur = Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState();
-        BlockState pilierNoir = Blocks.POLISHED_BASALT.defaultBlockState();
+        BlockState basalte = Blocks.POLISHED_BASALT.defaultBlockState();
         BlockState tuiles = Blocks.DEEPSLATE_TILES.defaultBlockState();
-        // le sol et les fondations
-        for (int x = 53; x <= 61; x++) {
-            for (int z = -9; z <= 9; z++) {
+        BlockState noir = Blocks.BLACKSTONE.defaultBlockState();
+        // le sol, et deux rigoles de lave sous verre qui courent d'un bout à l'autre de la halle
+        for (int x = x0 - 2; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                pose(x, -2, z, Blocks.COBBLED_DEEPSLATE.defaultBlockState());
                 pose(x, -1, z, Blocks.COBBLED_DEEPSLATE.defaultBlockState());
+                boolean rigole = x > x0 && x < x1 - 2 && (z == -5 || z == 5);
+                if (rigole) {
+                    pose(x, -1, z, Blocks.LAVA.defaultBlockState());
+                    pose(x, 0, z, Blocks.GLASS.defaultBlockState());
+                    continue;
+                }
                 float r = rnd.nextFloat();
-                pose(x, 0, z, r < 0.15F ? sol2 : r < 0.25F ? Blocks.BLACKSTONE.defaultBlockState() : r < 0.3F ? Blocks.MAGMA_BLOCK.defaultBlockState() : sol1);
+                pose(x, 0, z, r < 0.15F ? sol2 : r < 0.22F ? noir : r < 0.26F ? Blocks.MAGMA_BLOCK.defaultBlockState() : sol1);
             }
         }
-        // les murs, les piliers, les fenêtres à barreaux
-        for (int x = 53; x <= 61; x++) {
-            for (int z = -9; z <= 9; z++) {
-                boolean bord = x == 53 || x == 61 || Math.abs(z) == 9;
+        // les murs : des piliers de basalte tous les quatre blocs, des contreforts, de hautes fenêtres à barreaux
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                boolean bord = x == x0 || x == x1 || z == z0 || z == z1;
                 if (!bord) {
                     continue;
                 }
-                boolean pilier = (x == 53 || x == 57 || x == 61) && (Math.abs(z) == 9 || z % 4 == 1 || z % 4 == -3);
-                for (int y = 1; y <= 6; y++) {
-                    boolean entree = x == 53 && Math.abs(z) <= 2 && y <= 4;
-                    boolean fenetre = Math.abs(z) == 9 && (x == 55 || x == 59) && (y == 3 || y == 4);
+                boolean pilier = (x - x0) % 4 == 0 && (z == z0 || z == z1) || (z - z0) % 5 == 0 && (x == x0 || x == x1);
+                for (int y = 1; y <= haut; y++) {
+                    boolean entree = x == x0 && Math.abs(z) <= 3 && y <= 8;
+                    boolean fenetre = !pilier && (z == z0 || z == z1) && y >= 4 && y <= 8 && (x - x0) % 4 == 2;
                     if (entree) {
                         continue;
                     }
-                    pose(x, y, z, fenetre ? Blocks.IRON_BARS.defaultBlockState() : pilier ? pilierNoir : (y == 1 ? Blocks.BLACKSTONE.defaultBlockState() : mur));
+                    pose(x, y, z, fenetre ? Blocks.IRON_BARS.defaultBlockState() : pilier ? basalte : y == 1 ? noir : y == haut ? Blocks.CHISELED_POLISHED_BLACKSTONE.defaultBlockState() : mur);
                 }
-            }
-        }
-        // l'arche de l'entrée
-        for (int z = -2; z <= 2; z++) {
-            pose(53, 5, z, Math.abs(z) == 2 ? escalier(Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS, z < 0 ? Direction.SOUTH : Direction.NORTH, Half.TOP)
-                    : Blocks.CHISELED_POLISHED_BLACKSTONE.defaultBlockState());
-        }
-        // le toit en gradins de tuiles d'ardoise
-        for (int etage = 0; etage < 4; etage++) {
-            for (int x = 53 + etage; x <= 61 - etage; x++) {
-                for (int z = -9 + etage * 2; z <= 9 - etage * 2; z++) {
-                    pose(x, 7 + etage, z, tuiles);
-                }
-            }
-        }
-        // les deux grandes cheminées, avec un feu de signal au sommet (une longue colonne de fumée)
-        for (int cz : new int[] {-6, 6}) {
-            for (int y = 1; y <= 17; y++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        boolean foyer = dx == -1 && dz == 0 && y <= 2;
-                        boolean dedans = dx == 0 && dz == 0 && y <= 2;
-                        if (foyer || dedans) {
-                            continue;
-                        }
-                        pose(59 + dx, y, cz + dz, y > 11 && (dx == 0 && dz == 0) ? Blocks.HAY_BLOCK.defaultBlockState()
-                                : (y + dx + dz) % 5 == 0 ? Blocks.BRICKS.defaultBlockState() : Blocks.NETHER_BRICKS.defaultBlockState());
+                // les contreforts, à l'extérieur des piliers des grands murs
+                if (pilier && (z == z0 || z == z1)) {
+                    int dehors = z == z0 ? -1 : 1;
+                    for (int y = 1; y <= 7; y++) {
+                        pose(x, y, z + dehors, y >= 6 ? escalier(Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS, z == z0 ? Direction.SOUTH : Direction.NORTH) : noir);
                     }
                 }
             }
-            pose(59, 0, cz, Blocks.MAGMA_BLOCK.defaultBlockState());
-            pose(59, 1, cz, Blocks.CAMPFIRE.defaultBlockState());
-            pose(59, 18, cz, Blocks.CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.SIGNAL_FIRE, true));
-            pose(58, 0, cz, Blocks.MAGMA_BLOCK.defaultBlockState());
         }
-        // le mur de lave, derrière une vitre, au fond de la halle
-        for (int z = -2; z <= 2; z++) {
-            for (int y = 1; y <= 5; y++) {
-                pose(63, y, z, Blocks.BLACKSTONE.defaultBlockState());
-                pose(61, y, z, Math.abs(z) <= 1 && y >= 2 && y <= 4 ? Blocks.GLASS.defaultBlockState() : mur);
+        // la grande arche de l'entrée (7 de large, 8 de haut), et le nom en lettres d'or au-dessus
+        for (int z = -3; z <= 3; z++) {
+            int sommet = Math.abs(z) == 3 ? 6 : Math.abs(z) == 2 ? 7 : 8;
+            for (int y = sommet + 1; y <= 9; y++) {
+                pose(x0, y, z, Blocks.CHISELED_POLISHED_BLACKSTONE.defaultBlockState());
             }
-            pose(62, 0, z, Blocks.BLACKSTONE.defaultBlockState());
-            pose(62, 6, z, Blocks.BLACKSTONE.defaultBlockState());
+            pose(x0, sommet + 1, z, Math.abs(z) <= 1 ? Blocks.GILDED_BLACKSTONE.defaultBlockState() : Blocks.CHISELED_POLISHED_BLACKSTONE.defaultBlockState());
         }
-        for (int y = 1; y <= 5; y++) {
-            pose(62, y, -3, Blocks.BLACKSTONE.defaultBlockState());
-            pose(62, y, 3, Blocks.BLACKSTONE.defaultBlockState());
+        // deux colosses de basalte de part et d'autre de l'arche, coiffés d'un brasier
+        for (int z : new int[] {-6, 6}) {
+            for (int dz = -1; dz <= 1; dz++) {
+                pose(x0 - 1, 0, z + dz, noir);
+                pose(x0 - 2, 0, z + dz, noir);
+                for (int y = 1; y <= 7; y++) {
+                    pose(x0 - 1, y, z + dz, dz == 0 ? basalte : y % 3 == 0 ? Blocks.GILDED_BLACKSTONE.defaultBlockState() : noir);
+                }
+            }
+            pose(x0 - 1, 8, z, Blocks.MAGMA_BLOCK.defaultBlockState());
+            pose(x0 - 1, 9, z, Blocks.CAMPFIRE.defaultBlockState());
+            pose(x0 - 2, 1, z, Blocks.ANVIL.defaultBlockState().setValue(net.minecraft.world.level.block.AnvilBlock.FACING, Direction.NORTH));
         }
-        for (int z = -2; z <= 2; z++) {
-            for (int y = 1; y <= 5; y++) {
-                pose(62, y, z, Math.abs(z) <= 1 && y >= 2 && y <= 4 ? Blocks.LAVA.defaultBlockState() : Blocks.BLACKSTONE.defaultBlockState());
+        // le toit en gradins de tuiles d'ardoise, une bordure de pierre noire à chaque gradin
+        for (int etage = 0; etage < 6; etage++) {
+            for (int x = x0 + etage; x <= x1 - etage; x++) {
+                for (int z = z0 + etage * 2; z <= z1 - etage * 2; z++) {
+                    boolean bordure = x == x0 + etage || x == x1 - etage || z == z0 + etage * 2 || z == z1 - etage * 2;
+                    pose(x, haut + 1 + etage, z, bordure ? Blocks.POLISHED_BLACKSTONE_BRICK_SLAB.defaultBlockState()
+                            .setValue(net.minecraft.world.level.block.SlabBlock.TYPE, net.minecraft.world.level.block.state.properties.SlabType.DOUBLE) : tuiles);
+                }
             }
         }
-        // l'enclume monumentale, au centre ; Brokk se tient derrière
-        for (int z = -1; z <= 1; z++) {
-            pose(56, 1, z, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
-            pose(57, 1, z, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
-            pose(56, 2, z, Blocks.IRON_BLOCK.defaultBlockState());
-            pose(57, 2, z, Blocks.IRON_BLOCK.defaultBlockState());
+        // trois cheminées géantes de brique rouge et noire, chacune avec son feu de signal (une longue colonne de fumée)
+        for (int cz : new int[] {-10, 0, 10}) {
+            int cx = x1 - 3;
+            for (int y = 1; y <= haut + 14; y++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        boolean conduit = dx == 0 && dz == 0;
+                        boolean foyer = dx == -1 && dz == 0 && y <= 3;
+                        if (foyer || conduit && y <= 3) {
+                            pose(cx + dx, y, cz + dz, AIR);
+                            continue;
+                        }
+                        pose(cx + dx, y, cz + dz, conduit ? Blocks.HAY_BLOCK.defaultBlockState()
+                                : (y + dx + dz) % 4 == 0 ? Blocks.BRICKS.defaultBlockState() : Blocks.NETHER_BRICKS.defaultBlockState());
+                    }
+                }
+            }
+            pose(cx, 0, cz, Blocks.MAGMA_BLOCK.defaultBlockState());
+            pose(cx, 1, cz, Blocks.CAMPFIRE.defaultBlockState());
+            pose(cx, haut + 15, cz, Blocks.CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.SIGNAL_FIRE, true));
         }
-        pose(56, 3, 0, Blocks.ANVIL.defaultBlockState().setValue(net.minecraft.world.level.block.AnvilBlock.FACING, Direction.NORTH));
-        pose(57, 3, 0, Blocks.ANVIL.defaultBlockState().setValue(net.minecraft.world.level.block.AnvilBlock.FACING, Direction.NORTH));
-        pose(56, 3, -1, Blocks.CHAIN.defaultBlockState().setValue(net.minecraft.world.level.block.ChainBlock.AXIS, Direction.Axis.Z));
-        // les postes de travail des orques
-        for (int z : new int[] {-3, -2, 2, 3}) {
-            pose(60, 1, z, Blocks.BLAST_FURNACE.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.WEST)
-                    .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT, true));
+        // au fond, la cascade de lave derrière une grande vitre
+        for (int z = -4; z <= 4; z++) {
+            for (int y = 0; y <= haut - 2; y++) {
+                pose(x1 + 1, y, z, noir);
+                pose(x1, y, z, Math.abs(z) <= 3 && y >= 1 && y <= haut - 3 ? Blocks.LAVA.defaultBlockState() : noir);
+                pose(x1 - 1, y, z, Math.abs(z) <= 3 && y >= 1 && y <= haut - 3 ? Blocks.GLASS.defaultBlockState() : mur);
+            }
+            pose(x1, haut - 2, z, noir);
         }
-        pose(60, 2, -3, Blocks.LAVA_CAULDRON.defaultBlockState());
-        pose(60, 2, 3, Blocks.LAVA_CAULDRON.defaultBlockState());
-        pose(55, 1, -7, Blocks.SMITHING_TABLE.defaultBlockState());
-        pose(56, 1, -7, Blocks.ANVIL.defaultBlockState());
-        pose(57, 1, -7, Blocks.CHIPPED_ANVIL.defaultBlockState());
-        pose(54, 1, -7, Blocks.GRINDSTONE.defaultBlockState().setValue(net.minecraft.world.level.block.FaceAttachedHorizontalDirectionalBlock.FACE,
+        // l'enclume monumentale : un socle de basalte, deux enclumes, et un marteau géant appuyé contre
+        int ex = 58;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                pose(ex + dx, 1, dz, Math.abs(dz) == 2 ? Blocks.POLISHED_BLACKSTONE_STAIRS.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING,
+                        dz < 0 ? Direction.SOUTH : Direction.NORTH) : Blocks.POLISHED_BLACKSTONE.defaultBlockState());
+                if (Math.abs(dz) <= 1) {
+                    pose(ex + dx, 2, dz, dx == 0 ? Blocks.IRON_BLOCK.defaultBlockState() : basalte);
+                }
+            }
+        }
+        pose(ex, 3, -1, Blocks.ANVIL.defaultBlockState().setValue(net.minecraft.world.level.block.AnvilBlock.FACING, Direction.EAST));
+        pose(ex, 3, 1, Blocks.ANVIL.defaultBlockState().setValue(net.minecraft.world.level.block.AnvilBlock.FACING, Direction.EAST));
+        pose(ex, 3, 0, Blocks.IRON_BLOCK.defaultBlockState());
+        for (int y = 1; y <= 4; y++) {
+            pose(ex + 2, y, 3, pilier(Blocks.STRIPPED_DARK_OAK_LOG, Direction.Axis.Y));
+        }
+        pose(ex + 2, 5, 3, Blocks.IRON_BLOCK.defaultBlockState());
+        pose(ex + 2, 5, 2, Blocks.IRON_BLOCK.defaultBlockState());
+        pose(ex + 2, 5, 4, Blocks.IRON_BLOCK.defaultBlockState());
+        // de chaque côté : une rangée de hauts-fourneaux allumés, des tas de charbon, des chaudrons de lave et de trempe
+        for (int z : new int[] {z0 + 1, z1 - 1}) {
+            Direction versLeCentre = z < 0 ? Direction.SOUTH : Direction.NORTH;
+            for (int x = x0 + 2; x <= x1 - 6; x++) {
+                int k = (x - x0) % 4;
+                if (k == 0) {
+                    continue;
+                }
+                BlockState poste = k == 1 ? Blocks.BLAST_FURNACE.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, versLeCentre)
+                        .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT, true)
+                        : k == 2 ? Blocks.COAL_BLOCK.defaultBlockState()
+                        : (x / 4) % 2 == 0 ? Blocks.LAVA_CAULDRON.defaultBlockState()
+                        : Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3);
+                pose(x, 1, z, poste);
+                if (k == 1) {
+                    pose(x, 2, z, Blocks.BLAST_FURNACE.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, versLeCentre)
+                            .setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT, true));
+                }
+            }
+        }
+        // les établis du forgeron : meule, table de forgeron, enclumes ébréchées, tonneaux, coffres
+        pose(x0 + 3, 1, -9, Blocks.SMITHING_TABLE.defaultBlockState());
+        pose(x0 + 4, 1, -9, Blocks.CHIPPED_ANVIL.defaultBlockState());
+        pose(x0 + 5, 1, -9, Blocks.GRINDSTONE.defaultBlockState().setValue(net.minecraft.world.level.block.FaceAttachedHorizontalDirectionalBlock.FACE,
                 net.minecraft.world.level.block.state.properties.AttachFace.FLOOR));
-        pose(55, 1, 7, Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3));
-        pose(56, 1, 7, Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3));
-        pose(57, 1, 7, Blocks.FLETCHING_TABLE.defaultBlockState());
-        pose(54, 1, 7, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-        pose(54, 2, 7, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-        pose(60, 1, 8, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
-        pose(60, 1, -8, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
-        for (int z : new int[] {-8, -7, 7, 8}) {
-            pose(58, 1, z, Blocks.IRON_BLOCK.defaultBlockState());
+        pose(x0 + 3, 1, 9, Blocks.STONECUTTER.defaultBlockState());
+        pose(x0 + 4, 1, 9, Blocks.DAMAGED_ANVIL.defaultBlockState());
+        pose(x0 + 5, 1, 9, Blocks.FLETCHING_TABLE.defaultBlockState());
+        pose(x1 - 5, 1, -9, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+        pose(x1 - 5, 1, 9, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH));
+        for (int[] t : new int[][] {{x1 - 6, -9}, {x1 - 6, 9}, {x1 - 7, -9}}) {
+            pose(t[0], 1, t[1], Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+            pose(t[0], 2, t[1], Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
         }
-        // la presse et le bassin de Create, et des engrenages sur la façade nord
-        objet(55, 1, -4, "create:basin", null);
-        objet(55, 3, -4, "create:mechanical_press", Direction.SOUTH);
-        objet(55, 4, -4, "create:shaft", null);
+        // la mezzanine de pierre, le long du mur nord, avec sa rambarde et son escalier
+        for (int x = x0 + 1; x <= x1 - 5; x++) {
+            for (int z = z0 + 1; z <= z0 + 3; z++) {
+                pose(x, 6, z, Blocks.POLISHED_BLACKSTONE_BRICK_SLAB.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.SlabBlock.TYPE, net.minecraft.world.level.block.state.properties.SlabType.TOP));
+            }
+            pose(x, 7, z0 + 4, Blocks.POLISHED_BLACKSTONE_BRICK_WALL.defaultBlockState());
+            if ((x - x0) % 3 == 0) {
+                pose(x, 8, z0 + 4, Blocks.LANTERN.defaultBlockState());
+            }
+        }
+        for (int k = 0; k < 5; k++) {
+            pose(x0 + 2 + k, 1 + k, z0 + 4, escalier(Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS, Direction.EAST));
+            pose(x0 + 2 + k, 7, z0 + 4, AIR);
+        }
+        // les lustres : des couronnes de lanternes au bout de longues chaînes
+        for (int[] l : new int[][] {{56, -6}, {56, 6}, {62, -6}, {62, 6}, {58, 0}}) {
+            for (int y = haut - 1; y >= 7; y--) {
+                pose(l[0], y, l[1], Blocks.CHAIN.defaultBlockState());
+            }
+            pose(l[0], 6, l[1], Blocks.SOUL_LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+            for (Direction d : new Direction[] {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                if (l[1] == 0 && d.getAxis() == Direction.Axis.Z) {
+                    continue;
+                }
+                pose(l[0] + d.getStepX(), 7, l[1] + d.getStepZ(), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+            }
+            pose(l[0], 8, l[1], Blocks.IRON_BLOCK.defaultBlockState());
+        }
+        // les engrenages de Create sur les grands murs, et une presse au-dessus d'un bassin
         BlockState roue = modOuNull("create:large_cogwheel");
         if (roue != null) {
-            pose(55, 4, -10, avec(roue, "axis", "z"));
-            pose(59, 4, -10, avec(roue, "axis", "z"));
-            pose(55, 4, 10, avec(roue, "axis", "z"));
-            pose(59, 4, 10, avec(roue, "axis", "z"));
+            for (int x = x0 + 6; x <= x1 - 6; x += 8) {
+                pose(x, 9, z0 - 1, avec(roue, "axis", "z"));
+                pose(x, 9, z1 + 1, avec(roue, "axis", "z"));
+            }
         }
-        BlockState petite = modOuNull("create:cogwheel");
-        if (petite != null) {
-            pose(57, 5, -10, avec(petite, "axis", "z"));
-            pose(57, 5, 10, avec(petite, "axis", "z"));
+        objet(x0 + 7, 1, -9, "create:basin", null);
+        objet(x0 + 7, 3, -9, "create:mechanical_press", Direction.SOUTH);
+        objet(x0 + 7, 4, -9, "create:shaft", null);
+        // la cour, devant : des tas de charbon et de minerai, un chariot, des bacs de trempe
+        for (int[] c : new int[][] {{x0 - 2, -12}, {x0 - 2, 12}}) {
+            pose(c[0], 1, c[1], Blocks.COAL_BLOCK.defaultBlockState());
+            pose(c[0], 1, c[1] + 1, Blocks.COAL_BLOCK.defaultBlockState());
+            pose(c[0], 2, c[1], Blocks.COAL_BLOCK.defaultBlockState());
+            pose(c[0] + 1, 1, c[1], Blocks.RAW_IRON_BLOCK.defaultBlockState());
+            pose(c[0], 1, c[1] - 1, Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3));
         }
-        // chaînes et lanternes qui pendent du plafond
-        for (int[] l : new int[][] {{55, -4}, {55, 4}, {58, -1}, {58, 1}, {55, 0}}) {
-            pose(l[0], 6, l[1], Blocks.CHAIN.defaultBlockState());
-            pose(l[0], 5, l[1], Blocks.CHAIN.defaultBlockState());
-            pose(l[0], 4, l[1], Blocks.SOUL_LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
-        }
-        // les braseros de chaque côté de l'entrée
-        for (int z : new int[] {-4, 4}) {
-            pose(52, 0, z, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
-            pose(52, 1, z, pilierNoir);
-            pose(52, 2, z, pilierNoir);
-            pose(52, 3, z, Blocks.CAMPFIRE.defaultBlockState());
-        }
-        // le râtelier : des armes accrochées aux murs
+        // le râtelier : des armes accrochées aux murs, entre les fenêtres
         net.minecraft.world.item.Item[] armes = {net.minecraft.world.item.Items.IRON_SWORD, net.minecraft.world.item.Items.IRON_AXE,
                 net.minecraft.world.item.Items.SHIELD, net.minecraft.world.item.Items.DIAMOND_SWORD, net.minecraft.world.item.Items.IRON_HELMET,
-                net.minecraft.world.item.Items.CROSSBOW, net.minecraft.world.item.Items.MACE};
+                net.minecraft.world.item.Items.CROSSBOW, net.minecraft.world.item.Items.MACE, net.minecraft.world.item.Items.NETHERITE_AXE};
         int a = 0;
-        for (int x = 54; x <= 60; x += 1) {
-            if (x == 55 || x == 59) {
+        for (int x = x0 + 2; x <= x1 - 6; x++) {
+            if ((x - x0) % 4 != 0) {
                 continue;
             }
-            cadre(x, 3, -8, Direction.SOUTH, new ItemStack(armes[a++ % armes.length]));
-            cadre(x, 3, 8, Direction.NORTH, new ItemStack(armes[a++ % armes.length]));
+            cadre(x, 4, z0 + 1, Direction.SOUTH, new ItemStack(armes[a++ % armes.length]));
+            cadre(x, 4, z1 - 1, Direction.NORTH, new ItemStack(armes[a++ % armes.length]));
         }
-        titre(52.5, 9.3, 0.5, "LA FORGE DE BROKK", "armes rares : parle à Brokk", 1.8F);
+        titre(x0 - 0.5, 11.3, 0.5, "LA FORGE DE BROKK", "armes rares : parle à Brokk", 2.2F);
     }
 
     private void puits(int px, int pz) {
