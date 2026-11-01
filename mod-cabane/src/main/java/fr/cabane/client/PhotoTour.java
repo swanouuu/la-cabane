@@ -142,6 +142,11 @@ public final class PhotoTour {
                 mc.setScreen(new ClientCartes.BoosterScreen(List.of(ids.get(0), ids.get(5), ids.get(9), ids.get(14), ids.get(18))));
             }
             case "telephone" -> mc.setScreen(new ClientPiaf.Accueil());
+            case "messages" -> mc.setScreen(new ClientMessages.Boite());
+            case "conversation" -> mc.setScreen(new ClientMessages.Discussion(e[4], 0));
+            case "galerie" -> mc.setScreen(new ClientPiaf.Galerie(false));
+            case "visionneuse" -> mc.setScreen(new ClientPiaf.Visionneuse(ClientPiaf.galerie.getLast()));
+            case "imprimer" -> mc.setScreen(new ClientPiaf.Imprimer(ClientPiaf.galerie.getLast()));
             case "contacts" -> mc.setScreen(new ClientPiaf.Contacts());
             case "recents" -> mc.setScreen(new ClientPiaf.Recents());
             case "booster-demo" -> {
@@ -194,6 +199,38 @@ public final class PhotoTour {
             case "photo" -> ClientPiaf.prendrePhoto();
             case "publier" -> ClientPiaf.demander(2, reste, ClientPiaf.galerie.isEmpty() ? 0 : ClientPiaf.galerie.getLast());
             case "texte" -> ClientPiaf.demander(2, reste, 0);
+            case "sms" -> ClientMessages.demander(fr.cabane.telephone.Messages.Action.ENVOYER, e[2],
+                    String.join(" ", java.util.Arrays.copyOfRange(e, 3, e.length)), 0);
+            case "mms" -> ClientMessages.demander(fr.cabane.telephone.Messages.Action.ENVOYER, e[2], "", ClientPiaf.galerie.getLast());
+            case "mode" -> ClientCamera.regler(Integer.parseInt(e[2]), Integer.parseInt(e[3]));
+            case "declencher" -> ClientCamera.declencherPourCaptures();
+            case "imprimer" -> {
+                // « act imprimer largeur hauteur [n] » : la n-ième photo en partant de la dernière
+                // (ou « #id » : cette photo-là)
+                long id = e.length > 4 && e[4].startsWith("#") ? Long.parseLong(e[4].substring(1))
+                        : ClientPiaf.galerie.get(ClientPiaf.galerie.size() - 1 - (e.length > 4 ? Integer.parseInt(e[4]) : 0));
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.photo.Impression.Demande(id, Integer.parseInt(e[2]), Integer.parseInt(e[3])));
+            }
+            case "tenir-photo" -> {
+                // « act tenir-photo largeur hauteur » : met en main une copie de la photo imprimée à cette taille
+                Minecraft mc = Minecraft.getInstance();
+                var inv = mc.player.getInventory();
+                for (int i = 0; i < inv.items.size(); i++) {
+                    var p = inv.items.get(i).get(fr.cabane.CabaneComponents.PHOTO.get());
+                    if (p != null && p.largeur() == Integer.parseInt(e[2]) && p.hauteur() == Integer.parseInt(e[3])) {
+                        commande(mc, "item replace entity @s weapon.mainhand from entity @s container." + i);
+                        break;
+                    }
+                }
+            }
+            case "accrocher" -> {
+                // « act accrocher x y z face » : clic droit avec l'objet en main sur la face d'un bloc
+                Minecraft mc = Minecraft.getInstance();
+                var bloc = new net.minecraft.core.BlockPos(Integer.parseInt(e[2]), Integer.parseInt(e[3]), Integer.parseInt(e[4]));
+                var face = net.minecraft.core.Direction.byName(e[5]);
+                mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND,
+                        new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(bloc).relative(face, 0.5), face, bloc, false));
+            }
             case "utiliser" -> {
                 Minecraft mc = Minecraft.getInstance();
                 mc.gameMode.useItem(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND);

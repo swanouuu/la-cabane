@@ -127,7 +127,11 @@ Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en
 - Chaque nouveau joueur en reçoit un ; les suivants s'achètent chez Mouloud (pas de recette). Touche **N** ou clic droit : la première fois, on choisit tout de suite son numéro.
 - **La SIM est gravée dans le téléphone** : la première fois, tu choisis un numéro à 3 ou 4 chiffres, et il ne changera plus. Un autre numéro, c'est un autre téléphone. Le téléphone garde sa mémoire (contacts, récents, photos, compte Piaf) : si on te le vole, on peut se faire passer pour toi.
 - Compose un numéro → ça sonne chez l'autre (les joueurs autour l'entendent aussi). On peut appeler **en numéro masqué**. Vous vous entendez partout sur la map grâce à Simple Voice Chat.
-- Les applis, façon iPhone : **Clavier**, **Contacts**, **Récents**, **Piaf** (le réseau social), **Photo** (un viseur, puis clic pour déclencher) et **Galerie**, **Argent**, **Réglages**.
+- Les applis, façon iPhone : **Clavier**, **Contacts**, **Récents**, **Messages**, **Piaf** (le réseau social), **Appareil photo** et **Photos**, **Portefeuille**, **Réglages**.
+- **Messages** : des SMS entre numéros, comme sur un vrai téléphone (bulles bleues et grises, notification à l'arrivée, pastille rouge sur l'icône pour les non lus). On peut joindre une photo de sa galerie : elle arrive dans la galerie de l'autre. Les conversations restent dans le téléphone (sa SIM), comme les contacts.
+- **L'appareil photo** : la **molette** change de mode, **PHOTO** (à plat), **PORTRAIT** (debout) ou **SELFIE** (debout, la caméra te filme de face) ; le **clic molette** règle le **retardateur** (3, 5 ou 10 s). Avec le retardateur, le téléphone reste posé là où tu as déclenché : tu as le temps d'aller te mettre dans le cadre (avec tes potes), et la photo est prise depuis cet endroit.
+- **Photos** : touche une photo pour l'ouvrir, puis **Imprimer**, **Envoyer par message** ou **Publier sur Piaf**.
+- **Imprimer** : tu choisis la taille sur le mur, bloc par bloc (de 1 x 1 à 8 x 8), avec un aperçu ; la photo est rognée au format choisi, jamais déformée. Il faut une feuille de papier pour 4 blocs. La photo imprimée s'accroche comme un tableau (clic droit sur un mur plein) ; on la décroche en la frappant.
 
 ## L'argent, la boutique et le casino
 

@@ -84,6 +84,11 @@ const combine = ou(
 );
 icone("telephone", "#65f27e", "#13b931", [[combine, BLANC]]);
 
+// Messages : une bulle blanche, sa petite queue en bas à gauche, sur vert
+icone("messages", "#65f27e", "#13b931", [
+  [ou(disque(16, 15, 9.5), poly([[8, 19], [6, 26], [13, 22]])), BLANC],
+]);
+
 // Contacts : silhouette sur gris
 icone("contacts", "#d8d8de", "#9c9ca6", [
   [ou(disque(16, 12, 5.5), rect(7, 19, 25, 30, 7)), "#6e6e78"],

@@ -17,6 +17,7 @@ public final class ClientSetup {
     public static void onRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(CabaneEntities.PARACHUTE.get(), ParachuteRenderer::new);
         event.registerEntityRenderer(CabaneEntities.VOITURE_POLICE.get(), VoitureRenderer::new);
+        event.registerEntityRenderer(CabaneEntities.TABLEAU_PHOTO.get(), TableauPhotoRenderer::new);
         event.registerBlockEntityRenderer(CabaneBlocks.ETAL_BE.get(), EtalRenderer::new);
         event.registerBlockEntityRenderer(CabaneBlocks.INTERACTIF_BE.get(), InteractifRenderer::new);
     }

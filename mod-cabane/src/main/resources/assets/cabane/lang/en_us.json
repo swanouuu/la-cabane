@@ -63,5 +63,7 @@
   "key.cabane.sirene": "Sirène de la voiture de police",
   "block.cabane.partie_table": "Table du casino",
   "subtitles.cabane.voix": "Un habitant parle",
+  "item.cabane.photo": "Photo imprimée",
+  "entity.cabane.tableau_photo": "Photo accrochée",
   "subtitles.cabane.voiture": "Voiture de police"
 }

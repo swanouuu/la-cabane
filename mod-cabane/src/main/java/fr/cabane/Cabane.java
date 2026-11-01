@@ -40,6 +40,8 @@ public class Cabane {
         modBus.addListener(Casino::register);
         modBus.addListener(Cartes::register);
         modBus.addListener(fr.cabane.telephone.Piaf::register);
+        modBus.addListener(fr.cabane.telephone.Messages::register);
+        modBus.addListener(fr.cabane.photo.Impression::register);
     }
 
     public static ResourceLocation id(String path) {

@@ -19,6 +19,10 @@ public final class CabaneEntities {
             () -> EntityType.Builder.<fr.cabane.police.VoitureEntity>of(fr.cabane.police.VoitureEntity::new, MobCategory.MISC)
                     .sized(2.0F, 1.9F).clientTrackingRange(10).build("voiture_police"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<fr.cabane.photo.TableauPhoto>> TABLEAU_PHOTO = ENTITIES.register("tableau_photo",
+            () -> EntityType.Builder.<fr.cabane.photo.TableauPhoto>of(fr.cabane.photo.TableauPhoto::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F).clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).build("tableau_photo"));
+
     static void register(IEventBus modBus) {
         ENTITIES.register(modBus);
     }

@@ -441,7 +441,7 @@ Object.assign(lang, {
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.gilet_police": "Gilet de police",
   "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
   "key.cabane.sirene": "Sirène de la voiture de police", "block.cabane.partie_table": "Table du casino",
-  "subtitles.cabane.voix": "Un habitant parle", "subtitles.cabane.voiture": "Voiture de police",
+  "subtitles.cabane.voix": "Un habitant parle", "item.cabane.photo": "Photo imprimée", "entity.cabane.tableau_photo": "Photo accrochée", "subtitles.cabane.voiture": "Voiture de police",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
@@ -463,6 +463,12 @@ for (const nom of ["puff_rose", "puff_bleue", "puff_menthe", "tuyau"]) itemGener
 offres.push(["menottes", "cabane:menottes", 1, 800], ["pistolet", "cabane:pistolet", 1, 2500],
   ["gilet_police", "cabane:gilet_police", 1, 1200], ["voiture_police", "cabane:voiture_police", 1, 25000]);
 for (const nom of ["menottes", "gilet_police", "voiture_police"]) itemGenere(nom);
+// la photo imprimée : un polaroid (ciel, soleil, collines)
+tex("item/photo", [
+  "................", "..TTTTTTTTTTTT..", "..TBBBBBBBBBBT..", "..TBBBBBBYYBBT..", "..TBBBBBBYYBBT..", "..TBBBBBBBBBBT..",
+  "..TBBgBBBBBBBT..", "..TBgggBBBgBBT..", "..TggggggggggT..", "..TGGGGGGGGGGT..", "..TGGGGGGGGGGT..", "..TTTTTTTTTTTT..",
+  "..TTTTTTTTTTTT..", "..TTTTTTTTTTTT..", "..TTTTTTTTTTTT..", "................"]);
+itemGenere("photo");
 // le pistolet : un vrai petit modèle 3D en main, l'icône à plat dans l'inventaire
 {
   const face = (uv) => Object.fromEntries(["north", "south", "east", "west", "up", "down"].map((c) => [c, { texture: "#p", uv }]));

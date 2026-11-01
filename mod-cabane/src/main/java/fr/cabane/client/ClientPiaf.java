@@ -42,6 +42,7 @@ public final class ClientPiaf {
     static List<Piaf.Vue> posts = List.of();
     static List<Long> galerie = List.of();
     private static final Map<Long, ResourceLocation> PHOTOS = new HashMap<>();
+    private static final Map<Long, int[]> TAILLES = new HashMap<>();
     private static final Set<Long> DEMANDEES = new HashSet<>();
     private static final SystemToast.SystemToastId TOAST = new SystemToast.SystemToastId();
     private static int envoi;
@@ -62,6 +63,7 @@ public final class ClientPiaf {
             // depuis un flux : la version « tableau » passe par la petite pile de LWJGL et échoue au-delà de 64 Ko
             NativeImage image = NativeImage.read(new java.io.ByteArrayInputStream(png));
             ResourceLocation rl = Cabane.id("photo/" + id);
+            TAILLES.put(id, new int[] {image.getWidth(), image.getHeight()});
             Minecraft.getInstance().getTextureManager().register(rl, new DynamicTexture(image));
             PHOTOS.put(id, rl);
         } catch (Exception e) {
@@ -87,6 +89,49 @@ public final class ClientPiaf {
             PacketDistributor.sendToServer(new Piaf.DemandePhoto(id));
         }
         return rl;
+    }
+
+    /** Largeur et hauteur d'une photo en pixels (paysage 320 x 180, portrait 180 x 320). */
+    static int[] taille(long id) {
+        return TAILLES.getOrDefault(id, new int[] {320, 180});
+    }
+
+    /** La hauteur d'une photo affichée sur cette largeur, sans dépasser max. */
+    static int hauteurPhoto(long id, int largeur, int max) {
+        int[] t = taille(id);
+        return Math.min(max, largeur * t[1] / t[0]);
+    }
+
+    /** Dessine une photo dans un cadre : rognée pour le remplir, ou entière avec des bandes noires. */
+    static void dessinerPhoto(GuiGraphics g, long id, int x, int y, int w, int h, boolean remplir) {
+        ResourceLocation rl = photo(id);
+        if (rl == null) {
+            g.fill(x, y, x + w, y + h, 0xFF22262E);
+            return;
+        }
+        int[] t = taille(id);
+        float cadre = w / (float) h;
+        float image = t[0] / (float) t[1];
+        if (remplir) {
+            int uw = t[0];
+            int vh = t[1];
+            if (image > cadre) {
+                uw = Math.round(t[1] * cadre);
+            } else {
+                vh = Math.round(t[0] / cadre);
+            }
+            g.blit(rl, x, y, w, h, (t[0] - uw) / 2F, (t[1] - vh) / 2F, uw, vh, t[0], t[1]);
+        } else {
+            g.fill(x, y, x + w, y + h, Ios.NOIR);
+            int dw = w;
+            int dh = h;
+            if (image > cadre) {
+                dh = Math.round(w / image);
+            } else {
+                dw = Math.round(h * image);
+            }
+            g.blit(rl, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh, 0, 0, t[0], t[1], t[0], t[1]);
+        }
     }
 
     interface Rafraichissable {
@@ -275,17 +320,20 @@ public final class ClientPiaf {
             super.init();
             int taille = Math.min(32, (W - 24 - 3 * 10) / 4);
             int ecart = (W - 4 * taille) / 5;
-            String[][] grille = {{"contacts", "Contacts"}, {"recents", "Récents"}, {"galerie", "Photos"}, {"reglages", "Réglages"}};
+            String[][] grille = {{"contacts", "Contacts"}, {"recents", "Récents"}, {"galerie", "Photos"}, {"reglages", "Réglages"},
+                    {"argent", "Portefeuille"}};
             Runnable[] actions = {() -> minecraft.setScreen(new Contacts()), () -> minecraft.setScreen(new Recents()),
-                    () -> minecraft.setScreen(new Galerie(false)), () -> minecraft.setScreen(new Reglages())};
+                    () -> minecraft.setScreen(new Galerie(false)), () -> minecraft.setScreen(new Reglages()),
+                    () -> minecraft.setScreen(new Portefeuille())};
             int yGrille = top + 96;
             for (int i = 0; i < grille.length; i++) {
-                addRenderableWidget(Ios.Bouton.appli(left + ecart + i * (taille + ecart), yGrille, taille, grille[i][0], grille[i][1], true, actions[i]));
+                addRenderableWidget(Ios.Bouton.appli(left + ecart + (i % 4) * (taille + ecart), yGrille + (i / 4) * (taille + 18), taille,
+                        grille[i][0], grille[i][1], true, actions[i]));
             }
-            String[] dock = {"telephone", "piaf", "photo", "argent"};
-            String[] noms = {"Téléphone", "Piaf", "Appareil photo", "Portefeuille"};
-            Runnable[] actionsDock = {() -> minecraft.setScreen(new PhoneScreen()), () -> minecraft.setScreen(new Fil()),
-                    ClientCamera::ouvrir, () -> minecraft.setScreen(new Portefeuille())};
+            String[] dock = {"telephone", "messages", "photo", "piaf"};
+            String[] noms = {"Téléphone", "Messages", "Appareil photo", "Piaf"};
+            Runnable[] actionsDock = {() -> minecraft.setScreen(new PhoneScreen()), () -> minecraft.setScreen(new ClientMessages.Boite()),
+                    ClientCamera::ouvrir, () -> minecraft.setScreen(new Fil())};
             int yDock = top + H - 20 - taille - 6;
             for (int i = 0; i < dock.length; i++) {
                 addRenderableWidget(Ios.Bouton.appli(left + ecart + i * (taille + ecart), yDock, taille, dock[i], noms[i], false, actionsDock[i]));
@@ -295,6 +343,22 @@ public final class ClientPiaf {
             }
             if (premiere) {
                 ClientPhone.send(fr.cabane.telephone.PhoneNetwork.Action.ETAT, "");
+                ClientMessages.demander(fr.cabane.telephone.Messages.Action.BOITE, "", "", 0);
+            }
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.render(g, mouseX, mouseY, partialTick);
+            // la pastille rouge des messages pas encore lus, sur l'icône du dock
+            int nonLus = ClientMessages.nonLus();
+            if (nonLus > 0) {
+                int taille = Math.min(32, (W - 24 - 3 * 10) / 4);
+                int ecart = (W - 4 * taille) / 5;
+                int x = left + ecart + (taille + ecart) + taille - 2;
+                int y = top + H - 20 - taille - 6 + 1;
+                Ios.disque(g, x, y, 6, Ios.ROUGE);
+                Ios.texteCentre(g, font, nonLus > 9 ? "9+" : String.valueOf(nonLus), x, y - 3, 0.7F, Ios.BLANC, true);
             }
         }
 
@@ -573,10 +637,10 @@ public final class ClientPiaf {
                 ty += 10;
             }
             if (p.photo() != 0) {
-                int ph = w * 9 / 16;
+                int ph = hauteurPhoto(p.photo(), w, w);
                 ResourceLocation rl = photo(p.photo());
                 if (rl != null) {
-                    g.blit(rl, x, ty + 2, w, ph, 0, 0, 320, 180, 320, 180);
+                    dessinerPhoto(g, p.photo(), x, ty + 2, w, ph, false);
                 } else {
                     Ios.rond(g, x, ty + 2, w, ph, 8, 0xFF22262E);
                     Ios.texteCentre(g, font, "📷 …", x + w / 2F, ty + ph / 2F, 1F, Ios.GRIS, false);
@@ -644,10 +708,7 @@ public final class ClientPiaf {
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
             if (photo != 0) {
-                ResourceLocation rl = photo(photo);
-                if (rl != null) {
-                    g.blit(rl, x0(), y0() + 102, largeur(), largeur() * 9 / 16, 0, 0, 320, 180, 320, 180);
-                }
+                dessinerPhoto(g, photo, x0(), y0() + 102, largeur(), hauteurPhoto(photo, largeur(), bas() - y0() - 116), false);
             }
             Ios.texte(g, font, champ.getValue().length() + "/" + Piaf.TEXTE_MAX, x0(), bas() - 10, 0.75F, Ios.GRIS, false);
         }
@@ -655,13 +716,21 @@ public final class ClientPiaf {
 
     // ---------------------------------------------------------------- photos
 
-    /** Les photos prises. Toucher une photo la publie sur Piaf. */
+    /** Les photos prises (et reçues). Toucher une photo l'ouvre ; en mode « choisir », la renvoie à l'écran qui l'a demandée. */
     static final class Galerie extends Ecran {
         private final boolean choisir;
+        private final java.util.function.LongConsumer choix;
 
         Galerie(boolean choisir) {
             super(choisir ? "Choisir" : "Photos");
             this.choisir = choisir;
+            this.choix = choisir ? id -> Minecraft.getInstance().setScreen(new Publier(id)) : null;
+        }
+
+        Galerie(java.util.function.LongConsumer choix) {
+            super("Choisir");
+            this.choisir = true;
+            this.choix = choix;
         }
 
         @Override
@@ -679,7 +748,11 @@ public final class ClientPiaf {
             for (int i = 0; i < liste.size(); i++) {
                 int[] r = vignette(i);
                 if (mouseX >= r[0] && mouseX < r[0] + r[2] && mouseY >= r[1] && mouseY < r[1] + r[3]) {
-                    minecraft.setScreen(new Publier(liste.get(i)));
+                    if (choix != null) {
+                        choix.accept(liste.get(i));
+                    } else {
+                        minecraft.setScreen(new Visionneuse(liste.get(i)));
+                    }
                     return true;
                 }
             }
@@ -708,16 +781,107 @@ public final class ClientPiaf {
             }
             for (int i = 0; i < liste.size(); i++) {
                 int[] r = vignette(i);
-                ResourceLocation rl = photo(liste.get(i));
-                if (rl != null) {
-                    g.blit(rl, r[0], r[1], r[2], r[3], 0, 0, 320, 180, 320, 180);
-                } else {
-                    g.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], 0xFF22262E);
+                dessinerPhoto(g, liste.get(i), r[0], r[1], r[2], r[3], true);
+                int[] t = taille(liste.get(i));
+                if (t[1] > t[0]) {
+                    Ios.texte(g, font, "▯", r[0] + 3, r[1] + 2, 0.7F, Ios.BLANC, true);
                 }
             }
             if (!liste.isEmpty()) {
-                Ios.texteCentre(g, font, "Touche une photo pour la publier", left + W / 2F, bas() - 10, 0.75F, Ios.GRIS, false);
+                Ios.texteCentre(g, font, choisir ? "Touche la photo à joindre" : "Touche une photo pour l'ouvrir", left + W / 2F, bas() - 10, 0.75F, Ios.GRIS, false);
             }
+        }
+    }
+
+    /** Une photo en grand : la publier, l'envoyer par message, ou l'imprimer pour l'accrocher au mur. */
+    static final class Visionneuse extends Ecran {
+        private final long id;
+
+        Visionneuse(long id) {
+            super("");
+            this.id = id;
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            addRenderableWidget(Ios.Bouton.texte(left + 8, top + 18, 50, 14, "‹ Photos", Ios.BLEU, () -> minecraft.setScreen(new Galerie(false))));
+            int y = bas() - 78;
+            addRenderableWidget(Ios.Bouton.plein(x0(), y, largeur(), 20, "Imprimer", Ios.BLEU, () -> minecraft.setScreen(new Imprimer(id))));
+            addRenderableWidget(Ios.Bouton.plein(x0(), y + 26, largeur(), 20, "Envoyer par message", Ios.VERT,
+                    () -> minecraft.setScreen(new ClientMessages.Nouveau(id))));
+            addRenderableWidget(Ios.Bouton.plein(x0(), y + 52, largeur(), 20, "Publier sur Piaf", 0xFF3A3A3C, () -> minecraft.setScreen(new Publier(id))));
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.render(g, mouseX, mouseY, partialTick);
+            int y = top + 36;
+            dessinerPhoto(g, id, x0(), y, largeur(), bas() - 84 - y, false);
+        }
+    }
+
+    /** Imprimer une photo : on choisit sa taille sur le mur, bloc par bloc. */
+    static final class Imprimer extends Ecran {
+        private final long id;
+        private int largeurBlocs;
+        private int hauteurBlocs;
+
+        Imprimer(long id) {
+            super("Imprimer");
+            this.id = id;
+            int[] t = taille(id);
+            largeurBlocs = t[0] >= t[1] ? 2 : 1;
+            hauteurBlocs = t[0] >= t[1] ? 1 : 2;
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            int y = bas() - 92;
+            reglage(y, "Largeur", d -> largeurBlocs = Math.clamp(largeurBlocs + d, 1, fr.cabane.photo.Impression.MAX));
+            reglage(y + 22, "Hauteur", d -> hauteurBlocs = Math.clamp(hauteurBlocs + d, 1, fr.cabane.photo.Impression.MAX));
+            addRenderableWidget(Ios.Bouton.texte(x0(), y + 44, largeur(), 12, "Garder les proportions de la photo", Ios.BLEU, () -> {
+                int[] t = taille(id);
+                hauteurBlocs = Math.clamp(Math.round(largeurBlocs * t[1] / (float) t[0]), 1, fr.cabane.photo.Impression.MAX);
+            }));
+            addRenderableWidget(Ios.Bouton.plein(x0(), bas() - 24, largeur(), 20, "Imprimer", Ios.BLEU, () -> {
+                PacketDistributor.sendToServer(new fr.cabane.photo.Impression.Demande(id, largeurBlocs, hauteurBlocs));
+                minecraft.setScreen(null);
+            }));
+        }
+
+        private void reglage(int y, String nom, java.util.function.IntConsumer changer) {
+            addRenderableWidget(Ios.Bouton.plein(x0() + largeur() - 70, y, 22, 18, "−", 0xFF3A3A3C, () -> changer.accept(-1)));
+            addRenderableWidget(Ios.Bouton.plein(x0() + largeur() - 22, y, 22, 18, "+", 0xFF3A3A3C, () -> changer.accept(1)));
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.render(g, mouseX, mouseY, partialTick);
+            int y = bas() - 92;
+            g.drawString(font, "Largeur", x0(), y + 5, Ios.BLANC, false);
+            Ios.texteCentre(g, font, largeurBlocs + " bloc" + (largeurBlocs > 1 ? "s" : ""), x0() + largeur() - 35, y + 5, 0.75F, Ios.BLANC, false);
+            g.drawString(font, "Hauteur", x0(), y + 27, Ios.BLANC, false);
+            Ios.texteCentre(g, font, hauteurBlocs + " bloc" + (hauteurBlocs > 1 ? "s" : ""), x0() + largeur() - 35, y + 27, 0.75F, Ios.BLANC, false);
+            // l'aperçu : le cadre sur le mur, à l'échelle, avec la photo rognée comme elle sera accrochée
+            int zoneH = y - y0() - 22;
+            int bloc = Math.min(largeur() / largeurBlocs, zoneH / hauteurBlocs);
+            int w = bloc * largeurBlocs;
+            int h = bloc * hauteurBlocs;
+            int x = left + (W - w) / 2;
+            int py = y0() + (zoneH - h) / 2;
+            g.fill(x - 2, py - 2, x + w + 2, py + h + 2, 0xFF4A3524);
+            dessinerPhoto(g, id, x, py, w, h, true);
+            for (int i = 1; i < largeurBlocs; i++) {
+                g.fill(x + i * bloc, py, x + i * bloc + 1, py + h, 0x30FFFFFF);
+            }
+            for (int j = 1; j < hauteurBlocs; j++) {
+                g.fill(x, py + j * bloc, x + w, py + j * bloc + 1, 0x30FFFFFF);
+            }
+            int papier = fr.cabane.photo.Impression.papier(largeurBlocs, hauteurBlocs);
+            Ios.texteCentre(g, font, largeurBlocs + " × " + hauteurBlocs + " blocs · " + papier + " feuille" + (papier > 1 ? "s" : "") + " de papier",
+                    left + W / 2F, y - 16, 0.75F, Ios.GRIS, false);
         }
     }
 

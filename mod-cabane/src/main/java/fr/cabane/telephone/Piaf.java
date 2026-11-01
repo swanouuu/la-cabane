@@ -264,6 +264,24 @@ public final class Piaf {
         return UUID.nameUUIDFromBytes(("piaf:" + sim).getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
+    /** La photo est-elle dans la galerie de ce téléphone ? */
+    public static boolean dansGalerie(MinecraftServer server, String sim, long photo) {
+        return Donnees.get(server).galeries.getOrDefault(sim, List.of()).contains(photo);
+    }
+
+    /** Une photo reçue (par SMS) rejoint la galerie du téléphone. */
+    static void ajouterGalerie(MinecraftServer server, String sim, long photo) {
+        Donnees d = Donnees.get(server);
+        List<Long> galerie = d.galeries.computeIfAbsent(sim, k -> new ArrayList<>());
+        if (!galerie.contains(photo)) {
+            galerie.add(photo);
+            while (galerie.size() > 64) {
+                galerie.remove(0);
+            }
+            d.setDirty();
+        }
+    }
+
     private static void agir(ServerPlayer joueur, Action a) {
         Donnees d = Donnees.get(joueur.server);
         String sim = PhoneCalls.numero(joueur);

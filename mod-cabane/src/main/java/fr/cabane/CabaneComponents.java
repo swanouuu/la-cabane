@@ -36,6 +36,11 @@ public final class CabaneComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> GOUT =
             COMPONENTS.registerComponentType("gout", b -> b.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8));
 
+    /** Une photo imprimée : laquelle, et sa taille sur le mur. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<fr.cabane.photo.PhotoImprimee>> PHOTO =
+            COMPONENTS.registerComponentType("photo", b -> b.persistent(fr.cabane.photo.PhotoImprimee.CODEC)
+                    .networkSynchronized(fr.cabane.photo.PhotoImprimee.STREAM_CODEC));
+
     static void register(IEventBus modBus) {
         COMPONENTS.register(modBus);
     }

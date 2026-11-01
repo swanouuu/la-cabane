@@ -59,6 +59,10 @@ public final class CabaneItems {
     public static final DeferredItem<fr.cabane.police.Police.VoitureItem> VOITURE_POLICE =
             ITEMS.register("voiture_police", () -> new fr.cabane.police.Police.VoitureItem(new Item.Properties().stacksTo(1)));
 
+    /** Une photo du téléphone, imprimée (voir fr.cabane.photo). */
+    public static final DeferredItem<fr.cabane.photo.PhotoItem> PHOTO =
+            ITEMS.register("photo", () -> new fr.cabane.photo.PhotoItem(new Item.Properties().stacksTo(16)));
+
     // L'histoire de Beauvais
     public static final DeferredItem<fr.cabane.histoire.Histoire.ObjetLore> CLE_SALLE_ZERO = ITEMS.register("cle_salle_zero",
             () -> new fr.cabane.histoire.Histoire.ObjetLore(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant(),
