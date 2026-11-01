@@ -1,0 +1,19 @@
+{
+  "resultat": "cataclysm:sturdy_boots",
+  "prix": 12000,
+  "ordre": 41,
+  "ingredients": [
+    [
+      "minecraft:leather",
+      12
+    ],
+    [
+      "minecraft:iron_ingot",
+      16
+    ],
+    [
+      "minecraft:slime_ball",
+      8
+    ]
+  ]
+}

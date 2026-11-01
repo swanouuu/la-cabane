@@ -56,7 +56,7 @@ public final class CasinoUi {
         return mise >= 1000 ? 0xFF1F1F1F : mise >= 500 ? 0xFF6A1B9A : mise >= 100 ? 0xFF1565C0 : mise >= 50 ? 0xFF2E7D32 : 0xFFC62828;
     }
 
-    static int melange(int a, int b, float t) {
+    public static int melange(int a, int b, float t) {
         int r = (int) ((a >> 16 & 0xFF) + ((b >> 16 & 0xFF) - (a >> 16 & 0xFF)) * t);
         int v = (int) ((a >> 8 & 0xFF) + ((b >> 8 & 0xFF) - (a >> 8 & 0xFF)) * t);
         int bl = (int) ((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);

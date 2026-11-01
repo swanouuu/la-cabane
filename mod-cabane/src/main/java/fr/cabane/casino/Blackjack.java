@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -35,6 +37,10 @@ public final class Blackjack {
         fr.cabane.bloc.InteractifBlockEntity table;
         int etat = AUCUNE;
         long gain;
+        // à la grande table : le siège (0 à 2), le nom affiché, quand la main s'est terminée
+        int siege = -1;
+        String nom = "";
+        long fin;
 
         int tirer() {
             if (sabot.isEmpty()) {
@@ -115,11 +121,22 @@ public final class Blackjack {
         switch (action) {
             case DISTRIBUER -> {
                 var table = Casino.machine(joueur, pos);
+                if (p.etat == EN_COURS || table == null) {
+                    break;
+                }
+                int siege = siegeLibre(joueur, p, table);
+                if (siege < 0) {
+                    joueur.displayClientMessage(Component.literal("Table complète : trois joueurs au maximum. Attends qu'une place se libère.")
+                            .withStyle(ChatFormatting.GOLD), true);
+                    break;
+                }
                 // la caisse doit pouvoir payer une main doublée gagnante (4 fois la mise)
-                if (p.etat == EN_COURS || !Casino.miser(joueur, table, mise, mise * 4)) {
+                if (!Casino.miser(joueur, table, mise, mise * 4)) {
                     break;
                 }
                 p.table = table;
+                p.siege = siege;
+                p.nom = joueur.getGameProfile().getName();
                 p.joueur.clear();
                 p.croupier.clear();
                 p.mise = mise;
@@ -164,6 +181,45 @@ public final class Blackjack {
             }
         }
         envoyer(joueur, p);
+        afficher(p.table);
+    }
+
+    /** Le siège du joueur à cette table : le sien s'il l'occupe déjà, sinon le premier libre (ou -1). */
+    private static int siegeLibre(ServerPlayer joueur, Partie p, fr.cabane.bloc.InteractifBlockEntity table) {
+        boolean[] pris = new boolean[3];
+        long maintenant = table.getLevel() == null ? 0 : table.getLevel().getGameTime();
+        for (Map.Entry<UUID, Partie> e : PARTIES.entrySet()) {
+            Partie q = e.getValue();
+            if (!e.getKey().equals(joueur.getUUID()) && q.table == table && q.siege >= 0 && (q.etat == EN_COURS || maintenant - q.fin < 200)) {
+                pris[q.siege] = true;
+            }
+        }
+        if (p.table == table && p.siege >= 0 && !pris[p.siege]) {
+            return p.siege;
+        }
+        for (int i = 0; i < 3; i++) {
+            if (!pris[i]) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Les mains de tous les joueurs de cette table, posées sur le tapis pour que tout le monde les voie. */
+    private static void afficher(fr.cabane.bloc.InteractifBlockEntity table) {
+        if (table == null || table.isRemoved() || table.getLevel() == null) {
+            return;
+        }
+        long maintenant = table.getLevel().getGameTime();
+        List<fr.cabane.bloc.InteractifBlockEntity.Place> places = new ArrayList<>();
+        for (Partie q : PARTIES.values()) {
+            if (q.table == table && q.siege >= 0 && (q.etat == EN_COURS || maintenant - q.fin < 600)) {
+                boolean cache = q.etat == EN_COURS;
+                List<Integer> banque = cache && !q.croupier.isEmpty() ? List.of(q.croupier.get(0)) : List.copyOf(q.croupier);
+                places.add(new fr.cabane.bloc.InteractifBlockEntity.Place(q.siege, q.nom, List.copyOf(q.joueur), banque, cache, q.etat, q.mise, q.gain, q.fin));
+            }
+        }
+        table.places(places);
     }
 
     private static void banque(ServerPlayer joueur, Partie p) {
@@ -177,6 +233,7 @@ public final class Blackjack {
 
     private static void finir(ServerPlayer joueur, Partie p, int etat) {
         p.etat = etat;
+        p.fin = joueur.level().getGameTime();
         p.gain = switch (etat) {
             case BLACKJACK -> p.mise * 5 / 2;
             case GAGNE -> p.mise * 2;
@@ -196,7 +253,10 @@ public final class Blackjack {
 
     /** Quitter le serveur en pleine main, c'est abandonner la mise. */
     public static void deconnexion(ServerPlayer joueur) {
-        PARTIES.remove(joueur.getUUID());
+        Partie p = PARTIES.remove(joueur.getUUID());
+        if (p != null) {
+            afficher(p.table);
+        }
     }
 
     private Blackjack() {

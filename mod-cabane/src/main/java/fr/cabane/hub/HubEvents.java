@@ -48,7 +48,24 @@ public final class HubEvents {
             new Pnj("cousin", -27.5, -4.5, -90F),      // l'autre côté de l'entrée du bazar
             new Pnj("garde_ouest", -3.5, 62.5, 0F),    // à la grande porte, côté dehors
             new Pnj("garde_est", 3.5, 62.5, 0F),
-            new Pnj("guerisseuse", -15.5, 30.5, 90F)); // au feu de camp
+            new Pnj("guerisseuse", -15.5, 30.5, 90F),  // au feu de camp
+            // le Président sur la place, devant le grand panneau, et sa garde rapprochée autour
+            new Pnj("macron", 0.5, 9.5, 0F),
+            new Pnj("garde_president_1", -1.5, 8.5, 0F),
+            new Pnj("garde_president_2", 2.5, 8.5, 0F),
+            new Pnj("garde_president_3", -1.5, 11.5, 0F),
+            new Pnj("garde_president_4", 2.5, 11.5, 0F),
+            // les habitants, chacun dans son coin
+            new Pnj("jean", 20.5, 0.5, 90F),           // la rue du village
+            new Pnj("jacques", 44.5, 0.5, -90F),
+            new Pnj("francis", -12.5, -12.5, 45F),     // la place
+            new Pnj("louis", 12.5, -6.5, 0F),
+            new Pnj("bernard", 31.5, 22.5, 180F),      // le chemin des champs
+            new Pnj("gerard", -24.5, 35.5, 90F),       // le feu de camp
+            new Pnj("ginette", 6.5, -14.5, 0F),
+            new Pnj("monique", -7.5, 24.5, -90F),      // l'avenue de la grande porte
+            new Pnj("martine", 29.5, 3.5, 180F),
+            new Pnj("thierry", 0.5, 40.5, 0F));
 
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
     private static final int RAYON_CHUNKS = 6;
@@ -146,7 +163,7 @@ public final class HubEvents {
                 FORCES.clear();
                 etape = Etape.RIEN;
                 for (ServerPlayer joueur : server.getPlayerList().getPlayers()) {
-                    welcome(joueur);
+                    accueillir(joueur);
                 }
             }
             default -> {
@@ -193,7 +210,8 @@ public final class HubEvents {
 
     private static void terminer(ServerLevel level, BlockPos centre, long start) {
         HubData.get(level.getServer()).setCentre(centre);
-        level.setDefaultSpawnPos(centre.offset(0, 1, 8), 180F);
+        HubData data = HubData.get(level.getServer());
+        level.setDefaultSpawnPos(data.demarre() ? HubBuilder.dansAvion(centre) : HubBuilder.salleEmbarquement(centre), 180F);
         level.getGameRules().getRule(GameRules.RULE_SPAWN_RADIUS).set(0, level.getServer());
         // la cabane devient le vrai centre de la map : la bordure du monde se centre dessus
         level.getWorldBorder().setCenter(centre.getX() + 0.5, centre.getZ() + 0.5);
@@ -232,6 +250,14 @@ public final class HubEvents {
             double x = centre.getX() + pnj.dx();
             double y = centre.getY() + 1;
             double z = centre.getZ() + pnj.dz();
+            // la maison du PNJ : ceux qui se baladent y reviennent toujours
+            CompoundTag maison = new CompoundTag();
+            maison.putInt("X", (int) Math.floor(x));
+            maison.putInt("Y", (int) Math.floor(y));
+            maison.putInt("Z", (int) Math.floor(z));
+            CompoundTag navigation = tag.getCompound("Navigation");
+            navigation.put("Home", maison);
+            tag.put("Navigation", navigation);
             Entity entity = EntityType.loadEntityRecursive(tag, level, e -> {
                 e.moveTo(x, y, z, pnj.yaw(), 0F);
                 return e;
@@ -241,6 +267,63 @@ public final class HubEvents {
             Cabane.LOGGER.warn("PNJ {} non créé (Easy NPC absent ou fichier invalide) : {}", pnj.file(), e.toString());
             return false;
         }
+    }
+
+    /** À la connexion : avant le /start, la salle d'embarquement ; après, l'avion (la première fois). */
+    public static void accueillir(ServerPlayer joueur) {
+        HubData data = HubData.get(joueur.server);
+        if (data.centre() != null && !data.demarre()) {
+            BlockPos salle = HubBuilder.salleEmbarquement(data.centre());
+            joueur.teleportTo(joueur.server.overworld(), salle.getX() + 0.5, salle.getY(), salle.getZ() + 0.5, 180F, 0F);
+            if (!joueur.isCreative()) {
+                joueur.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);
+            }
+            joueur.connection.send(new ClientboundSetTitlesAnimationPacket(10, 70, 20));
+            joueur.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Porte 12").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)));
+            joueur.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Vol BV2026 pour Beauvais : embarquement imminent").withStyle(ChatFormatting.YELLOW)));
+            joueur.sendSystemMessage(Component.literal("✈ Tu attends en salle d'embarquement. L'hôte lance la partie avec /start quand tout le monde est là.")
+                    .withStyle(ChatFormatting.YELLOW));
+            return;
+        }
+        welcome(joueur);
+    }
+
+    /** /start : la vitre de la passerelle s'ouvre, tout le monde embarque, l'avion devient le point de départ. */
+    public static void demarrer(MinecraftServer server, net.minecraft.commands.CommandSourceStack source) {
+        HubData data = HubData.get(server);
+        if (data.centre() == null) {
+            source.sendFailure(Component.literal("Beauvais n'est pas encore construit, patiente un instant."));
+            return;
+        }
+        if (data.demarre()) {
+            source.sendFailure(Component.literal("La partie a déjà commencé."));
+            return;
+        }
+        data.setDemarre(true);
+        ServerLevel level = server.overworld();
+        level.setDefaultSpawnPos(HubBuilder.dansAvion(data.centre()), 90F);
+        for (BlockPos p : HubBuilder.porteEmbarquement(data.centre())) {
+            level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        }
+        for (ServerPlayer joueur : server.getPlayerList().getPlayers()) {
+            if (joueur.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.ADVENTURE) {
+                joueur.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            }
+            welcome(joueur);
+        }
+        server.getPlayerList().broadcastSystemMessage(Component.literal("✈ Décollage ! Bon vol vers Beauvais…").withStyle(ChatFormatting.GOLD), false);
+    }
+
+    /** Mort sans lit : on renaît dans l'avion, avec un parachute. */
+    public static void reapparition(ServerPlayer joueur) {
+        HubData data = HubData.get(joueur.server);
+        if (data.centre() == null || !data.demarre() || joueur.getRespawnPosition() != null) {
+            return;
+        }
+        BlockPos dedans = HubBuilder.dansAvion(data.centre());
+        joueur.teleportTo(joueur.server.overworld(), dedans.getX() + 0.5, dedans.getY(), dedans.getZ() + 0.5, 90F, 0F);
+        give(joueur, new ItemStack(CabaneItems.PARACHUTE.get()));
+        joueur.sendSystemMessage(Component.literal("Retour dans l'avion… Prends ton parachute et saute !").withStyle(ChatFormatting.YELLOW));
     }
 
     /** Première connexion : le joueur se réveille dans l'avion en feu, avec son kit de départ. */
@@ -263,11 +346,11 @@ public final class HubEvents {
         BlockPos centre = data.centre();
         if (centre != null) {
             ServerLevel level = player.server.overworld();
-            BlockPos coffre = centre.offset(HubBuilder.COFFRE_AVION);
+            BlockPos coffre = HubBuilder.coffreAvion(centre);
             if (level.getBlockEntity(coffre) instanceof Container conteneur) {
                 remplirParachutes(conteneur);
             }
-            BlockPos dedans = centre.offset(HubBuilder.DANS_AVION);
+            BlockPos dedans = HubBuilder.dansAvion(centre);
             player.teleportTo(level, dedans.getX() + 0.5, dedans.getY(), dedans.getZ() + 0.5, 90F, 0F);
             level.playSound(null, dedans, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.AMBIENT, 0.6F, 0.7F);
         }

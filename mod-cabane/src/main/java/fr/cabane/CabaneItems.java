@@ -47,6 +47,20 @@ public final class CabaneItems {
     public static final DeferredItem<fr.cabane.fumee.Fumee.TuyauItem> TUYAU =
             ITEMS.register("tuyau", () -> new fr.cabane.fumee.Fumee.TuyauItem(new Item.Properties().stacksTo(1)));
 
+    // La police de Beauvais
+    public static final DeferredItem<fr.cabane.police.Police.MenottesItem> MENOTTES =
+            ITEMS.register("menottes", () -> new fr.cabane.police.Police.MenottesItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<fr.cabane.police.Police.PistoletItem> PISTOLET =
+            ITEMS.register("pistolet", () -> new fr.cabane.police.Police.PistoletItem(new Item.Properties()));
+    public static final DeferredItem<fr.cabane.police.Police.TenueItem> TENUE_POLICE =
+            ITEMS.register("tenue_police", () -> new fr.cabane.police.Police.TenueItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> CASQUETTE_POLICE = uniforme("casquette_police", net.minecraft.world.item.ArmorItem.Type.HELMET);
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> VESTE_POLICE = uniforme("veste_police", net.minecraft.world.item.ArmorItem.Type.CHESTPLATE);
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> PANTALON_POLICE = uniforme("pantalon_police", net.minecraft.world.item.ArmorItem.Type.LEGGINGS);
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> CHAUSSURES_POLICE = uniforme("chaussures_police", net.minecraft.world.item.ArmorItem.Type.BOOTS);
+    public static final DeferredItem<fr.cabane.police.Police.VoitureItem> VOITURE_POLICE =
+            ITEMS.register("voiture_police", () -> new fr.cabane.police.Police.VoitureItem(new Item.Properties().stacksTo(1)));
+
     // Les sept reliques, cachées dans les coffres de donjons précis (voir data/cabane/loot_modifiers)
     public static final DeferredItem<RelicItem> SCARABEE_DOR = relique("scarabee_dor", Rarity.UNCOMMON);
     public static final DeferredItem<RelicItem> IDOLE_DE_JADE = relique("idole_de_jade", Rarity.UNCOMMON);
@@ -73,6 +87,11 @@ public final class CabaneItems {
                         Cartes.toutes().forEach(c -> output.accept(Cartes.carte(c.id())));
                     })
                     .build());
+
+    private static DeferredItem<net.minecraft.world.item.ArmorItem> uniforme(String name, net.minecraft.world.item.ArmorItem.Type type) {
+        return ITEMS.register(name, () -> new net.minecraft.world.item.ArmorItem(fr.cabane.police.Police.UNIFORME, type,
+                new Item.Properties().durability(type.getDurability(10))));
+    }
 
     private static DeferredItem<RelicItem> relique(String name, Rarity rarity) {
         return ITEMS.register(name, () -> new RelicItem(new Item.Properties().stacksTo(1).rarity(rarity).fireResistant()));

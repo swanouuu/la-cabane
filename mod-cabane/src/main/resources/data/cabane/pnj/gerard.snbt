@@ -1,0 +1,27 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-1454756483,-1898352350,1177296628,176284341],
+  CustomName:'{"text":"Gérard","color":"gray"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/gerard.png"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.55},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Gérard",
+        Texts:[{Text:"Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là. Celui-là, c'est le mien."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Pas de souci",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

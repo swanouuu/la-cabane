@@ -1,0 +1,19 @@
+{
+  "resultat": "mowziesmobs:wrought_axe",
+  "prix": 15000,
+  "ordre": 31,
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ],
+    [
+      "minecraft:blaze_rod",
+      4
+    ]
+  ]
+}

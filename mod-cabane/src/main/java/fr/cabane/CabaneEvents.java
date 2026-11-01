@@ -26,6 +26,7 @@ public final class CabaneEvents {
         event.addListener(Boutique.INSTANCE);
         event.addListener(Contrats.INSTANCE);
         event.addListener(Cartes.INSTANCE);
+        event.addListener(fr.cabane.boutique.Forge.INSTANCE);
     }
 
     @SubscribeEvent
@@ -49,8 +50,15 @@ public final class CabaneEvents {
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             Economie.connexion(player);
-            HubEvents.welcome(player);
+            HubEvents.accueillir(player);
             PhoneCalls.sendState(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !event.isEndConquered()) {
+            HubEvents.reapparition(player);
         }
     }
 

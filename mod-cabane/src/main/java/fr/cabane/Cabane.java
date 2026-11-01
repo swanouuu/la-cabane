@@ -31,6 +31,8 @@ public class Cabane {
         modBus.addListener(Economie::register);
         modBus.addListener(Boutique::register);
         modBus.addListener(Contrats::register);
+        modBus.addListener(fr.cabane.boutique.Forge::register);
+        fr.cabane.police.Police.register(modBus);
         modBus.addListener(Etals::register);
         modBus.addListener(Casino::register);
         modBus.addListener(Cartes::register);

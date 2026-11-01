@@ -26,7 +26,7 @@ hash = "863ba1b9d63535cf576447757066e3f7926ed994b92f37e38dcd2b640f3600d9"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/reliques.snbt"
-hash = "18a4aaf52998bc6bf5398ea64a5b1de23980d4b9079bd0d37bea7b26aa2975de"
+hash = "99b1df0602afcf7b53c9838c0bf405f7d41914d15227b0a8283c54915ed8f908"
 
 [[files]]
 file = "config/ftbquests/quests/data.snbt"
@@ -34,11 +34,11 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "44302475bb251713e04b6aefac511a0a7808c0a16ca28f9e6458db7b66c8f9b3"
+hash = "4afe59b1097c1117ee44ed607eb89923450fb1bd15c0643718308d33aef075c8"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "44302475bb251713e04b6aefac511a0a7808c0a16ca28f9e6458db7b66c8f9b3"
+hash = "4afe59b1097c1117ee44ed607eb89923450fb1bd15c0643718308d33aef075c8"
 
 [[files]]
 file = "mods/amendments.pw.toml"
@@ -72,7 +72,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "bb7b7eb25de93986e6f692e9500fe5d6d79532fd733a4eb9aa508814d417c3f2"
+hash = "b6127cbd497bee8b682e5be900c6b8d41874a184bfe6e70c278afc3c870aeaba"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"

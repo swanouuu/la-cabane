@@ -1,0 +1,19 @@
+{
+  "resultat": "cataclysm:khopesh",
+  "prix": 14000,
+  "ordre": 40,
+  "ingredients": [
+    [
+      "minecraft:gold_ingot",
+      12
+    ],
+    [
+      "minecraft:sandstone",
+      32
+    ],
+    [
+      "minecraft:diamond",
+      3
+    ]
+  ]
+}

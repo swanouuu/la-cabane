@@ -1,0 +1,27 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;1225783962,492319576,1587421915,2059639289],
+  CustomName:'{"text":"Martine","color":"gray"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/martine.png"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.55},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Martine",
+        Texts:[{Text:"Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Merci du conseil",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

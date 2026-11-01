@@ -1,0 +1,23 @@
+{
+  "resultat": "mowziesmobs:spear",
+  "prix": 6000,
+  "ordre": 10,
+  "ingredients": [
+    [
+      "minecraft:bamboo",
+      32
+    ],
+    [
+      "minecraft:flint",
+      8
+    ],
+    [
+      "minecraft:gold_ingot",
+      6
+    ],
+    [
+      "minecraft:feather",
+      4
+    ]
+  ]
+}

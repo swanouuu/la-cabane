@@ -15,6 +15,10 @@ public final class CabaneEntities {
             () -> EntityType.Builder.<ParachuteEntity>of(ParachuteEntity::new, MobCategory.MISC)
                     .sized(0.8F, 0.6F).clientTrackingRange(10).updateInterval(3).build("parachute"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<fr.cabane.police.VoitureEntity>> VOITURE_POLICE = ENTITIES.register("voiture_police",
+            () -> EntityType.Builder.<fr.cabane.police.VoitureEntity>of(fr.cabane.police.VoitureEntity::new, MobCategory.MISC)
+                    .sized(2.0F, 1.9F).clientTrackingRange(10).build("voiture_police"));
+
     static void register(IEventBus modBus) {
         ENTITIES.register(modBus);
     }

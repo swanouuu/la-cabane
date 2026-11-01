@@ -39,6 +39,12 @@ public final class CabaneCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(CabaneCommands::annuaire)));
 
+        // /start : l'hôte lance la partie (tout le monde passe de la salle d'embarquement à l'avion)
+        dispatcher.register(Commands.literal("start").requires(source -> source.hasPermission(2)).executes(ctx -> {
+            fr.cabane.hub.HubEvents.demarrer(ctx.getSource().getServer(), ctx.getSource());
+            return 1;
+        }));
+
         dispatcher.register(Commands.literal("pileouface")
                 .then(Commands.literal("accepter").executes(ctx -> run(ctx, Casino::accepter)))
                 .then(Commands.argument("joueur", EntityArgument.player())
@@ -52,6 +58,7 @@ public final class CabaneCommands {
                 // utilisables par les PNJ (Easy NPC, « exécuter en tant que joueur ») ou à la main
                 .then(Commands.literal("boutique").executes(ctx -> run(ctx, Boutique::ouvrir)))
                 .then(Commands.literal("contrats").executes(ctx -> run(ctx, Contrats::ouvrir)))
+                .then(Commands.literal("forge").executes(ctx -> run(ctx, fr.cabane.boutique.Forge::ouvrir)))
                 // utilisée par les quêtes : une carte au trésor vers le donjon le plus proche d'un point lointain
                 .then(Commands.literal("carte").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("joueur", EntityArgument.player())
@@ -66,6 +73,12 @@ public final class CabaneCommands {
                     ctx.getSource().sendSuccess(() -> Component.literal("Construction du centre de map lancée ici (une minute environ), le spawn y sera déplacé."), true);
                     return 1;
                 }))
+                // l'hôte peut lâcher la garde présidentielle sur quelqu'un
+                .then(Commands.literal("garde").requires(source -> source.hasPermission(3))
+                        .then(Commands.argument("joueur", EntityArgument.player()).executes(ctx -> {
+                            fr.cabane.hub.Gardes.lacher(EntityArgument.getPlayer(ctx, "joueur"));
+                            return 1;
+                        })))
                 .then(Commands.literal("pnj").requires(source -> source.hasPermission(3)).executes(ctx -> {
                     int count = HubEvents.spawnNpcs(ctx.getSource().getLevel());
                     ctx.getSource().sendSuccess(() -> Component.literal(count + " PNJ replacés autour de la cabane."), true);

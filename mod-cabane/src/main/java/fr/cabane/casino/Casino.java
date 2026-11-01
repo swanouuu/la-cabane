@@ -195,8 +195,18 @@ public final class Casino {
         };
     }
 
+    /** Durée du tirage en 3D sur les grandes tables (en ticks). */
+    public static final int DUREE_ROULETTE = 130;
+    public static final int DUREE_ROUE = 150;
+
     private static void jouer(ServerPlayer joueur, int jeu, long mise, int choix, net.minecraft.core.BlockPos pos) {
         fr.cabane.bloc.InteractifBlockEntity machine = machine(joueur, pos);
+        int duree = jeu == ROULETTE ? DUREE_ROULETTE : jeu == ROUE ? DUREE_ROUE : 0;
+        if (machine != null && duree > 0 && machine.tourne(joueur.level().getGameTime(), duree)) {
+            joueur.displayClientMessage(Component.literal(jeu == ROULETTE ? "Rien ne va plus ! Attends la fin du tour." : "La roue tourne encore, patience !")
+                    .withStyle(ChatFormatting.GOLD), true);
+            return;
+        }
         if (jeu < MACHINE || jeu > PILE_OU_FACE || !miser(joueur, machine, mise, gainMax(jeu, mise, choix))) {
             return;
         }
@@ -210,6 +220,9 @@ public final class Casino {
             default -> pileOuFace(rnd, mise, choix, tirage);
         };
         payer(joueur, machine, gain);
+        if (duree > 0) {
+            machine.annoncer(tirage.get(0), joueur.getGameProfile().getName(), gain);
+        }
         PacketDistributor.sendToPlayer(joueur, new Resultat(jeu, tirage, gain));
     }
 

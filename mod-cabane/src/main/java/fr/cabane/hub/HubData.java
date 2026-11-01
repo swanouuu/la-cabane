@@ -17,6 +17,8 @@ public class HubData extends SavedData {
     private static final String NAME = "cabane_centre";
 
     private BlockPos centre;
+    /** La partie a-t-elle commencé (/start) ? Avant, on attend dans la salle d'embarquement. */
+    private boolean demarre;
     private final Set<UUID> kits = new HashSet<>();
 
     public static HubData get(MinecraftServer server) {
@@ -27,6 +29,7 @@ public class HubData extends SavedData {
     private static HubData load(CompoundTag tag, HolderLookup.Provider registries) {
         HubData data = new HubData();
         NbtUtils.readBlockPos(tag, "centre").ifPresent(pos -> data.centre = pos);
+        data.demarre = tag.getBoolean("demarre");
         ListTag list = tag.getList("kits", Tag.TAG_INT_ARRAY);
         for (Tag entry : list) {
             data.kits.add(NbtUtils.loadUUID(entry));
@@ -39,10 +42,20 @@ public class HubData extends SavedData {
         if (centre != null) {
             tag.put("centre", NbtUtils.writeBlockPos(centre));
         }
+        tag.putBoolean("demarre", demarre);
         ListTag list = new ListTag();
         kits.forEach(id -> list.add(NbtUtils.createUUID(id)));
         tag.put("kits", list);
         return tag;
+    }
+
+    public boolean demarre() {
+        return demarre;
+    }
+
+    public void setDemarre(boolean valeur) {
+        demarre = valeur;
+        setDirty();
     }
 
     public BlockPos centre() {

@@ -1,0 +1,19 @@
+{
+  "resultat": "cataclysm:black_steel_sword",
+  "prix": 9000,
+  "ordre": 20,
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      4
+    ],
+    [
+      "minecraft:coal_block",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ]
+  ]
+}

@@ -1,20 +1,20 @@
-# La Cabane — serveur Minecraft entre potes
+# Beauvais — serveur Minecraft entre potes
 
-Survie moddée en **NeoForge 1.21.1** (la même base que CrazyTown S3). Grande map savane, une cabane abandonnée au centre de la map comme base principale, des PNJ, une grande quête qui envoie dans des donjons partout sur la map, et des téléphones avec numéros perso et vocal.
+Survie moddée en **NeoForge 1.21.1** (la même base que CrazyTown S3). Votre avion prend feu au-dessus de la jungle ; vous sautez en parachute et vous atterrissez à **Beauvais**, un village perdu au milieu d'arbres géants. Des PNJ, une grande quête qui envoie dans des donjons partout sur la map, des téléphones avec numéros perso et vocal, un casino, une police, et un président.
 
-Nom provisoire : remplace « La Cabane » dans `outils/config.json` et `pack/pack.toml` quand vous aurez trouvé le vrai nom.
+Le dépôt et le mod s'appellent encore `la-cabane` / `mod-cabane` : c'est le nom de départ, ça ne se voit pas en jeu.
 
 ## Aperçu en jeu
 
 Captures prises automatiquement dans le jeu de test (`docs/apercu/`).
 
-![Les PNJ et le casino](docs/apercu/2-pnj-rpg.jpg)
-![Le téléphone et les boosters](docs/apercu/3-telephone-et-cartes.jpg)
-![Le classeur et les jeux du casino](docs/apercu/4-classeur-et-casino.jpg)
-![Le grand panneau et la Grande Cabane](docs/apercu/village-2-panneau-et-cabane.jpg)
-![Dans la Grande Cabane](docs/apercu/village-3-dans-la-cabane.jpg)
-![Le Grand Bazar et la rue](docs/apercu/village-4-bazar-et-rue.jpg)
-![Les champs et l’avion](docs/apercu/village-5-champs-et-avion.jpg)
+![Beauvais vu du ciel](docs/apercu/beauvais-1-vue-du-ciel.jpg)
+![Macron et sa garde](docs/apercu/beauvais-2-macron.jpg)
+![La forge de Brokk](docs/apercu/beauvais-3-forge.jpg)
+![La police](docs/apercu/beauvais-4-police.jpg)
+![La roulette](docs/apercu/beauvais-5-roulette.jpg)
+![La roue de la fortune](docs/apercu/beauvais-6-roue.jpg)
+![Le blackjack](docs/apercu/beauvais-7-blackjack.jpg)
 
 ## Comment ça marche
 
@@ -25,7 +25,7 @@ Toi (Prism)  ──publier.bat──►  GitHub (pack/)  ◄──au lancement�
 ```
 
 - `pack/` : la liste des mods (format [packwiz](https://packwiz.infra.link)), les configs et le livre de quêtes. C'est la seule chose que tes potes et le serveur téléchargent.
-- `mod-cabane/` : notre mod maison (téléphone, centre de map, reliques).
+- `mod-cabane/` : notre mod maison (téléphone, village, PNJ, casino, police…).
 - `outils/` : les scripts. Les fichiers `.bat` à la racine sont là pour lancer ces scripts en double-cliquant.
 
 ## Pour tes potes (une seule fois)
@@ -44,7 +44,7 @@ Prévoir 8 Go de RAM pour l'instance (réglé par défaut).
 | `compiler.bat` | Compile le mod maison et le met dans le pack. |
 | `publier.bat` | Compare les mods de **ton** instance Prism avec le pack, met le pack à jour et l'envoie sur GitHub. `publier.bat --essai` montre seulement ce qui changerait. |
 | `construire-instance.bat` | Refait `dist/La Cabane.zip`, à envoyer aux potes. |
-| `tester-en-jeu.bat` | Lance le jeu de développement avec tous les mods du pack et la dernière version du mod maison (compilée au passage). Pratique pour voir l’avancée sans attendre une publication. Le compte est un compte de test hors ligne : pas de serveur en ligne avec. |
+| `tester-en-jeu.bat` | Lance le jeu de développement avec tous les mods du pack et la dernière version du mod maison (compilée au passage). Le compte est un compte de test hors ligne : pas de serveur en ligne avec. |
 
 **Ajouter ou retirer un mod** : fais-le dans ton Prism, puis double-clique sur `publier.bat` **avant** de relancer le jeu. Sinon, au lancement, le pack remet les mods comme avant. Les mods qui ne sont que sur CurseForge doivent être ajoutés à la main :
 
@@ -53,39 +53,67 @@ cd pack
 ../.outils/gopath/bin/packwiz.exe curseforge add <nom-du-mod>
 ```
 
-## Le centre de map
+## Le départ : la salle d'embarquement et `/start`
 
-![Le village vu du ciel](docs/apercu/village-1-vue-d-ensemble.jpg)
+- Tant que l'hôte n'a pas lancé la partie, tout le monde attend dans la **salle d'embarquement**, au bout de la passerelle de l'avion (mode aventure, on ne casse rien).
+- Quand tout le monde est là, l'hôte tape **`/start`** : la porte s'ouvre, chacun se retrouve dans l'avion à 270 blocs de haut, avec un parachute. Il n'y a plus qu'à sauter.
+- Ensuite, on réapparaît toujours dans l'avion… sauf si on a dormi dans un lit.
 
-Au tout premier démarrage du serveur, le mod s'installe à côté d'un village de savane (« le village qui nous héberge ») et y construit le nôtre, en grand (130 blocs de large) :
+## Le village de Beauvais
 
-- **au centre**, une grande place pavée avec quatre fontaines et le **grand panneau de la carte** : côté sud la carte du monde (9 x 5 cartes), côté nord les environs, une croix rouge sur le village ;
-- **au nord**, la **Grande Cabane**, notre base : grande salle avec tablées, cheminée, cuisine, bibliothèque, 14 grands coffres et le **mur des reliques** ; à l'étage un dortoir de 14 lits ; dans les combles l'atelier et la table d'enchantement ; deux tours de pierre aux coins ;
-- **à l'ouest**, le **Grand Bazar** : le comptoir de Bako et sa vitrine, le tableau des contrats, et 8 emplacements d'étals pour vos boutiques ;
-- **à l'est**, la rue du village : quatre maisons libres, une maison en chantier, une parcelle libre, la **forge de Brokk** ; deux autres parcelles libres au nord ;
-- **au sud**, les champs, le puits, l'enclos avec ses animaux, le feu de camp, la tour de guet et la **grande porte** ; une palissade fait le tour ;
-- les **PNJ** : le Vieux Gardien, Mira la Cartographe, Bako le Marchand, Brokk le Forgeron et Lumi la Fée (Easy NPC). Tu peux modifier leurs dialogues, leur skin, et plus tard ajouter des voix, directement en jeu.
+Au tout premier démarrage du serveur, le mod cherche une grande jungle (biomes géants : jungle, savane, désert, volcans, neige) et y construit Beauvais, en grand (130 blocs de large) :
 
-Les meubles viennent des mods du pack (Handcrafted, Farmer's Delight, Supplementaries, Macaw's Lights) ; si l'un d'eux est retiré, le village garde une version simple. La construction se fait en une trentaine d'étapes, une par tick, pour que le serveur ne bloque jamais. Le spawn est devant le grand panneau, et la bordure du monde est centrée sur le village. Commandes admin :
+- **au centre**, une grande place pavée avec quatre fontaines et le **grand panneau de la carte** ;
+- **au nord**, la **Grande Cabane**, la base des joueurs : grande salle, cuisine, bibliothèque, coffres, **mur des reliques**, dortoir, atelier ;
+- **à l'ouest**, le **Grand Bazar** : le comptoir de Mouloud, le tableau des contrats de Mehdi (les contrats de l'heure s'affichent au-dessus, avec le compte à rebours ; clic droit pour livrer), et des emplacements d'étals ;
+- **à l'est**, la rue : des maisons usées par le temps, un chantier, la **forge de Brokk** ;
+- **au sud**, les champs, le puits, l'enclos, le feu de camp, la tour de guet et la **grande porte** ;
+- des **terrains à vendre** : une borne « À VENDRE » avec le prix (maisons 5 000 $, parcelles 8 000 $, grands terrains commerciaux 20 000 $). Clic droit deux fois pour acheter ; la borne affiche ensuite le nom du propriétaire.
 
-- `/cabane placer` reconstruit le centre de map à tes pieds et y déplace le spawn ;
-- `/cabane pnj` fait revenir les PNJ.
+Les PNJ (Easy NPC) :
+
+- **le Hejj du Village**, le sage, devant la Grande Cabane (il donnera les grandes quêtes) ;
+- **Karim le Chouf**, au grand panneau, qui donne les cartes au trésor ;
+- **Mouloud le Marchand** et son cousin **Gribbs**, au Grand Bazar ;
+- **Mehdi de Pôle emploi**, au tableau des contrats ;
+- **Brokk le Forgeron**, et sa **forge spéciale** : il fabrique des armes et armures rares des mods (lance Umvuthana, épée d'acier noir, hache du Wroughtnaut, gantelet de la Terre, masque du Soleil, forge infernale…). Il faut lui rapporter les matériaux et payer le travail ; lui seul sait les faire. Les recettes sont dans `mod-cabane/src/main/resources/data/cabane/forge/` ;
+- **Ovsie la Fée**, **Nyota la Guérisseuse**, les gardes de la grande porte ;
+- **les habitants** : Jean, Jacques, Francis, Louis, Bernard, Gérard, Ginette, Monique, Martine et Thierry. Ils se baladent autour de chez eux et se méfient des nouveaux ;
+- **Macron, Président de Beauvais**, sur la place, et ses **quatre gardes présidentiels**. Ils sont invincibles : qui frappe le Président (ou un garde) est pris en chasse pendant deux minutes. Ils finissent par se calmer.
+
+Commandes admin :
+
+- `/start` lance la partie (l'hôte seulement) ;
+- `/cabane placer` reconstruit le village à tes pieds et y déplace le spawn ;
+- `/cabane pnj` fait revenir les PNJ ;
+- `/cabane garde <joueur>` lâche la garde présidentielle sur quelqu'un.
+
+## Le téléphone
+
+- Chaque nouveau joueur en reçoit un ; les suivants s'achètent chez Mouloud (pas de recette). Touche **N** ou clic droit.
+- **La SIM est gravée dans le téléphone** : la première fois, tu choisis un numéro à 3 ou 4 chiffres, et il ne changera plus. Un autre numéro, c'est un autre téléphone. Le téléphone garde sa mémoire (contacts, récents, photos, compte Piaf) : si on te le vole, on peut se faire passer pour toi.
+- Compose un numéro → ça sonne chez l'autre (les joueurs autour l'entendent aussi). On peut appeler **en numéro masqué**. Vous vous entendez partout sur la map grâce à Simple Voice Chat.
+- Les applis, façon iPhone : **Clavier**, **Contacts**, **Récents**, **Piaf** (le réseau social), **Photo** (un viseur, puis clic pour déclencher) et **Galerie**, **Argent**, **Réglages**.
+
+## L'argent, la boutique et le casino
+
+- La monnaie : les SakaiDollars ($). On en gagne avec les contrats de Mehdi, on se paie entre joueurs avec `/payer`.
+- La boutique de Mouloud vend le téléphone, les boosters de cartes (animations de révélation, la carte la plus rare toujours en dernier), les puffs et la chicha, les étals, la police… et le casino.
+- **Le casino** coûte cher (4 000 à 12 000 $ la table) : c'est le gérant qui l'installe. Chaque jeu a sa **caisse** : le gérant la remplit et récupère l'argent (accroupi + clic droit). Si la caisse ne couvre pas le gain possible, la mise est refusée.
+- **Les grandes tables** : la **roulette** (2 x 2) avec son cylindre qui tourne en vrai et la bille qui tombe dans la case, la **roue de la fortune** (5 x 5) avec ses lumières et son feu d'artifice au jackpot, et le **blackjack** (3 x 2) avec un croupier : jusqu'à trois joueurs assis, les cartes de chacun sont posées sur le tapis.
+- Les **tickets à gratter**, à gratter vraiment à la souris.
+
+## La police
+
+Chez Mouloud : les **menottes** (clic droit sur un joueur : il est menotté et suit son policier ; encore un clic pour le libérer), le **pistolet** (100 balles, rechargement infini, aucun dégât : la cible brille et ralentit), la **tenue de police** (clic droit : on l'enfile d'un coup ; presque aucune protection) et la **voiture de police** (sans essence, quatre places, ZQSD pour conduire, **H** pour la sirène, accroupi + frapper pour la ranger).
 
 ## Les quêtes (FTB Quests)
 
-- **La Cabane** : l'arrivée, le premier coup de fil, les Waystones, le sac à dos, la cuisine, Create.
+- **Beauvais** : l'arrivée, le premier coup de fil, les Waystones, le sac à dos, la cuisine, Create.
 - **Les Sept Reliques** : pour chaque relique, un indice qui donne une carte au trésor, puis le donjon à trouver, puis la relique (cachée dans le coffre au trésor de ce donjon). Avec les sept, on obtient « Le Réveil de la Cabane » et des élytres.
 - **Les Grands Donjons** : 12 donjons géants à visiter et 12 boss (Cataclysm, Mowzie's Mobs).
 
 Pour modifier les quêtes, utilise le livre en jeu (en op, mode édition), ou modifie `outils/generer-quetes.mjs` puis lance `node outils/generer-quetes.mjs`.
-
-## Le téléphone
-
-- Touche **N** (ou clic droit avec le téléphone). La première fois, chacun choisit son numéro à **3 ou 4 chiffres**.
-- Compose un numéro → ça sonne chez l'autre (les joueurs autour l'entendent aussi). Il décroche, et vous vous entendez partout sur la map grâce à Simple Voice Chat.
-- Il faut avoir le téléphone dans l'inventaire. Recette : vitre, fer, redstone, cuivre. Chaque nouveau joueur en reçoit un.
-- Tout se fait dans le téléphone : **Clavier** pour appeler, **Contacts** pour ton annuaire (ajouter, appeler, supprimer), **Récents** pour les appels passés, reçus et manqués, **Piaf** pour le réseau social, **Photo** et **Galerie**, **Argent** pour ton solde.
-- Les commandes `/telephone …` existent encore pour dépanner. Pour les admins : `/telephone annuaire`.
 
 ## Les mods principaux
 
@@ -99,3 +127,13 @@ La liste complète est dans `pack/mods/`.
 ## Le serveur
 
 On choisira l'hébergeur plus tard. Il devra accepter nos propres mods (donc pas Aternos) et ouvrir le **port UDP 24454** pour Simple Voice Chat.
+
+**La map est prête à l'avance** : `dist/Beauvais - monde.zip` contient le monde avec Beauvais déjà construit, ses PNJ, et 1 000 blocs de jungle tout autour déjà générés (pas d'attente au premier lancement, tout le monde voit la même map). Au-delà, le monde continue de se générer normalement quand on explore. Pour l'installer sur le serveur : décompresser le zip dans le dossier du serveur, puis dans `server.properties` :
+
+```
+level-name=monde-beauvais
+level-type=minecraft:large_biomes
+level-seed=lacabane2026
+```
+
+Sans ce zip, le serveur construit le village tout seul au premier démarrage (une à deux minutes).

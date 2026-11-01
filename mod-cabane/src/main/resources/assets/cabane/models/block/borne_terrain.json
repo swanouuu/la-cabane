@@ -1,0 +1,139 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "poteau": "minecraft:block/stripped_oak_log",
+    "planche": "minecraft:block/birch_planks",
+    "rouge": "minecraft:block/red_wool",
+    "particle": "minecraft:block/birch_planks"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        0,
+        7
+      ],
+      "to": [
+        9,
+        10,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#poteau"
+        },
+        "south": {
+          "texture": "#poteau"
+        },
+        "east": {
+          "texture": "#poteau"
+        },
+        "west": {
+          "texture": "#poteau"
+        },
+        "up": {
+          "texture": "#poteau"
+        },
+        "down": {
+          "texture": "#poteau"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        8,
+        7.25
+      ],
+      "to": [
+        14,
+        15,
+        8.75
+      ],
+      "faces": {
+        "north": {
+          "texture": "#planche"
+        },
+        "south": {
+          "texture": "#planche"
+        },
+        "east": {
+          "texture": "#planche"
+        },
+        "west": {
+          "texture": "#planche"
+        },
+        "up": {
+          "texture": "#planche"
+        },
+        "down": {
+          "texture": "#planche"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        14.25,
+        7.15
+      ],
+      "to": [
+        14,
+        15,
+        8.85
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rouge"
+        },
+        "south": {
+          "texture": "#rouge"
+        },
+        "east": {
+          "texture": "#rouge"
+        },
+        "west": {
+          "texture": "#rouge"
+        },
+        "up": {
+          "texture": "#rouge"
+        },
+        "down": {
+          "texture": "#rouge"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        8,
+        7.15
+      ],
+      "to": [
+        14,
+        8.75,
+        8.85
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rouge"
+        },
+        "south": {
+          "texture": "#rouge"
+        },
+        "east": {
+          "texture": "#rouge"
+        },
+        "west": {
+          "texture": "#rouge"
+        },
+        "up": {
+          "texture": "#rouge"
+        },
+        "down": {
+          "texture": "#rouge"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "resultat": "mowziesmobs:earthrend_gauntlet",
+  "prix": 30000,
+  "ordre": 60,
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      6
+    ],
+    [
+      "minecraft:amethyst_shard",
+      16
+    ],
+    [
+      "minecraft:diamond",
+      6
+    ],
+    [
+      "minecraft:netherite_scrap",
+      2
+    ]
+  ]
+}

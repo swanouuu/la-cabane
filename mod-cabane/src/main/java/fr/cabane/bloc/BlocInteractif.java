@@ -20,7 +20,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public class BlocInteractif extends HorizontalDirectionalBlock implements net.minecraft.world.level.block.EntityBlock {
 
     public enum Ouverture {
-        BOUTIQUE(false), CONTRATS(false),
+        BOUTIQUE(false), CONTRATS(false), TERRAIN(false),
         MACHINE_A_SOUS(true), ROULETTE(true), BLACKJACK(true), DES(true), ROUE(true), PILE_OU_FACE(true);
 
         final boolean cote_client;
@@ -45,7 +45,13 @@ public class BlocInteractif extends HorizontalDirectionalBlock implements net.mi
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
-        if (!level.isClientSide && placer instanceof ServerPlayer joueur && level.getBlockEntity(pos) instanceof InteractifBlockEntity be) {
+        if (!level.isClientSide) {
+            for (BlockPos p : GrandesTables.parties(pos, state)) {
+                level.setBlock(p, fr.cabane.CabaneBlocks.PARTIE_TABLE.get().defaultBlockState(), 3);
+            }
+        }
+        // une borne de terrain posée à la main reste « à vendre » : c'est l'admin qui fixe le prix
+        if (!level.isClientSide && ouverture != Ouverture.TERRAIN && placer instanceof ServerPlayer joueur && level.getBlockEntity(pos) instanceof InteractifBlockEntity be) {
             be.definirProprietaire(joueur.getUUID(), joueur.getGameProfile().getName());
         }
     }
@@ -70,7 +76,36 @@ public class BlocInteractif extends HorizontalDirectionalBlock implements net.mi
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        BlockState etat = defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        // une grande table a besoin de toute sa place
+        for (BlockPos p : GrandesTables.parties(context.getClickedPos(), etat)) {
+            if (!context.getLevel().getBlockState(p).canBeReplaced(context) || !context.getLevel().isInWorldBounds(p)) {
+                if (context.getPlayer() != null && context.getLevel().isClientSide) {
+                    context.getPlayer().displayClientMessage(net.minecraft.network.chat.Component.literal("Pas assez de place pour cette table.")
+                            .withStyle(net.minecraft.ChatFormatting.RED), true);
+                }
+                return null;
+            }
+        }
+        return etat;
+    }
+
+    @Override
+    protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+        // les grandes tables sont entièrement dessinées par leur rendu 3D
+        return GrandesTables.grande(ouverture) ? net.minecraft.world.level.block.RenderShape.ENTITYBLOCK_ANIMATED : super.getRenderShape(state);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState nouvel, boolean deplace) {
+        if (!state.is(nouvel.getBlock())) {
+            for (BlockPos p : GrandesTables.parties(pos, state)) {
+                if (level.getBlockState(p).is(fr.cabane.CabaneBlocks.PARTIE_TABLE.get())) {
+                    level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 35);
+                }
+            }
+        }
+        super.onRemove(state, level, pos, nouvel, deplace);
     }
 
     @Override
@@ -88,6 +123,7 @@ public class BlocInteractif extends HorizontalDirectionalBlock implements net.mi
             switch (ouverture) {
                 case BOUTIQUE -> Boutique.ouvrir(joueur);
                 // clic droit : livrer ce qu'on a ; accroupi : la liste détaillée
+                case TERRAIN -> Terrains.cliquer(joueur, pos);
                 case CONTRATS -> {
                     if (joueur.isShiftKeyDown()) {
                         Contrats.ouvrir(joueur);

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/borne_terrain"
+    },
+    "facing=east": {
+      "model": "cabane:block/borne_terrain",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/borne_terrain",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/borne_terrain",
+      "y": 270
+    }
+  }
+}

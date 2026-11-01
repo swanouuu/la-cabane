@@ -81,7 +81,10 @@ import net.neoforged.neoforge.common.Tags;
 public class HubBuilder {
     private static final int RAYON = 64;
     private static final int FONDU = 18;
-    public static final int HAUTEUR_AVION = 62;
+    /** L'avion vole tout en haut du monde (la limite est 320) : environ 200 blocs de chute. */
+    public static int hauteurAvion(BlockPos centre) {
+        return Math.max(62, Math.min(200, 306 - centre.getY()));
+    }
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
     public static final String TAG = "cabane_hub";
@@ -253,7 +256,9 @@ public class HubBuilder {
                 return;
             }
             if (candidats == null) {
-                candidats = calculerCandidats();
+                // Beauvais s'installe en pleine jungle, loin de tout village : pas de recherche de village
+                candidats = List.of();
+                Cabane.LOGGER.info("Recherche d'une jungle assez plate pour Beauvais…");
                 return;
             }
             if (bbEnCours != null) {
@@ -346,8 +351,8 @@ public class HubBuilder {
         private void repliSavane() {
             long debut = System.currentTimeMillis();
             while (System.currentTimeMillis() - debut < BUDGET_MS) {
-                int r = anneau * 48;
-                if (r > 6000) {
+                int r = anneau * 64;
+                if (r > 12000) {
                     fini = true;
                     return;
                 }
@@ -365,7 +370,7 @@ public class HubBuilder {
                     z = 0;
                 } else {
                     int segment = k / (2 * anneau);
-                    int t = k % (2 * anneau) * 48 - r;
+                    int t = k % (2 * anneau) * 64 - r;
                     switch (segment) {
                         case 0 -> { x = t; z = -r; }
                         case 1 -> { x = r; z = t; }
@@ -373,7 +378,7 @@ public class HubBuilder {
                         default -> { x = -r; z = -t; }
                     }
                 }
-                if (!savaneA(level, x, mer + 12, z)) {
+                if (!jungleA(level, x, mer + 12, z)) {
                     continue;
                 }
                 int s = sol(x, z);
@@ -385,7 +390,7 @@ public class HubBuilder {
                 boolean ok = true;
                 for (int[] d : AUTOUR) {
                     int h = sol(x + d[0], z + d[1]);
-                    if (h <= mer + 1 || !savaneA(level, x + d[0], mer + 12, z + d[1])) {
+                    if (h <= mer + 1 || !jungleA(level, x + d[0], mer + 12, z + d[1])) {
                         ok = false;
                         break;
                     }
@@ -393,8 +398,8 @@ public class HubBuilder {
                     max = Math.max(max, h);
                 }
                 BlockPos pos = new BlockPos(x, s, z);
-                if (ok && max - min <= 14 && !hostileProche(pos)) {
-                    Cabane.LOGGER.info("Savane trouvée pour la cabane en {}", pos);
+                if (ok && max - min <= 26 && !hostileProche(pos)) {
+                    Cabane.LOGGER.info("Jungle trouvée pour Beauvais en {}", pos);
                     resultat = new Site(pos, null);
                     fini = true;
                     return;
@@ -403,10 +408,10 @@ public class HubBuilder {
         }
     }
 
-    private static boolean savaneA(ServerLevel level, int x, int y, int z) {
+    private static boolean jungleA(ServerLevel level, int x, int y, int z) {
         Holder<Biome> biome = level.getUncachedNoiseBiome(x >> 2, y >> 2, z >> 2);
-        return biome.is(BiomeTags.IS_SAVANNA) || biome.is(Tags.Biomes.IS_SAVANNA)
-                || biome.unwrapKey().map(k -> k.location().getPath().contains("savanna")).orElse(false);
+        return biome.is(BiomeTags.IS_JUNGLE) || biome.is(Tags.Biomes.IS_JUNGLE)
+                || biome.unwrapKey().map(k -> k.location().getPath().matches(".*(jungle|rainforest|tropic).*")).orElse(false);
     }
 
     // ================================================================== construction
@@ -442,7 +447,9 @@ public class HubBuilder {
             e.add(new Etape("chemin vers le village", () -> cheminVersLeVillage(village)));
         }
         e.add(new Etape("avion", this::avion));
+        e.add(new Etape("salle d'embarquement", this::embarquement));
         e.add(new Etape("textes", this::textes));
+        e.add(new Etape("lumière", this::lumiere));
         return e;
     }
 
@@ -1074,7 +1081,7 @@ public class HubBuilder {
     }
 
     private void vigne(int x, int y, int z, Direction versLeMur) {
-        if (rnd.nextFloat() < 0.12F && level.getBlockState(c.offset(x, y, z)).isAir()
+        if (rnd.nextFloat() < 0.35F && level.getBlockState(c.offset(x, y, z)).isAir()
                 && level.getBlockState(c.offset(x, y, z).relative(versLeMur)).isSolid()) {
             pose(x, y, z, Blocks.VINE.defaultBlockState().setValue(VineBlock.getPropertyForFace(versLeMur), true));
         }
@@ -1373,6 +1380,8 @@ public class HubBuilder {
         m(-3, 1, 1, Blocks.POTTED_POPPY.defaultBlockState());
         m(0, 7, 3, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
         jardin();
+        usure(p);
+        borne(mcx + 3 * 1, mzFront + msens * -3, PRIX_MAISON, msens < 0 ? Direction.SOUTH : Direction.NORTH);
         // meubles des mods de déco : table, chaise, vaisselle, jardinières, paillasson
         mObjet(0, 1, 4, "handcrafted:" + p.bois() + "_table", null);
         mObjet(0, 1, 3, "handcrafted:" + p.bois() + "_chair", fond);
@@ -1384,7 +1393,6 @@ public class HubBuilder {
                 m(u, 1, -1, avec(vers(jardiniere, fond.getOpposite()), "face", "floor"));
             }
         }
-        texteMaison(texte);
     }
 
     private void mObjet(int u, int y, int v, String id, Direction face) {
@@ -1442,8 +1450,81 @@ public class HubBuilder {
         m(3, 1, -2, pilier(Blocks.OAK_LOG, Direction.Axis.X));
         m(-2, 1, -2, Blocks.CRAFTING_TABLE.defaultBlockState());
         m(-3, 1, -2, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-        texte(cx + 0.5, 3.2, zFront + (sens < 0 ? 1.5 : -0.5), sens < 0 ? 180F : 0F,
-                "[{\"text\":\"CHANTIER\\n\",\"color\":\"yellow\",\"bold\":true},{\"text\":\"À vous de finir la maison !\",\"color\":\"white\",\"bold\":false}]", 0.7F, 0x99000000, true);
+        borne(cx + 4, zFront + sens * -2, PRIX_CHANTIER, sens < 0 ? Direction.SOUTH : Direction.NORTH);
+    }
+
+    static final long PRIX_MAISON = 5_000;
+    static final long PRIX_CHANTIER = 3_000;
+    static final long PRIX_PARCELLE = 8_000;
+    static final long PRIX_COMMERCE = 20_000;
+
+    /** Une borne « à vendre » : clic droit pour acheter (deux fois, pour confirmer). */
+    private void borne(int x, int z, long prix, Direction face) {
+        pose(x, 1, z, fr.cabane.CabaneBlocks.BORNE_TERRAIN.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, face));
+        if (level.getBlockEntity(c.offset(x, 1, z)) instanceof fr.cabane.bloc.InteractifBlockEntity be) {
+            be.ajouterCaisse(prix);
+        }
+    }
+
+    /** Un grand terrain pour un commerce : bordure de gravier, poteaux à lanterne, borne à vendre. */
+    private void terrainCommercial(int x0, int z0, int x1, int z1) {
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                if (x == x0 || x == x1 || z == z0 || z == z1) {
+                    pose(x, 0, z, (rnd.nextFloat() < 0.3F ? Blocks.COARSE_DIRT : Blocks.GRAVEL).defaultBlockState());
+                }
+            }
+        }
+        for (int x : new int[] {x0, x1}) {
+            for (int z : new int[] {z0, z1}) {
+                pose(x, 0, z, Blocks.COBBLESTONE.defaultBlockState());
+                pose(x, 1, z, pilier(Blocks.STRIPPED_OAK_LOG, Direction.Axis.Y));
+                pose(x, 2, z, pilier(Blocks.STRIPPED_OAK_LOG, Direction.Axis.Y));
+                pose(x, 3, z, Blocks.LANTERN.defaultBlockState());
+            }
+        }
+        borne((x0 + x1) / 2, z1, PRIX_COMMERCE, Direction.SOUTH);
+    }
+
+    /** Un village un peu usé : quelques trous, des vitres cassées, de la mousse, des toiles d'araignée. */
+    private void usure(Palette p) {
+        for (int u = -4; u <= 4; u++) {
+            for (int v = 0; v <= 6; v++) {
+                boolean bord = Math.abs(u) == 4 || v == 0 || v == 6;
+                boolean coin = Math.abs(u) == 4 && (v == 0 || v == 6);
+                if (!bord || coin || (u == 0 && v == 0)) {
+                    continue;
+                }
+                for (int y = 1; y <= 3; y++) {
+                    float r = rnd.nextFloat();
+                    BlockState actuel = level.getBlockState(c.offset(mcx + u, y, mzFront + msens * v));
+                    if (actuel.is(Blocks.GLASS_PANE) && r < 0.3F) {
+                        m(u, y, v, AIR);
+                    } else if (!actuel.is(Blocks.GLASS_PANE) && r < 0.04F) {
+                        m(u, y, v, AIR);
+                    } else if (!actuel.is(Blocks.GLASS_PANE) && r < 0.12F && p.mur() != Blocks.WHITE_TERRACOTTA) {
+                        m(u, y, v, Blocks.MOSSY_COBBLESTONE.defaultBlockState());
+                    }
+                }
+            }
+        }
+        // le toit : deux ou trois trous, de la mousse
+        for (int k = 0; k < 3; k++) {
+            int v = rnd.nextInt(7);
+            int u = rnd.nextInt(9) - 4;
+            m(u, 8 - Math.abs(v - 3), v, AIR);
+        }
+        for (int k = 0; k < 6; k++) {
+            int v = rnd.nextInt(9) - 1;
+            int u = rnd.nextInt(11) - 5;
+            int h = 8 - Math.abs(v - 3) + 1;
+            if (level.getBlockState(c.offset(mcx + u, h, mzFront + msens * v)).isAir()) {
+                m(u, h, v, Blocks.MOSS_CARPET.defaultBlockState());
+            }
+        }
+        m(-3, 4, 1, Blocks.COBWEB.defaultBlockState());
+        m(3, 4, 5, Blocks.COBWEB.defaultBlockState());
+        m(1, 1, 2, Blocks.MOSS_CARPET.defaultBlockState());
     }
 
     /** Un terrain à bâtir, marqué par quatre poteaux à lanterne. */
@@ -1456,8 +1537,7 @@ public class HubBuilder {
                 pose(x, 3, z, Blocks.LANTERN.defaultBlockState());
             }
         }
-        texte((x0 + x1) / 2.0 + 0.5, 1.8, (z0 + z1) / 2.0 + 0.5, 0F,
-                "[{\"text\":\"PARCELLE LIBRE\\n\",\"color\":\"green\",\"bold\":true},{\"text\":\"Construis ta maison ici !\",\"color\":\"white\",\"bold\":false}]", 0.9F, 0x99000000, true);
+        borne((x0 + x1) / 2, (z0 + z1) / 2, PRIX_PARCELLE, Direction.SOUTH);
     }
 
     private void forgePuitsChamps() {
@@ -1510,7 +1590,7 @@ public class HubBuilder {
                 pose(x, 5, z, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
             }
         }
-        texte(53.9, 6.7, 0.5, -90F, "{\"text\":\"LA FORGE DE BROKK\",\"color\":\"red\",\"bold\":true}", 1.2F, 0x99000000, false);
+        texte(53.9, 6.7, 0.5, -90F, "{\"text\":\"LA FORGE DE BROKK\",\"color\":\"gold\",\"bold\":true}", 1.6F, 0x00000000, false);
     }
 
     private void puits(int px, int pz) {
@@ -1582,8 +1662,9 @@ public class HubBuilder {
         feuDeCamp(-20, 30);
         grandePorte();
         palissade();
-        parcelle(-44, -40, -32, -26);
-        parcelle(32, -40, 44, -26);
+        terrainCommercial(-44, -40, -32, -26);
+        terrainCommercial(32, -40, 44, -26);
+        terrainCommercial(-54, 18, -40, 30);
     }
 
     private void tourDeGuet(int tx, int tz) {
@@ -1905,6 +1986,7 @@ public class HubBuilder {
     private void vie() {
         arbres();
         buissons();
+        lianes();
         animauxDeLEnclos();
         animal(EntityType.CAT, 30, -4);
         animal(EntityType.CAT, 41, 5);
@@ -1913,20 +1995,35 @@ public class HubBuilder {
 
     private void arbres() {
         var features = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
-        int[][] places = {{-10, 30}, {10, 34}, {-10, 48}, {10, 52}, {-52, 24}, {-55, -19}, {-52, -30}, {52, -30}, {28, -48}, {-29, -50}, {-26, 52}, {56, 14}};
-        for (int i = 0; i < places.length; i++) {
-            BlockPos p = c.offset(places[i][0], 1, places[i][1]);
-            if (!level.getBlockState(p.below()).is(Blocks.GRASS_BLOCK)) {
-                continue;
-            }
-            var arbre = i % 3 == 2 ? net.minecraft.data.worldgen.features.TreeFeatures.FANCY_OAK : net.minecraft.data.worldgen.features.TreeFeatures.ACACIA;
-            features.getHolder(arbre).ifPresent(h -> h.value().place(level, level.getChunkSource().getGenerator(), rnd, p));
+        // de grands arbres de jungle sur le pourtour, de plus petits le long de la grande allée
+        int[][] geants = {{-58, 6}, {-55, -19}, {-52, -34}, {52, -32}, {26, -50}, {-29, -50}, {-26, 54}, {56, 14}, {12, -56}, {-12, -56}, {48, 34}, {-46, 44}};
+        int[][] petits = {{-10, 30}, {10, 34}, {-10, 48}, {10, 52}, {16, 22}, {-14, 22}, {-24, 46}, {26, 48}};
+        for (int[] g : geants) {
+            planter(features, net.minecraft.data.worldgen.features.TreeFeatures.MEGA_JUNGLE_TREE, g[0], g[1], true);
         }
+        for (int[] pt : petits) {
+            planter(features, net.minecraft.data.worldgen.features.TreeFeatures.JUNGLE_TREE, pt[0], pt[1], false);
+        }
+    }
+
+    private void planter(net.minecraft.core.Registry<net.minecraft.world.level.levelgen.feature.ConfiguredFeature<?, ?>> features,
+                         net.minecraft.resources.ResourceKey<net.minecraft.world.level.levelgen.feature.ConfiguredFeature<?, ?>> arbre, int x, int z, boolean geant) {
+        for (int dx = 0; dx <= (geant ? 1 : 0); dx++) {
+            for (int dz = 0; dz <= (geant ? 1 : 0); dz++) {
+                BlockPos sol = c.offset(x + dx, 0, z + dz);
+                if (!level.getBlockState(sol).is(Blocks.GRASS_BLOCK) && !level.getBlockState(sol).is(Blocks.COARSE_DIRT)) {
+                    return;
+                }
+                level.setBlock(sol, Blocks.GRASS_BLOCK.defaultBlockState(), FLAGS);
+                level.setBlock(sol.above(), AIR, FLAGS);
+            }
+        }
+        features.getHolder(arbre).ifPresent(h -> h.value().place(level, level.getChunkSource().getGenerator(), rnd, c.offset(x, 1, z)));
     }
 
     /** Des buissons et des fleurs hautes dans l'herbe, hors des parcelles et de l'enclos. */
     private void buissons() {
-        for (int essai = 0; essai < 140; essai++) {
+        for (int essai = 0; essai < 320; essai++) {
             int x = rnd.nextInt(2 * RAYON - 9) - RAYON + 5;
             int z = rnd.nextInt(2 * RAYON - 9) - RAYON + 5;
             if (x * x + z * z > (RAYON - 6) * (RAYON - 6) || (x * x + z * z) < 22 * 22
@@ -1938,7 +2035,11 @@ public class HubBuilder {
                     || !level.getBlockState(sol.above(2)).isAir()) {
                 continue;
             }
-            int choix = rnd.nextInt(6);
+            int choix = rnd.nextInt(10);
+            if (choix >= 6) {
+                jungle(x, z, choix);
+                continue;
+            }
             if (choix <= 2) {
                 Block feuilles = choix == 0 ? Blocks.OAK_LEAVES : choix == 1 ? Blocks.AZALEA_LEAVES : Blocks.FLOWERING_AZALEA_LEAVES;
                 BlockState s = feuilles.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
@@ -1951,6 +2052,60 @@ public class HubBuilder {
             } else {
                 Block fleur = choix == 4 ? Blocks.ROSE_BUSH : Blocks.LILAC;
                 net.minecraft.world.level.block.DoublePlantBlock.placeAt(level, fleur.defaultBlockState(), sol.above(), FLAGS);
+            }
+        }
+    }
+
+    /** Un peu de jungle : buisson de jungle, fougères, grande fougère, bambous. */
+    private void jungle(int x, int z, int choix) {
+        BlockPos sol = c.offset(x, 0, z);
+        switch (choix) {
+            case 6 -> level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE)
+                    .getHolder(net.minecraft.data.worldgen.features.TreeFeatures.JUNGLE_BUSH)
+                    .ifPresent(h -> h.value().place(level, level.getChunkSource().getGenerator(), rnd, sol.above()));
+            case 7 -> pose(x, 1, z, Blocks.FERN.defaultBlockState());
+            case 8 -> net.minecraft.world.level.block.DoublePlantBlock.placeAt(level, Blocks.LARGE_FERN.defaultBlockState(), sol.above(), FLAGS);
+            default -> {
+                int h = 3 + rnd.nextInt(4);
+                for (int y = 1; y <= h; y++) {
+                    pose(x, y, z, Blocks.BAMBOO.defaultBlockState().setValue(net.minecraft.world.level.block.BambooStalkBlock.LEAVES,
+                            y >= h - 1 ? net.minecraft.world.level.block.state.properties.BambooLeaves.LARGE : net.minecraft.world.level.block.state.properties.BambooLeaves.NONE));
+                }
+            }
+        }
+    }
+
+    /**
+     * Des lianes partout : sur les murs, et qui pendent des avant-toits. Une passe sur tout le village,
+     * après les arbres.
+     */
+    private void lianes() {
+        Direction[] cotes = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+        for (int dx = -RAYON + 2; dx <= RAYON - 2; dx++) {
+            for (int dz = -RAYON + 2; dz <= RAYON - 2; dz++) {
+                if (dx * dx + dz * dz > (RAYON - 2) * (RAYON - 2) || dx * dx + dz * dz < 20 * 20) {
+                    continue;
+                }
+                for (int y = 2; y <= 22; y++) {
+                    if (rnd.nextFloat() > 0.05F) {
+                        continue;
+                    }
+                    BlockPos p = c.offset(dx, y, dz);
+                    if (!level.getBlockState(p).isAir()) {
+                        continue;
+                    }
+                    for (Direction d : cotes) {
+                        BlockState mur = level.getBlockState(p.relative(d));
+                        if (mur.isFaceSturdy(level, p.relative(d), d.getOpposite()) && !mur.is(BlockTags.LEAVES)) {
+                            BlockState liane = Blocks.VINE.defaultBlockState().setValue(VineBlock.getPropertyForFace(d), true);
+                            int longueur = 1 + rnd.nextInt(4);
+                            for (int k = 0; k < longueur && level.getBlockState(p.below(k)).isAir() && p.below(k).getY() > c.getY() + 1; k++) {
+                                level.setBlock(p.below(k), liane, FLAGS);
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -2002,14 +2157,138 @@ public class HubBuilder {
         level.addFreshEntity(m);
     }
 
+    /**
+     * Recalcule la lumière de tout le village : après avoir rasé la jungle et posé des milliers de blocs,
+     * sinon des zones restent noires (la lumière du ciel n'y est pas revenue).
+     */
+    private void lumiere() {
+        var moteur = level.getChunkSource().getLightEngine();
+        int max = RAYON + FONDU;
+        for (int cx = (c.getX() - max) >> 4; cx <= (c.getX() + max) >> 4; cx++) {
+            for (int cz = (c.getZ() - max) >> 4; cz <= (c.getZ() + max) >> 4; cz++) {
+                moteur.lightChunk(level.getChunk(cx, cz), false);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ la salle d'embarquement
+
+    /** Où attendent les joueurs avant le /start : au milieu de la salle d'embarquement. */
+    public static BlockPos salleEmbarquement(BlockPos centre) {
+        return centre.offset(-8, hauteurAvion(centre) + 1, -23);
+    }
+
+    /** La vitre qui ferme la passerelle jusqu'au départ. */
+    public static java.util.List<BlockPos> porteEmbarquement(BlockPos centre) {
+        int a = hauteurAvion(centre);
+        java.util.List<BlockPos> l = new java.util.ArrayList<>();
+        for (int x = -8; x <= -7; x++) {
+            for (int y = 1; y <= 3; y++) {
+                l.add(centre.offset(x, a + y, -3));
+            }
+        }
+        return l;
+    }
+
+    /**
+     * Une salle d'embarquement d'aéroport, au bout d'une passerelle fermée qui mène à l'avion. Les
+     * joueurs y attendent que l'hôte tape /start ; alors la vitre s'ouvre et tout le monde embarque.
+     */
+    private void embarquement() {
+        int a = hauteurAvion(c);
+        BlockState sol = Blocks.SMOOTH_QUARTZ.defaultBlockState();
+        BlockState mur = Blocks.WHITE_CONCRETE.defaultBlockState();
+        BlockState vitre = Blocks.LIGHT_GRAY_STAINED_GLASS.defaultBlockState();
+        // la passerelle : un couloir vitré jusqu'à une porte de l'avion
+        for (int z = -13; z <= -3; z++) {
+            for (int x = -9; x <= -6; x++) {
+                boolean paroi = x == -9 || x == -6;
+                pose(x, a, z, Blocks.GRAY_CONCRETE.defaultBlockState());
+                for (int y = 1; y <= 3; y++) {
+                    pose(x, a + y, z, paroi ? (y == 2 ? vitre : Blocks.GRAY_CONCRETE.defaultBlockState()) : AIR);
+                }
+                pose(x, a + 4, z, Blocks.GRAY_CONCRETE.defaultBlockState());
+            }
+        }
+        for (int x = -8; x <= -7; x++) {
+            pose(x, a + 1, -2, AIR);
+            pose(x, a + 2, -2, AIR);
+        }
+        for (BlockPos p : porteEmbarquement(c)) {
+            level.setBlock(p, Blocks.WHITE_STAINED_GLASS.defaultBlockState(), FLAGS);
+        }
+        pose(-8, a + 3, -8, Blocks.SEA_LANTERN.defaultBlockState());
+        // la salle
+        for (int x = -18; x <= 2; x++) {
+            for (int z = -30; z <= -14; z++) {
+                boolean bord = x == -18 || x == 2 || z == -30 || z == -14;
+                pose(x, a, z, bord ? mur : (x + z) % 2 == 0 ? sol : Blocks.POLISHED_DIORITE.defaultBlockState());
+                for (int y = 1; y <= 6; y++) {
+                    BlockState s = AIR;
+                    if (bord) {
+                        boolean coin = (x == -18 || x == 2) && (z == -30 || z == -14);
+                        s = coin || y == 1 || y == 6 ? mur : vitre;
+                    }
+                    pose(x, a + y, z, s);
+                }
+                pose(x, a + 7, z, bord || (x % 4 != 0 || z % 4 != 0) ? mur : Blocks.SEA_LANTERN.defaultBlockState());
+            }
+        }
+        for (int x = -8; x <= -7; x++) {
+            for (int y = 1; y <= 3; y++) {
+                pose(x, a + y, -14, AIR);
+            }
+        }
+        // des rangées de sièges, des plantes, un tapis vers la porte
+        for (int x = -16; x <= 0; x++) {
+            if (x == -8 || x == -7) {
+                continue;
+            }
+            for (int z : new int[] {-27, -24, -21}) {
+                pose(x, a + 1, z, escalier(Blocks.QUARTZ_STAIRS, Direction.NORTH));
+            }
+        }
+        for (int z = -29; z <= -15; z++) {
+            pose(-8, a + 1, z, Blocks.BLUE_CARPET.defaultBlockState());
+            pose(-7, a + 1, z, Blocks.BLUE_CARPET.defaultBlockState());
+        }
+        for (int[] pt : new int[][] {{-17, -29}, {1, -29}, {-17, -15}, {1, -15}}) {
+            pose(pt[0], a + 1, pt[1], Blocks.POTTED_BAMBOO.defaultBlockState());
+        }
+        // le tableau des départs, au fond
+        for (int x = -12; x <= -3; x++) {
+            for (int y = 3; y <= 5; y++) {
+                pose(x, a + y, -29, Blocks.BLACK_CONCRETE.defaultBlockState());
+            }
+        }
+        texte(-7.0, a + 4.9, -28.4, 180F, "{\"text\":\"DÉPARTS\",\"color\":\"yellow\",\"bold\":true}", 0.9F, 0x00000000, false);
+        texte(-7.0, a + 3.4, -28.4, 180F, "[{\"text\":\"BV2026   BEAUVAIS   PORTE 12\\n\",\"color\":\"white\"},{\"text\":\"EMBARQUEMENT : DÈS LE /start\",\"color\":\"green\"}]", 0.6F, 0x00000000, false);
+        texte(-7.0, a + 5.1, -14.6, 180F, "{\"text\":\"PORTE 12 — VOL BV2026 POUR BEAUVAIS\",\"color\":\"gold\",\"bold\":true}", 0.9F, 0x00000000, false);
+        texte(-7.0, a + 4.3, -14.6, 180F, "{\"text\":\"L'hôte ouvre l'embarquement en tapant /start\",\"color\":\"white\"}", 0.6F, 0x00000000, false);
+    }
+
     // ------------------------------------------------------------------ textes flottants
 
+    /** Un titre doré, comme sur la porte, qui fait face à celui qui regarde. */
+    private void titre(double x, double y, double z, String texte, String sousTitre, float echelle) {
+        String json = sousTitre.isEmpty()
+                ? "{\"text\":\"" + texte + "\",\"color\":\"gold\",\"bold\":true}"
+                : "[{\"text\":\"" + texte + "\n\",\"color\":\"gold\",\"bold\":true},{\"text\":\"" + sousTitre + "\",\"color\":\"white\",\"bold\":false}]";
+        texte(x, y, z, 0F, json, echelle, 0x00000000, true);
+    }
+
     private void textes() {
+        titre(31, 3.6, 22.5, "LES CHAMPS", "blé, carottes, pommes de terre, betteraves", 1.1F);
+        titre(48.5, 3.2, 17.5, "L'ENCLOS", "", 1.1F);
+        titre(-20.5, 3.6, 25.5, "LE FEU DE CAMP", "on s'y raconte les donjons lointains", 1.0F);
+        titre(-40.5, 22.5, 36.5, "LA TOUR DE GUET", "", 1.3F);
+        titre(36.5, 6.2, 18.5, "LE PUITS", "", 0.9F);
+        titre(-34.5, 6.4, -8.4, "PÔLE EMPLOI", "les contrats de l'heure", 1.0F);
         texte(0.5, 15.5, CZ1 + 1.6, 180F, "{\"text\":\"LA GRANDE CABANE\",\"color\":\"gold\",\"bold\":true}", 3.5F, 0x55000000, false);
         texte(BX1 + 1.2, 12.5, 0.5, 90F, "{\"text\":\"GRAND BAZAR\",\"color\":\"gold\",\"bold\":true}", 3.5F, 0x55000000, false);
         texte(0.5, 11.4, 61.6, 180F, "{\"text\":\"BEAUVAIS\",\"color\":\"gold\",\"bold\":true}", 2.5F, 0x00000000, false);
         texte(0.5, 11.4, 58.4, 0F, "{\"text\":\"BEAUVAIS\",\"color\":\"gold\",\"bold\":true}", 2.5F, 0x00000000, false);
-        texte(-1.5, HAUTEUR_AVION + 2.2, 0.5, 90F, "[{\"text\":\"MAYDAY ! L'AVION EST EN FEU !\\n\",\"color\":\"red\",\"bold\":true},{\"text\":\"Prends un parachute dans le coffre au fond\\npuis saute par la porte !\",\"color\":\"white\",\"bold\":false}]", 0.5F, 0xAA000000, false);
+        texte(-1.5, hauteurAvion(c) + 2.2, 0.5, 90F, "[{\"text\":\"MAYDAY ! L'AVION EST EN FEU !\\n\",\"color\":\"red\",\"bold\":true},{\"text\":\"Prends un parachute dans le coffre au fond\\npuis saute par la porte !\",\"color\":\"white\",\"bold\":false}]", 0.5F, 0xAA000000, false);
     }
 
     // ------------------------------------------------------------------ cartes
@@ -2124,12 +2403,16 @@ public class HubBuilder {
     // ------------------------------------------------------------------ l'avion en feu
 
     /** Position (relative) où apparaissent les nouveaux joueurs, dans la carlingue. */
-    public static final BlockPos DANS_AVION = new BlockPos(4, HAUTEUR_AVION + 1, 0);
+    public static BlockPos dansAvion(BlockPos centre) {
+        return centre.offset(4, hauteurAvion(centre) + 1, 0);
+    }
     /** Le coffre aux parachutes. */
-    public static final BlockPos COFFRE_AVION = new BlockPos(-9, HAUTEUR_AVION + 1, 1);
+    public static BlockPos coffreAvion(BlockPos centre) {
+        return centre.offset(-9, hauteurAvion(centre) + 1, 1);
+    }
 
     private void avion() {
-        int a = HAUTEUR_AVION;
+        int a = hauteurAvion(c);
         BlockState blanc = Blocks.WHITE_CONCRETE.defaultBlockState();
         BlockState bleu = Blocks.LIGHT_BLUE_CONCRETE.defaultBlockState();
         BlockState gris = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
@@ -2209,7 +2492,7 @@ public class HubBuilder {
             pose(x, a + 1, -1, escalier(Blocks.QUARTZ_STAIRS, Direction.EAST));
             pose(x, a + 1, 1, escalier(Blocks.QUARTZ_STAIRS, Direction.EAST));
         }
-        pose(COFFRE_AVION.getX(), COFFRE_AVION.getY(), COFFRE_AVION.getZ(), Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
+        pose(-9, a + 1, 1, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
         pose(-9, a + 1, -1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
         for (int x = 0; x <= 1; x++) {
             pose(x, a + 1, -2, AIR);

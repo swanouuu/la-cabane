@@ -1,0 +1,23 @@
+{
+  "resultat": "mowziesmobs:sol_visage",
+  "prix": 45000,
+  "ordre": 70,
+  "ingredients": [
+    [
+      "minecraft:gold_block",
+      8
+    ],
+    [
+      "minecraft:blaze_rod",
+      12
+    ],
+    [
+      "minecraft:magma_cream",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      8
+    ]
+  ]
+}

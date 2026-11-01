@@ -297,7 +297,7 @@ const uuid = (graine) => {
 const snbtTexte = (s) => JSON.stringify(s);
 const nomJson = (texte, couleur) => `'${JSON.stringify({ text: texte, color: couleur }).replace(/'/g, "\\'")}'`;
 
-function pnj({ fichier, nom, couleur, type = "humanoid", variante, rendu, dialogues }) {
+function pnj({ fichier, nom, couleur, type = "humanoid", variante, rendu, peau, objectifs, extra = "", dialogues }) {
   const entrees = dialogues.map((d) => `{
         Label:${snbtTexte(d.label)},
         Name:${snbtTexte(d.titre)},
@@ -319,9 +319,9 @@ function pnj({ fichier, nom, couleur, type = "humanoid", variante, rendu, dialog
   PersistenceRequired:1b,
   EasyNPCVersion:3,
   VariantType:${snbtTexte(variante)},
-  SkinData:{Type:"DEFAULT"},${rendu ? `
+  SkinData:${peau ? `{Type:"RESOURCE_LOCATION",Texture:${snbtTexte(`cabane:textures/entity/pnj/${peau}.png`)}}` : `{Type:"DEFAULT"}`},${rendu ? `
   RenderData:{Type:"CUSTOM_ENTITY",EntityType:${snbtTexte(rendu)}},` : ""}
-  ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
+  ObjectiveData:{ObjectiveDataSet:[${objectifs || `{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}`}]},${extra}
   ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
   DialogData:{
     Type:"STANDARD",
@@ -355,8 +355,8 @@ pnj({ fichier: "marchand", nom: "Mouloud le Marchand", couleur: "green", type: "
 ] });
 
 pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", rendu: "mowziesmobs:ferrous_wroughtnaut", dialogues: [
-  { label: "default", titre: "Brokk", texte: "CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent.",
-    boutons: [{ label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "À plus, Brokk" }] },
+  { label: "default", titre: "Brokk", texte: "CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte-moi les matériaux, paie le travail, et je te forge une merveille.",
+    boutons: [{ label: "forge", texte: "La forge spéciale", commande: "cabane forge" }, { label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "À plus, Brokk" }] },
   { label: "travail", titre: "Le travail", texte: "Regarde le chapitre « Le Village » de ton livre de quêtes : fer, bois, nourriture… Et les contrats de Mehdi, au Grand Bazar, changent toutes les heures.",
     boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "bye", texte: "Compris" }] },
 ] });
@@ -381,7 +381,7 @@ pnj({ fichier: "guerisseuse", nom: "Nyota la Guérisseuse", couleur: "dark_green
   { label: "conseil", titre: "Conseil", texte: "Dors dans la Grande Cabane avant de partir loin : ton lit là-bas te fera revenir. Et garde toujours ton téléphone : on ne sait jamais qui il faudra appeler.",
     boutons: [{ label: "bye", texte: "Merci Nyota" }] },
 ] });
-pnj({ fichier: "pole_emploi", nom: "Mehdi de Pôle emploi", couleur: "blue", variante: "STEVE", dialogues: [
+pnj({ fichier: "pole_emploi", nom: "Mehdi de Pôle emploi", couleur: "blue", variante: "STEVE", peau: "mehdi", dialogues: [
   { label: "default", titre: "Mehdi", texte: "Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats du village sont affichés juste au-dessus du tableau, ils changent toutes les heures. Apportez la marchandise, un clic droit sur le tableau, et le village vous paie.",
     boutons: [{ label: "contrats", texte: "Voir les contrats", commande: "cabane contrats" }, { label: "dossier", texte: "Et mon dossier ?", vers: "dossier" }, { label: "bye", texte: "Merci Mehdi" }] },
   { label: "dossier", titre: "Votre dossier", texte: "Votre dossier ? Il manque une pièce justificative. Il en manque toujours une. Revenez avec un contrat rempli, ça fera une bonne ligne sur votre CV.",
@@ -391,6 +391,64 @@ pnj({ fichier: "cousin", nom: "Gribbs, cousin de Mouloud", couleur: "dark_aqua",
   { label: "default", titre: "Gribbs", texte: "Psst ! Toi ! Les meilleures affaires sont chez mon cousin Mouloud, juste là, au Grand Bazar. Enfin… presque les meilleures. Moi, je vends des secrets. Pas encore, mais bientôt.",
     boutons: [{ label: "boutique", texte: "Voir la boutique", commande: "cabane boutique" }, { label: "bye", texte: "Euh… à plus" }] },
 ] });
+
+// les habitants : ils se baladent autour de chez eux et n'aiment pas trop les nouveaux
+const balade = (vitesse = 0.55) => `{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:${vitesse}},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}`;
+const habitants = [
+  ["jean", "Jean", "Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, il nous faut le temps de vous connaître. Allez, circulez.", "Bonne journée quand même"],
+  ["jacques", "Jacques", "Tu marches sur mon chemin, là. Je l'ai balayé ce matin. … Bon. Ça ira pour cette fois.", "Pardon, Jacques"],
+  ["francis", "Francis", "Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit. Je vous ai à l'œil.", "Promis, on sera sages"],
+  ["louis", "Louis", "Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé.", "D'accord, d'accord"],
+  ["bernard", "Bernard", "De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien.", "C'est noté, Bernard"],
+  ["gerard", "Gérard", "Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là. Celui-là, c'est le mien.", "Pas de souci"],
+  ["ginette", "Ginette", "Mon petit, tu as une tête à faire des bêtises. Je te surveille. Et essuie tes pieds avant d'entrer chez les gens.", "Oui madame"],
+  ["monique", "Monique", "Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez. Pas en bien, pas en mal… On attend de voir.", "On verra bien"],
+  ["martine", "Martine", "Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour.", "Merci du conseil"],
+  ["thierry", "Thierry", "Moi, j'étais là avant l'avion, avant la cabane, avant tout le monde. Les nouveaux, je les regarde de loin. Faut faire ses preuves, ici.", "Je ferai mes preuves"],
+];
+for (const [fichier, nom, texte, reponse] of habitants) {
+  pnj({ fichier, nom, couleur: "gray", variante: "STEVE", peau: fichier, objectifs: balade(), dialogues: [
+    { label: "default", titre: nom, texte, boutons: [{ label: "bye", texte: reponse }] },
+  ] });
+}
+
+// le Président de Beauvais et sa garde rapprochée (HubEvents / Gardes : qui le frappe se fait poursuivre)
+pnj({ fichier: "macron", nom: "Macron, Président de Beauvais", couleur: "gold", variante: "STEVE", peau: "macron", objectifs: balade(0.4),
+  extra: `
+  Tags:["cabane_macron"],`, dialogues: [
+  { label: "default", titre: "Le Président", texte: "Mes chers compatriotes de Beauvais ! Bienvenue. Je suis votre Président. Et votre maire. Et, en même temps, un peu les deux.",
+    boutons: [{ label: "gardes", texte: "Et vos gardes ?", vers: "gardes" }, { label: "travail", texte: "Du travail ?", vers: "travail" }, { label: "bye", texte: "Au revoir, Monsieur le Président" }] },
+  { label: "gardes", titre: "La garde", texte: "Ma garde rapprochée : quatre guerriers d'élite de la jungle. Je vous le dis avec bienveillance : ne me touchez pas. Ils finissent toujours par se calmer… mais pas tout de suite.",
+    boutons: [{ label: "bye", texte: "Compris" }] },
+  { label: "travail", titre: "Le travail", texte: "Du travail ? Je traverse la place et je vous en trouve ! Mehdi, au Grand Bazar, affiche des contrats toutes les heures. C'est notre projet !",
+    boutons: [{ label: "bye", texte: "Merci, Monsieur le Président" }] },
+] });
+for (let i = 1; i <= 4; i++) {
+  pnj({ fichier: "garde_president_" + i, nom: "Garde présidentiel", couleur: "dark_red", variante: "STEVE", peau: "garde_" + i,
+    objectifs: `{Type:"FOLLOW_ENTITY_BY_UUID",Prio:3,SpeedModifier:1.1,TargetEntityUUID:${uuid("macron")},StartDistance:5.0f,StopDistance:2.5f},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}`,
+    extra: `
+  Tags:["cabane_garde"],
+  HandItems:[{id:"mowziesmobs:spear",count:1},{}],`, dialogues: [
+    { label: "default", titre: "Garde", texte: "Circulez. Le Président ne reçoit pas sans rendez-vous. Et si vous levez la main sur lui, vous aurez affaire à nous quatre.",
+      boutons: [{ label: "bye", texte: "Pardon" }] },
+  ] });
+}
+
+// ---------------------------------------------------------------- la forge de Brokk : lui seul sait faire ces pièces
+const forge = (fichier, resultat, prix, ingredients, ordre) =>
+  ecrire(`data/cabane/forge/${fichier}.json`, JSON.stringify({ resultat, prix, ordre, ingredients }, null, 2) + "\n");
+forge("lance_umvuthana", "mowziesmobs:spear", 6000, [["minecraft:bamboo", 32], ["minecraft:flint", 8], ["minecraft:gold_ingot", 6], ["minecraft:feather", 4]], 10);
+forge("epee_acier_noir", "cataclysm:black_steel_sword", 9000, [["minecraft:iron_block", 4], ["minecraft:coal_block", 8], ["minecraft:diamond", 2]], 20);
+forge("targe_acier_noir", "cataclysm:black_steel_targe", 9000, [["minecraft:iron_block", 6], ["minecraft:coal_block", 6], ["minecraft:leather", 8]], 21);
+forge("casque_forge", "mowziesmobs:wrought_helmet", 12000, [["minecraft:iron_block", 5], ["minecraft:diamond", 2], ["minecraft:leather", 6]], 30);
+forge("hache_forgee", "mowziesmobs:wrought_axe", 15000, [["minecraft:iron_block", 8], ["minecraft:diamond", 4], ["minecraft:blaze_rod", 4]], 31);
+forge("khopesh", "cataclysm:khopesh", 14000, [["minecraft:gold_ingot", 12], ["minecraft:sandstone", 32], ["minecraft:diamond", 3]], 40);
+forge("bottes_robustes", "cataclysm:sturdy_boots", 12000, [["minecraft:leather", 12], ["minecraft:iron_ingot", 16], ["minecraft:slime_ball", 8]], 41);
+forge("lance_corail", "cataclysm:coral_spear", 16000, [["minecraft:prismarine_shard", 24], ["minecraft:nautilus_shell", 2], ["minecraft:diamond", 3]], 42);
+forge("gantelet_garde", "cataclysm:gauntlet_of_guard", 25000, [["minecraft:iron_block", 8], ["minecraft:diamond", 6], ["minecraft:obsidian", 8]], 50);
+forge("gantelet_terre", "mowziesmobs:earthrend_gauntlet", 30000, [["minecraft:iron_block", 6], ["minecraft:amethyst_shard", 16], ["minecraft:diamond", 6], ["minecraft:netherite_scrap", 2]], 60);
+forge("masque_soleil", "mowziesmobs:sol_visage", 45000, [["minecraft:gold_block", 8], ["minecraft:blaze_rod", 12], ["minecraft:magma_cream", 8], ["minecraft:diamond", 8]], 70);
+forge("forge_infernale", "cataclysm:infernal_forge", 60000, [["minecraft:netherite_ingot", 1], ["minecraft:blaze_rod", 16], ["minecraft:magma_block", 16], ["minecraft:diamond", 8]], 80);
 
 // ================================================================ économie, marché, casino, cartes, parachute
 
@@ -519,7 +577,12 @@ Object.assign(lang, {
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
   "entity.cabane.parachute": "Parachute",
   "item.cabane.puff_rose": "Puff fraise", "item.cabane.puff_bleue": "Puff myrtille glacée", "item.cabane.puff_menthe": "Puff menthe",
-  "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha",
+  "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
+  "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police",
+  "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police",
+  "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police",
+  "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
+  "key.cabane.sirene": "Sirène de la voiture de police", "block.cabane.partie_table": "Table du casino",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
@@ -537,6 +600,10 @@ const offres = [
 offres.push(["puff_rose", "cabane:puff_rose", 1, 60], ["puff_bleue", "cabane:puff_bleue", 1, 60], ["puff_menthe", "cabane:puff_menthe", 1, 60],
   ["chicha", "cabane:chicha", 1, 900]);
 for (const nom of ["puff_rose", "puff_bleue", "puff_menthe", "tuyau"]) itemGenere(nom);
+// la police (textures : outils/police.mjs)
+offres.push(["menottes", "cabane:menottes", 1, 800], ["pistolet", "cabane:pistolet", 1, 2500],
+  ["tenue_police", "cabane:tenue_police", 1, 1200], ["voiture_police", "cabane:voiture_police", 1, 25000]);
+for (const nom of ["menottes", "pistolet", "tenue_police", "casquette_police", "veste_police", "pantalon_police", "chaussures_police", "voiture_police"]) itemGenere(nom);
 // la chicha : un modèle en plusieurs morceaux (vase de verre, tige dorée, plateau, foyer, tuyau)
 const morceau = (de, a, texture) => ({ from: de, to: a, faces: Object.fromEntries(["north", "south", "east", "west", "up", "down"].map((f) => [f, { texture }])) });
 ecrire("assets/cabane/models/block/chicha.json", {
@@ -550,6 +617,19 @@ ecrire("assets/cabane/models/block/chicha.json", {
   ],
 });
 ecrire("assets/cabane/models/item/chicha.json", { parent: "cabane:block/chicha" });
+// la borne de terrain : un poteau et un écriteau blanc bordé de rouge
+ecrire("assets/cabane/models/block/borne_terrain.json", {
+  parent: "minecraft:block/block",
+  textures: { poteau: "minecraft:block/stripped_oak_log", planche: "minecraft:block/birch_planks", rouge: "minecraft:block/red_wool", particle: "minecraft:block/birch_planks" },
+  elements: [morceau([7, 0, 7], [9, 10, 9], "#poteau"), morceau([2, 8, 7.25], [14, 15, 8.75], "#planche"),
+    morceau([2, 14.25, 7.15], [14, 15, 8.85], "#rouge"), morceau([2, 8, 7.15], [14, 8.75, 8.85], "#rouge")],
+});
+ecrire("assets/cabane/models/item/borne_terrain.json", { parent: "cabane:block/borne_terrain" });
+ecrire("assets/cabane/blockstates/borne_terrain.json", { variants: Object.fromEntries(
+  [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: "cabane:block/borne_terrain", ...(y ? { y } : {}) }])) });
+ecrire("data/cabane/loot_table/blocks/borne_terrain.json", { type: "minecraft:block", pools: [] });
+ecrire("assets/cabane/models/block/partie_table.json", { textures: { particle: "minecraft:block/dark_oak_planks" } });
+ecrire("assets/cabane/blockstates/partie_table.json", { variants: { "": { model: "cabane:block/partie_table" } } });
 ecrire("assets/cabane/blockstates/chicha.json", { variants: Object.fromEntries(
   [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: "cabane:block/chicha", ...(y ? { y } : {}) }])) });
 ecrire("data/cabane/loot_table/blocks/chicha.json", { type: "minecraft:block", pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: "cabane:chicha" }] }] });

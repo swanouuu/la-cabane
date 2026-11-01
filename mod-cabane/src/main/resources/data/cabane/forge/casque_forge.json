@@ -1,0 +1,19 @@
+{
+  "resultat": "mowziesmobs:wrought_helmet",
+  "prix": 12000,
+  "ordre": 30,
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      5
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ],
+    [
+      "minecraft:leather",
+      6
+    ]
+  ]
+}

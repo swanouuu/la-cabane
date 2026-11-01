@@ -26,12 +26,19 @@ public final class CabaneBlocks {
 
     public static final DeferredBlock<BlocInteractif> COMPTOIR = interactif("comptoir", Ouverture.BOUTIQUE);
     public static final DeferredBlock<BlocInteractif> TABLEAU_CONTRATS = interactif("tableau_contrats", Ouverture.CONTRATS);
+    /** Incassable : seul un admin la déplace (par commande), pour qu'on ne vole pas la vente d'un terrain. */
+    public static final DeferredBlock<BlocInteractif> BORNE_TERRAIN = BLOCKS.registerBlock("borne_terrain", p -> new BlocInteractif(p, Ouverture.TERRAIN),
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(-1F, 3_600_000F).sound(SoundType.WOOD).noOcclusion().noLootTable());
     public static final DeferredBlock<BlocInteractif> MACHINE_A_SOUS = interactif("machine_a_sous", Ouverture.MACHINE_A_SOUS);
     public static final DeferredBlock<BlocInteractif> TABLE_ROULETTE = interactif("table_roulette", Ouverture.ROULETTE);
     public static final DeferredBlock<BlocInteractif> TABLE_BLACKJACK = interactif("table_blackjack", Ouverture.BLACKJACK);
     public static final DeferredBlock<BlocInteractif> TABLE_DES = interactif("table_des", Ouverture.DES);
     public static final DeferredBlock<BlocInteractif> ROUE_FORTUNE = interactif("roue_fortune", Ouverture.ROUE);
     public static final DeferredBlock<BlocInteractif> TABLE_PILE_OU_FACE = interactif("table_pile_ou_face", Ouverture.PILE_OU_FACE);
+
+    /** Les cases invisibles des grandes tables du casino (pas d'objet : elles viennent avec la table). */
+    public static final DeferredBlock<fr.cabane.bloc.GrandesTables.Partie> PARTIE_TABLE = BLOCKS.registerBlock("partie_table", fr.cabane.bloc.GrandesTables.Partie::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F, 6F).sound(SoundType.WOOD).noOcclusion().noLootTable());
 
     public static final DeferredBlock<fr.cabane.fumee.Fumee.ChichaBlock> CHICHA = BLOCKS.registerBlock("chicha", fr.cabane.fumee.Fumee.ChichaBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1F).sound(SoundType.GLASS).noOcclusion());
@@ -46,13 +53,13 @@ public final class CabaneBlocks {
     @SuppressWarnings("DataFlowIssue")
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<fr.cabane.bloc.InteractifBlockEntity>> INTERACTIF_BE =
             BLOCK_ENTITIES.register("interactif", () -> BlockEntityType.Builder.of(fr.cabane.bloc.InteractifBlockEntity::new,
-                    COMPTOIR.get(), TABLEAU_CONTRATS.get(), MACHINE_A_SOUS.get(), TABLE_ROULETTE.get(), TABLE_BLACKJACK.get(),
+                    COMPTOIR.get(), TABLEAU_CONTRATS.get(), BORNE_TERRAIN.get(), MACHINE_A_SOUS.get(), TABLE_ROULETTE.get(), TABLE_BLACKJACK.get(),
                     TABLE_DES.get(), ROUE_FORTUNE.get(), TABLE_PILE_OU_FACE.get()).build(null));
 
     public static final DeferredHolder<MenuType<?>, MenuType<EtalMenu>> ETAL_MENU = MENUS.register("etal",
             () -> IMenuTypeExtension.create(EtalMenu::new));
 
-    public static final List<DeferredBlock<?>> TOUS = List.of(COMPTOIR, TABLEAU_CONTRATS, ETAL, MACHINE_A_SOUS, TABLE_ROULETTE,
+    public static final List<DeferredBlock<?>> TOUS = List.of(COMPTOIR, TABLEAU_CONTRATS, BORNE_TERRAIN, ETAL, MACHINE_A_SOUS, TABLE_ROULETTE,
             TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE, CHICHA);
 
     private static DeferredBlock<BlocInteractif> interactif(String nom, Ouverture ouverture) {

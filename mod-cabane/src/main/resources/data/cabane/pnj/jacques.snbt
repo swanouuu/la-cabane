@@ -1,0 +1,27 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-68050472,-2104333112,1835528913,1796885093],
+  CustomName:'{"text":"Jacques","color":"gray"}',
+  CustomNameVisible:1b,
+  Invulnerable:1b,
+  PersistenceRequired:1b,
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/jacques.png"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.55},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Jacques",
+        Texts:[{Text:"Tu marches sur mon chemin, là. Je l'ai balayé ce matin. … Bon. Ça ira pour cette fois."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Pardon, Jacques",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

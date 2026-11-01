@@ -16,8 +16,13 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Brokk",
-        Texts:[{Text:"CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Le village m'a accueilli comme toi. Ma forge a besoin de fer, et je paie bien ceux qui en rapportent."}],
+        Texts:[{Text:"CLANG. Une armure de fer forgé qui forge, ça t'étonne ? Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte-moi les matériaux, paie le travail, et je te forge une merveille."}],
         Buttons:[{
+          Label:"forge",
+          Name:"La forge spéciale",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane forge",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
           Label:"travail",
           Name:"Du travail ?",
           Type:"ACTION",

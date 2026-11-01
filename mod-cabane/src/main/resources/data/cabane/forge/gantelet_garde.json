@@ -1,0 +1,19 @@
+{
+  "resultat": "cataclysm:gauntlet_of_guard",
+  "prix": 25000,
+  "ordre": 50,
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      6
+    ],
+    [
+      "minecraft:obsidian",
+      8
+    ]
+  ]
+}

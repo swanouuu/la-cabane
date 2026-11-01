@@ -1,0 +1,19 @@
+{
+  "resultat": "cataclysm:coral_spear",
+  "prix": 16000,
+  "ordre": 42,
+  "ingredients": [
+    [
+      "minecraft:prismarine_shard",
+      24
+    ],
+    [
+      "minecraft:nautilus_shell",
+      2
+    ],
+    [
+      "minecraft:diamond",
+      3
+    ]
+  ]
+}
