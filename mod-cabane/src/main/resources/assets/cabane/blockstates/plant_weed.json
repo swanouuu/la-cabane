@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "age=0": {
+      "model": "cabane:block/plant_weed_0"
+    },
+    "age=1": {
+      "model": "cabane:block/plant_weed_0"
+    },
+    "age=2": {
+      "model": "cabane:block/plant_weed_1"
+    },
+    "age=3": {
+      "model": "cabane:block/plant_weed_1"
+    },
+    "age=4": {
+      "model": "cabane:block/plant_weed_2"
+    },
+    "age=5": {
+      "model": "cabane:block/plant_weed_2"
+    },
+    "age=6": {
+      "model": "cabane:block/plant_weed_3"
+    },
+    "age=7": {
+      "model": "cabane:block/plant_weed_3"
+    }
+  }
+}

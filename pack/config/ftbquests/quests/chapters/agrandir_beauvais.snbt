@@ -546,10 +546,19 @@
 			rewards: [
 				{
 					count: 1
-					id: "45F7F7AFF4B22444"
+					id: "4516E2B68D632D7F"
 					item: {
 						count: 1
-						id: "cabane:gilet_police"
+						id: "cabane:tenue_police"
+					}
+					type: "item"
+				}
+				{
+					count: 1
+					id: "53EA9393ECF4BA61"
+					item: {
+						count: 1
+						id: "cabane:matraque"
 					}
 					type: "item"
 				}
@@ -739,11 +748,335 @@
 		}
 		{
 			dependencies: [
+				"46E951E0C9BD2820"
+			]
+			id: "7085FD7118D95AB2"
+			rewards: [
+				{
+					command: "/argent donner {p} 3000"
+					elevate_perms: true
+					id: "323454E65ADFE4AF"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 64L
+					id: "3141EBA54D29A81A"
+					item: {
+						count: 1
+						id: "minecraft:bread"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "1954D05ABFB6BAAB"
+					item: {
+						count: 1
+						id: "minecraft:cooked_beef"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "086540A35DC7F4BF"
+					item: {
+						count: 1
+						id: "minecraft:baked_potato"
+					}
+					type: "item"
+				}
+			]
+			x: 2.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"7085FD7118D95AB2"
+			]
+			id: "410E687AD831327D"
+			rewards: [
+				{
+					command: "/argent donner {p} 3500"
+					elevate_perms: true
+					id: "62AC6D8B1F775B35"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 32L
+					id: "7AB1174D46702917"
+					item: {
+						count: 1
+						id: "minecraft:hay_block"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "7138F549E40D1309"
+					item: {
+						count: 1
+						id: "minecraft:cooked_salmon"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 16L
+					id: "352C4F085D59E632"
+					item: {
+						count: 1
+						id: "minecraft:dried_kelp_block"
+					}
+					type: "item"
+				}
+			]
+			x: 4.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"410E687AD831327D"
+			]
+			id: "6FDBEF03C4E02F4B"
+			rewards: [
+				{
+					command: "/argent donner {p} 4000"
+					elevate_perms: true
+					id: "735B4615DE52DFBB"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 96L
+					id: "30F13A5C2D2160F8"
+					item: {
+						count: 1
+						id: "minecraft:oak_fence"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 128L
+					id: "372A65D0B68EAE26"
+					item: {
+						count: 1
+						id: "minecraft:wheat"
+					}
+					type: "item"
+				}
+				{
+					id: "6539DAF9C2CCFC82"
+					type: "checkmark"
+				}
+			]
+			x: 6.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"6FDBEF03C4E02F4B"
+				"25273E17EBD095AA"
+			]
+			id: "362AA6EC98C53BBC"
+			rewards: [
+				{
+					count: 1
+					id: "16A3C636AF7DD4C0"
+					item: {
+						count: 1
+						id: "minecraft:enchanted_golden_apple"
+					}
+					type: "item"
+				}
+				{
+					command: "/argent donner {p} 6000"
+					elevate_perms: true
+					id: "3AF1BEFC5C499207"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 8L
+					id: "3FA74FADC37BAA2C"
+					item: {
+						count: 1
+						id: "minecraft:cake"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "5F4F4F874E229138"
+					item: {
+						count: 1
+						id: "minecraft:pumpkin_pie"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "05139CFB5859D44F"
+					item: {
+						count: 1
+						id: "minecraft:golden_carrot"
+					}
+					type: "item"
+				}
+				{
+					id: "4F60CB5162509C8D"
+					type: "checkmark"
+				}
+			]
+			x: 8.0d
+			y: 4.5d
+		}
+		{
+			dependencies: [
+				"2BD3FBE527316C9F"
+			]
+			id: "49396E04167C57FC"
+			rewards: [
+				{
+					command: "/argent donner {p} 12000"
+					elevate_perms: true
+					id: "7F19E6F04C63F56A"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 1024L
+					id: "171861563DAD0A34"
+					item: {
+						count: 1
+						id: "minecraft:stone_bricks"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 128L
+					id: "4618EB7BAD63FE40"
+					item: {
+						count: 1
+						id: "minecraft:stone_brick_wall"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "6052E6F08E25E738"
+					item: {
+						count: 1
+						id: "minecraft:iron_bars"
+					}
+					type: "item"
+				}
+				{
+					id: "56AF08737FFF8152"
+					type: "checkmark"
+				}
+			]
+			x: 10.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
+				"49396E04167C57FC"
+			]
+			id: "68AB5DCF30733EAC"
+			rewards: [
+				{
+					command: "/title {p} title {\"text\":\"Gardien de Beauvais\",\"color\":\"gray\"}"
+					elevate_perms: true
+					id: "3E1B549FC31F8708"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+				{
+					command: "/argent donner {p} 8000"
+					elevate_perms: true
+					id: "1E3A91AE8BC69CF2"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 384L
+					id: "7E6FF6E762EB2056"
+					item: {
+						count: 1
+						id: "minecraft:stone_bricks"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 4L
+					id: "6E74A7498C1B3DCB"
+					item: {
+						count: 1
+						id: "minecraft:bell"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "276D88BB9864ED97"
+					item: {
+						count: 1
+						id: "minecraft:lantern"
+					}
+					type: "item"
+				}
+				{
+					id: "522951C74FE8EB55"
+					type: "checkmark"
+				}
+			]
+			x: 12.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
 				"788DD4E54A6A6223"
 				"0ED2F75EB32984DE"
 				"62EB8B71CE88A6BB"
-				"2BD3FBE527316C9F"
-				"25273E17EBD095AA"
+				"68AB5DCF30733EAC"
+				"362AA6EC98C53BBC"
 			]
 			id: "6B09984DCFEFAC34"
 			rewards: [
@@ -781,7 +1114,7 @@
 					type: "checkmark"
 				}
 			]
-			x: 12.0d
+			x: 14.0d
 			y: 0.0d
 		}
 	]

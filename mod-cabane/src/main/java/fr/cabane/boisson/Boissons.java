@@ -40,6 +40,9 @@ public final class Boissons {
     public static final DeferredRegister<MobEffect> EFFETS = DeferredRegister.create(Registries.MOB_EFFECT, Cabane.MODID);
     public static final DeferredHolder<MobEffect, Ivresse> IVRESSE = EFFETS.register("ivresse", Ivresse::new);
 
+    /** Pour le vocal (Simple Voice Chat) : le niveau d'ivresse de chaque joueur et quand il a été noté. */
+    public static final java.util.Map<java.util.UUID, long[]> IVRESSE_VOIX = new java.util.concurrent.ConcurrentHashMap<>();
+
     /** Ivresse maximale (niveau 7 : ivre mort). */
     private static final int MAX = 6;
     private static final String[] ETATS = {"Pompette", "Éméché", "Bourré", "Bien bourré", "Complètement bourré", "Ivre mort", "Ivre mort"};
@@ -193,6 +196,9 @@ public final class Boissons {
         public boolean applyEffectTick(LivingEntity e, int niveau) {
             if (e.level().isClientSide) {
                 return true;
+            }
+            if (e instanceof ServerPlayer joueur) {
+                IVRESSE_VOIX.put(joueur.getUUID(), new long[] {niveau, System.currentTimeMillis()});
             }
             var rnd = e.getRandom();
             // le hoquet

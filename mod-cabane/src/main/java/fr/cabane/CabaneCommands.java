@@ -59,6 +59,9 @@ public final class CabaneCommands {
                 .then(Commands.literal("boutique").executes(ctx -> run(ctx, Boutique::ouvrir)))
                 .then(Commands.literal("contrats").executes(ctx -> run(ctx, Contrats::ouvrir)))
                 .then(Commands.literal("forge").executes(ctx -> run(ctx, fr.cabane.boutique.Forge::ouvrir)))
+                // le marché noir : seulement à côté du Fourgue
+                .then(Commands.literal("fourgue").executes(ctx -> run(ctx, fr.cabane.drogue.MarcheNoir::ouvrir))
+                        .then(Commands.literal("vendre").executes(ctx -> run(ctx, fr.cabane.drogue.MarcheNoir::vendre))))
                 // utilisée par les quêtes : une carte au trésor vers le donjon le plus proche d'un point lointain
                 .then(Commands.literal("carte").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("joueur", EntityArgument.player())
@@ -102,15 +105,37 @@ public final class CabaneCommands {
                         .executes(ctx -> raid(ctx.getSource(), 6))
                         .then(Commands.argument("nombre", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 40))
                                 .executes(ctx -> raid(ctx.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "nombre")))))
-                // la Forteresse du Sud : tout le monde peut demander où elle est ; l'hôte la construit, l'ouvre ou la scelle
-                .then(Commands.literal("forteresse").executes(ctx -> forteresse(ctx.getSource()))
-                        .then(Commands.literal("construire").requires(CabaneCommands::hote).executes(ctx -> {
-                            fr.cabane.histoire.Forteresse.lancer(ctx.getSource().getServer().overworld(), true);
-                            ctx.getSource().sendSuccess(() -> Component.literal("Construction de la Forteresse du Sud lancée (une à deux minutes)."), true);
-                            return 1;
-                        }))
-                        .then(Commands.literal("ouvrir").requires(CabaneCommands::hote).executes(ctx -> porteForteresse(ctx.getSource(), true)))
-                        .then(Commands.literal("fermer").requires(CabaneCommands::hote).executes(ctx -> porteForteresse(ctx.getSource(), false)))));
+                // les événements que l'hôte prépare : le combat Vegeta contre Goku
+                .then(Commands.literal("evenement").requires(CabaneCommands::hote)
+                        .then(Commands.literal("vegeta")
+                                .then(Commands.argument("action", StringArgumentType.word())
+                                        .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(new String[] {"armer", "annuler", "lancer"}, b))
+                                        .executes(ctx -> {
+                                            var message = fr.cabane.vegeta.EvenementVegeta.commande(ctx.getSource().getServer(),
+                                                    StringArgumentType.getString(ctx, "action"), ctx.getSource().getPlayer());
+                                            ctx.getSource().sendSuccess(() -> message, true);
+                                            return 1;
+                                        }))))
+                // le PLATO 6Z : tout le monde peut demander où il est ; l'hôte le construit, l'ouvre ou le scelle
+                .then(plato("plato"))
+                .then(plato("forteresse")));
+    }
+
+    /** /cabane plato (ou l'ancien nom, forteresse) : où il est ; l'hôte le construit, l'ouvre, le scelle, y pose les coffres. */
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> plato(String nom) {
+        return Commands.literal(nom).executes(ctx -> forteresse(ctx.getSource()))
+                .then(Commands.literal("construire").requires(CabaneCommands::hote).executes(ctx -> {
+                    fr.cabane.histoire.Forteresse.lancer(ctx.getSource().getServer().overworld(), true);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Construction du PLATO 6Z lancée (une à deux minutes)."), true);
+                    return 1;
+                }))
+                .then(Commands.literal("coffres").requires(CabaneCommands::hote).executes(ctx -> {
+                    int n = fr.cabane.histoire.Forteresse.coffres(ctx.getSource().getServer().overworld());
+                    ctx.getSource().sendSuccess(() -> Component.literal(n + " coffres au trésor posés dans le PLATO 6Z."), true);
+                    return n;
+                }))
+                .then(Commands.literal("ouvrir").requires(CabaneCommands::hote).executes(ctx -> porteForteresse(ctx.getSource(), true)))
+                .then(Commands.literal("fermer").requires(CabaneCommands::hote).executes(ctx -> porteForteresse(ctx.getSource(), false)));
     }
 
     /** L'hôte : un admin du serveur, ou le joueur qui a ouvert le monde en solo. */
@@ -132,20 +157,20 @@ public final class CabaneCommands {
         var data = fr.cabane.hub.HubData.get(source.getServer());
         BlockPos f = data.forteresse();
         if (f == null) {
-            source.sendSuccess(() -> Component.literal("La Forteresse du Sud n'a pas encore été repérée (elle se construit, très loin au sud).").withStyle(ChatFormatting.GRAY), false);
+            source.sendSuccess(() -> Component.literal("Le PLATO 6Z n'a pas encore été repéré (il se construit, très loin au sud).").withStyle(ChatFormatting.GRAY), false);
             return 0;
         }
-        source.sendSuccess(() -> Component.literal("⚑ La Forteresse du Sud : X " + f.getX() + "  Y " + f.getY() + "  Z " + f.getZ()
-                + (data.forteresseOuverte() ? " — la porte est ouverte." : " — scellée, c'est pour plus tard.")).withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.literal("⚑ Le PLATO 6Z : X " + f.getX() + "  Y " + f.getY() + "  Z " + f.getZ()
+                + (data.forteresseOuverte() ? " — la porte est ouverte." : " — scellé, c'est pour plus tard.")).withStyle(ChatFormatting.GOLD), false);
         return 1;
     }
 
     private static int porteForteresse(CommandSourceStack source, boolean ouverte) {
         if (!fr.cabane.histoire.Forteresse.porte(source.getServer().overworld(), ouverte)) {
-            source.sendFailure(Component.literal("La Forteresse du Sud n'est pas encore construite (/cabane forteresse construire)."));
+            source.sendFailure(Component.literal("Le PLATO 6Z n'est pas encore construit (/cabane plato construire)."));
             return 0;
         }
-        source.sendSuccess(() -> Component.literal(ouverte ? "La Forteresse du Sud est ouverte : la grande herse est levée." : "La Forteresse du Sud est à nouveau scellée."), true);
+        source.sendSuccess(() -> Component.literal(ouverte ? "Le PLATO 6Z est ouvert : la grande herse est levée." : "Le PLATO 6Z est à nouveau scellé."), true);
         return 1;
     }
 

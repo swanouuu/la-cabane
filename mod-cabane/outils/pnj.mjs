@@ -23,7 +23,7 @@ export function genererPnj(ecrire) {
    * fichier, nom, couleur, peau (textures/entity/pnj/<peau>.png), voix (cabane:voix.<voix>), echelle,
    * objectifs, tags, mains ([main droite, main gauche]), dialogues [{label, titre, texte (ou tableau = au hasard), boutons}].
    */
-  function pnj({ fichier, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
+  function pnj({ fichier, id = fichier, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
     const entrees = dialogues.map((d) => `{
         Label:${snbt(d.label)},
         Name:${snbt(d.titre)},
@@ -42,7 +42,7 @@ export function genererPnj(ecrire) {
   HandItems:[${mains.map((m) => (m ? `{id:${snbt(m)},count:1}` : "{}")).join(",")}],` : "";
     ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
   id:${snbt("easy_npc:" + type)},
-  UUID:${uuid(fichier)},
+  UUID:${uuid(id)},
   CustomName:${nomJson(nom, couleur)},
   CustomNameVisible:1b,
   PersistenceRequired:1b,
@@ -213,7 +213,7 @@ export function genererPnj(ecrire) {
       "Vous… vous n'êtes pas des gardes ? Écoutez-moi : le Président ne protège personne. Les Pillards du Sud, c'est lui qui les envoie. Il leur dit quand frapper.",
       "Il m'a enfermé parce que je posais trop de questions. Les autres… il leur fait boire la potion verte. Après, ils ne parlent plus.",
     ], boutons: [{ label: "projet", texte: "Le projet AUGMENTÉ ?", vers: "projet" }, { label: "sortir", texte: "Comment te sortir de là ?", vers: "sortir" }] },
-    { label: "projet", titre: "Le projet AUGMENTÉ", texte: "Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur de la Forteresse du Sud, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé.",
+    { label: "projet", titre: "Le projet AUGMENTÉ", texte: "Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur du PLATO 6Z, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé.",
       boutons: [{ label: "bye", texte: "On va les trouver" }] },
     { label: "sortir", titre: "Pas encore", texte: "Pas encore. S'il voit ma cellule vide, il saura qu'on est venus. Libérez d'abord Beauvais. Je tiendrai. Et prenez le dossier dans le coffre, là-bas : tout y est écrit.",
       boutons: [{ label: "bye", texte: "Tiens bon, Pierre" }] },
@@ -235,7 +235,7 @@ export function genererPnj(ecrire) {
   ] });
 
   // ------------------------------------------------------------ Vegeta, qui s'entraîne près de la tour de guet
-  pnj({ fichier: "vegeta", nom: "Vegeta", couleur: "dark_blue", objectifs: IMMOBILE, dialogues: [
+  pnj({ fichier: "vegeta", tags: ["ambiance_vegeta"], nom: "Vegeta", couleur: "dark_blue", objectifs: IMMOBILE, dialogues: [
     { label: "default", titre: "Vegeta", texte: [
       "Hmph. Ma stupide fierté m'empêche de te dire bonjour. Alors je te dis : dégage, insecte.",
       "Je suis le prince de tous les Saiyans ! … Ici on m'appelle « le monsieur qui crie près de la tour », mais bon.",
@@ -249,6 +249,46 @@ export function genererPnj(ecrire) {
       "Ma stupide fierté, c'est tout ce qui me reste ! Et ma coupe de cheveux. Elle tient toute seule. Sans gel.",
       "Un prince ne demande jamais son chemin. C'est pour ça que je suis à Beauvais depuis six ans.",
     ], boutons: [{ label: "bye", texte: "Respect, prince" }] },
+  ] });
+  // le Fourgue, dans l'ombre derrière la tour de guet : le marché noir
+  pnj({ fichier: "fourgue", nom: "Le Fourgue", couleur: "dark_gray", tags: ["fourgue"], dialogues: [
+    { label: "default", titre: "Le Fourgue", texte: [
+      "Psst. T'as pas vu de flics en venant ? … Bon. Qu'est-ce que tu veux ?",
+      "Je vends des graines. Pour le jardinage. Rien d'autre. Le jardinage.",
+      "Tu ramènes la marchandise, je paye cash. Pas de questions, pas de reçu.",
+      "La police de Beauvais me cherche depuis des mois. Ils cherchent mal.",
+      "Un conseil d'ami : la descente, c'est pire que la montée. Mais bon, c'est pas mon problème.",
+    ], boutons: [{ label: "acheter", texte: "Montre-moi ce que t'as", commande: "cabane fourgue" },
+      { label: "vendre", texte: "J'ai de la marchandise", commande: "cabane fourgue vendre" },
+      { label: "labo", texte: "Comment on cuisine ?", vers: "labo" }, { label: "bye", texte: "J'ai rien vu" }] },
+    { label: "labo", titre: "Le Fourgue", texte: [
+      "Les graines, tu les plantes sur de la terre labourée, comme du blé. La weed donne des têtes, la coca des feuilles. Un joint, c'est une tête et du papier. Pour le reste, il te faut mon labo : 4 têtes donnent du hash, 6 feuilles et de la poudre à canon donnent de la coke, et la meth… redstone, sucre, poudre de blaze. Elle explose une fois sur cinq. Cuisine dehors.",
+    ], boutons: [{ label: "bye", texte: "Compris" }] },
+  ] });
+
+  // l'hôte a armé l'événement : Vegeta sent Kakarot arriver
+  pnj({ fichier: "vegeta_arme", tags: ["ambiance_vegeta"], id: "vegeta", peau: "vegeta", voix: "vegeta", nom: "Vegeta", couleur: "dark_red", objectifs: IMMOBILE, dialogues: [
+    { label: "default", titre: "Vegeta", texte: [
+      "Il est là. Je le sens… Kakarot. Allez chercher tout le monde. TOUT le monde.",
+      "Ma capsule s'est écrasée ici en le poursuivant. Aujourd'hui, il vient à moi. Réunissez-vous autour de moi, et parlez-moi.",
+      "Vous tremblez ? Normal. Ce qui va se passer dans le ciel de Beauvais, personne ne l'a jamais vu.",
+    ], boutons: [{ label: "bye", texte: "On arrive !" }] },
+  ] });
+  // après le combat, si on a aidé Goku : le M a disparu, Vegeta est vexé mais reconnaissant
+  pnj({ fichier: "vegeta_goku", tags: ["ambiance_vegeta"], id: "vegeta", peau: "vegeta", voix: "vegeta", nom: "Vegeta", couleur: "dark_blue", objectifs: IMMOBILE, dialogues: [
+    { label: "default", titre: "Vegeta", texte: [
+      "Le M de Babidi a disparu. Ne vous faites pas d'idées : je ne vous dois rien. … Merci.",
+      "Kakarot est reparti s'entraîner. Il a dit que Beauvais était « un super coin pour pique-niquer ». Idiot.",
+      "Si vous racontez à quelqu'un que vous m'avez sauvé, je fais exploser votre maison. Gentiment.",
+    ], boutons: [{ label: "bye", texte: "Promis, prince" }] },
+  ] });
+  // après le combat, si on a aidé Vegeta : le Prince a battu Kakarot, il est intenable
+  pnj({ fichier: "vegeta_vegeta", tags: ["ambiance_vegeta"], id: "vegeta", peau: "majin_vegeta", voix: "vegeta", nom: "Vegeta", couleur: "dark_purple", objectifs: IMMOBILE, dialogues: [
+    { label: "default", titre: "Majin Vegeta", texte: [
+      "J'AI BATTU KAKAROT ! Avec un peu d'aide. Très peu. Presque rien.",
+      "Le M ? Je le garde. Ça me va bien, non ?",
+      "Vous avez choisi le bon camp. Le camp du Prince. Vous aurez une place d'honneur dans mon futur royaume de Beauvais.",
+    ], boutons: [{ label: "bye", texte: "Vive le Prince !" }] },
   ] });
 
   // ------------------------------------------------------------ les habitants : ils se baladent et se méfient des nouveaux

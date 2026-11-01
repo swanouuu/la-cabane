@@ -87,7 +87,9 @@ public final class ClientBoutique {
         @Override
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
-            Ui.titre(g, font, "Boutique du marché", left + 10, top + 10);
+            // les offres du Fourgue s'appellent toutes « noir_… »
+            boolean noir = !offres.isEmpty() && offres.get(0).id().contains(":noir_");
+            Ui.titre(g, font, noir ? "Marché noir" : "Boutique du marché", left + 10, top + 10);
             Ui.solde(g, font, left + W - 10, top + 10);
             int debut = page * PAR_PAGE;
             for (int i = debut; i < Math.min(offres.size(), debut + PAR_PAGE); i++) {

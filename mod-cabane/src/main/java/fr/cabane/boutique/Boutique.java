@@ -38,7 +38,8 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
     public static final Boutique INSTANCE = new Boutique();
     private static List<Offre> offres = List.of();
 
-    public record Offre(String id, ItemStack stack, long prix, int ordre) {
+    /** noir : une offre du marché noir, que seul le Fourgue propose. */
+    public record Offre(String id, ItemStack stack, long prix, int ordre, boolean noir) {
     }
 
     /** Ce que le client affiche. */
@@ -90,7 +91,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
                     return;
                 }
                 liste.add(new Offre(id.toString(), new ItemStack(item, GsonHelper.getAsInt(o, "nombre", 1)),
-                        GsonHelper.getAsLong(o, "prix"), GsonHelper.getAsInt(o, "ordre", 100)));
+                        GsonHelper.getAsLong(o, "prix"), GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsBoolean(o, "noir", false)));
             } catch (Exception e) {
                 Cabane.LOGGER.warn("Offre {} illisible : {}", id, e.toString());
             }
@@ -113,7 +114,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
     }
 
     public static void envoyerVitrine(ServerPlayer joueur) {
-        PacketDistributor.sendToPlayer(joueur, new Vitrine(offres.stream().map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
+        PacketDistributor.sendToPlayer(joueur, new Vitrine(offres.stream().filter(o -> !o.noir()).map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
@@ -128,9 +129,14 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
     }
 
     public static void ouvrir(ServerPlayer joueur) {
+        ouvrir(joueur, false);
+    }
+
+    /** La boutique de Mouloud, ou (noir) celle du Fourgue. */
+    public static void ouvrir(ServerPlayer joueur, boolean noir) {
         Economie.sync(joueur);
         envoyerVitrine(joueur);
-        PacketDistributor.sendToPlayer(joueur, new Ouvrir(offres.stream().map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
+        PacketDistributor.sendToPlayer(joueur, new Ouvrir(offres.stream().filter(o -> o.noir() == noir).map(o -> new Vue(o.id(), o.stack(), o.prix())).toList()));
     }
 
     private static void acheter(ServerPlayer joueur, String id, int quantite) {
@@ -138,7 +144,7 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
             return;
         }
         Offre offre = offres.stream().filter(o -> o.id().equals(id)).findFirst().orElse(null);
-        if (offre == null || !Economie.payer(joueur, offre.prix() * quantite)) {
+        if (offre == null || (offre.noir() && !fr.cabane.drogue.MarcheNoir.presDuFourgue(joueur)) || !Economie.payer(joueur, offre.prix() * quantite)) {
             return;
         }
         for (int i = 0; i < quantite; i++) {

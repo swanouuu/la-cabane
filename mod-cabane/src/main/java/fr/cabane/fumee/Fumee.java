@@ -76,7 +76,7 @@ public final class Fumee {
     }
 
     /** Un nuage de fumée devant la bouche du joueur, teinté selon le goût, et parfois un rond de fumée. */
-    static void souffler(ServerPlayer joueur, Vector3f teinte, int volume) {
+    public static void souffler(ServerPlayer joueur, Vector3f teinte, int volume) {
         ServerLevel level = joueur.serverLevel();
         Vec3 regard = joueur.getLookAngle();
         Vec3 bouche = joueur.getEyePosition().add(regard.scale(0.35)).add(0, -0.12, 0);
@@ -104,6 +104,16 @@ public final class Fumee {
         level.playSound(null, bouche.x, bouche.y, bouche.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.25F, 1.6F + r.nextFloat() * 0.3F);
     }
 
+    /** Le glouglou : des bulles qui remontent et éclatent, plus grosses et plus graves dans une chicha que dans une puff. */
+    static void glouglou(ServerLevel level, double x, double y, double z, boolean chicha) {
+        net.minecraft.util.RandomSource r = level.getRandom();
+        float grave = chicha ? 0.75F : 1.3F;
+        level.playSound(null, x, y, z, SoundEvents.BUBBLE_COLUMN_UPWARDS_INSIDE, SoundSource.PLAYERS, chicha ? 0.9F : 0.35F, grave + r.nextFloat() * 0.2F);
+        for (int i = 0; i < (chicha ? 4 : 2); i++) {
+            level.playSound(null, x, y, z, SoundEvents.BUBBLE_COLUMN_BUBBLE_POP, SoundSource.PLAYERS, chicha ? 0.7F : 0.3F, grave + r.nextFloat() * 0.5F);
+        }
+    }
+
     /** La puff : un goût surprise (tiré à la première bouffée), une couleur de fumée ; elle finit par être vide. */
     public static class PuffItem extends Item {
         public PuffItem(Properties properties, int couleur, String parfum) {
@@ -126,6 +136,7 @@ public final class Fumee {
                     joueur.displayClientMessage(Component.literal("Goût surprise : " + g.nom() + " !").withColor(g.couleur()), true);
                 }
                 souffler(joueur, teinte(g), 16);
+                glouglou(joueur.serverLevel(), joueur.getX(), joueur.getEyeY(), joueur.getZ(), false);
                 stack.hurtAndBreak(1, joueur, hand == InteractionHand.MAIN_HAND
                         ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
             }
@@ -158,7 +169,7 @@ public final class Fumee {
                     decrocher(joueur, stack);
                 } else {
                     souffler(joueur, teinte(goutDe(stack, joueur.getRandom())), 34);
-                    level.playSound(null, chicha, SoundEvents.BUBBLE_COLUMN_BUBBLE_POP, SoundSource.BLOCKS, 0.8F, 0.8F);
+                    glouglou((ServerLevel) level, chicha.getX() + 0.5, chicha.getY() + 0.5, chicha.getZ() + 0.5, true);
                     ((ServerLevel) level).sendParticles(ParticleTypes.BUBBLE_POP, chicha.getX() + 0.5, chicha.getY() + 0.25, chicha.getZ() + 0.5, 6, 0.1, 0.05, 0.1, 0.01);
                 }
             }

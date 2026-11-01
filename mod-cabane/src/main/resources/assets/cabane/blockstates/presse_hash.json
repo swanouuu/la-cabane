@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "actif=false,facing=north": {
+      "model": "cabane:block/presse_hash"
+    },
+    "actif=true,facing=north": {
+      "model": "cabane:block/presse_hash"
+    },
+    "actif=false,facing=east": {
+      "model": "cabane:block/presse_hash",
+      "y": 90
+    },
+    "actif=true,facing=east": {
+      "model": "cabane:block/presse_hash",
+      "y": 90
+    },
+    "actif=false,facing=south": {
+      "model": "cabane:block/presse_hash",
+      "y": 180
+    },
+    "actif=true,facing=south": {
+      "model": "cabane:block/presse_hash",
+      "y": 180
+    },
+    "actif=false,facing=west": {
+      "model": "cabane:block/presse_hash",
+      "y": 270
+    },
+    "actif=true,facing=west": {
+      "model": "cabane:block/presse_hash",
+      "y": 270
+    }
+  }
+}

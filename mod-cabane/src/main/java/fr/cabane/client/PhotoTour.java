@@ -99,6 +99,11 @@ public final class PhotoTour {
                     attente = Integer.parseInt(e[6]);
                 }
                 case "rien" -> attente = Integer.parseInt(e[3]);
+                case "vote" -> {
+                    // « ui <nom> vote <camp> <ticks> » : voter (0 Goku, 1 Vegeta), puis capture
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.vegeta.EvenementVegeta.Choix(Integer.parseInt(e[3])));
+                    attente = Integer.parseInt(e[4]);
+                }
                 case "blackjack" -> {
                     // « ui <nom> blackjack <ticks> x y z » : s'asseoir à la table et se faire distribuer
                     fr.cabane.client.casino.ClientCasino.ouvrir(fr.cabane.bloc.BlocInteractif.Ouverture.BLACKJACK, position(e));

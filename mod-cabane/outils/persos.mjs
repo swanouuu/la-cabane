@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
+import { skinsPerso } from "./skins-perso.mjs";
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const DOSSIER = path.join(ICI, "..", "src", "main", "resources", "assets", "cabane", "textures", "entity", "pnj");
@@ -437,13 +438,29 @@ skin("prisonnier", (img) => {
   jambes(img, (f, x, y) => (y >= 10 ? hex("#d9a57a") : (x + y) % 5 === 0 ? sale : hex("#6a6250")));
 });
 
+// ---- le Fourgue, le dealer : capuche noire, survêt gris, sacoche en bandoulière
+skin("fourgue", (img) => {
+  tete(img, { teint: "#a8754e", cheveux: "#151210", coupe: "court", yeux: "#2a1a10", barbe: { couleur: "#151210", style: "courte" } });
+  chapeau(img, "capuche", "#1c1c20", "#2c2c32");
+  const sweat = hex("#1c1c20"), gris = hex("#5a5a60"), sacoche = hex("#3a2a1a");
+  corps(img, (f, x, y) => {
+    if (f === "avant" && x + y === 7) return sacoche; // la bandoulière
+    if (f === "avant" && y >= 8 && y <= 10 && x >= 1 && x <= 3) return sacoche;
+    if (f === "avant" && y === 6 && x >= 2 && x <= 5) return fois(sweat, 1.4); // la poche kangourou
+    return sweat;
+  }, "veste");
+  corps(img, () => sweat);
+  bras(img, mains(hex("#a8754e"), () => sweat, 11));
+  jambes(img, (f, x, y) => (y >= 11 ? hex("#f2f2f2") : (f === "dehors" && x === 1) ? hex("#f2f2f2") : gris));
+});
+
 // ================================================================ les choix (la version utilisée en jeu)
 const CHOIX = { hejj: "hejj_a", karim: "karim_a", mouloud: "mouloud_a", gribbs: "gribbs_a", mehdi: "mehdi_a", brokk: "brokk_a",
-  ovsie: "ovsie_a", nyota: "nyota_a", vegeta: "vegeta_a" };
+  ovsie: "ovsie_a", nyota: "nyota_a" };
 for (const [nom, version] of Object.entries(CHOIX)) {
   fs.copyFileSync(path.join(DOSSIER, "versions", version + ".png"), path.join(DOSSIER, nom + ".png"));
 }
-for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier"]) {
+for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier", "fourgue"]) {
   fs.copyFileSync(path.join(DOSSIER, "versions", nom + ".png"), path.join(DOSSIER, nom + ".png"));
 }
 
@@ -497,3 +514,6 @@ apercu(["mouloud_a", "mouloud_b", "mouloud_c", "gribbs_a", "mehdi_a", "vegeta_a"
 apercu(["brokk_a", "brokk_b", "brokk_c", "orque_1", "orque_2", "orque_3"], path.join(DOCS, "3-forge.png"));
 apercu(["ovsie_a", "ovsie_b", "ovsie_c", "nyota_a", "nyota_b", "garde_porte_1", "garde_porte_2"], path.join(DOCS, "4-fee-guerisseuse-gardes.png"));
 console.log("Skins écrits dans", DOSSIER, "— aperçus dans", DOCS);
+
+// les skins fournis (Vegeta, Goku) passent après : ils remplacent les versions dessinées ici
+skinsPerso();

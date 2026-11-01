@@ -89,7 +89,7 @@
 	quest.157CE27E91E64AE3.quest_desc: [
 		"Scellé dans la salle du trésor d'une forteresse enfouie."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.157CE27E91E64AE3.title: "&6Œil du Gardien"
 	quest.161721A13AF5F233.quest_desc: [
@@ -148,7 +148,7 @@
 	quest.1FD30F90AE282C8F.quest_desc: [
 		"Cachée dans les forteresses qui flottent au-dessus des nuages."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.1FD30F90AE282C8F.title: "&6Plume Céleste"
 	quest.218D1602B8B42AE0.quest_desc: [
@@ -222,6 +222,13 @@
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
 	quest.33B200AA18D79663.title: "Trouver : Temple du Désert"
+	quest.362AA6EC98C53BBC.quest_desc: [
+		"Le Hejj veut un banquet sur la place, pour tout le village. Même Vegeta est invité (il viendra, mais il dira que c'est par hasard)."
+		""
+		"Livrez le festin, installez de grandes tables sur la place, puis cochez."
+	]
+	quest.362AA6EC98C53BBC.quest_subtitle: "Tout Beauvais à table"
+	quest.362AA6EC98C53BBC.title: "&6&lLe banquet du Hejj"
 	quest.389EAB4D73BEB741.quest_desc: [
 		"Le Président veut un pont « jusqu'à la lune ». Le Hejj propose de commencer par la rivière."
 		""
@@ -279,6 +286,10 @@
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
 	quest.4040726D0528310B.title: "&cLe Héraut"
+	quest.410E687AD831327D.quest_desc: [
+		"Quand la jungle est noyée sous la pluie, plus personne ne sort chasser. Il faut des réserves qui tiennent."
+	]
+	quest.410E687AD831327D.title: "Les réserves pour la saison des pluies"
 	quest.41AAB9DFC7CC4D19.quest_desc: [
 		"Mouloud rêve d'un marché couvert, avec des toiles de toutes les couleurs. Mouloud rêve beaucoup."
 	]
@@ -292,15 +303,15 @@
 	quest.45A9B3AB9BA55F7F.quest_desc: [
 		"Gardée au plus profond d'un temple englouti par la jungle."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.45A9B3AB9BA55F7F.title: "&6Idole de Jade"
 	quest.46E951E0C9BD2820.quest_desc: [
-		"« Le cœur du village appartient aux habitants. Vous, installez-vous juste à côté, hors de l'enceinte. Et aidez Beauvais à pousser jusqu'à vous. »"
+		"« Le cœur du village appartient aux habitants. Autour, derrière le boulevard, il y a des terrains pour vous : achetez-en un à sa borne, et bâtissez votre maison ou votre commerce. »"
 		""
 		"Chaque chantier de ce chapitre agrandit le village : livrez les matériaux (ils sont pris), construisez, et le village vous paie."
 		""
-		"Construisez vos maisons à l'extérieur de l'enceinte, et faites grandir Beauvais vers elles !"
+		"Les grands projets du Hejj, en bas et en haut du plan : nourrir Beauvais, et le protéger."
 	]
 	quest.46E951E0C9BD2820.quest_subtitle: "Faire grandir le village"
 	quest.46E951E0C9BD2820.title: "&6Le grand plan du Hejj"
@@ -326,9 +337,16 @@
 	quest.48F2088D4FD8A8BD.quest_desc: [
 		"Elle repose dans un monument au fond de l'océan."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.48F2088D4FD8A8BD.title: "&6Perle des Abysses"
+	quest.49396E04167C57FC.quest_desc: [
+		"« La palissade, c'est joli. Contre un raid, c'est du petit bois. » Le Hejj veut une vraie muraille de pierre tout autour du village, à la place de la palissade : au moins 4 blocs de haut, avec un chemin de ronde."
+		""
+		"Livrez la pierre (il en faut beaucoup), construisez la muraille, puis cochez."
+	]
+	quest.49396E04167C57FC.quest_subtitle: "Un grand projet du Hejj"
+	quest.49396E04167C57FC.title: "&7&lLa grande muraille"
 	quest.49A7BD08274ACF97.quest_desc: [
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
@@ -363,7 +381,7 @@
 		"La Confrérie des Explorateurs renaît : vous êtes les nouveaux Gardiens de Beauvais."
 	]
 	quest.52E14CF141DF0919.quest_subtitle: "Les sept reliques sont réunies"
-	quest.52E14CF141DF0919.title: "&6&lLe Réveil de la Cabane"
+	quest.52E14CF141DF0919.title: "&6&lLe Réveil de Beauvais"
 	quest.54BAB8678049D39C.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -426,7 +444,7 @@
 	quest.61BC56987E3E4478.quest_desc: [
 		"Vestige des fonderies et des citadelles mécaniques."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.61BC56987E3E4478.title: "&6Engrenage Ancien"
 	quest.62BD944D28455283.quest_desc: [
@@ -467,6 +485,12 @@
 		"Les blessés des raids et des expéditions ont besoin de soins. Nyota veut des lits propres et de quoi préparer ses remèdes."
 	]
 	quest.688714D5D7460A33.title: "L'infirmerie de Nyota"
+	quest.68AB5DCF30733EAC.quest_desc: [
+		"Une tour de garde à chaque passage de la muraille (au nord-est, au nord-ouest, au sud-est, au sud-ouest), avec une cloche pour sonner l'alerte."
+		""
+		"Livrez, construisez les quatre tours, puis cochez."
+	]
+	quest.68AB5DCF30733EAC.title: "Les quatre tours de garde"
 	quest.69337CA8CD88663A.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
@@ -499,12 +523,25 @@
 		"Mouloud aime les clients fidèles. Achète-lui un booster de cartes (au moins un)."
 	]
 	quest.6F388D8748978BE5.title: "Client fidèle"
+	quest.6FDBEF03C4E02F4B.quest_desc: [
+		"Construisez un vrai élevage sur un terrain du village : des enclos, des vaches, des moutons, des poules, et un abreuvoir."
+		""
+		"Livrez les clôtures, construisez, puis cochez."
+	]
+	quest.6FDBEF03C4E02F4B.title: "L'élevage du village"
 	quest.6FEF7F7E3D26E56D.quest_desc: [
 		"Le trésor le mieux gardé des forteresses illageoises."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.6FEF7F7E3D26E56D.title: "&6Couronne Illageoise"
+	quest.7085FD7118D95AB2.quest_desc: [
+		"« Un village qui a faim, c'est un village qui se dispute. » Le Hejj veut des réserves pour tout le monde."
+		""
+		"Livrez de quoi remplir le grenier : du pain, de la viande cuite, des pommes de terre au four."
+	]
+	quest.7085FD7118D95AB2.quest_subtitle: "Un grand projet du Hejj"
+	quest.7085FD7118D95AB2.title: "&6Le grenier de Beauvais"
 	quest.71228EE420BFC212.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
@@ -522,14 +559,14 @@
 	]
 	quest.73A740F15D08ECBE.title: "L'Acropole"
 	quest.753BE5C735570076.quest_desc: [
-		"À 10 000 blocs plein sud se dresse la Forteresse du Sud, le repaire des Pillards. Au cœur du donjon : la Salle Zéro."
+		"À 10 000 blocs plein sud se dresse le PLATO 6Z, le repaire des Pillards. Au cœur du donjon : la Salle Zéro."
 		""
-		"Tapez &e/cabane forteresse&r pour ses coordonnées. Pour l'instant elle est scellée : c'est pour plus tard ! L'hôte l'ouvrira quand le moment sera venu."
+		"Tapez &e/cabane plato&r pour ses coordonnées. Pour l'instant il est scellé : c'est pour plus tard ! L'hôte l'ouvrira quand le moment sera venu."
 		""
 		"Allez la voir de vos yeux, puis cochez."
 	]
 	quest.753BE5C735570076.quest_subtitle: "Acte V — Le repaire"
-	quest.753BE5C735570076.title: "&4La Forteresse du Sud"
+	quest.753BE5C735570076.title: "&4Le PLATO 6Z"
 	quest.758C2C41EB15DFBC.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -564,7 +601,7 @@
 	quest.7CCADBA9586409BC.quest_desc: [
 		"Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert."
 		""
-		"Ramène-la à la Cabane et pose-la sur un cadre du &6mur des reliques&r."
+		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.7CCADBA9586409BC.title: "&6Scarabée d'Or"
 	quest.7E9CCC0F6A03976E.quest_desc: [

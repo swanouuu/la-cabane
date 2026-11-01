@@ -4,7 +4,7 @@
   CustomName:'{"text":"Vegeta","color":"dark_blue"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","ambiance_vegeta"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/vegeta.png"},

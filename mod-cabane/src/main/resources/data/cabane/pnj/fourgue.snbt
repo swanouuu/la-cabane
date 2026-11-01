@@ -1,0 +1,52 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-402794065,1304637718,-235722776,36792729],
+  CustomName:'{"text":"Le Fourgue","color":"dark_gray"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj","fourgue"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/fourgue.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.fourgue",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Le Fourgue",
+        Texts:[{Text:"Psst. T'as pas vu de flics en venant ? … Bon. Qu'est-ce que tu veux ?"},{Text:"Je vends des graines. Pour le jardinage. Rien d'autre. Le jardinage."},{Text:"Tu ramènes la marchandise, je paye cash. Pas de questions, pas de reçu."},{Text:"La police de Beauvais me cherche depuis des mois. Ils cherchent mal."},{Text:"Un conseil d'ami : la descente, c'est pire que la montée. Mais bon, c'est pas mon problème."}],
+        Buttons:[{
+          Label:"acheter",
+          Name:"Montre-moi ce que t'as",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane fourgue",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
+          Label:"vendre",
+          Name:"J'ai de la marchandise",
+          Type:"ACTION",
+          Actions:[{Type:"COMMAND",Cmd:"cabane fourgue vendre",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
+        },{
+          Label:"labo",
+          Name:"Comment on cuisine ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"labo"}]
+        },{
+          Label:"bye",
+          Name:"J'ai rien vu",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"labo",
+        Name:"Le Fourgue",
+        Texts:[{Text:"Les graines, tu les plantes sur de la terre labourée, comme du blé. La weed donne des têtes, la coca des feuilles. Un joint, c'est une tête et du papier. Pour le reste, il te faut mon labo : 4 têtes donnent du hash, 6 feuilles et de la poudre à canon donnent de la coke, et la meth… redstone, sucre, poudre de blaze. Elle explose une fois sur cinq. Cuisine dehors."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Compris",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

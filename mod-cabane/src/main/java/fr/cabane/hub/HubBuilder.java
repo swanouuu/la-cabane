@@ -79,7 +79,13 @@ import net.neoforged.neoforge.common.Tags;
  * <p>Coordonnées relatives au centre {@code c} de la place : y = 0 est le sol.
  */
 public class HubBuilder {
-    private static final int RAYON = 64;
+    /** Le village entier (la palissade) : trois fois la surface du vieux centre. */
+    private static final int RAYON = 112;
+    /** La grande porte, au bout de l'allée sud (les gardes s'y postent). */
+    public static final int Z_PORTE = RAYON - 4;
+    /** Le boulevard qui fait le tour du vieux centre, et les terrains à bâtir derrière. */
+    private static final int RAYON_BOULEVARD = 72;
+    private static final int RAYON_TERRAINS = 92;
     private static final int FONDU = 18;
     /** L'avion vole tout en haut du monde (la limite est 320) : environ 200 blocs de chute. */
     public static int hauteurAvion(BlockPos centre) {
@@ -115,8 +121,10 @@ public class HubBuilder {
     public static final class Recherche {
         private static final int DISTANCE_HOSTILE = 320;
         private static final int RAYON_VILLAGES = 8000;
-        private static final long BUDGET_MS = 1500;
-        private static final int[][] AUTOUR = {{46, 0}, {-46, 0}, {0, 46}, {0, -46}, {33, 33}, {-33, -33}, {33, -33}, {-33, 33}};
+        // court, pour que le serveur ne prenne jamais de retard (sinon son « watchdog » finit par l'arrêter)
+        private static final long BUDGET_MS = 40;
+        private static final int[][] AUTOUR = {{46, 0}, {-46, 0}, {0, 46}, {0, -46}, {33, 33}, {-33, -33}, {33, -33}, {-33, 33},
+                {96, 0}, {-96, 0}, {0, 96}, {0, -96}, {68, 68}, {-68, -68}, {68, -68}, {-68, 68}};
 
         private record Candidat(ChunkPos chunk, Holder<Structure> structure, double distance) {
         }
@@ -144,6 +152,7 @@ public class HubBuilder {
         private int pointAnneau = 0;
         private Site resultat;
         private boolean fini;
+        private final int[] refus = new int[4];
 
         public Recherche(ServerLevel level) {
             this.level = level;
@@ -347,12 +356,34 @@ public class HubBuilder {
             }
         }
 
+        /**
+         * Pas d'océan à perte de vue : sur deux cercles (180 et 320 blocs), au plus quatre points sur vingt-quatre
+         * en plein océan (les rivières de la jungle, elles, sont les bienvenues).
+         */
+        private boolean assezDeTerre(int x, int z) {
+            int eau = 0;
+            for (int r : new int[] {180, 320}) {
+                for (int k = 0; k < 12; k++) {
+                    double a = k * Math.PI / 6 + (r == 320 ? Math.PI / 12 : 0);
+                    int px = x + (int) (Math.cos(a) * r);
+                    int pz = z + (int) (Math.sin(a) * r);
+                    Holder<Biome> b = biome(px, pz);
+                    if (b.is(BiomeTags.IS_OCEAN) || b.is(BiomeTags.IS_DEEP_OCEAN)) {
+                        eau++;
+                    }
+                }
+            }
+            return eau <= 4;
+        }
+
         /** Repli : une savane plate, sur la terre ferme, loin des structures hostiles. Avec budget de temps. */
         private void repliSavane() {
             long debut = System.currentTimeMillis();
             while (System.currentTimeMillis() - debut < BUDGET_MS) {
                 int r = anneau * 64;
                 if (r > 12000) {
+                    Cabane.LOGGER.warn("Aucune jungle ne convient (refus : {} relief ou eau tout près, {} trop accidentée, {} océan autour, {} structure hostile)",
+                            refus[0], refus[1], refus[2], refus[3]);
                     fini = true;
                     return;
                 }
@@ -387,23 +418,40 @@ public class HubBuilder {
                 }
                 int min = s;
                 int max = s;
+                // le cœur (46 blocs) : de la jungle, au sec ; la couronne (96 blocs) : au plus deux points dans l'eau ou hors jungle
                 boolean ok = true;
-                for (int[] d : AUTOUR) {
+                int ratesCouronne = 0;
+                for (int i = 0; i < AUTOUR.length && ok; i++) {
+                    int[] d = AUTOUR[i];
                     int h = sol(x + d[0], z + d[1]);
                     if (h <= mer + 1 || !jungleA(level, x + d[0], mer + 12, z + d[1])) {
-                        ok = false;
-                        break;
+                        ok = i >= 8 && ++ratesCouronne <= 2;
+                        continue;
                     }
                     min = Math.min(min, h);
                     max = Math.max(max, h);
                 }
                 BlockPos pos = new BlockPos(x, s, z);
-                if (ok && max - min <= 26 && !hostileProche(pos)) {
-                    Cabane.LOGGER.info("Jungle trouvée pour Beauvais en {}", pos);
-                    resultat = new Site(pos, null);
-                    fini = true;
-                    return;
+                if (!ok) {
+                    refus[0]++;
+                    continue;
                 }
+                if (max - min > 30) {
+                    refus[1]++;
+                    continue;
+                }
+                if (!assezDeTerre(x, z)) {
+                    refus[2]++;
+                    continue;
+                }
+                if (hostileProche(pos)) {
+                    refus[3]++;
+                    continue;
+                }
+                Cabane.LOGGER.info("Jungle trouvée pour Beauvais en {}", pos);
+                resultat = new Site(pos, null);
+                fini = true;
+                return;
             }
         }
     }
@@ -442,9 +490,14 @@ public class HubBuilder {
         e.add(new Etape("laboratoire", this::laboratoire));
         e.add(new Etape("forge, puits et champs", this::forgePuitsChamps));
         e.add(new Etape("abords", this::abords));
+        e.add(new Etape("boulevard et terrains à bâtir", this::quartiers));
         e.add(new Etape("décoration", this::decorer));
         e.add(new Etape("finitions", this::finitions));
         e.add(new Etape("arbres, buissons et animaux", this::vie));
+        for (int i = 0; i < TRANCHES; i++) {
+            int t = i;
+            e.add(new Etape("arbres flottants " + (i + 1) + "/" + TRANCHES, () -> arbresFlottants(t)));
+        }
         if (village != null) {
             e.add(new Etape("chemin vers le village", () -> cheminVersLeVillage(village)));
         }
@@ -492,7 +545,7 @@ public class HubBuilder {
                     t = t * t * (3 - 2 * t);
                     cible = (int) Math.round(y0 + (sol - y0) * t);
                 }
-                int haut = Math.max(sol, cible) + (dedans ? 40 : 16);
+                int haut = Math.max(Math.max(sol, cible) + (dedans ? 40 : 16), level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z));
                 for (int y = cible + 1; y <= haut; y++) {
                     if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
                         abs(x, y, z, AIR);
@@ -535,7 +588,7 @@ public class HubBuilder {
         chemin(18, -2, 53, 2);              // la rue du village, jusqu'à la forge
         chemin(-36, 35, -3, 37);            // → feu de camp et tour de guet
         chemin(30, 3, 31, 40);              // → puits et champs
-        for (int z = 22; z <= 58; z += 9) {
+        for (int z = 22; z <= Z_PORTE - 6; z += 9) {
             lampadaire(-4, z);
             lampadaire(4, z);
         }
@@ -1836,9 +1889,144 @@ public class HubBuilder {
         lampadaire(fx - 4, fz - 4);
     }
 
+    /**
+     * La couronne autour du vieux centre : un boulevard circulaire, quatre allées en diagonale vers les passages de la
+     * palissade, et tout autour des terrains à bâtir (une borne « à vendre » chacun) pour les commerces des joueurs.
+     */
+    private void quartiers() {
+        // le boulevard (4 de large), qui croise la grande allée du sud
+        int r = RAYON_BOULEVARD;
+        for (int dx = -r - 3; dx <= r + 3; dx++) {
+            for (int dz = -r - 3; dz <= r + 3; dz++) {
+                double d = Math.sqrt(dx * dx + dz * dz);
+                if (Math.abs(d - r) <= 2 && sol(dx, dz)) {
+                    float f = rnd.nextFloat();
+                    pose(dx, 0, dz, (f < 0.1F ? Blocks.COARSE_DIRT : f < 0.16F ? Blocks.GRAVEL : Blocks.DIRT_PATH).defaultBlockState());
+                    pose(dx, 1, dz, AIR);
+                }
+            }
+        }
+        // les allées en diagonale, du boulevard aux passages de la palissade
+        for (int k = 0; k < 4; k++) {
+            double a = Math.PI / 4 + k * Math.PI / 2;
+            for (double t = r; t <= RAYON + 2; t += 0.5) {
+                int cx = (int) Math.round(Math.cos(a) * t);
+                int cz = (int) Math.round(Math.sin(a) * t);
+                for (int ex = -1; ex <= 1; ex++) {
+                    for (int ez = -1; ez <= 1; ez++) {
+                        if (sol(cx + ex, cz + ez)) {
+                            pose(cx + ex, 0, cz + ez, Blocks.DIRT_PATH.defaultBlockState());
+                            pose(cx + ex, 1, cz + ez, AIR);
+                        }
+                    }
+                }
+            }
+        }
+        // des lampadaires tout le long du boulevard
+        for (int k = 0; k < 36; k++) {
+            double a = k * Math.PI * 2 / 36 + 0.04;
+            int lx = (int) Math.round(Math.cos(a) * (r + 3));
+            int lz = (int) Math.round(Math.sin(a) * (r + 3));
+            if (sol(lx, lz) && level.getBlockState(c.offset(lx, 1, lz)).isAir()) {
+                lampadaire(lx, lz);
+            }
+        }
+        // les terrains : 11 x 11, en couronne, sauf sur les allées (diagonales et grande allée du sud)
+        int places = 26;
+        for (int k = 0; k < places; k++) {
+            double a = k * Math.PI * 2 / places;
+            double versAllee = Math.abs(Math.IEEEremainder(a - Math.PI / 4, Math.PI / 2));
+            double versSud = Math.abs(Math.IEEEremainder(a - Math.PI / 2, Math.PI * 2));
+            if (versAllee < 0.12 || versSud < 0.16) {
+                continue;
+            }
+            int tx = (int) Math.round(Math.cos(a) * RAYON_TERRAINS);
+            int tz = (int) Math.round(Math.sin(a) * RAYON_TERRAINS);
+            boolean libre = true;
+            for (int x = tx - 5; x <= tx + 5 && libre; x++) {
+                for (int z = tz - 5; z <= tz + 5 && libre; z++) {
+                    libre = sol(x, z) && level.getBlockState(c.offset(x, 1, z)).canBeReplaced();
+                }
+            }
+            if (libre) {
+                parcelle(tx - 5, tz - 5, tx + 5, tz + 5);
+            }
+        }
+    }
+
+    /** Ce point du village est-il du sol plat et sec (pas un bâtiment, pas de l'eau) ? */
+    private boolean sol(int x, int z) {
+        BlockState s = level.getBlockState(c.offset(x, 0, z));
+        return (s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.DIRT) || s.is(Blocks.DIRT_PATH) || s.is(Blocks.GRAVEL))
+                && level.getFluidState(c.offset(x, 1, z)).isEmpty();
+    }
+
+    /**
+     * Les arbres coupés par l'aplanissement : tout tronc qui ne touche plus le sol (par d'autres troncs) est enlevé,
+     * ses feuilles tomberont d'elles-mêmes. Une tranche (en x) de la zone, jusqu'un peu au-delà du raccord.
+     */
+    private void arbresFlottants(int tranche) {
+        int max = RAYON + FONDU + 16;
+        int largeur = (2 * max + TRANCHES) / TRANCHES;
+        int debut = -max + tranche * largeur;
+        int fin = Math.min(max, debut + largeur - 1);
+        java.util.Set<BlockPos> vus = new java.util.HashSet<>();
+        int enleves = 0;
+        for (int dx = debut; dx <= fin; dx++) {
+            for (int dz = -max; dz <= max; dz++) {
+                if (dx * dx + dz * dz > max * max) {
+                    continue;
+                }
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, c.getX() + dx, c.getZ() + dz);
+                for (int y = c.getY() - 12; y <= top; y++) {
+                    BlockPos p = new BlockPos(c.getX() + dx, y, c.getZ() + dz);
+                    if (vus.contains(p) || !level.getBlockState(p).is(BlockTags.LOGS)) {
+                        continue;
+                    }
+                    // tout le bois relié à celui-ci : posé sur quelque chose de solide, ou en l'air ?
+                    java.util.List<BlockPos> bois = new java.util.ArrayList<>();
+                    java.util.ArrayDeque<BlockPos> file = new java.util.ArrayDeque<>(List.of(p));
+                    vus.add(p);
+                    boolean pose = false;
+                    while (!file.isEmpty() && bois.size() < 6000) {
+                        BlockPos b = file.poll();
+                        bois.add(b);
+                        // appuyé sur un bloc solide qui n'est pas de l'arbre (le sol, un mur, une tour) : il tient
+                        for (Direction d : Direction.values()) {
+                            BlockState voisin = level.getBlockState(b.relative(d));
+                            if (!voisin.is(BlockTags.LOGS) && !voisin.is(BlockTags.LEAVES) && voisin.isSolid()) {
+                                pose = true;
+                            }
+                        }
+                        for (int ox = -1; ox <= 1; ox++) {
+                            for (int oy = -1; oy <= 1; oy++) {
+                                for (int oz = -1; oz <= 1; oz++) {
+                                    BlockPos v = b.offset(ox, oy, oz);
+                                    if (level.getBlockState(v).is(BlockTags.LOGS) && vus.add(v)) {
+                                        file.add(v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // le bois des maisons (poutres, piliers) touche toujours un mur ou le sol : il n'est jamais touché
+                    if (!pose && bois.size() < 6000) {
+                        for (BlockPos b : bois) {
+                            level.setBlock(b, AIR, FLAGS);
+                        }
+                        enleves += bois.size();
+                    }
+                }
+            }
+        }
+        if (enleves > 0) {
+            Cabane.LOGGER.info("Arbres flottants : {} blocs de bois enlevés", enleves);
+        }
+    }
+
     /** La grande porte du village, au bout de l'allée sud. */
     private void grandePorte() {
-        int z = 60;
+        int z = Z_PORTE;
         for (int sx : new int[] {-1, 1}) {
             for (int dx = 4; dx <= 6; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -2280,7 +2468,7 @@ public class HubBuilder {
 
     /**
      * Sous la Mairie : le laboratoire du « projet AUGMENTÉ » (tubes, tables d'opération, cellules, carnets).
-     * La Salle Zéro, elle, est au cœur de la forteresse du Sud.
+     * La Salle Zéro, elle, est au cœur du PLATO 6Z.
      */
     private void laboratoire() {
         BlockState blanc = Blocks.WHITE_CONCRETE.defaultBlockState();
@@ -2364,8 +2552,8 @@ public class HubBuilder {
         figurant("minecraft:zombie_villager", 38.5, -25, 60.5);
         figurant("minecraft:husk", 46.5, -25, 60.5);
         texte(42.5, -21.6, 57.6, 180F, "{\"text\":\"SUJET 07 — PIERRE\",\"color\":\"red\"}", 0.45F, 0x00000000, false);
-        // sur le mur du fond : la carte vers la forteresse du Sud, où se cache la Salle Zéro
-        texte(47.4, -23.6, 50.5, 90F, "[{\"text\":\"SALLE ZÉRO\\n\",\"color\":\"dark_red\",\"bold\":true},{\"text\":\"Forteresse du Sud, chez nos amis les Pillards\\n\",\"color\":\"white\",\"bold\":false},{\"text\":\"10 000 pas plein sud\",\"color\":\"gray\",\"bold\":false}]", 0.7F, 0x00000000, false);
+        // sur le mur du fond : la carte vers le PLATO 6Z, où se cache la Salle Zéro
+        texte(47.4, -23.6, 50.5, 90F, "[{\"text\":\"SALLE ZÉRO\\n\",\"color\":\"dark_red\",\"bold\":true},{\"text\":\"PLATO 6Z, chez nos amis les Pillards\\n\",\"color\":\"white\",\"bold\":false},{\"text\":\"10 000 pas plein sud\",\"color\":\"gray\",\"bold\":false}]", 0.7F, 0x00000000, false);
         cadre(47, -24, 49, Direction.WEST, new ItemStack(net.minecraft.world.item.Items.COMPASS));
     }
 
@@ -2438,16 +2626,20 @@ public class HubBuilder {
             planter(features, net.minecraft.data.worldgen.features.TreeFeatures.JUNGLE_TREE, pt[0], pt[1], false);
         }
         // une couronne d'arbres géants (tronc 4 x 4) juste derrière la palissade, sauf devant la grande porte
-        for (int k = 0; k < 14; k++) {
-            double angle = Math.toRadians(8 + k * 360.0 / 14);
+        for (int k = 0; k < 22; k++) {
+            double angle = Math.toRadians(8 + k * 360.0 / 22);
             if (Math.abs(Math.toDegrees(angle) - 90) < 22) {
                 continue;
             }
-            double r = 76 + rnd.nextInt(8);
+            double r = RAYON + 8 + rnd.nextInt(8);
             int x = (int) Math.round(Math.cos(angle) * r);
             int z = (int) Math.round(Math.sin(angle) * r);
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.getX() + x, c.getZ() + z);
-            fr.cabane.monde.ArbreGeant.planter(level, new BlockPos(c.getX() + x, y, c.getZ() + z), rnd, 1.1F);
+            int sol = solNaturel(c.getX() + x, c.getZ() + z);
+            BlockPos pied = new BlockPos(c.getX() + x, sol, c.getZ() + z);
+            if (!level.getFluidState(pied).isEmpty() || !level.getBlockState(pied).is(BlockTags.DIRT)) {
+                continue;
+            }
+            fr.cabane.monde.ArbreGeant.planter(level, pied.above(), rnd, 1.1F);
         }
     }
 

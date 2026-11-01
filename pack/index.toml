@@ -14,7 +14,7 @@ hash = "e57d8311aec9f524911ed1313cabf138bb7fa5a2d3ba985a00a2a267ff35ef78"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/agrandir_beauvais.snbt"
-hash = "d8666758739c136c1b66b2dc5a42fb9c279c4b06badff4d26100e5f488a26552"
+hash = "b9e7d15ecaeaafd7b1aa02d35d9ef711e85d7aa5ced018f2fcdd4a21c1a7b0c1"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/donjons.snbt"
@@ -46,11 +46,11 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "b41fae94f2c5acd599b9cb2aa30c6b237cc4e4552d93caf870f8152dbe52f324"
+hash = "23639426e0d1ae1d685e986e636aa565f16097990004150c83868b0c9efd63ca"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "b41fae94f2c5acd599b9cb2aa30c6b237cc4e4552d93caf870f8152dbe52f324"
+hash = "23639426e0d1ae1d685e986e636aa565f16097990004150c83868b0c9efd63ca"
 
 [[files]]
 file = "emotes/bof.json"
@@ -81,8 +81,18 @@ file = "emotes/t_pose.json"
 hash = "5841369a125cd907160de81dcffd2484cccd1906bd16366a4fd138f9c0df3bf6"
 
 [[files]]
+file = "mods/alexs-mobs-continued.pw.toml"
+hash = "a00c896dfe2f15399ab8d793c065bd122bf1f9e7e15131a7f61fd14de80510a6"
+metafile = true
+
+[[files]]
 file = "mods/amendments.pw.toml"
 hash = "aef2b0ee3884d9da84c099557f8f7529f965513d269d450f1f9f8e8cc78b5a47"
+metafile = true
+
+[[files]]
+file = "mods/animal-hats-yeah.pw.toml"
+hash = "3600d7b47f8a6ca841c382cdddadfcf2db2524bf6933f9d4177902e341fa7968"
 metafile = true
 
 [[files]]
@@ -111,8 +121,13 @@ hash = "a4931e5abbec081a08ab3a1d69b2d470596b6361d707a7756f6ad34c0f21f81e"
 metafile = true
 
 [[files]]
+file = "mods/bl4cks-sit.pw.toml"
+hash = "2cfa9768cc635d7ec8cbc0172e62db5ad0fc79117b927344d7f2484b78ebd7b7"
+metafile = true
+
+[[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "107b96364f39aa2cfc2ac7abe7b45ee39e01f6630d151c12932a4a6b46a4e688"
+hash = "c7bca396d41e787fc1504de7a9749a9bf428044f39fe6649b6de63b9a88578c3"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
@@ -137,6 +152,11 @@ metafile = true
 [[files]]
 file = "mods/cloth-config.pw.toml"
 hash = "75181b55e0407d1fca1e2f346c6501f919f5109545990ddfb66db9cd1b771f8a"
+metafile = true
+
+[[files]]
+file = "mods/codxlib.pw.toml"
+hash = "10c5766cfee693bb3843ecd60334400b239b961c24fd4b9db60aceca272e3e17"
 metafile = true
 
 [[files]]

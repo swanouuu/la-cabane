@@ -222,7 +222,7 @@ public final class Histoire {
                 "Jour 30.\n\nLes Sept Reliques me gênent. Tant qu'elles sont sur le comptoir, les villageois se croient protégés et ne m'écoutent pas.\n\nJe les fais emporter cette nuit, aux quatre coins du monde, dans les pires donjons.",
                 "Jour 52.\n\nPremier sujet. La potion verte rend fort, et obéissant. Effet secondaire : il ne parle plus.\n\nJ'annonce qu'il est « parti travailler à la capitale ». Personne ne pose de question.",
                 "Jour 77.\n\nLes Pillards du Sud me paient en or pour savoir quand les gardes dorment. Chaque pillage fait peur au village. La peur me rend indispensable.\n\nC'est notre projet.",
-                "Jour 101.\n\nLe projet AUGMENTÉ avance. Bientôt, je n'aurai plus besoin de gardes : je serai la garde.\n\nLa Salle Zéro est prête, au cœur de la Forteresse du Sud, chez nos amis les Pillards. Personne n'y entre sans les Sept Reliques. Et personne ne les retrouvera.",
+                "Jour 101.\n\nLe projet AUGMENTÉ avance. Bientôt, je n'aurai plus besoin de gardes : je serai la garde.\n\nLa Salle Zéro est prête, au cœur du PLATO 6Z, chez nos amis les Pillards. Personne n'y entre sans les Sept Reliques. Et personne ne les retrouvera.",
                 "Jour 102.\n\nUn avion en feu dans le ciel, au-dessus de la jungle. Des étrangers.\n\nTant mieux : de nouveaux sujets.");
     }
 
@@ -367,6 +367,15 @@ public final class Histoire {
                 .withStyle(ChatFormatting.GOLD), false);
         for (LivingEntity sbire : level.getEntitiesOfClass(LivingEntity.class, mort.getBoundingBox().inflate(48), e -> e.getTags().contains(TAG_SBIRE))) {
             sbire.discard();
+        }
+        // le coffre du Président apparaît au pied de son pupitre
+        BlockPos pupitre = Forteresse.pupitre(server);
+        if (pupitre != null) {
+            BlockPos c = pupitre.offset(0, -1, 3);
+            level.setBlock(c, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 3);
+            Forteresse.butin(level, c, "plato_president");
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, c.getX() + 0.5, c.getY() + 1, c.getZ() + 0.5, 80, 0.6, 0.8, 0.6, 0.4);
+            server.getPlayerList().broadcastSystemMessage(Component.literal("★ Le coffre du Président est apparu au pied du pupitre.").withStyle(ChatFormatting.GOLD), false);
         }
         // le Président et sa garde quittent la place ; il finit dans une cellule du laboratoire
         HubEvents.apresLiberation(level);

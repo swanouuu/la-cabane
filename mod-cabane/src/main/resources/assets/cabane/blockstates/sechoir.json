@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "actif=false,facing=north": {
+      "model": "cabane:block/sechoir"
+    },
+    "actif=true,facing=north": {
+      "model": "cabane:block/sechoir"
+    },
+    "actif=false,facing=east": {
+      "model": "cabane:block/sechoir",
+      "y": 90
+    },
+    "actif=true,facing=east": {
+      "model": "cabane:block/sechoir",
+      "y": 90
+    },
+    "actif=false,facing=south": {
+      "model": "cabane:block/sechoir",
+      "y": 180
+    },
+    "actif=true,facing=south": {
+      "model": "cabane:block/sechoir",
+      "y": 180
+    },
+    "actif=false,facing=west": {
+      "model": "cabane:block/sechoir",
+      "y": 270
+    },
+    "actif=true,facing=west": {
+      "model": "cabane:block/sechoir",
+      "y": 270
+    }
+  }
+}

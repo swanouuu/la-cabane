@@ -34,7 +34,16 @@ public class CabaneVoicePlugin implements VoicechatPlugin {
         if (sender == null) {
             return;
         }
-        UUID partner = PhoneCalls.activePartner(sender.getPlayer().getUuid());
+        // bourré : la voix tangue et devient pâteuse, pour ceux qui l'entendent de près comme au téléphone
+        UUID id = sender.getPlayer().getUuid();
+        int ivresse = VoixBourree.niveau(id);
+        if (ivresse >= 0) {
+            byte[] deformee = VoixBourree.deformer(event.getVoicechat(), id, event.getPacket().getOpusEncodedData(), ivresse);
+            if (deformee != null) {
+                event.getPacket().setOpusEncodedData(deformee);
+            }
+        }
+        UUID partner = PhoneCalls.activePartner(id);
         if (partner == null) {
             return;
         }

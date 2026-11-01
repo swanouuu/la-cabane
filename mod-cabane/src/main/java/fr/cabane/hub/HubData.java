@@ -23,10 +23,16 @@ public class HubData extends SavedData {
     private int versionPnj;
     /** Le Président est-il tombé ? */
     private boolean libere;
-    /** Le centre de la Forteresse du Sud (au sol), une fois construite. */
+    /** Le centre du PLATO 6Z (au sol), une fois construit. */
     private BlockPos forteresse;
+    /** L'île du combat de Vegeta, tant qu'elle existe (pour l'effacer même si le serveur s'est arrêté en plein combat). */
+    private BlockPos ileVegeta;
     /** L'hôte a-t-il ouvert la forteresse (/cabane forteresse ouvrir) ? */
     private boolean forteresseOuverte;
+    /** Le combat Vegeta contre Goku : 0 pas encore prévu, 1 armé par l'hôte, 2 joué. */
+    private int vegeta;
+    /** Qui les joueurs ont aidé : « goku » ou « vegeta » (vide avant le combat). */
+    private String issueVegeta = "";
     private final Set<UUID> kits = new HashSet<>();
 
     public static HubData get(MinecraftServer server) {
@@ -41,7 +47,10 @@ public class HubData extends SavedData {
         data.versionPnj = tag.getInt("versionPnj");
         data.libere = tag.getBoolean("libere");
         NbtUtils.readBlockPos(tag, "forteresse").ifPresent(pos -> data.forteresse = pos);
+        NbtUtils.readBlockPos(tag, "ileVegeta").ifPresent(pos -> data.ileVegeta = pos);
         data.forteresseOuverte = tag.getBoolean("forteresseOuverte");
+        data.vegeta = tag.getInt("vegeta");
+        data.issueVegeta = tag.getString("issueVegeta");
         ListTag list = tag.getList("kits", Tag.TAG_INT_ARRAY);
         for (Tag entry : list) {
             data.kits.add(NbtUtils.loadUUID(entry));
@@ -57,14 +66,33 @@ public class HubData extends SavedData {
         tag.putBoolean("demarre", demarre);
         tag.putInt("versionPnj", versionPnj);
         tag.putBoolean("libere", libere);
+        if (ileVegeta != null) {
+            tag.put("ileVegeta", NbtUtils.writeBlockPos(ileVegeta));
+        }
         if (forteresse != null) {
             tag.put("forteresse", NbtUtils.writeBlockPos(forteresse));
         }
         tag.putBoolean("forteresseOuverte", forteresseOuverte);
+        tag.putInt("vegeta", vegeta);
+        tag.putString("issueVegeta", issueVegeta);
         ListTag list = new ListTag();
         kits.forEach(id -> list.add(NbtUtils.createUUID(id)));
         tag.put("kits", list);
         return tag;
+    }
+
+    public int vegeta() {
+        return vegeta;
+    }
+
+    public String issueVegeta() {
+        return issueVegeta;
+    }
+
+    public void setVegeta(int etat, String issue) {
+        vegeta = etat;
+        issueVegeta = issue;
+        setDirty();
     }
 
     public boolean libere() {
@@ -73,6 +101,15 @@ public class HubData extends SavedData {
 
     public void setLibere(boolean valeur) {
         libere = valeur;
+        setDirty();
+    }
+
+    public BlockPos ileVegeta() {
+        return ileVegeta;
+    }
+
+    public void setIleVegeta(BlockPos pos) {
+        ileVegeta = pos;
         setDirty();
     }
 

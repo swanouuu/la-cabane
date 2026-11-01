@@ -47,7 +47,7 @@ public final class CabaneBlocks {
     public static final DeferredBlock<fr.cabane.histoire.Histoire.BibliothequeSecrete> BIBLIOTHEQUE_SECRETE = BLOCKS.registerBlock("bibliotheque_secrete",
             fr.cabane.histoire.Histoire.BibliothequeSecrete::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(-1F, 3_600_000F).sound(SoundType.WOOD).noLootTable());
-    /** Le pupitre de la Salle Zéro, au cœur de la Forteresse du Sud : la Clé y réveille le Président. Incassable. */
+    /** Le pupitre de la Salle Zéro, au cœur du PLATO 6Z : la Clé y réveille le Président. Incassable. */
     public static final DeferredBlock<fr.cabane.histoire.Histoire.PupitreBlock> PUPITRE_PRESIDENT = BLOCKS.registerBlock("pupitre_president",
             fr.cabane.histoire.Histoire.PupitreBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(-1F, 3_600_000F).sound(SoundType.NETHERITE_BLOCK).noOcclusion().noLootTable()

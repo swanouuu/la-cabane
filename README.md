@@ -72,6 +72,7 @@ Au tout premier démarrage du serveur, le mod cherche une grande jungle (biomes 
 
 - **au centre**, une grande place pavée avec quatre fontaines et le **grand panneau de la carte** ;
 - **au nord**, la **Grande Cabane**, la base des joueurs : grande salle, cuisine, bibliothèque, coffres, **mur des reliques**, dortoir, atelier ;
+- **tout autour du vieux centre**, un **boulevard** et une couronne de **terrains à bâtir** (une borne « à vendre » chacun) pour les commerces des joueurs ; la palissade et la grande porte sont plus loin, le village fait trois fois la taille d'avant ;
 - **à l'ouest**, le **Grand Bazar** : le comptoir de Mouloud, le tableau des contrats de Mehdi (les contrats de l'heure s'affichent au-dessus, avec le compte à rebours ; clic droit pour livrer), et des emplacements d'étals ;
 - **à l'est**, la rue : des maisons usées par le temps, un chantier, la **forge de Brokk** ;
 - **au sud**, les champs, le puits, l'enclos, le feu de camp, la tour de guet et la **grande porte** ;
@@ -117,10 +118,33 @@ Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en
 
 ## Le bar : bières, vin et sodas
 
-- **L'alcool** : bière blonde, bière brune, la fameuse **8.6**, vin rouge, pastis, rhum. Chaque verre fait monter l'**ivresse** : le hoquet, puis la tête qui tourne, la caméra qui tangue, la démarche qui titube… et le trou noir si on abuse. Certaines donnent un petit bonus (la 8.6 et le rhum rendent plus fort, le vin soigne un peu, le pastis protège du feu).
+- **L'alcool** : bière blonde, bière brune, la fameuse **8.6**, vin rouge, pastis, rhum. Chaque verre fait monter l'**ivresse** : le hoquet, puis la tête qui tourne, la caméra qui tangue, la démarche qui titube… et le trou noir si on abuse. Au vocal, la voix d'un joueur bourré devient pâteuse et tangue (pour tout le monde, téléphone compris), jusqu'à ce que l'effet passe. Certaines donnent un petit bonus (la 8.6 et le rhum rendent plus fort, le vin soigne un peu, le pastis protège du feu).
 - **Les sodas** (coca, fanta, ice tea pêche) : un coup de fouet (vitesse, saut, régénération), et ils font redescendre d'un cran.
 - Tout s'achète chez Mouloud, et tout se fabrique : bouteille vide + blé + sucre (blonde), + cacao (brune), + sucre, sucre et œil d'araignée fermenté (8.6), trois baies sucrées (vin), sucre + deux fougères (pastis), cannes à sucre (rhum) ; pépite de fer + deux sucres + cacao, colorant orange ou glace pour les canettes.
 - **Pour les vendre** : le marché rachète bières, vin et coca dans ses contrats, et chacun peut tenir son étal (ou ouvrir la taverne du village, une quête d'« Agrandir Beauvais »).
+
+## Le marché noir
+
+Derrière la tour de guet, dans l'ombre : **le Fourgue**. Il vend les graines (weed, coca), le papier à rouler et les postes des labos, et il rachète toute la marchandise cash (« J'ai de la marchandise »). Sa boutique ne s'ouvre qu'à côté de lui.
+
+- **Les champs** : les graines se plantent sur de la terre labourée, comme le blé. La weed donne de la weed fraîche, la coca des feuilles.
+- **Les labos**, deux postes par produit, en 3D (on voit la marchandise travailler sur la table) : le **séchoir** (weed fraîche → weed séchée) puis la **presse à hash** ; le **bac de macération** (feuilles de coca + sucre → pâte) puis la **table de raffinage** (pâte + poudre à canon → cocaïne) ; le **réacteur** (redstone, sucre, poudre de blaze → plaque de meth, il explose parfois) puis la **table de découpe**. Clic droit en tenant le premier ingrédient pour lancer, clic droit pour reprendre le résultat.
+- **Les joints** se roulent à la main : weed séchée (ou hash) + papier.
+- **Les effets** : une montée courte (on plane et on a faim ; la coke rend très rapide et fait voir tout ce qui bouge à travers les murs pendant 1 min ; la meth rend invincible 45 s)… puis une **descente** longue et pénible (jusqu'à 5 min de lenteur, faiblesse, faim, nausée). En reprendre avant la fin, c'est l'**overdose**. Le lait coupe tout. La drogue, c'est mal.
+
+## Les accessoires
+
+Chez Mouloud, à porter sur la tête (à la place du casque, sans protection) : lunettes de soleil, lunettes cœur, lunettes 3D, lunettes pixel « deal with it », moustache et nez de clown. Le pack ajoute aussi **Animal Hats** (des animaux en chapeau), **Sit** (clic droit sur un escalier ou une dalle pour s'asseoir) et **Alex's Mobs**.
+
+## L'événement Vegeta
+
+Le grand combat, à lancer quand tout le monde est là (seul l'hôte peut le faire) :
+
+1. `/cabane evenement vegeta armer` : Vegeta sent Kakarot arriver. Rassemblez-vous près de lui ; dès que quelqu'un fait clic droit sur Vegeta, avec tous les joueurs à moins de 24 blocs, ça démarre.
+2. Ou `/cabane evenement vegeta lancer` : ça démarre tout de suite, là où tu es (pratique pour tester).
+3. `/cabane evenement vegeta annuler` : on arrête tout.
+
+Une île de roche apparaît alors dans le ciel, 80 blocs au-dessus de vous (elle n'existe que pendant le combat, et disparaît à la fin, même si le serveur s'arrête en plein milieu). Écran noir, « Goku est enfin arrivé… », puis la cinématique : Goku et Majin Vegeta passent Super Saiyan 2, plan par plan comme dans Dragon Ball Z Kai, avec le son de l'extrait (dans le pack « Beauvais - voix », voir plus bas). Ensuite chacun vote : celui qu'on aide se bat à nos côtés, l'autre devient le boss, sur l'île. Vegeta ne parle plus pareil après.
 
 ## Le téléphone
 
@@ -143,11 +167,13 @@ Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en
 - **Les grandes tables** : la **roulette** (2 x 2) avec son cylindre qui tourne en vrai et la bille qui tombe dans la case, la **roue de la fortune** (5 x 5) avec ses lumières et son feu d'artifice au jackpot, et le **blackjack** (3 x 2) avec un croupier : jusqu'à trois joueurs assis, les cartes de chacun sont posées sur le tapis.
 - Les **tickets à gratter**, à gratter vraiment à la souris : trois modèles tirés au hasard, BEAUVAIS MILLIONS (trois montants identiques), PENALTY ! (3 buts sur 5 tirs) et MORPION D'OR (3 étoiles alignées).
 - Les **boosters** s'ouvrent carte par carte, la plus rare en dernier.
-- Les **puffs** et la **chicha** ont un goût surprise (Love 66, Lady Killer, Double Pomme, Blue Mist… 24 goûts), avec la fumée de la bonne couleur.
+- Les **puffs** et la **chicha** ont un goût surprise (Love 66, Lady Killer, Double Pomme, Blue Mist… 24 goûts), avec la fumée de la bonne couleur. La chicha fait des grosses bulles, la puff des petites.
 
 ## La police
 
-Chez Mouloud : les **menottes** (clic droit sur un joueur : il est menotté et suit son policier ; encore un clic pour le libérer), le **pistolet** (munitions infinies, une balle toutes les 0,7 s, aucun dégât : la cible brille et ralentit), le **gilet de police** (il s'enfile comme un plastron, par-dessus les habits : on garde son skin) et la **voiture de police** (sans essence, quatre places, ZQSD pour conduire, **H** pour la sirène, le gyrophare tourne dès qu'on conduit, accroupi + frapper pour la ranger).
+Chez Mouloud : les **menottes** (clic droit sur un joueur : il est menotté et suit son policier ; encore un clic pour le libérer), le **pistolet** (munitions infinies, une balle toutes les 0,7 s, aucun dégât : la cible brille et ralentit), la **tenue de police** complète (casquette, veste, pantalon, chaussures), la **matraque** (frapper un joueur menotté le charge sur ton dos pour l'emmener en prison ; accroupi + clic droit pour le poser) et la **voiture de police** (sans essence, quatre places, ZQSD pour conduire, **H** pour la sirène, le gyrophare tourne dès qu'on conduit, accroupi + frapper pour la ranger).
+
+Un joueur menotté peut être libéré de force : un autre joueur maintient clic droit sur lui 7 secondes (une barre de progression s'affiche) et les menottes sautent.
 
 ## Les émotes et les petits mods marrants
 
@@ -162,6 +188,8 @@ Chaque PNJ dit une réplique enregistrée quand on lui parle (s'il en a). Pour a
 2. Nomme chaque fichier avec le nom du PNJ, puis un numéro : `macron-1`, `macron-2`, `vegeta-fierte`, `gardien-1`… S'il en a plusieurs, il en dit une au hasard.
 3. Mets-les dans le dossier `voix/` à la racine du projet, au format `.ogg` (Audacity sait exporter en OGG, gratuit). Sinon, envoie-les-moi dans n'importe quel format et je les convertis.
 4. Lance `node mod-cabane/outils/generer.mjs`, puis `compiler.bat` et `publier.bat`.
+
+Pour qu'un PNJ parle **tout seul** de temps en temps quand on passe à côté (toutes les 45 à 90 s), mets ses répliques dans `voix/ambiance/` (par exemple `voix/ambiance/vegeta-1.ogg`) : pour l'instant, seul Vegeta a ce réglage. Ces répliques-là ne vont **ni sur GitHub ni dans le mod** : `construire-instance.bat` les range dans le pack de ressources « Beauvais - voix » de `dist/SakaiMod.zip`, activé d'office. Envoie ce zip à tes potes toi-même (ils le réimportent dans Prism), et mets le même pack sur ton propre Prism.
 
 Les noms des PNJ : `gardien` (le Hejj), `cartographe` (Karim), `marchand` (Mouloud), `cousin` (Gribbs), `pole_emploi` (Mehdi), `forgeron` (Brokk), `orque` (les orques), `fee` (Ovsie), `guerisseuse` (Nyota), `garde_est`, `garde_ouest`, `macron`, `garde_president`, `vegeta`, `conteur` (Marcel), `prisonnier` (Pierre), et les habitants `jean`, `jacques`, `francis`, `louis`, `bernard`, `gerard`, `ginette`, `monique`, `martine`, `thierry`.
 

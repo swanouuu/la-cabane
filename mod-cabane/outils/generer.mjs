@@ -3,6 +3,8 @@
 import { genererPnj } from "./pnj.mjs";
 import { genererHistoire } from "./histoire.mjs";
 import { genererBoissons, OFFRES_BOISSONS, CONTRATS_BOISSONS } from "./boissons.mjs";
+import { genererMarcheNoir, OFFRES_NOIR } from "./marche-noir.mjs";
+import { genererAccessoires, OFFRES_ACCESSOIRES } from "./accessoires.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -193,7 +195,7 @@ const lang = {
   "itemGroup.cabane": "SakaiMod",
   "item.cabane.telephone": "Téléphone",
   "item.cabane.telephone.desc": "Clic droit ou touche N : choisis ton numéro et appelle tes potes.",
-  "item.cabane.relique": "Relique de la Cabane",
+  "item.cabane.relique": "Relique de Beauvais",
   "screen.cabane.telephone": "Téléphone",
   "key.cabane.telephone": "Ouvrir le téléphone",
   "key.categories.cabane": "Beauvais",
@@ -257,7 +259,7 @@ ecrire("data/cabane/advancement/premier_contrat.json", {
 });
 ecrire("data/cabane/advancement/sept_reliques.json", {
   parent: "cabane:relique_oeil_du_gardien",
-  display: { icon: { id: "minecraft:elytra" }, title: { text: "Le Réveil de la Cabane" }, description: { text: "Réunir les sept reliques." },
+  display: { icon: { id: "minecraft:elytra" }, title: { text: "Le Réveil de Beauvais" }, description: { text: "Réunir les sept reliques." },
     frame: "challenge", show_toast: true, announce_to_chat: true },
   criteria: Object.fromEntries(RELIQUES.map((r) => [r.id, { trigger: "minecraft:inventory_changed", conditions: { items: [{ items: `cabane:${r.id}` }] } }])),
 });
@@ -427,6 +429,8 @@ bloc("roue_fortune", { front: "cabane:block/roue_fortune_front", side: "minecraf
 
 genererHistoire({ ecrire, png, lang });
 genererBoissons({ ecrire, png, lang });
+genererMarcheNoir({ ecrire, png, lang });
+genererAccessoires({ ecrire, png, lang });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
@@ -438,7 +442,7 @@ Object.assign(lang, {
   "entity.cabane.parachute": "Parachute",
   "item.cabane.puff_rose": "Puff rose (goût surprise)", "item.cabane.puff_bleue": "Puff bleue (goût surprise)", "item.cabane.puff_menthe": "Puff verte (goût surprise)",
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
-  "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.gilet_police": "Gilet de police",
+  "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",
   "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
   "key.cabane.sirene": "Sirène de la voiture de police", "block.cabane.partie_table": "Table du casino",
   "subtitles.cabane.voix": "Un habitant parle", "item.cabane.photo": "Photo imprimée", "entity.cabane.tableau_photo": "Photo accrochée", "subtitles.cabane.voiture": "Voiture de police",
@@ -461,8 +465,8 @@ offres.push(["puff_rose", "cabane:puff_rose", 1, 60], ["puff_bleue", "cabane:puf
 for (const nom of ["puff_rose", "puff_bleue", "puff_menthe", "tuyau"]) itemGenere(nom);
 // la police (textures : outils/police.mjs)
 offres.push(["menottes", "cabane:menottes", 1, 800], ["pistolet", "cabane:pistolet", 1, 2500],
-  ["gilet_police", "cabane:gilet_police", 1, 1200], ["voiture_police", "cabane:voiture_police", 1, 25000]);
-for (const nom of ["menottes", "gilet_police", "voiture_police"]) itemGenere(nom);
+  ["tenue_police", "cabane:tenue_police", 1, 1200], ["matraque", "cabane:matraque", 1, 600], ["voiture_police", "cabane:voiture_police", 1, 25000]);
+for (const nom of ["menottes", "tenue_police", "casquette_police", "veste_police", "pantalon_police", "chaussures_police", "matraque", "voiture_police"]) itemGenere(nom);
 // la photo imprimée : un polaroid (ciel, soleil, collines)
 tex("item/photo", [
   "................", "..TTTTTTTTTTTT..", "..TBBBBBBBBBBT..", "..TBBBBBBYYBBT..", "..TBBBBBBYYBBT..", "..TBBBBBBBBBBT..",
@@ -533,8 +537,10 @@ ecrire("assets/cabane/blockstates/partie_table.json", { variants: { "": { model:
 ecrire("assets/cabane/blockstates/chicha.json", { variants: Object.fromEntries(
   [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: "cabane:block/chicha", ...(y ? { y } : {}) }])) });
 ecrire("data/cabane/loot_table/blocks/chicha.json", { type: "minecraft:block", pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: "cabane:chicha" }] }] });
-offres.push(...OFFRES_BOISSONS);
+offres.push(...OFFRES_BOISSONS, ...OFFRES_ACCESSOIRES);
 offres.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i }));
+// le marché noir : seulement chez le Fourgue
+OFFRES_NOIR.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i, noir: true }));
 
 // ---- les contrats horaires du marché
 const contrats = [
@@ -592,6 +598,12 @@ console.log("Ressources générées dans", RES);
       const nom = fichier.toLowerCase().replace(/\.ogg$/, "").replace(/[^a-z0-9_]/g, "_");
       fs.mkdirSync(path.join(cible, pnj), { recursive: true });
       fs.copyFileSync(path.join(dossierVoix, fichier), path.join(cible, pnj, nom + ".ogg"));
+      // la cinématique : une réplique par fichier (cine-01.ogg, cine-02.ogg…), chacune son propre son
+      const numero = pnj === "cine" ? fichier.match(/(\d+)/)?.[1] : null;
+      if (numero) {
+        sons[`cine.${numero.padStart(2, "0")}`] = { sounds: [{ name: `cabane:voix/cine/${nom}`, stream: true }] };
+        continue;
+      }
       (sons["voix." + pnj] ??= { subtitle: "subtitles.cabane.voix", sounds: [] }).sounds.push({ name: `cabane:voix/${pnj}/${nom}` });
     }
   }

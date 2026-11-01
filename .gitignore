@@ -9,3 +9,8 @@ mod-cabane/runs/
 dist/
 serveur-test/
 *.log
+# essais de voix (non publiés)
+voix/essais/
+# répliques d'ambiance (extraits du doublage) : seulement dans dist/SakaiMod.zip, jamais sur GitHub
+voix/ambiance/
+voix/cinematique/

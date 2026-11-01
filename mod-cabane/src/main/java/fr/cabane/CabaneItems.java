@@ -52,10 +52,17 @@ public final class CabaneItems {
             ITEMS.register("menottes", () -> new fr.cabane.police.Police.MenottesItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<fr.cabane.police.Police.PistoletItem> PISTOLET =
             ITEMS.register("pistolet", () -> new fr.cabane.police.Police.PistoletItem(new Item.Properties()));
-    /** Un gilet qu'on enfile par-dessus ses habits : le skin reste visible. */
-    public static final DeferredItem<net.minecraft.world.item.ArmorItem> GILET_POLICE = ITEMS.register("gilet_police",
-            () -> new net.minecraft.world.item.ArmorItem(fr.cabane.police.Police.UNIFORME, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE,
-                    new Item.Properties().stacksTo(1).durability(net.minecraft.world.item.ArmorItem.Type.CHESTPLATE.getDurability(10))));
+    /** La tenue complète : un clic droit et on est habillé de pied en cap. */
+    public static final DeferredItem<fr.cabane.police.Police.TenueItem> TENUE_POLICE =
+            ITEMS.register("tenue_police", () -> new fr.cabane.police.Police.TenueItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> CASQUETTE_POLICE = uniforme("casquette_police", net.minecraft.world.item.ArmorItem.Type.HELMET);
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> VESTE_POLICE = uniforme("veste_police", net.minecraft.world.item.ArmorItem.Type.CHESTPLATE);
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> PANTALON_POLICE = uniforme("pantalon_police", net.minecraft.world.item.ArmorItem.Type.LEGGINGS);
+    public static final DeferredItem<net.minecraft.world.item.ArmorItem> CHAUSSURES_POLICE = uniforme("chaussures_police", net.minecraft.world.item.ArmorItem.Type.BOOTS);
+    /** La matraque : un coup sur un menotté, et on le charge sur son dos. */
+    public static final DeferredItem<fr.cabane.police.Police.MatraqueItem> MATRAQUE = ITEMS.register("matraque",
+            () -> new fr.cabane.police.Police.MatraqueItem(new Item.Properties().stacksTo(1)
+                    .attributes(net.minecraft.world.item.SwordItem.createAttributes(net.minecraft.world.item.Tiers.IRON, -1, -2.4F))));
     public static final DeferredItem<fr.cabane.police.Police.VoitureItem> VOITURE_POLICE =
             ITEMS.register("voiture_police", () -> new fr.cabane.police.Police.VoitureItem(new Item.Properties().stacksTo(1)));
 
@@ -66,7 +73,7 @@ public final class CabaneItems {
     // L'histoire de Beauvais
     public static final DeferredItem<fr.cabane.histoire.Histoire.ObjetLore> CLE_SALLE_ZERO = ITEMS.register("cle_salle_zero",
             () -> new fr.cabane.histoire.Histoire.ObjetLore(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant(),
-                    "Forgée par Brokk avec les Sept Reliques.", "Elle ouvre la Salle Zéro, au cœur de la Forteresse du Sud.",
+                    "Forgée par Brokk avec les Sept Reliques.", "Elle ouvre la Salle Zéro, au cœur du PLATO 6Z.",
                     "Le Président vous y attend."));
     public static final DeferredItem<fr.cabane.histoire.Histoire.ObjetLore> DOSSIER_SECRET = ITEMS.register("dossier_secret",
             () -> new fr.cabane.histoire.Histoire.ObjetLore(new Item.Properties().stacksTo(1).rarity(Rarity.RARE),
@@ -99,6 +106,11 @@ public final class CabaneItems {
                         Cartes.toutes().forEach(c -> output.accept(Cartes.carte(c.id())));
                     })
                     .build());
+
+    private static DeferredItem<net.minecraft.world.item.ArmorItem> uniforme(String name, net.minecraft.world.item.ArmorItem.Type type) {
+        return ITEMS.register(name, () -> new net.minecraft.world.item.ArmorItem(fr.cabane.police.Police.UNIFORME, type,
+                new Item.Properties().durability(type.getDurability(10))));
+    }
 
     private static DeferredItem<RelicItem> relique(String name, Rarity rarity) {
         return ITEMS.register(name, () -> new RelicItem(new Item.Properties().stacksTo(1).rarity(rarity).fireResistant()));

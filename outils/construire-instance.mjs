@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { RACINE, config, png, zip } from "./commun.mjs";
+import { NOM_PACK_VOIX, packVoix } from "./voix-privees.mjs";
 
 const c = config();
 const MODELE = path.join(RACINE, "outils", "instance-prism");
@@ -49,8 +50,17 @@ const fichiers = [
   ["mmc-pack.json", fs.readFileSync(path.join(MODELE, "mmc-pack.json"))],
   ["cabane.png", icone],
   ["minecraft/packwiz-installer-bootstrap.jar", fs.readFileSync(path.join(MODELE, "minecraft", "packwiz-installer-bootstrap.jar"))],
-  ["minecraft/options.txt", fs.readFileSync(path.join(MODELE, "minecraft", "options.txt"))],
 ];
+
+// Les voix privées : un pack de ressources activé d'office (il n'existe que dans ce zip, pas sur GitHub)
+const voix = packVoix();
+let options = fs.readFileSync(path.join(MODELE, "minecraft", "options.txt"), "utf8").trimEnd() + "\n";
+if (voix.length) {
+  for (const [nom, contenu] of voix) fichiers.push([`minecraft/resourcepacks/${NOM_PACK_VOIX}/${nom}`, contenu]);
+  options += `resourcePacks:["vanilla","mod_resources","file/${NOM_PACK_VOIX}"]\n`;
+  console.log(`Voix privées : ${voix.length - 2} son(s) dans le pack « ${NOM_PACK_VOIX} »`);
+}
+fichiers.push(["minecraft/options.txt", Buffer.from(options)]);
 
 // Le serveur apparaît directement dans la liste Multijoueur
 if (c.adresseServeur) {

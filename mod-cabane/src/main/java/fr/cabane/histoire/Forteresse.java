@@ -35,7 +35,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /**
- * La Forteresse du Sud, repaire des Pillards et refuge du Président, à 10 000 blocs plein sud du village :
+ * Le PLATO 6Z, repaire des Pillards et refuge du Président, à 10 000 blocs plein sud du village :
  * une enceinte de 116 blocs, des tours d'angle, une grande porte scellée, un donjon de 55 blocs de haut et,
  * dedans, la Salle Zéro où attend le combat final. Pour l'instant, on ne peut pas y entrer (« c'est pour plus
  * tard ») : l'hôte l'ouvrira avec /cabane forteresse ouvrir. Elle se construit tranche par tranche, sans
@@ -75,7 +75,7 @@ public final class Forteresse {
         int x = centre.getX();
         int z = centre.getZ() + DISTANCE;
         chantier = new Chantier(level, x, z);
-        Cabane.LOGGER.info("Forteresse du Sud : construction lancée en {} {}", x, z);
+        Cabane.LOGGER.info("PLATO 6Z : construction lancée en {} {}", x, z);
     }
 
     @SubscribeEvent
@@ -84,6 +84,47 @@ public final class Forteresse {
     }
 
     /** Lève (ou rabaisse) la herse et le mur de la grande porte. Faux si la forteresse n'existe pas encore. */
+    /**
+     * Les coffres au trésor : quatre dans les coins de la Salle Zéro, et des tonneaux pleins dans le camp des Pillards.
+     * Les tables de butin sont dans data/cabane/loot_table/coffres/ (Lootr en fait un butin par joueur).
+     */
+    public static int coffres(ServerLevel level) {
+        BlockPos f = HubData.get(level.getServer()).forteresse();
+        if (f == null) {
+            return 0;
+        }
+        for (int cx = (f.getX() - 45) >> 4; cx <= (f.getX() + 45) >> 4; cx++) {
+            for (int cz = (f.getZ() - 45) >> 4; cz <= (f.getZ() + 45) >> 4; cz++) {
+                level.getChunk(cx, cz);
+            }
+        }
+        int n = 0;
+        for (int[] c : new int[][] {{-13, -13}, {13, -13}, {-13, 13}, {13, 13}}) {
+            BlockPos p = f.offset(c[0], 1, c[1]);
+            level.setBlock(p, Blocks.CHEST.defaultBlockState().setValue(net.minecraft.world.level.block.ChestBlock.FACING, c[1] < 0 ? Direction.SOUTH : Direction.NORTH), 3);
+            n += butin(level, p, "plato_tresor");
+        }
+        for (int[] t : new int[][] {{-32, -30}, {30, -28}, {-30, 30}, {32, 32}, {-36, 2}, {36, -4}}) {
+            BlockPos p = f.offset(t[0] + 2, 1, t[1] + 3);
+            if (!level.getBlockState(p).is(Blocks.BARREL)) {
+                level.setBlock(p, Blocks.BARREL.defaultBlockState(), 3);
+            }
+            n += butin(level, p, "plato_camp");
+        }
+        return n;
+    }
+
+    /** Remplit un coffre ou un tonneau avec une table de butin du mod. */
+    public static int butin(ServerLevel level, BlockPos p, String table) {
+        if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity coffre) {
+            coffre.setLootTable(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+                    Cabane.id("coffres/" + table)), level.random.nextLong());
+            coffre.setChanged();
+            return 1;
+        }
+        return 0;
+    }
+
     public static boolean porte(ServerLevel level, boolean ouverte) {
         HubData data = HubData.get(level.getServer());
         BlockPos f = data.forteresse();
@@ -112,7 +153,7 @@ public final class Forteresse {
                     chantier = null;
                 }
             } catch (RuntimeException e) {
-                Cabane.LOGGER.error("Forteresse du Sud : construction interrompue", e);
+                Cabane.LOGGER.error("PLATO 6Z : construction interrompue", e);
                 chantier.forcer(false);
                 chantier = null;
             }
@@ -139,7 +180,7 @@ public final class Forteresse {
             int sx = f.getX(), sz = f.getZ() - DEMI - 8;
             int sy = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, sx, sz);
             joueur.teleportTo(sx + 0.5, sy, sz + 0.5);
-            joueur.displayClientMessage(Component.literal("🔒 La Forteresse du Sud est scellée… c'est pour plus tard !").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), true);
+            joueur.displayClientMessage(Component.literal("🔒 Le PLATO 6Z est scellé… c'est pour plus tard !").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), true);
             level.playSound(null, joueur.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 1F, 0.6F);
         }
     }
@@ -215,7 +256,7 @@ public final class Forteresse {
                     fz = s[1];
                 }
                 if (site == sites.size()) {
-                    Cabane.LOGGER.info("Forteresse du Sud : site choisi en {} {} (note {})", fx, fz, meilleur);
+                    Cabane.LOGGER.info("PLATO 6Z : site choisi en {} {} (note {})", fx, fz, meilleur);
                     forcer(true);
                 }
                 return false;
@@ -240,7 +281,8 @@ public final class Forteresse {
             }
             forcer(false);
             HubData.get(level.getServer()).setForteresse(new BlockPos(fx, base, fz));
-            Cabane.LOGGER.info("Forteresse du Sud construite en {} {} {}", fx, base, fz);
+            coffres(level);
+            Cabane.LOGGER.info("PLATO 6Z construit en {} {} {}", fx, base, fz);
             return true;
         }
 
@@ -352,7 +394,7 @@ public final class Forteresse {
                         pose(mur[0], 22, mur[1], Blocks.BLACK_WALL_BANNER.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, d));
                     }
                 }
-                texte(0.5, 25, -MUR - 5.5, 180F, "{\"text\":\"LA FORTERESSE DU SUD\",\"color\":\"gold\",\"bold\":true}", 4F);
+                texte(0.5, 25, -MUR - 5.5, 180F, "{\"text\":\"PLATO 6Z\",\"color\":\"gold\",\"bold\":true}", 5F);
                 texte(0.5, 23.2, -MUR - 5.5, 180F, "{\"text\":\"Repaire des Pillards — refuge du Président\",\"color\":\"white\"}", 1.6F);
                 texte(0.5, 10, -MUR - 5.5, 180F, "{\"text\":\"🔒 SCELLÉE — c'est pour plus tard\",\"color\":\"red\",\"bold\":true}", 1.8F);
             });

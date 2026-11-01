@@ -80,6 +80,44 @@ export function genererHistoire({ ecrire, png, lang }) {
     criteria: { victoire: { trigger: "minecraft:impossible" } },
   });
 
+  // ---- le butin du PLATO 6Z : le trésor de la Salle Zéro, les tonneaux du camp des Pillards, le coffre du Président
+  const objet = (name, poids, min = 1, max = 1, fonctions = []) => ({ type: "minecraft:item", name, weight: poids,
+    functions: [...(max > 1 ? [{ function: "minecraft:set_count", count: { type: "minecraft:uniform", min, max } }] : []), ...fonctions] });
+  const enchante = [{ function: "minecraft:enchant_randomly" }];
+  const armes = [
+    "cataclysm:the_incinerator", "cataclysm:meat_shredder", "cataclysm:wrath_of_the_desert", "cataclysm:bulwark_of_the_flame",
+    "cataclysm:astrape", "cataclysm:tidal_claws", "cataclysm:cursed_bow", "cataclysm:soul_render", "cataclysm:gauntlet_of_bulwark",
+    "cataclysm:black_steel_sword", "cataclysm:khopesh", "cataclysm:gauntlet_of_guard", "mowziesmobs:wrought_axe", "mowziesmobs:sol_visage",
+    "mowziesmobs:earthrend_gauntlet", "mowziesmobs:sculptor_staff", "mowziesmobs:naga_fang_dagger",
+  ].map((id) => objet(id, 1));
+  const armures = ["ignitium", "cursium"].flatMap((m) => ["helmet", "chestplate", "leggings", "boots"].map((p) => objet(`cataclysm:${m}_${p}`, 1)));
+  const precieux = [
+    objet("minecraft:diamond", 10, 3, 8), objet("minecraft:emerald_block", 6, 1, 3), objet("minecraft:netherite_ingot", 3),
+    objet("minecraft:enchanted_golden_apple", 3), objet("minecraft:totem_of_undying", 3), objet("minecraft:experience_bottle", 6, 8, 24),
+    objet("minecraft:book", 5, 1, 1, enchante), objet("minecraft:netherite_upgrade_smithing_template", 2),
+    objet("cataclysm:ignitium_ingot", 3, 1, 3), objet("cataclysm:cursium_ingot", 3, 1, 3), objet("cataclysm:witherite_ingot", 3, 1, 3),
+  ];
+  ecrire("data/cabane/loot_table/coffres/plato_tresor.json", { type: "minecraft:chest", pools: [
+    { rolls: { type: "minecraft:uniform", min: 3, max: 5 }, entries: precieux },
+    { rolls: 1, entries: armes },
+    { rolls: { type: "minecraft:uniform", min: 0, max: 1 }, entries: armures },
+  ] });
+  ecrire("data/cabane/loot_table/coffres/plato_camp.json", { type: "minecraft:chest", pools: [
+    { rolls: { type: "minecraft:uniform", min: 3, max: 6 }, entries: [
+      objet("minecraft:emerald", 10, 2, 8), objet("minecraft:iron_ingot", 8, 2, 6), objet("minecraft:gold_ingot", 6, 1, 4),
+      objet("minecraft:crossbow", 3, 1, 1, enchante), objet("minecraft:arrow", 6, 8, 24), objet("minecraft:golden_carrot", 5, 2, 6),
+      objet("cataclysm:black_steel_ingot", 3, 1, 3), objet("minecraft:diamond", 2, 1, 2), objet("minecraft:ominous_bottle", 2),
+    ] },
+  ] });
+  ecrire("data/cabane/loot_table/coffres/plato_president.json", { type: "minecraft:chest", pools: [
+    { rolls: 1, entries: [objet("minecraft:netherite_ingot", 1, 3, 5)] },
+    { rolls: 1, entries: [objet("minecraft:enchanted_golden_apple", 1, 2, 3)] },
+    { rolls: 1, entries: [objet("minecraft:nether_star", 1)] },
+    { rolls: 1, entries: [objet("minecraft:totem_of_undying", 1, 1, 2)] },
+    { rolls: 2, entries: armes },
+    { rolls: 1, entries: armures },
+  ] });
+
   Object.assign(lang, {
     "block.cabane.bibliotheque_secrete": "Bibliothèque",
     "block.cabane.pupitre_president": "Pupitre de la Salle Zéro",

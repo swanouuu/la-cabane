@@ -31,7 +31,7 @@
       },{
         Label:"projet",
         Name:"Le projet AUGMENTÉ",
-        Texts:[{Text:"Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur de la Forteresse du Sud, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé."}],
+        Texts:[{Text:"Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur du PLATO 6Z, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé."}],
         Buttons:[{
           Label:"bye",
           Name:"On va les trouver",

@@ -56,8 +56,8 @@ public final class HubEvents {
             new Pnj("fee", -27.5, 4.5, 0F),            // devant le Grand Bazar
             new Pnj("pole_emploi", -37.5, -7.5, 0F),   // au tableau des contrats, dans le bazar
             new Pnj("cousin", -27.5, -4.5, -90F),      // l'autre côté de l'entrée du bazar
-            new Pnj("garde_ouest", -3.5, 62.5, 0F),    // à la grande porte, côté dehors
-            new Pnj("garde_est", 3.5, 62.5, 0F),
+            new Pnj("garde_ouest", -3.5, HubBuilder.Z_PORTE + 2.5, 0F),    // à la grande porte, côté dehors
+            new Pnj("garde_est", 3.5, HubBuilder.Z_PORTE + 2.5, 0F),
             new Pnj("guerisseuse", -15.5, 30.5, 90F),  // au feu de camp
             // le Président sur la place, devant le grand panneau, et sa garde rapprochée autour
             new Pnj("macron", 0.5, 1, 9.5, 0F, -1),
@@ -84,12 +84,14 @@ public final class HubEvents {
             new Pnj("thierry", 0.5, 40.5, 0F),
             // Vegeta s'entraîne près de la tour de guet ; les orques travaillent à la forge de Brokk
             new Pnj("vegeta", -30.5, 42.5, 90F),
+            // le Fourgue, dans l'ombre derrière la tour de guet : le marché noir
+            new Pnj("fourgue", -38.5, 48.5, 135F),
             new Pnj("orque_1", 55.5, -5.5, 0F),
             new Pnj("orque_2", 58.5, -3.5, 90F),
             new Pnj("orque_3", 55.5, 5.5, 180F));
 
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
-    private static final int RAYON_CHUNKS = 6;
+    private static final int RAYON_CHUNKS = 10;
 
     /**
      * La construction se fait en plusieurs étapes, sur plusieurs ticks, pour ne jamais bloquer le serveur
@@ -110,7 +112,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 4;
+    public static final int VERSION_PNJ = 7;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {
@@ -137,8 +139,9 @@ public final class HubEvents {
     }
 
     private static void forcerVillage(ServerLevel level, BlockPos centre, boolean forcer) {
-        for (int cx = (centre.getX() >> 4) - 5; cx <= (centre.getX() >> 4) + 5; cx++) {
-            for (int cz = (centre.getZ() >> 4) - 5; cz <= (centre.getZ() >> 4) + 5; cz++) {
+        // tout le village, jusqu'aux gardes de la grande porte
+        for (int cx = (centre.getX() >> 4) - 8; cx <= (centre.getX() >> 4) + 8; cx++) {
+            for (int cz = (centre.getZ() >> 4) - 8; cz <= (centre.getZ() >> 4) + 8; cz++) {
                 level.setChunkForced(cx, cz, forcer);
             }
         }
@@ -293,12 +296,31 @@ public final class HubEvents {
      * loin du village : on le charge, et les PNJ sont remplacés quelques secondes plus tard.
      */
     public static void apresLiberation(ServerLevel level) {
+        rafraichirPnj(level);
+    }
+
+    /** Les PNJ changent de discours (événement, libération) : le village est chargé, et ils sont remplacés juste après. */
+    public static void rafraichirPnj(ServerLevel level) {
         BlockPos centre = HubData.get(level.getServer()).centre();
         if (centre == null) {
             return;
         }
         forcerVillage(level, centre, true);
         rafraichir = 100;
+    }
+
+    /** Vegeta change de discours selon l'événement : armé, puis après le combat selon le camp choisi. */
+    private static String fichier(ServerLevel level, String fichier) {
+        if (fichier.equals("vegeta")) {
+            HubData data = HubData.get(level.getServer());
+            if (data.vegeta() == 1) {
+                return "vegeta_arme";
+            }
+            if (data.vegeta() == 2 && !data.issueVegeta().isEmpty()) {
+                return "vegeta_" + data.issueVegeta();
+            }
+        }
+        return fichier;
     }
 
     private static void retirer(ServerLevel level, Pnj pnj) {
@@ -318,7 +340,7 @@ public final class HubEvents {
     }
 
     private static boolean spawn(ServerLevel level, BlockPos centre, Pnj pnj) {
-        ResourceLocation id = Cabane.id("pnj/" + pnj.file() + ".snbt");
+        ResourceLocation id = Cabane.id("pnj/" + fichier(level, pnj.file()) + ".snbt");
         Optional<Resource> resource = level.getServer().getResourceManager().getResource(id);
         if (resource.isEmpty()) {
             return false;

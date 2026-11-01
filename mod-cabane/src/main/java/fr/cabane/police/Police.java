@@ -76,6 +76,108 @@ public final class Police {
         modBus.addListener(Police::registerPayloads);
     }
 
+    // ------------------------------------------------------------------ la tenue
+
+    /** Clic droit : on enfile toute la tenue d'un coup (ce qu'on portait part dans l'inventaire). */
+    public static class TenueItem extends Item {
+        public TenueItem(Properties properties) {
+            super(properties);
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player joueur, InteractionHand main) {
+            ItemStack tenue = joueur.getItemInHand(main);
+            if (!level.isClientSide) {
+                habiller(joueur, net.minecraft.world.entity.EquipmentSlot.HEAD, fr.cabane.CabaneItems.CASQUETTE_POLICE.get());
+                habiller(joueur, net.minecraft.world.entity.EquipmentSlot.CHEST, fr.cabane.CabaneItems.VESTE_POLICE.get());
+                habiller(joueur, net.minecraft.world.entity.EquipmentSlot.LEGS, fr.cabane.CabaneItems.PANTALON_POLICE.get());
+                habiller(joueur, net.minecraft.world.entity.EquipmentSlot.FEET, fr.cabane.CabaneItems.CHAUSSURES_POLICE.get());
+                level.playSound(null, joueur.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.PLAYERS, 1F, 1F);
+                joueur.displayClientMessage(Component.literal("👮 Police de Beauvais, en service !").withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD), true);
+                tenue.consume(1, joueur);
+            }
+            return InteractionResultHolder.sidedSuccess(tenue, level.isClientSide);
+        }
+
+        private static void habiller(Player joueur, net.minecraft.world.entity.EquipmentSlot place, Item piece) {
+            ItemStack avant = joueur.getItemBySlot(place);
+            if (!avant.isEmpty() && !joueur.getInventory().add(avant)) {
+                joueur.drop(avant, false);
+            }
+            joueur.setItemSlot(place, new ItemStack(piece));
+        }
+
+        @Override
+        public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lignes, TooltipFlag flag) {
+            lignes.add(Component.literal("Clic droit : enfiler toute la tenue").withStyle(ChatFormatting.GRAY));
+        }
+    }
+
+    // ------------------------------------------------------------------ la matraque
+
+    /**
+     * Un coup de matraque sur un menotté : on le charge sur son dos (pour l'emmener en prison). Encore un coup, ou
+     * clic droit accroupi avec la matraque : on le pose.
+     */
+    public static class MatraqueItem extends net.minecraft.world.item.SwordItem {
+        public MatraqueItem(Properties properties) {
+            super(net.minecraft.world.item.Tiers.IRON, properties);
+        }
+
+        @Override
+        public boolean hurtEnemy(ItemStack stack, LivingEntity cible, LivingEntity agent) {
+            if (cible instanceof ServerPlayer prisonnier && agent instanceof ServerPlayer policier && menotte(prisonnier)) {
+                if (prisonnier.getVehicle() == policier) {
+                    poser(prisonnier);
+                } else {
+                    prisonnier.stopRiding();
+                    prisonnier.startRiding(policier, true);
+                    prisonnier.serverLevel().playSound(null, prisonnier.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.PLAYERS, 1F, 0.7F);
+                    policier.displayClientMessage(Component.literal("Tu portes " + prisonnier.getGameProfile().getName()
+                            + " sur ton dos. (accroupi + clic droit avec la matraque pour le poser)").withStyle(ChatFormatting.BLUE), true);
+                    prisonnier.displayClientMessage(Component.literal("👮 Tu es emmené sur le dos de " + policier.getGameProfile().getName() + ".").withStyle(ChatFormatting.RED), true);
+                }
+            }
+            return super.hurtEnemy(stack, cible, agent);
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player joueur, InteractionHand main) {
+            if (!level.isClientSide && joueur.isShiftKeyDown()) {
+                for (net.minecraft.world.entity.Entity passager : List.copyOf(joueur.getPassengers())) {
+                    if (passager instanceof ServerPlayer prisonnier) {
+                        poser(prisonnier);
+                    }
+                }
+            }
+            return super.use(level, joueur, main);
+        }
+
+        @Override
+        public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lignes, TooltipFlag flag) {
+            lignes.add(Component.literal("Frapper un menotté : le charger sur son dos").withStyle(ChatFormatting.GRAY));
+            lignes.add(Component.literal("Accroupi + clic droit : le poser").withStyle(ChatFormatting.DARK_GRAY));
+        }
+    }
+
+    private static final java.util.Set<UUID> POSES = new java.util.HashSet<>();
+
+    private static void poser(ServerPlayer prisonnier) {
+        POSES.add(prisonnier.getUUID());
+        prisonnier.stopRiding();
+        POSES.remove(prisonnier.getUUID());
+        prisonnier.displayClientMessage(Component.literal("On te pose par terre.").withStyle(ChatFormatting.GRAY), true);
+    }
+
+    /** Un menotté porté sur le dos ne peut pas descendre tout seul. */
+    @SubscribeEvent
+    public static void onDescente(net.neoforged.neoforge.event.entity.EntityMountEvent event) {
+        if (event.isDismounting() && event.getEntityMounting() instanceof ServerPlayer prisonnier && menotte(prisonnier)
+                && event.getEntityBeingMounted() instanceof Player && !POSES.contains(prisonnier.getUUID()) && prisonnier.isAlive()) {
+            event.setCanceled(true);
+        }
+    }
+
     // ------------------------------------------------------------------ le pistolet
 
     /** Munitions infinies, une balle toutes les 0,7 s. Ne blesse pas : la cible brille et ralentit. */
@@ -252,10 +354,48 @@ public final class Police {
         }
     }
 
+    /** Le crochetage en cours : qui force les menottes de qui, depuis combien de ticks. */
+    private record Crochetage(UUID prisonnier, int avance, long dernier) {
+    }
+
+    private static final java.util.Map<UUID, Crochetage> CROCHETAGES = new java.util.HashMap<>();
+    /** Sept secondes de clic droit maintenu pour forcer des menottes. */
+    private static final int DUREE_CROCHETAGE = 140;
+
     @SubscribeEvent
     public static void onClicEntite(PlayerInteractEvent.EntityInteract event) {
         if (bloquer(event.getEntity())) {
             event.setCanceled(true);
+            return;
+        }
+        // forcer les menottes d'un autre : rester en clic droit sur lui (sans menottes en main)
+        if (!(event.getEntity() instanceof ServerPlayer aide) || !(event.getTarget() instanceof ServerPlayer prisonnier) || !menotte(prisonnier)
+                || event.getHand() != InteractionHand.MAIN_HAND || event.getItemStack().getItem() instanceof MenottesItem) {
+            return;
+        }
+        event.setCanceled(true);
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        long maintenant = aide.serverLevel().getGameTime();
+        Crochetage c = CROCHETAGES.get(aide.getUUID());
+        int avance = c != null && c.prisonnier().equals(prisonnier.getUUID()) && maintenant - c.dernier() <= 10
+                ? c.avance() + (int) (maintenant - c.dernier()) : 0;
+        CROCHETAGES.put(aide.getUUID(), new Crochetage(prisonnier.getUUID(), avance, maintenant));
+        if (avance >= DUREE_CROCHETAGE) {
+            CROCHETAGES.remove(aide.getUUID());
+            if (prisonnier.getVehicle() instanceof Player) {
+                poser(prisonnier);
+            }
+            liberer(prisonnier);
+            aide.displayClientMessage(Component.literal("🔓 Les menottes ont cédé !").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD), true);
+            prisonnier.displayClientMessage(Component.literal("🔓 " + aide.getGameProfile().getName() + " a forcé tes menottes !").withStyle(ChatFormatting.GREEN), true);
+            return;
+        }
+        int pct = avance * 100 / DUREE_CROCHETAGE;
+        String barre = "▮".repeat(pct / 10) + "▯".repeat(10 - pct / 10);
+        aide.displayClientMessage(Component.literal("🔓 Tu forces les menottes… " + barre + " " + pct + " % (reste en clic droit)").withStyle(ChatFormatting.YELLOW), true);
+        prisonnier.displayClientMessage(Component.literal("🔓 " + aide.getGameProfile().getName() + " force tes menottes… " + barre).withStyle(ChatFormatting.YELLOW), true);
+        if (avance % 20 < 5) {
+            aide.serverLevel().playSound(null, prisonnier.blockPosition(), SoundEvents.CHAIN_HIT, SoundSource.PLAYERS, 0.8F, 0.8F + aide.getRandom().nextFloat() * 0.4F);
         }
     }
 

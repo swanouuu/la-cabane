@@ -1,0 +1,28 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-1429915456,-1053109562,1709335113,283248741],
+  CustomName:'{"text":"Vegeta","color":"dark_blue"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj","ambiance_vegeta"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/vegeta.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.vegeta",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Vegeta",
+        Texts:[{Text:"Le M de Babidi a disparu. Ne vous faites pas d'idées : je ne vous dois rien. … Merci."},{Text:"Kakarot est reparti s'entraîner. Il a dit que Beauvais était « un super coin pour pique-niquer ». Idiot."},{Text:"Si vous racontez à quelqu'un que vous m'avez sauvé, je fais exploser votre maison. Gentiment."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Promis, prince",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

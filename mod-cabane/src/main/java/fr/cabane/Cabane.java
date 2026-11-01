@@ -29,6 +29,8 @@ public class Cabane {
         CabaneEntities.register(modBus);
         CabaneSons.register(modBus);
         fr.cabane.boisson.Boissons.register(modBus);
+        fr.cabane.drogue.MarcheNoir.register(modBus);
+        fr.cabane.accessoire.Accessoires.register(modBus);
         fr.cabane.monde.CabaneMonde.register(modBus);
         modBus.addListener(PhoneNetwork::register);
         modBus.addListener(Economie::register);
@@ -42,6 +44,7 @@ public class Cabane {
         modBus.addListener(fr.cabane.telephone.Piaf::register);
         modBus.addListener(fr.cabane.telephone.Messages::register);
         modBus.addListener(fr.cabane.photo.Impression::register);
+        modBus.addListener(fr.cabane.vegeta.EvenementVegeta::register);
     }
 
     public static ResourceLocation id(String path) {
