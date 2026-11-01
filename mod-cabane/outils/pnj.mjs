@@ -23,7 +23,7 @@ export function genererPnj(ecrire) {
    * fichier, nom, couleur, peau (textures/entity/pnj/<peau>.png), voix (cabane:voix.<voix>), echelle,
    * objectifs, tags, mains ([main droite, main gauche]), dialogues [{label, titre, texte (ou tableau = au hasard), boutons}].
    */
-  function pnj({ fichier, nom, couleur, peau = fichier, voix = fichier, echelle, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
+  function pnj({ fichier, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
     const entrees = dialogues.map((d) => `{
         Label:${snbt(d.label)},
         Name:${snbt(d.titre)},
@@ -36,18 +36,21 @@ export function genererPnj(ecrire) {
           Actions:[{Type:"COMMAND",Cmd:${snbt(b.commande)},ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]` : ""}
         }`).join(",")}]
       }`).join(",");
+    // une fée vole : Easy NPC plante le serveur si on lui demande d'ouvrir les portes
+    if (type === "fairy") objectifs = objectifs.replace(/,?\{Type:"OPEN_DOOR",Prio:\d+\}/, "");
     const objets = mains ? `
   HandItems:[${mains.map((m) => (m ? `{id:${snbt(m)},count:1}` : "{}")).join(",")}],` : "";
     ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
-  id:"easy_npc:humanoid",
+  id:${snbt("easy_npc:" + type)},
   UUID:${uuid(fichier)},
   CustomName:${nomJson(nom, couleur)},
   CustomNameVisible:1b,
   PersistenceRequired:1b,
   Tags:[${["cabane_pnj", ...tags].map(snbt).join(",")}],
   EasyNPCVersion:3,
-  VariantType:"STEVE",
-  SkinData:{Type:"RESOURCE_LOCATION",Texture:${snbt(`cabane:textures/entity/pnj/${peau}.png`)}},${echelle ? `
+  VariantType:${snbt(variante)},
+  SkinData:${rendu ? `{Type:"DEFAULT"}` : `{Type:"RESOURCE_LOCATION",Texture:${snbt(`cabane:textures/entity/pnj/${peau}.png`)}}`},${rendu ? `
+  RenderData:{Type:"CUSTOM_ENTITY",EntityType:${snbt(rendu)}},` : ""}${echelle ? `
   ModelData:{Scale:{Root:[${echelle}f,${echelle}f,${echelle}f]}},` : ""}
   SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:${snbt(`cabane:voix.${voix}`)},Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[${objectifs}]},${objets}
@@ -69,6 +72,8 @@ export function genererPnj(ecrire) {
       "Un village, c'est comme un arbre géant : il pousse lentement, mais il faut l'arroser tous les jours. Vous êtes l'arrosoir.",
       "J'ai rêvé d'un Beauvais avec un port, un pont, une tour plus haute que les arbres. Mon rêve a besoin de vos bras.",
       "Le Président dit que c'est lui qui décide. Je le laisse dire. C'est moi qui sais où sont les clés.",
+      "J'étais du Conseil des Anciens, avant. Maintenant je suis… le vieux sur le porche. Va voir Marcel, au feu de camp : il raconte l'histoire mieux que moi.",
+      "Chut. Pas trop fort. Les gardes du Président ont de grandes oreilles sous leurs masques.",
     ], boutons: [{ label: "aider", texte: "Comment aider ?", vers: "aider" }, { label: "maison", texte: "Où s'installer ?", vers: "maison" },
       { label: "reliques", texte: "Et les reliques ?", vers: "reliques" }, { label: "bye", texte: "À plus tard" }] },
     { label: "aider", titre: "Agrandir Beauvais", texte: [
@@ -131,7 +136,7 @@ export function genererPnj(ecrire) {
   ] });
 
   // ------------------------------------------------------------ Brokk l'ogre et ses orques
-  pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", peau: "brokk", echelle: 1.5, mains: ["minecraft:mace", null], dialogues: [
+  pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", rendu: "mowziesmobs:ferrous_wroughtnaut", dialogues: [
     { label: "default", titre: "Brokk", texte: [
       "CLANG. Brokk forge. Toi regarde. Toi touche pas l'enclume.",
       "Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte les matériaux, paie le travail.",
@@ -153,7 +158,7 @@ export function genererPnj(ecrire) {
     ] });
   }
 
-  pnj({ fichier: "fee", nom: "Ovsie la Fée", couleur: "light_purple", peau: "ovsie", echelle: 0.6, objectifs: balade(0.7), dialogues: [
+  pnj({ fichier: "fee", nom: "Ovsie la Fée", couleur: "light_purple", type: "fairy", variante: "GREEN", rendu: "mowziesmobs:lantern", objectifs: `{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}`, dialogues: [
     { label: "default", titre: "Ovsie", texte: [
       "Coucou ! Tu collectionnes les cartes ? Les boosters se vendent chez Mouloud, et un classeur garde toute ta collection.",
       "Je brille la nuit. Le jour aussi, mais personne ne remarque.",
@@ -184,6 +189,51 @@ export function genererPnj(ecrire) {
     ] });
   }
 
+  // ------------------------------------------------------------ Marcel, le conteur du feu de camp : l'histoire de Beauvais
+  pnj({ fichier: "conteur", nom: "Marcel le Conteur", couleur: "gold", dialogues: [
+    { label: "default", titre: "Marcel", texte: [
+      "Ah, des gens du ciel… Asseyez-vous près du feu. Vous voulez savoir pourquoi les gens d'ici vous regardent de travers ? C'est une longue histoire.",
+      "Bonsoir, voyageur. Le feu est chaud, la nuit est longue. Une histoire ?",
+    ], boutons: [{ label: "h1", texte: "Raconte-moi Beauvais", vers: "h1" }, { label: "bye", texte: "Une autre fois" }] },
+    { label: "h1", titre: "Le temps des Anciens", texte: "Il y a longtemps, Beauvais était le village le plus paisible de la jungle. Les arbres géants nous protégeaient, la rivière nous nourrissait, et le Conseil des Anciens décidait de tout, ici, autour de ce feu. Sur le comptoir de la Grande Cabane reposaient les Sept Reliques : tant qu'elles étaient là, aucun malheur n'entrait au village.",
+      boutons: [{ label: "h2", texte: "Et ensuite ?", vers: "h2" }] },
+    { label: "h2", titre: "L'homme en costume", texte: "Un jour, un homme en costume est arrivé. Il parlait bien, il souriait beaucoup, il promettait tout : la prospérité, la sécurité… et en même temps, l'inverse. Le Conseil l'a écouté. Puis il a pris le titre de Président, s'est entouré d'une garde masquée, et le Conseil n'a plus jamais été réuni.",
+      boutons: [{ label: "h3", texte: "Et ensuite ?", vers: "h3" }] },
+    { label: "h3", titre: "Les Pillards du Sud", texte: "Peu après, les Pillards sont arrivés du sud, des marais. Ils brûlent les récoltes, vident les greniers, et repartent avant l'aube. Le Président dit qu'il nous protège. Mais sa garde ne protège que lui. Et une nuit, les Sept Reliques ont disparu. Personne n'a rien vu. Personne n'a rien entendu.",
+      boutons: [{ label: "h4", texte: "Et ensuite ?", vers: "h4" }] },
+    { label: "h4", titre: "La Mairie", texte: "Depuis, la Mairie est fermée la nuit. Certains disent qu'on entend des machines sous la terre. Et des gens disparaissent : « partis travailler à la capitale », dit le Président. Personne n'est jamais revenu de la capitale. On ne sait même pas où elle est, la capitale.",
+      boutons: [{ label: "h5", texte: "Et ensuite ?", vers: "h5" }] },
+    { label: "h5", titre: "La prophétie", texte: "Alors oui, on se méfie des étrangers : tous ceux qui sont venus ont fini par voler, ou par trahir. Mais une vieille prophétie dit : « Quand le feu tombera du ciel, ceux qui en sortiront rendront Beauvais à son peuple. » Votre avion est tombé en feu… Faites vos preuves. Votre livre de quêtes vous guidera : « L'Histoire de Beauvais ».",
+      boutons: [{ label: "bye", texte: "Merci, Marcel" }] },
+  ] });
+
+  // ------------------------------------------------------------ Pierre, enfermé dans le laboratoire sous la Mairie
+  pnj({ fichier: "prisonnier", nom: "Pierre, le disparu", couleur: "gray", dialogues: [
+    { label: "default", titre: "Pierre", texte: [
+      "Vous… vous n'êtes pas des gardes ? Écoutez-moi : le Président ne protège personne. Les Pillards du Sud, c'est lui qui les envoie. Il leur dit quand frapper.",
+      "Il m'a enfermé parce que je posais trop de questions. Les autres… il leur fait boire la potion verte. Après, ils ne parlent plus.",
+    ], boutons: [{ label: "projet", texte: "Le projet AUGMENTÉ ?", vers: "projet" }, { label: "sortir", texte: "Comment te sortir de là ?", vers: "sortir" }] },
+    { label: "projet", titre: "Le projet AUGMENTÉ", texte: "Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur de la Forteresse du Sud, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé.",
+      boutons: [{ label: "bye", texte: "On va les trouver" }] },
+    { label: "sortir", titre: "Pas encore", texte: "Pas encore. S'il voit ma cellule vide, il saura qu'on est venus. Libérez d'abord Beauvais. Je tiendrai. Et prenez le dossier dans le coffre, là-bas : tout y est écrit.",
+      boutons: [{ label: "bye", texte: "Tiens bon, Pierre" }] },
+  ] });
+  pnj({ fichier: "pierre_libre", nom: "Pierre, le revenant", couleur: "green", peau: "prisonnier", voix: "prisonnier", dialogues: [
+    { label: "default", titre: "Pierre", texte: [
+      "Libre ! Je respire enfin l'air de la jungle. Merci, les gens du ciel. Marcel n'arrête pas de raconter votre combat.",
+      "Le Conseil des Anciens va se réunir à nouveau. Et cette fois, c'est vous qu'on écoutera.",
+      "Je suis allé voir l'ancien président dans ma vieille cellule. Il m'a demandé un référendum. J'ai refusé.",
+    ], boutons: [{ label: "bye", texte: "Content de te voir dehors" }] },
+  ] });
+  pnj({ fichier: "macron_prison", nom: "Macron, ancien président", couleur: "gray", peau: "macron", voix: "macron", dialogues: [
+    { label: "default", titre: "L'ancien président", texte: [
+      "Je n'ai jamais dit ça. Et si je l'ai dit, c'était sorti de son contexte.",
+      "C'était… en même temps une erreur et un succès.",
+      "Je demande un référendum. Non ? Une consultation citoyenne, alors ?",
+      "Je traverse la cellule et je ne trouve pas de travail. Ça ne marche pas dans ce sens-là.",
+    ], boutons: [{ label: "bye", texte: "Bonne retraite" }] },
+  ] });
+
   // ------------------------------------------------------------ Vegeta, qui s'entraîne près de la tour de guet
   pnj({ fichier: "vegeta", nom: "Vegeta", couleur: "dark_blue", objectifs: IMMOBILE, dialogues: [
     { label: "default", titre: "Vegeta", texte: [
@@ -203,16 +253,16 @@ export function genererPnj(ecrire) {
 
   // ------------------------------------------------------------ les habitants : ils se baladent et se méfient des nouveaux
   const habitants = [
-    ["jean", "Jean", ["Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, faut le temps qu'on vous connaisse.", "Mon grand-père a planté cet arbre. Mon père l'a coupé. Moi je le regarde. C'est une tradition.", "Tu marches trop vite. Ici, on marche lentement. Ça énerve les touristes, c'est le but."], "Bonne journée quand même"],
-    ["jacques", "Jacques", ["Tu marches sur mon chemin, là. Je l'ai balayé ce matin.", "J'ai balayé ce chemin trois fois aujourd'hui. Trois. Fois.", "Le Président m'a promis une médaille du meilleur balayeur. J'attends toujours."], "Pardon, Jacques"],
-    ["francis", "Francis", ["Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit.", "Je vous ai à l'œil. L'autre œil est sur Gribbs.", "Si vous construisez à côté de chez moi, faites une jolie maison. Pas un truc en terre."], "Promis, on sera sages"],
-    ["louis", "Louis", ["Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé.", "Occupé à quoi ? Ça te regarde pas.", "Bon… je regardais les nuages. Celui-là ressemble à Mouloud."], "D'accord, d'accord"],
-    ["bernard", "Bernard", ["De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien.", "Mon singe s'appelle Bernard aussi. C'est pratique quand on crie.", "Les jeunes, avec leur Piaf… moi j'ai des vrais piafs. Ils font caca partout."], "C'est noté, Bernard"],
-    ["gerard", "Gérard", ["Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là.", "Je ronfle ? Moi ? Jamais. C'est la jungle qui ronfle.", "Vegeta crie tous les matins à six heures. Un jour je vais crier plus fort."], "Pas de souci"],
-    ["ginette", "Ginette", ["Mon petit, tu as une tête à faire des bêtises. Je te surveille.", "Essuie tes pieds avant d'entrer chez les gens. Même chez Brokk. Surtout chez Brokk.", "Tu manges assez ? Tu as l'air maigre. Mange une carotte."], "Oui madame"],
-    ["monique", "Monique", ["Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez.", "Pas en bien, pas en mal… On attend de voir.", "Ginette dit que vous êtes poli. Moi je trouve que vous avez un drôle de chapeau."], "On verra bien"],
-    ["martine", "Martine", ["Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour.", "J'ai voté pour le Hejj. Il n'était pas candidat. J'ai voté quand même.", "Si vous voyez Vegeta, dites-lui que sa coupe est ridicule. De ma part."], "Merci du conseil"],
-    ["thierry", "Thierry", ["Moi, j'étais là avant l'avion, avant tout le monde. Faut faire ses preuves, ici.", "Les preuves, c'est simple : un pont, un port, et une fontaine qui marche.", "Tu veux un conseil ? Le blackjack, c'est la banque qui gagne. Toujours. Sauf moi, une fois."], "Je ferai mes preuves"],
+    ["jean", "Jean", ["Mon frère est parti « à la capitale ». Il n'a même pas pris son chapeau. Il ne sortait jamais sans son chapeau.", "Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, faut le temps qu'on vous connaisse.", "Mon grand-père a planté cet arbre. Mon père l'a coupé. Moi je le regarde. C'est une tradition.", "Tu marches trop vite. Ici, on marche lentement. Ça énerve les touristes, c'est le but."], "Bonne journée quand même"],
+    ["jacques", "Jacques", ["Les Pillards sont passés mardi. Ils ont tout piétiné. Même mon chemin. MON chemin.", "Tu marches sur mon chemin, là. Je l'ai balayé ce matin.", "J'ai balayé ce chemin trois fois aujourd'hui. Trois. Fois.", "Le Président m'a promis une médaille du meilleur balayeur. J'attends toujours."], "Pardon, Jacques"],
+    ["francis", "Francis", ["Le dernier étranger, il a dormi trois nuits chez moi, et il est reparti avec ma vaisselle. Alors excusez-moi si je compte mes cuillères.", "Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit.", "Je vous ai à l'œil. L'autre œil est sur Gribbs.", "Si vous construisez à côté de chez moi, faites une jolie maison. Pas un truc en terre."], "Promis, on sera sages"],
+    ["louis", "Louis", ["La nuit, j'entends des machines sous la place. Ma femme dit que c'est mon ventre. C'est pas mon ventre.", "Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé.", "Occupé à quoi ? Ça te regarde pas.", "Bon… je regardais les nuages. Celui-là ressemble à Mouloud."], "D'accord, d'accord"],
+    ["bernard", "Bernard", ["Les Pillards viennent du sud, des marais. Ils sentent la vase et la poudre. Le singe les entend venir avant tout le monde.", "De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien.", "Mon singe s'appelle Bernard aussi. C'est pratique quand on crie.", "Les jeunes, avec leur Piaf… moi j'ai des vrais piafs. Ils font caca partout."], "C'est noté, Bernard"],
+    ["gerard", "Gérard", ["Le feu de camp, c'était là que le Conseil se réunissait. Avant. Maintenant c'est juste moi et mon tronc.", "Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là.", "Je ronfle ? Moi ? Jamais. C'est la jungle qui ronfle.", "Vegeta crie tous les matins à six heures. Un jour je vais crier plus fort."], "Pas de souci"],
+    ["ginette", "Ginette", ["Ma voisine a disparu. « Partie à la capitale », qu'ils disent. Elle avait quatre-vingt-sept ans.", "Mon petit, tu as une tête à faire des bêtises. Je te surveille.", "Essuie tes pieds avant d'entrer chez les gens. Même chez Brokk. Surtout chez Brokk.", "Tu manges assez ? Tu as l'air maigre. Mange une carotte."], "Oui madame"],
+    ["monique", "Monique", ["On dit qu'il y a une porte secrète à la Mairie. On dit aussi que Gribbs est honnête. On dit beaucoup de choses.", "Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez.", "Pas en bien, pas en mal… On attend de voir.", "Ginette dit que vous êtes poli. Moi je trouve que vous avez un drôle de chapeau."], "On verra bien"],
+    ["martine", "Martine", ["Le Président vient faire des discours chaque matin. Le soir, la Mairie est fermée, mais il y a de la lumière… en bas.", "Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour.", "J'ai voté pour le Hejj. Il n'était pas candidat. J'ai voté quand même.", "Si vous voyez Vegeta, dites-lui que sa coupe est ridicule. De ma part."], "Merci du conseil"],
+    ["thierry", "Thierry", ["Quand les Pillards arrivent, la garde du Président protège… le Président. Nous, on se débrouille avec des fourches.", "Moi, j'étais là avant l'avion, avant tout le monde. Faut faire ses preuves, ici.", "Les preuves, c'est simple : un pont, un port, et une fontaine qui marche.", "Tu veux un conseil ? Le blackjack, c'est la banque qui gagne. Toujours. Sauf moi, une fois."], "Je ferai mes preuves"],
   ];
   for (const [fichier, nom, textes, reponse] of habitants) {
     pnj({ fichier, nom, couleur: "gray", objectifs: balade(), dialogues: [
@@ -234,6 +284,12 @@ export function genererPnj(ecrire) {
       "Qu'ils viennent me chercher ! … Non, les gardes, rasseyez-vous, c'était une image.",
       "Poudre de perlimpinpin ! Ovsie m'en a vendu un sac. Ça ne fait rien du tout.",
       "Gaulois réfractaire ? Vous ? Non… Vous avez plutôt une tête de Beauvaisien coopératif.",
+      "Tout va très bien à Beauvais. Grâce à moi. Répétez après moi : tout va très bien.",
+      "Les Pillards du Sud ? Je m'en occupe. Personnellement. Enfin, ma garde s'en occupe. Enfin… on y pense.",
+      "Ceux qui disparaissent ? Ils sont partis travailler à la capitale. C'est une chance pour eux.",
+      "La Mairie est fermée la nuit. Pour votre sécurité. Ne cherchez pas à comprendre.",
+      "Les Sept Reliques ? Des superstitions de vieux. Laissez-les où elles sont. Très loin.",
+      "C'est notre projet ! Le projet AUG… le projet. Juste le projet. Circulez.",
     ], boutons: [{ label: "gardes", texte: "Et vos gardes ?", vers: "gardes" }, { label: "projet", texte: "Votre projet ?", vers: "projet" }, { label: "bye", texte: "Au revoir, Monsieur le Président" }] },
     { label: "gardes", titre: "La garde", texte: [
       "Ma garde rapprochée : quatre guerriers d'élite de la jungle. Je vous le dis avec bienveillance : ne me touchez pas.",

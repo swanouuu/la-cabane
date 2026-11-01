@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Jean",
-        Texts:[{Text:"Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, faut le temps qu'on vous connaisse."},{Text:"Mon grand-père a planté cet arbre. Mon père l'a coupé. Moi je le regarde. C'est une tradition."},{Text:"Tu marches trop vite. Ici, on marche lentement. Ça énerve les touristes, c'est le but."}],
+        Texts:[{Text:"Mon frère est parti « à la capitale ». Il n'a même pas pris son chapeau. Il ne sortait jamais sans son chapeau."},{Text:"Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, faut le temps qu'on vous connaisse."},{Text:"Mon grand-père a planté cet arbre. Mon père l'a coupé. Moi je le regarde. C'est une tradition."},{Text:"Tu marches trop vite. Ici, on marche lentement. Ça énerve les touristes, c'est le but."}],
         Buttons:[{
           Label:"bye",
           Name:"Bonne journée quand même",

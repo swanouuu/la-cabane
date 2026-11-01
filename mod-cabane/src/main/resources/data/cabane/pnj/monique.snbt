@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Monique",
-        Texts:[{Text:"Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez."},{Text:"Pas en bien, pas en mal… On attend de voir."},{Text:"Ginette dit que vous êtes poli. Moi je trouve que vous avez un drôle de chapeau."}],
+        Texts:[{Text:"On dit qu'il y a une porte secrète à la Mairie. On dit aussi que Gribbs est honnête. On dit beaucoup de choses."},{Text:"Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez."},{Text:"Pas en bien, pas en mal… On attend de voir."},{Text:"Ginette dit que vous êtes poli. Moi je trouve que vous avez un drôle de chapeau."}],
         Buttons:[{
           Label:"bye",
           Name:"On verra bien",

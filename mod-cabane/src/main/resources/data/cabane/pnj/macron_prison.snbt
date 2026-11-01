@@ -1,0 +1,28 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-727292952,490419164,-1716798527,1501792293],
+  CustomName:'{"text":"Macron, ancien président","color":"gray"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/macron.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.macron",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"L'ancien président",
+        Texts:[{Text:"Je n'ai jamais dit ça. Et si je l'ai dit, c'était sorti de son contexte."},{Text:"C'était… en même temps une erreur et un succès."},{Text:"Je demande un référendum. Non ? Une consultation citoyenne, alors ?"},{Text:"Je traverse la cellule et je ne trouve pas de travail. Ça ne marche pas dans ce sens-là."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Bonne retraite",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

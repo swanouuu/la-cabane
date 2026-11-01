@@ -417,13 +417,33 @@ skin("vegeta_a", (img) => {
   jambes(img, (f, x, y) => (y >= 8 ? (y === 8 ? jaune : blanc) : bleu));
 });
 
+// ---- Marcel le Conteur : vieil homme, chapeau de paille, moustache blanche, poncho rayé
+skin("conteur", (img) => {
+  tete(img, { teint: "#c48c5e", cheveux: "#e4e4e0", coupe: "degarni", sourcils: "#f0f0ec", yeux: "#5a3a1e", rides: true, barbe: { couleur: "#f0f0ec", style: "moustache" } });
+  chapeau(img, "turban", "#d9b866", "#a8873a");
+  const rayures = [hex("#b3322e"), hex("#e8c04a"), hex("#2f6b3a"), hex("#f2ead3")];
+  corps(img, (f, x, y) => (y >= 9 ? hex("#5a4632") : rayures[(y >> 1) % 4]));
+  bras(img, mains(hex("#c48c5e"), (f, x, y) => rayures[(y >> 1) % 4], 7));
+  jambes(img, (f, x, y) => (y >= 11 ? hex("#4a3020") : hex("#6a5236")));
+  // la pipe, au coin de la bouche
+  img.set(14, 14, hex("#3a2414")); img.set(15, 14, hex("#3a2414"));
+});
+// ---- Pierre, le disparu : vêtements déchirés, barbe de plusieurs semaines
+skin("prisonnier", (img) => {
+  tete(img, { teint: "#d9a57a", cheveux: "#3a2a1a", coupe: "long", yeux: "#3b2a1a", rides: true, barbe: { couleur: "#3a2a1a", style: "courte" } });
+  const toile = hex("#8a8270"), sale = hex("#5f584a");
+  corps(img, (f, x, y) => ((x * 3 + y * 5) % 7 === 0 ? hex("#d9a57a") : (x + y) % 4 === 0 ? sale : toile));
+  bras(img, mains(hex("#d9a57a"), (f, x, y) => (y >= 6 && (x + y) % 3 === 0 ? hex("#d9a57a") : toile), 8));
+  jambes(img, (f, x, y) => (y >= 10 ? hex("#d9a57a") : (x + y) % 5 === 0 ? sale : hex("#6a6250")));
+});
+
 // ================================================================ les choix (la version utilisée en jeu)
 const CHOIX = { hejj: "hejj_a", karim: "karim_a", mouloud: "mouloud_a", gribbs: "gribbs_a", mehdi: "mehdi_a", brokk: "brokk_a",
   ovsie: "ovsie_a", nyota: "nyota_a", vegeta: "vegeta_a" };
 for (const [nom, version] of Object.entries(CHOIX)) {
   fs.copyFileSync(path.join(DOSSIER, "versions", version + ".png"), path.join(DOSSIER, nom + ".png"));
 }
-for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2"]) {
+for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier"]) {
   fs.copyFileSync(path.join(DOSSIER, "versions", nom + ".png"), path.join(DOSSIER, nom + ".png"));
 }
 

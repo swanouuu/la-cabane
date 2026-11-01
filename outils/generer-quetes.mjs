@@ -77,7 +77,7 @@ function chapitre(fichier, { titre, icone, ordre, quetes }) {
 const cabane = chapitre("la_cabane", { titre: "&6Beauvais", icone: "cabane:telephone", ordre: 0, quetes: [
   quete("bienvenue", { argent: 50, titre: "Bienvenue à Beauvais", sous: "Le début de tout", x: 0, y: 0, forme: "gear", taille: 1.5,
     desc: ["Votre avion a pris feu au-dessus de la jungle, mais vous avez sauté à temps. Vous voilà à Beauvais.", "",
-      "Allez parler au &6Hejj du Village&r devant la Grande Cabane : il vous expliquera tout. Puis cochez cette quête."],
+      "Allez écouter &6Marcel le Conteur&r, au feu de camp : il vous racontera l'histoire du village (le chapitre &6L'Histoire de Beauvais&r commence là). Le &6Hejj du Village&r, devant la Grande Cabane, vous expliquera le reste. Puis cochez cette quête."],
     taches: [coche("bienvenue")], recompenses: [xp("bienvenue", 2), donne("bienvenue", "minecraft:cooked_beef", 8)] }),
   quete("telephone", { argent: 50, titre: "Allô ?", sous: "Ton numéro perso", x: 2, y: -1.5, deps: ["bienvenue"],
     desc: ["Appuie sur &eN&r (ou clic droit avec le téléphone) et choisis ton numéro à 3 ou 4 chiffres.", "",
@@ -98,8 +98,76 @@ const cabane = chapitre("la_cabane", { titre: "&6Beauvais", icone: "cabane:telep
     taches: [avoir("create", "create:andesite_alloy", 16)], recompenses: [xp("create", 5), donne("create", "create:cogwheel", 8)] }),
 ] });
 
+// ---------------------------------------------------------------- chapitre : l'histoire de Beauvais (la grande aventure)
+const acte = (k, o) => quete("histoire/" + k, { ...o, deps: (o.deps ?? []).map((d) => (d.includes("/") || d === "bienvenue" ? d : "histoire/" + d)) });
+const histoire = chapitre("histoire", { titre: "&6&lL'Histoire de Beauvais", icone: "minecraft:writable_book", ordre: 1, quetes: [
+  // Acte I : l'arrivée
+  acte("conteur", { titre: "&6Marcel le Conteur", sous: "Acte I — Les gens du ciel", x: 0, y: 0, deps: ["bienvenue"], forme: "gear", taille: 1.5, argent: 100,
+    desc: ["Au feu de camp, un vieil homme fume la pipe et regarde le ciel. C'est &6Marcel le Conteur&r : il connaît l'histoire de Beauvais mieux que personne.", "",
+      "Écoutez-le jusqu'au bout (jusqu'à la prophétie), puis cochez cette quête."],
+    taches: [coche("histoire/conteur")], recompenses: [xp("histoire/conteur", 3)] }),
+  acte("mefiance", { titre: "Ceux qui se méfient", x: 2, y: -1, deps: ["conteur"], argent: 150,
+    desc: ["Les villageois regardent les gens du ciel de travers. Parlez à trois d'entre eux : chacun a une histoire de raid ou de disparition à raconter.", "",
+      "Jean, Monique, Thierry, Ginette… choisissez. Puis cochez."],
+    taches: [coche("histoire/mefiance")] }),
+  acte("president", { titre: "Monsieur le Président", x: 2, y: 1, deps: ["conteur"], argent: 150,
+    desc: ["Le Président se tient sur la place, entouré de sa garde masquée. Allez le saluer. Souriez : il sourit beaucoup, lui aussi.", "",
+      "Retenez bien ce qu'il dit. Et ce qu'il ne dit pas. Puis cochez."],
+    taches: [coche("histoire/president")] }),
+  // Acte II : les Pillards du Sud
+  acte("pillards", { titre: "Les Pillards du Sud", sous: "Acte II — Ceux qui viennent des marais", x: 4, y: -1, deps: ["mefiance"], argent: 400,
+    desc: ["Les Pillards rôdent dans la jungle et brûlent les récoltes. Montrez-leur que Beauvais a de nouveaux protecteurs."],
+    taches: [tuer("histoire/pillards", "minecraft:pillager", 10)], recompenses: [xp("histoire/pillards", 4)] }),
+  acte("brutes", { titre: "Les brutes à la hache", x: 6, y: -1, deps: ["pillards"], argent: 500,
+    desc: ["Les Vindicateurs sont les gros bras des Pillards. Ils frappent fort. Frappez plus fort."],
+    taches: [tuer("histoire/brutes", "minecraft:vindicator", 5)], recompenses: [xp("histoire/brutes", 5)] }),
+  acte("avantposte", { titre: "L'avant-poste", x: 6, y: 1, deps: ["pillards", "president"], argent: 600,
+    desc: ["Trouvez un avant-poste des Pillards. Dans leurs coffres, de l'or… frappé du sceau de la Mairie ?", "",
+      "Comment des pillards peuvent-ils être payés par le Président ? Il faudra fouiller la Mairie."],
+    taches: [visiter("histoire/avantposte", "minecraft:pillager_outpost")], recompenses: [xp("histoire/avantposte", 5)] }),
+  acte("raid", { titre: "&cDéfendre Beauvais", sous: "Quand ils attaqueront…", x: 8, y: -1, deps: ["brutes"], forme: "hexagon", argent: 2000,
+    desc: ["Un jour, les Pillards du Sud marcheront sur le village (c'est l'hôte qui décide quand !). Ce jour-là, soyez prêts.", "",
+      "Repoussez-les tous, protégez les habitants, puis cochez cette quête."],
+    taches: [coche("histoire/raid")], recompenses: [xp("histoire/raid", 8), donne("histoire/raid", "minecraft:totem_of_undying")] }),
+  // Acte III : le secret de la Mairie
+  acte("mairie", { titre: "La Mairie fermée la nuit", sous: "Acte III — Ce qu'on entend sous la terre", x: 8, y: 1, deps: ["avantposte"], argent: 1000,
+    desc: ["La nuit, on entend des machines sous la Mairie. Dans le bureau du Président, une des bibliothèques sonne creux…", "",
+      "Trouvez le passage secret, et descendez."],
+    taches: [succes("histoire/mairie", "cabane:histoire/laboratoire")], recompenses: [xp("histoire/mairie", 6)] }),
+  acte("pierre", { titre: "Le Sujet 07", x: 10, y: 0, deps: ["mairie"], argent: 500,
+    desc: ["Au fond du laboratoire, des cellules. Dans l'une d'elles, un homme qui parle encore : Pierre, « parti travailler à la capitale ».", "",
+      "Écoutez ce qu'il sait, puis cochez."],
+    taches: [coche("histoire/pierre")] }),
+  acte("dossier", { titre: "Le dossier « Projet Augmenté »", x: 10, y: 2, deps: ["mairie"], argent: 1500,
+    desc: ["Le coffre du laboratoire contient un dossier, le carnet du Président et le rapport du Sujet 07. Tout y est : la potion verte, les Pillards payés, la Salle Zéro.", "",
+      "Gardez le dossier : c'est la preuve. Et lisez le carnet…"],
+    taches: [avoir("histoire/dossier", "cabane:dossier_secret")], recompenses: [xp("histoire/dossier", 6)] }),
+  // Acte IV : les Sept Reliques
+  acte("reliques", { titre: "&eLes Sept Reliques", sous: "Acte IV — Aux quatre coins du monde", x: 12, y: 1, deps: ["pierre", "dossier"], forme: "diamond", argent: 3000,
+    desc: ["Seules les Sept Reliques peuvent ouvrir la Salle Zéro. Le Président les a fait cacher très loin, dans les pires donjons du monde.", "",
+      "Suivez le chapitre &eLes Sept Reliques&r : réunissez-les toutes. Brokk en forgera une clé."],
+    taches: [succes("histoire/reliques", "cabane:sept_reliques")],
+    recompenses: [donne("histoire/reliques", "cabane:cle_salle_zero"), commande("histoire/reliques", '/tellraw {p} {"text":"Brokk : « Sept reliques, une clé. Allez donc rendre visite à votre Président. »","color":"gold"}')] }),
+  // Acte V : la Forteresse du Sud
+  acte("forteresse", { titre: "&4La Forteresse du Sud", sous: "Acte V — Le repaire", x: 14, y: 1, deps: ["reliques"], argent: 1000,
+    desc: ["À 10 000 blocs plein sud se dresse la Forteresse du Sud, le repaire des Pillards. Au cœur du donjon : la Salle Zéro.", "",
+      "Tapez &e/cabane forteresse&r pour ses coordonnées. Pour l'instant elle est scellée : c'est pour plus tard ! L'hôte l'ouvrira quand le moment sera venu.", "",
+      "Allez la voir de vos yeux, puis cochez."],
+    taches: [coche("histoire/forteresse")] }),
+  acte("liberation", { titre: "&6&lLibérer Beauvais", sous: "Le Président Augmenté", x: 16, y: 1, deps: ["forteresse"], forme: "gear", taille: 2, argent: 25000,
+    desc: ["Dans la Salle Zéro, utilisez la Clé sur le pupitre. Le Président se réveillera, fusionné avec sa machine.", "",
+      "Il est très, très fort. Venez tous ensemble, avec vos meilleures armes, des potions, des totems. Et ne lâchez rien."],
+    taches: [succes("histoire/liberation", "cabane:histoire/liberation")],
+    recompenses: [xp("histoire/liberation", 30), donne("histoire/liberation", "minecraft:netherite_ingot", 2), donne("histoire/liberation", "minecraft:diamond_block", 2),
+      commande("histoire/liberation", '/title {p} title {"text":"Libérateur de Beauvais","color":"gold"}')] }),
+  acte("epilogue", { titre: "Le Conseil des Anciens", sous: "Épilogue", x: 18, y: 1, deps: ["liberation"], argent: 2000,
+    desc: ["Beauvais est libre. Pierre a retrouvé le feu de camp, et le Conseil des Anciens se réunit à nouveau.", "",
+      "Allez écouter Pierre, puis rendez une petite visite à l'ancien président, dans sa cellule sous la Mairie. Il a sûrement une consultation citoyenne à vous proposer."],
+    taches: [coche("histoire/epilogue")], recompenses: [donne("histoire/epilogue", "cabane:biere_86", 6)] }),
+] });
+
 // ---------------------------------------------------------------- chapitre : le village qui nous héberge
-const village = chapitre("le_village", { titre: "&aLe Village", icone: "minecraft:bell", ordre: 1, quetes: [
+const village = chapitre("le_village", { titre: "&aLe Village", icone: "minecraft:bell", ordre: 2, quetes: [
   quete("village/accueil", { titre: "Le village qui nous héberge", x: 0, y: 0, deps: ["bienvenue"], forme: "gear", taille: 1.3, argent: 50,
     desc: ["Beauvais vous accueille. Les habitants se méfient un peu des gens du ciel : à vous de faire vos preuves.", "", "Allez saluer les villageois, puis cochez cette quête."],
     taches: [coche("village/accueil")] }),
@@ -122,7 +190,7 @@ const village = chapitre("le_village", { titre: "&aLe Village", icone: "minecraf
 
 // ---------------------------------------------------------------- chapitre : agrandir Beauvais (les chantiers du Hejj)
 const chantier = (k, o) => quete("grandir/" + k, { ...o, deps: (o.deps ?? ["plan"]).map((d) => "grandir/" + d) });
-const grandir = chapitre("agrandir_beauvais", { titre: "&2Agrandir Beauvais", icone: "minecraft:bricks", ordre: 2, quetes: [
+const grandir = chapitre("agrandir_beauvais", { titre: "&2Agrandir Beauvais", icone: "minecraft:bricks", ordre: 3, quetes: [
   chantier("plan", { titre: "&6Le grand plan du Hejj", sous: "Faire grandir le village", x: 0, y: 0, forme: "gear", taille: 1.6, deps: [], argent: 200,
     desc: ["« Le cœur du village appartient aux habitants. Vous, installez-vous juste à côté, hors de l'enceinte. Et aidez Beauvais à pousser jusqu'à vous. »", "",
       "Chaque chantier de ce chapitre agrandit le village : livrez les matériaux (ils sont pris), construisez, et le village vous paie.", "",
@@ -174,7 +242,25 @@ const grandir = chapitre("agrandir_beauvais", { titre: "&2Agrandir Beauvais", ic
   chantier("tour", { titre: "Plus haut que les arbres", sous: "La tour de Beauvais", x: 10, y: -1.5, deps: ["gare"], argent: 8000,
     desc: ["Le Hejj a rêvé d'une tour plus haute que les arbres géants. Construisez-la : au moins 60 blocs de haut."],
     taches: [coche("grandir/tour")] }),
-  chantier("capitale", { titre: "&6&lBeauvais, capitale de la jungle", x: 12, y: 0, forme: "gear", taille: 2, deps: ["tour", "statue", "gare"], argent: 20000,
+  chantier("commissariat", { titre: "Le commissariat", sous: "Une vraie police pour Beauvais", x: 6, y: -4.5, deps: ["quartier"], argent: 4000,
+    desc: ["Avec les Pillards qui rôdent, Beauvais a besoin d'une vraie police (et pas de la garde du Président).", "",
+      "Livrez les matériaux, puis construisez un commissariat dans le quartier neuf : un bureau, une cellule, un parking pour la voiture. Cochez quand c'est fini."],
+    taches: [livrer("grandir/commissariat", "minecraft:stone_bricks", 128, "/a"), livrer("grandir/commissariat", "minecraft:iron_bars", 32, "/b"), coche("grandir/commissariat")],
+    recompenses: [donne("grandir/commissariat", "cabane:gilet_police"), donne("grandir/commissariat", "cabane:menottes")] }),
+  chantier("remparts", { titre: "Les remparts", sous: "Contre les raids du sud", x: 8, y: -4.5, deps: ["commissariat"], argent: 6000,
+    desc: ["Les raids viennent toujours du sud. Une muraille autour du quartier neuf, avec une porte qui ferme, et les Pillards n'auront qu'à bien se tenir.", "",
+      "Livrez les pierres, construisez les remparts, puis cochez."],
+    taches: [livrer("grandir/remparts", "minecraft:stone_bricks", 512, "/a"), livrer("grandir/remparts", "minecraft:cobblestone_wall", 64, "/b"), coche("grandir/remparts")] }),
+  chantier("taverne", { titre: "La taverne", sous: "Pour fêter les retours d'expédition", x: 4, y: 3, deps: ["marche"], argent: 3000,
+    desc: ["Gérard réclame un bar. Le Hejj aussi, discrètement. Un comptoir, des tonneaux, une terrasse… et de quoi remplir les verres.", "",
+      "Livrez les tonneaux et les premières bières (des blondes, à brasser ou à acheter chez Mouloud), construisez la taverne, puis cochez.", "",
+      "Ensuite, vendez vos boissons : le marché rachète bières, vin et sodas dans ses contrats, et vos étals feront le reste."],
+    taches: [livrer("grandir/taverne", "minecraft:barrel", 16, "/a"), livrer("grandir/taverne", "cabane:biere_blonde", 32, "/b"), coche("grandir/taverne")],
+    recompenses: [donne("grandir/taverne", "cabane:biere_86", 4)] }),
+  chantier("infirmerie", { titre: "L'infirmerie de Nyota", x: 6, y: 3, deps: ["ecole"], argent: 2500,
+    desc: ["Les blessés des raids et des expéditions ont besoin de soins. Nyota veut des lits propres et de quoi préparer ses remèdes."],
+    taches: [livrer("grandir/infirmerie", "minecraft:white_bed", 6, "/a"), livrer("grandir/infirmerie", "minecraft:glistering_melon_slice", 16, "/b")] }),
+  chantier("capitale", { titre: "&6&lBeauvais, capitale de la jungle", x: 12, y: 0, forme: "gear", taille: 2, deps: ["tour", "statue", "gare", "remparts", "taverne"], argent: 20000,
     desc: ["Le petit village est devenu une ville. Les habitants vous saluent enfin dans la rue.", "", "Même Gérard. Même Vegeta (de loin)."],
     taches: [coche("grandir/capitale")],
     recompenses: [donne("grandir/capitale", "minecraft:diamond_block", 2), commande("grandir/capitale", '/title {p} title {"text":"Bâtisseur de Beauvais","color":"gold"}')] }),
@@ -182,7 +268,7 @@ const grandir = chapitre("agrandir_beauvais", { titre: "&2Agrandir Beauvais", ic
 
 // ---------------------------------------------------------------- chapitre : les gens de Beauvais (une petite quête par personne)
 const service = (k, o) => quete("gens/" + k, { deps: ["village/accueil"], ...o });
-const gens = chapitre("les_gens", { titre: "&bLes gens de Beauvais", icone: "minecraft:cake", ordre: 3, quetes: [
+const gens = chapitre("les_gens", { titre: "&bLes gens de Beauvais", icone: "minecraft:cake", ordre: 4, quetes: [
   service("jean", { titre: "Jean se méfie", x: 0, y: -3, argent: 300, desc: ["« Encore un de l'avion… » Jean aime le poisson grillé. Apporte-lui-en, ça l'adoucira peut-être."],
     taches: [livrer("gens/jean", "minecraft:cooked_cod", 16)] }),
   service("jacques", { titre: "Le balai de Jacques", x: 2, y: -3, argent: 250, desc: ["Jacques a cassé son balai à force de balayer. Il lui faut de quoi en faire un neuf."],
@@ -251,7 +337,7 @@ reliques.push(quete("reveil", { argent: 5000, titre: "&6&lLe Réveil de la Caban
   taches: [coche("reveil")],
   recompenses: [donne("reveil", "minecraft:elytra"), donne("reveil", "minecraft:diamond", 16),
     commande("reveil", `/title {p} title {"text":"Gardien de Beauvais","color":"gold"}`)] }));
-const chapReliques = chapitre("reliques", { titre: "&eLes Sept Reliques", icone: "cabane:scarabee_dor", ordre: 4, quetes: reliques });
+const chapReliques = chapitre("reliques", { titre: "&eLes Sept Reliques", icone: "cabane:scarabee_dor", ordre: 5, quetes: reliques });
 
 // ---------------------------------------------------------------- chapitre 3 : les grands donjons
 const DONJONS = [
@@ -278,7 +364,7 @@ const donjons = [
     desc: ["Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."],
     taches: [tuer(`boss/${e}`, e)], recompenses: [xp(`boss/${e}`, 10 + diamants), donne(`boss/${e}`, "minecraft:diamond", diamants)] })),
 ];
-const chapDonjons = chapitre("donjons", { titre: "&cLes Grands Donjons", icone: "minecraft:netherite_sword", ordre: 5, quetes: donjons });
+const chapDonjons = chapitre("donjons", { titre: "&cLes Grands Donjons", icone: "minecraft:netherite_sword", ordre: 6, quetes: donjons });
 
 // ---------------------------------------------------------------- écriture
 fs.rmSync(SORTIE, { recursive: true, force: true });
@@ -289,9 +375,9 @@ ecrire("data.snbt", snbt({
   lock_message: "", pause_game: false, progression_mode: "linear", version: 13,
 }));
 ecrire("chapter_groups.snbt", snbt({ chapter_groups: [] }));
-for (const [fichier, chap] of [cabane, village, grandir, gens, chapReliques, chapDonjons]) ecrire(`chapters/${fichier}.snbt`, snbt(chap));
+for (const [fichier, chap] of [cabane, histoire, village, grandir, gens, chapReliques, chapDonjons]) ecrire(`chapters/${fichier}.snbt`, snbt(chap));
 const langTxt = snbt(lang);
 ecrire("lang/fr_fr.snbt", langTxt);
 ecrire("lang/en_us.snbt", langTxt);
-const n = [cabane, village, grandir, gens, chapReliques, chapDonjons].reduce((s, [, c]) => s + c.quests.length, 0);
+const n = [cabane, histoire, village, grandir, gens, chapReliques, chapDonjons].reduce((s, [, c]) => s + c.quests.length, 0);
 console.log(`${n} quêtes écrites dans ${SORTIE}`);

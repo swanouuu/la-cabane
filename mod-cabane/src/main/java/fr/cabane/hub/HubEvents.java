@@ -34,8 +34,18 @@ import net.minecraft.world.phys.AABB;
 
 public final class HubEvents {
 
-    /** Les PNJ du centre de map : fichier data/cabane/pnj/&lt;nom&gt;.snbt, position relative à la place. */
-    private record Pnj(String file, double dx, double dz, float yaw) {
+    /**
+     * Les PNJ du centre de map : fichier data/cabane/pnj/&lt;nom&gt;.snbt, position relative à la place (dy : la hauteur
+     * des pieds ; 1 = sur la place). Quand : 0 toujours, -1 tant que le Président règne, 1 une fois Beauvais libéré.
+     */
+    private record Pnj(String file, double dx, double dy, double dz, float yaw, int quand) {
+        Pnj(String file, double dx, double dz, float yaw) {
+            this(file, dx, 1, dz, yaw, 0);
+        }
+
+        boolean present(boolean libere) {
+            return quand == 0 || (quand > 0) == libere;
+        }
     }
 
     private static final List<Pnj> PNJ = List.of(
@@ -50,11 +60,17 @@ public final class HubEvents {
             new Pnj("garde_est", 3.5, 62.5, 0F),
             new Pnj("guerisseuse", -15.5, 30.5, 90F),  // au feu de camp
             // le Président sur la place, devant le grand panneau, et sa garde rapprochée autour
-            new Pnj("macron", 0.5, 9.5, 0F),
-            new Pnj("garde_president_1", -1.5, 8.5, 0F),
-            new Pnj("garde_president_2", 2.5, 8.5, 0F),
-            new Pnj("garde_president_3", -1.5, 11.5, 0F),
-            new Pnj("garde_president_4", 2.5, 11.5, 0F),
+            new Pnj("macron", 0.5, 1, 9.5, 0F, -1),
+            new Pnj("garde_president_1", -1.5, 1, 8.5, 0F, -1),
+            new Pnj("garde_president_2", 2.5, 1, 8.5, 0F, -1),
+            new Pnj("garde_president_3", -1.5, 1, 11.5, 0F, -1),
+            new Pnj("garde_president_4", 2.5, 1, 11.5, 0F, -1),
+            // Marcel raconte l'histoire du village au feu de camp ; Pierre, le Sujet 07, attend dans sa cellule du laboratoire
+            new Pnj("conteur", -24.5, 30.5, -90F),
+            new Pnj("prisonnier", HubBuilder.CELLULE_PIERRE.getX() + 0.5, HubBuilder.CELLULE_PIERRE.getY(), HubBuilder.CELLULE_PIERRE.getZ() + 0.5, 180F, -1),
+            // après la libération, Pierre retrouve le feu de camp et c'est le Président qui finit en cellule
+            new Pnj("pierre_libre", -22.5, 1, 32.5, -135F, 1),
+            new Pnj("macron_prison", HubBuilder.CELLULE_PRESIDENT.getX() + 0.5, HubBuilder.CELLULE_PRESIDENT.getY(), HubBuilder.CELLULE_PRESIDENT.getZ() + 0.5, 180F, 1),
             // les habitants, chacun dans son coin
             new Pnj("jean", 20.5, 0.5, 90F),           // la rue du village
             new Pnj("jacques", 44.5, 0.5, -90F),
@@ -94,7 +110,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 2;
+    public static final int VERSION_PNJ = 4;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {
@@ -260,13 +276,45 @@ public final class HubEvents {
         if (centre == null) {
             return 0;
         }
+        boolean libere = HubData.get(level.getServer()).libere();
         int count = 0;
         for (Pnj pnj : PNJ) {
-            if (spawn(level, centre, pnj)) {
+            if (!pnj.present(libere)) {
+                retirer(level, pnj);
+            } else if (spawn(level, centre, pnj)) {
                 count++;
             }
         }
         return count;
+    }
+
+    /**
+     * Le Président est tombé : sa garde et lui quittent la place, il finit en cellule sous la Mairie. Le combat a lieu
+     * loin du village : on le charge, et les PNJ sont remplacés quelques secondes plus tard.
+     */
+    public static void apresLiberation(ServerLevel level) {
+        BlockPos centre = HubData.get(level.getServer()).centre();
+        if (centre == null) {
+            return;
+        }
+        forcerVillage(level, centre, true);
+        rafraichir = 100;
+    }
+
+    private static void retirer(ServerLevel level, Pnj pnj) {
+        Optional<Resource> resource = level.getServer().getResourceManager().getResource(Cabane.id("pnj/" + pnj.file() + ".snbt"));
+        if (resource.isEmpty()) {
+            return;
+        }
+        try (BufferedReader reader = resource.get().openAsReader()) {
+            CompoundTag tag = TagParser.parseTag(reader.lines().collect(Collectors.joining("\n")));
+            Entity old = tag.hasUUID("UUID") ? level.getEntity(tag.getUUID("UUID")) : null;
+            if (old != null) {
+                old.discard();
+            }
+        } catch (Exception e) {
+            Cabane.LOGGER.warn("PNJ {} non retiré : {}", pnj.file(), e.toString());
+        }
     }
 
     private static boolean spawn(ServerLevel level, BlockPos centre, Pnj pnj) {
@@ -284,7 +332,7 @@ public final class HubEvents {
                 }
             }
             double x = centre.getX() + pnj.dx();
-            double y = centre.getY() + 1;
+            double y = centre.getY() + pnj.dy();
             double z = centre.getZ() + pnj.dz();
             // la maison du PNJ : ceux qui se baladent y reviennent toujours
             CompoundTag maison = new CompoundTag();
@@ -395,7 +443,7 @@ public final class HubEvents {
         player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Prends un parachute dans le coffre et saute !").withStyle(ChatFormatting.YELLOW)));
         player.sendSystemMessage(Component.literal("Ton avion est en feu au-dessus de la jungle !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         player.sendSystemMessage(Component.literal("• Prends un parachute dans le coffre, saute, puis clic droit en l'air pour l'ouvrir.").withStyle(ChatFormatting.YELLOW));
-        player.sendSystemMessage(Component.literal("• En bas, le village de Beauvais t'accueille dans la Grande Cabane. Parle au Hejj du Village.").withStyle(ChatFormatting.YELLOW));
+        player.sendSystemMessage(Component.literal("• En bas, le village de Beauvais t'accueille. Va écouter Marcel le Conteur, au feu de camp : il connaît l'histoire du village.").withStyle(ChatFormatting.YELLOW));
         player.sendSystemMessage(Component.literal("• Téléphone : touche N. Ton argent s'affiche à droite de l'écran.").withStyle(ChatFormatting.YELLOW));
     }
 

@@ -1,0 +1,82 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-577789652,711653992,-1331724419,1854185165],
+  CustomName:'{"text":"Marcel le Conteur","color":"gold"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/conteur.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.conteur",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Marcel",
+        Texts:[{Text:"Ah, des gens du ciel… Asseyez-vous près du feu. Vous voulez savoir pourquoi les gens d'ici vous regardent de travers ? C'est une longue histoire."},{Text:"Bonsoir, voyageur. Le feu est chaud, la nuit est longue. Une histoire ?"}],
+        Buttons:[{
+          Label:"h1",
+          Name:"Raconte-moi Beauvais",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"h1"}]
+        },{
+          Label:"bye",
+          Name:"Une autre fois",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"h1",
+        Name:"Le temps des Anciens",
+        Texts:[{Text:"Il y a longtemps, Beauvais était le village le plus paisible de la jungle. Les arbres géants nous protégeaient, la rivière nous nourrissait, et le Conseil des Anciens décidait de tout, ici, autour de ce feu. Sur le comptoir de la Grande Cabane reposaient les Sept Reliques : tant qu'elles étaient là, aucun malheur n'entrait au village."}],
+        Buttons:[{
+          Label:"h2",
+          Name:"Et ensuite ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"h2"}]
+        }]
+      },{
+        Label:"h2",
+        Name:"L'homme en costume",
+        Texts:[{Text:"Un jour, un homme en costume est arrivé. Il parlait bien, il souriait beaucoup, il promettait tout : la prospérité, la sécurité… et en même temps, l'inverse. Le Conseil l'a écouté. Puis il a pris le titre de Président, s'est entouré d'une garde masquée, et le Conseil n'a plus jamais été réuni."}],
+        Buttons:[{
+          Label:"h3",
+          Name:"Et ensuite ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"h3"}]
+        }]
+      },{
+        Label:"h3",
+        Name:"Les Pillards du Sud",
+        Texts:[{Text:"Peu après, les Pillards sont arrivés du sud, des marais. Ils brûlent les récoltes, vident les greniers, et repartent avant l'aube. Le Président dit qu'il nous protège. Mais sa garde ne protège que lui. Et une nuit, les Sept Reliques ont disparu. Personne n'a rien vu. Personne n'a rien entendu."}],
+        Buttons:[{
+          Label:"h4",
+          Name:"Et ensuite ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"h4"}]
+        }]
+      },{
+        Label:"h4",
+        Name:"La Mairie",
+        Texts:[{Text:"Depuis, la Mairie est fermée la nuit. Certains disent qu'on entend des machines sous la terre. Et des gens disparaissent : « partis travailler à la capitale », dit le Président. Personne n'est jamais revenu de la capitale. On ne sait même pas où elle est, la capitale."}],
+        Buttons:[{
+          Label:"h5",
+          Name:"Et ensuite ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"h5"}]
+        }]
+      },{
+        Label:"h5",
+        Name:"La prophétie",
+        Texts:[{Text:"Alors oui, on se méfie des étrangers : tous ceux qui sont venus ont fini par voler, ou par trahir. Mais une vieille prophétie dit : « Quand le feu tombera du ciel, ceux qui en sortiront rendront Beauvais à son peuple. » Votre avion est tombé en feu… Faites vos preuves. Votre livre de quêtes vous guidera : « L'Histoire de Beauvais »."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Merci, Marcel",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

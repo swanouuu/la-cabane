@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Ginette",
-        Texts:[{Text:"Mon petit, tu as une tête à faire des bêtises. Je te surveille."},{Text:"Essuie tes pieds avant d'entrer chez les gens. Même chez Brokk. Surtout chez Brokk."},{Text:"Tu manges assez ? Tu as l'air maigre. Mange une carotte."}],
+        Texts:[{Text:"Ma voisine a disparu. « Partie à la capitale », qu'ils disent. Elle avait quatre-vingt-sept ans."},{Text:"Mon petit, tu as une tête à faire des bêtises. Je te surveille."},{Text:"Essuie tes pieds avant d'entrer chez les gens. Même chez Brokk. Surtout chez Brokk."},{Text:"Tu manges assez ? Tu as l'air maigre. Mange une carotte."}],
         Buttons:[{
           Label:"bye",
           Name:"Oui madame",

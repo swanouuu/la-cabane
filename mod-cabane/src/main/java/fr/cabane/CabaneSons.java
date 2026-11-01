@@ -19,7 +19,7 @@ public final class CabaneSons {
     /** Une voix par PNJ : quand on ouvre son dialogue, il dit une de ses répliques enregistrées (s'il en a). */
     public static final List<String> VOIX = List.of("gardien", "cartographe", "marchand", "forgeron", "fee", "pole_emploi", "cousin",
             "guerisseuse", "garde_ouest", "garde_est", "macron", "garde_president", "vegeta", "orque",
-            "jean", "jacques", "francis", "louis", "bernard", "gerard", "ginette", "monique", "martine", "thierry");
+            "jean", "jacques", "francis", "louis", "bernard", "gerard", "ginette", "monique", "martine", "thierry", "conteur", "prisonnier");
     public static final Map<String, DeferredHolder<SoundEvent, SoundEvent>> VOIX_PNJ = VOIX.stream()
             .collect(Collectors.toMap(Function.identity(), nom -> son("voix." + nom)));
 

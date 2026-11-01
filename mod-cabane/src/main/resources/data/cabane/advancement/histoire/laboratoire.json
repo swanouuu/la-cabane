@@ -1,0 +1,22 @@
+{
+  "parent": "cabane:racine",
+  "display": {
+    "icon": {
+      "id": "minecraft:brewing_stand"
+    },
+    "title": {
+      "text": "Ce que cache la Mairie"
+    },
+    "description": {
+      "text": "Découvrir le laboratoire secret du Président."
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "entree": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

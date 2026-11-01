@@ -64,6 +64,7 @@ cd pack
 - Tant que l'hôte n'a pas lancé la partie, tout le monde attend dans la **salle d'embarquement**, au bout de la passerelle de l'avion (mode aventure, on ne casse rien).
 - Quand tout le monde est là, l'hôte tape **`/start`** : la porte s'ouvre, chacun se retrouve dans l'avion à 270 blocs de haut, avec un parachute. Il n'y a plus qu'à sauter.
 - Ensuite, on réapparaît toujours dans l'avion… sauf si on a dormi dans un lit.
+- **En solo**, toutes les commandes (`/start`, `/cabane…`) marchent toujours, même sans avoir activé la triche. **Sur un serveur**, elles restent réservées aux admins.
 
 ## Le village de Beauvais
 
@@ -78,6 +79,7 @@ Au tout premier démarrage du serveur, le mod cherche une grande jungle (biomes 
 
 Les PNJ (Easy NPC) :
 
+- **Marcel le Conteur**, au feu de camp : c'est par lui que commence l'histoire de Beauvais ;
 - **le Hejj du Village**, le sage, devant la Grande Cabane (il donnera les grandes quêtes) ;
 - **Karim le Chouf**, au grand panneau, qui donne les cartes au trésor ;
 - **Mouloud le Marchand** et son cousin **Gribbs**, au Grand Bazar ;
@@ -98,7 +100,27 @@ Commandes admin :
 - `/start` lance la partie (l'hôte seulement) ;
 - `/cabane placer` reconstruit le village à tes pieds et y déplace le spawn ;
 - `/cabane pnj` fait revenir les PNJ ;
-- `/cabane garde <joueur>` lâche la garde présidentielle sur quelqu'un.
+- `/cabane garde <joueur>` lâche la garde présidentielle sur quelqu'un ;
+- `/cabane raid [nombre]` lance un **raid des Pillards du Sud** sur le village (6 par défaut, un ravageur à partir de 8, un évocateur à partir de 12) ;
+- `/cabane forteresse` donne les coordonnées de la Forteresse du Sud (tout le monde peut la taper) ; `/cabane forteresse ouvrir` lève la grande herse le jour du combat final, `fermer` la rescelle, `construire` la reconstruit ;
+- `/cabane mairie` reconstruit la Mairie et son laboratoire (si besoin).
+
+## L'histoire de Beauvais
+
+Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en cinq actes :
+
+1. **Les gens du ciel.** Marcel le Conteur raconte : Beauvais était un village paisible, gouverné par le Conseil des Anciens et protégé par les Sept Reliques. Puis un homme en costume est arrivé, s'est fait Président, a suspendu le Conseil… et les Reliques ont disparu. Depuis, les **Pillards du Sud** ravagent le village et des gens disparaissent. Voilà pourquoi les villageois se méfient des étrangers. Mais une prophétie dit que « ceux qui tomberont du ciel en feu » rendront Beauvais à son peuple.
+2. **Les Pillards du Sud.** On les chasse, on trouve leurs avant-postes… et l'or de la Mairie dans leurs coffres. Les **raids** sur le village, c'est l'hôte qui les lance quand il veut (`/cabane raid`).
+3. **Le secret de la Mairie.** La Mairie du Président, sur la rive est de la place : salle du conseil, bureau, tableaux. Dans le bureau, une bibliothèque sonne creux : un clic, elle pivote, et une échelle descend vers le **laboratoire secret** (les « sujets » dans leurs tubes, le carnet du Président, le dossier « Projet Augmenté »). Au fond, dans sa cellule, **Pierre**, le Sujet 07, qui en sait long.
+4. **Les Sept Reliques**, très loin, toutes au-delà de la zone pré-générée (de 3 500 à 7 000 blocs) : tout est à explorer. Avec les sept, Brokk forge la **Clé de la Salle Zéro**.
+5. **La Forteresse du Sud**, à un peu plus de 10 000 blocs plein sud du village (sur la map fournie : **X -1472, Y 66, Z 18224** ; en jeu, `/cabane forteresse` donne ses coordonnées) : une citadelle noire de 116 blocs de côté sur un terrain dégagé, une avenue qui mène à la grande herse, des tours, un donjon de 55 blocs de haut, et au cœur la **Salle Zéro**. **Pour l'instant elle est scellée** : qui essaie d'entrer est reconduit dehors (« c'est pour plus tard ! »). Le jour venu, l'hôte tape `/cabane forteresse ouvrir`, et on y va tous ensemble : la Clé sur le pupitre réveille **le Président Augmenté** (le Héraut de Cataclysm, trois fois plus solide, avec des vagues de gardes augmentés). Quand il tombe, Beauvais est libéré : il finit dans une cellule de son propre laboratoire, Pierre retrouve le feu de camp.
+
+## Le bar : bières, vin et sodas
+
+- **L'alcool** : bière blonde, bière brune, la fameuse **8.6**, vin rouge, pastis, rhum. Chaque verre fait monter l'**ivresse** : le hoquet, puis la tête qui tourne, la caméra qui tangue, la démarche qui titube… et le trou noir si on abuse. Certaines donnent un petit bonus (la 8.6 et le rhum rendent plus fort, le vin soigne un peu, le pastis protège du feu).
+- **Les sodas** (coca, fanta, ice tea pêche) : un coup de fouet (vitesse, saut, régénération), et ils font redescendre d'un cran.
+- Tout s'achète chez Mouloud, et tout se fabrique : bouteille vide + blé + sucre (blonde), + cacao (brune), + sucre, sucre et œil d'araignée fermenté (8.6), trois baies sucrées (vin), sucre + deux fougères (pastis), cannes à sucre (rhum) ; pépite de fer + deux sucres + cacao, colorant orange ou glace pour les canettes.
+- **Pour les vendre** : le marché rachète bières, vin et coca dans ses contrats, et chacun peut tenir son étal (ou ouvrir la taverne du village, une quête d'« Agrandir Beauvais »).
 
 ## Le téléphone
 
@@ -137,7 +159,7 @@ Chaque PNJ dit une réplique enregistrée quand on lui parle (s'il en a). Pour a
 3. Mets-les dans le dossier `voix/` à la racine du projet, au format `.ogg` (Audacity sait exporter en OGG, gratuit). Sinon, envoie-les-moi dans n'importe quel format et je les convertis.
 4. Lance `node mod-cabane/outils/generer.mjs`, puis `compiler.bat` et `publier.bat`.
 
-Les noms des PNJ : `gardien` (le Hejj), `cartographe` (Karim), `marchand` (Mouloud), `cousin` (Gribbs), `pole_emploi` (Mehdi), `forgeron` (Brokk), `orque` (les orques), `fee` (Ovsie), `guerisseuse` (Nyota), `garde_est`, `garde_ouest`, `macron`, `garde_president`, `vegeta`, et les habitants `jean`, `jacques`, `francis`, `louis`, `bernard`, `gerard`, `ginette`, `monique`, `martine`, `thierry`.
+Les noms des PNJ : `gardien` (le Hejj), `cartographe` (Karim), `marchand` (Mouloud), `cousin` (Gribbs), `pole_emploi` (Mehdi), `forgeron` (Brokk), `orque` (les orques), `fee` (Ovsie), `guerisseuse` (Nyota), `garde_est`, `garde_ouest`, `macron`, `garde_president`, `vegeta`, `conteur` (Marcel), `prisonnier` (Pierre), et les habitants `jean`, `jacques`, `francis`, `louis`, `bernard`, `gerard`, `ginette`, `monique`, `martine`, `thierry`.
 
 ## Les skins des personnages
 
@@ -146,7 +168,8 @@ Les skins des personnages principaux sont dessinés par `mod-cabane/outils/perso
 ## Les quêtes (FTB Quests)
 
 - **Beauvais** : l'arrivée, le premier coup de fil, les Waystones, le sac à dos, la cuisine, Create.
-- **Agrandir Beauvais** : le grand chantier du Hejj. On s'installe juste à côté du village, hors de l'enceinte, et on le fait grandir : le quartier neuf, le pont, le port, la gare, le marché couvert, l'école de Ginette, le rond-point et la statue du Président… jusqu'à « Beauvais, capitale de la jungle ».
+- **L'Histoire de Beauvais** : la grande aventure, de Marcel le Conteur jusqu'à la libération (voir plus haut).
+- **Agrandir Beauvais** : le grand chantier du Hejj. On s'installe juste à côté du village, hors de l'enceinte, et on le fait grandir : le quartier neuf, le pont, le port, la gare, le marché couvert, l'école de Ginette, le rond-point et la statue du Président, le **commissariat**, les **remparts** contre les raids, la **taverne**, l'infirmerie de Nyota… jusqu'à « Beauvais, capitale de la jungle ».
 - **Les gens de Beauvais** : une petite quête par habitant (le balai de Jacques, le singe de Bernard, l'entraînement de Vegeta, le dossier complet de Mehdi…).
 - **Les Sept Reliques** : pour chaque relique, un indice qui donne une carte au trésor, puis le donjon à trouver, puis la relique (cachée dans le coffre au trésor de ce donjon). Avec les sept, on obtient « Le Réveil de la Cabane » et des élytres.
 - **Les Grands Donjons** : 12 donjons géants à visiter et 12 boss (Cataclysm, Mowzie's Mobs).
@@ -166,7 +189,7 @@ La liste complète est dans `pack/mods/`.
 
 On choisira l'hébergeur plus tard. Il devra accepter nos propres mods (donc pas Aternos) et ouvrir le **port UDP 24454** pour Simple Voice Chat.
 
-**La map est prête à l'avance** : `dist/Beauvais - monde.zip` contient le monde avec Beauvais déjà construit, ses PNJ, et 3 000 blocs dans chaque direction déjà générés (jungle géante autour du village, désert, badlands, savane, neige et volcans plus loin) (pas d'attente au premier lancement, tout le monde voit la même map). Au-delà, le monde continue de se générer normalement quand on explore. Pour l'installer sur le serveur : décompresser le zip dans le dossier du serveur, puis dans `server.properties` :
+**La map est prête à l'avance** : `dist/Beauvais - monde.zip` contient le monde avec Beauvais déjà construit, ses PNJ, et 3 000 blocs dans chaque direction déjà générés (jungle géante autour du village, désert, badlands, savane, neige et volcans plus loin) (pas d'attente au premier lancement, tout le monde voit la même map). La Mairie, son laboratoire et la Forteresse du Sud (scellée) y sont déjà construits. Au-delà des 3 000 blocs, le monde continue de se générer normalement quand on explore. Pour l'installer sur le serveur : décompresser le zip dans le dossier du serveur, puis dans `server.properties` :
 
 ```
 level-name=monde-beauvais

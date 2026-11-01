@@ -1,0 +1,52 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-867216517,1750550858,-510155886,-960953091],
+  CustomName:'{"text":"Pierre, le disparu","color":"gray"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/prisonnier.png"},
+  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.prisonnier",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
+  DialogData:{
+    Type:"STANDARD",
+    DialogDataSet:[{
+        Label:"default",
+        Name:"Pierre",
+        Texts:[{Text:"Vous… vous n'êtes pas des gardes ? Écoutez-moi : le Président ne protège personne. Les Pillards du Sud, c'est lui qui les envoie. Il leur dit quand frapper."},{Text:"Il m'a enfermé parce que je posais trop de questions. Les autres… il leur fait boire la potion verte. Après, ils ne parlent plus."}],
+        Buttons:[{
+          Label:"projet",
+          Name:"Le projet AUGMENTÉ ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"projet"}]
+        },{
+          Label:"sortir",
+          Name:"Comment te sortir de là ?",
+          Type:"ACTION",
+          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"sortir"}]
+        }]
+      },{
+        Label:"projet",
+        Name:"Le projet AUGMENTÉ",
+        Texts:[{Text:"Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur de la Forteresse du Sud, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"On va les trouver",
+          Type:"CLOSE"
+        }]
+      },{
+        Label:"sortir",
+        Name:"Pas encore",
+        Texts:[{Text:"Pas encore. S'il voit ma cellule vide, il saura qu'on est venus. Libérez d'abord Beauvais. Je tiendrai. Et prenez le dossier dans le coffre, là-bas : tout y est écrit."}],
+        Buttons:[{
+          Label:"bye",
+          Name:"Tiens bon, Pierre",
+          Type:"CLOSE"
+        }]
+      }]
+  },
+  Status:{finalized:1b}
+}

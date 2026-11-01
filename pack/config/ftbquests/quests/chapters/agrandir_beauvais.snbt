@@ -8,7 +8,7 @@
 		id: "minecraft:bricks"
 	}
 	id: "0F76A38B1018536B"
-	order_index: 2
+	order_index: 3
 	quest_links: [ ]
 	quests: [
 		{
@@ -540,9 +540,210 @@
 		}
 		{
 			dependencies: [
+				"482CB649D83791DA"
+			]
+			id: "1B1A5FCCDEFCE572"
+			rewards: [
+				{
+					count: 1
+					id: "45F7F7AFF4B22444"
+					item: {
+						count: 1
+						id: "cabane:gilet_police"
+					}
+					type: "item"
+				}
+				{
+					count: 1
+					id: "47AB8540DB31D344"
+					item: {
+						count: 1
+						id: "cabane:menottes"
+					}
+					type: "item"
+				}
+				{
+					command: "/argent donner {p} 4000"
+					elevate_perms: true
+					id: "4C0938DDDB2FA11C"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 128L
+					id: "365A957ADAFF851D"
+					item: {
+						count: 1
+						id: "minecraft:stone_bricks"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "4250890F24AE9964"
+					item: {
+						count: 1
+						id: "minecraft:iron_bars"
+					}
+					type: "item"
+				}
+				{
+					id: "225F6D0F574A65F5"
+					type: "checkmark"
+				}
+			]
+			x: 6.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
+				"1B1A5FCCDEFCE572"
+			]
+			id: "2BD3FBE527316C9F"
+			rewards: [
+				{
+					command: "/argent donner {p} 6000"
+					elevate_perms: true
+					id: "3E70A3E8F8AB43DE"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 512L
+					id: "61874B11CD32EA1B"
+					item: {
+						count: 1
+						id: "minecraft:stone_bricks"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 64L
+					id: "6CA63151157C97F8"
+					item: {
+						count: 1
+						id: "minecraft:cobblestone_wall"
+					}
+					type: "item"
+				}
+				{
+					id: "43E3F7F12F09E582"
+					type: "checkmark"
+				}
+			]
+			x: 8.0d
+			y: -4.5d
+		}
+		{
+			dependencies: [
+				"41AAB9DFC7CC4D19"
+			]
+			id: "25273E17EBD095AA"
+			rewards: [
+				{
+					count: 4
+					id: "22C2BDF98D8406D9"
+					item: {
+						count: 1
+						id: "cabane:biere_86"
+					}
+					type: "item"
+				}
+				{
+					command: "/argent donner {p} 3000"
+					elevate_perms: true
+					id: "22F5A98441EEC065"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 16L
+					id: "4120768EB805C3A5"
+					item: {
+						count: 1
+						id: "minecraft:barrel"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 32L
+					id: "0558FA3F08B58F04"
+					item: {
+						count: 1
+						id: "cabane:biere_blonde"
+					}
+					type: "item"
+				}
+				{
+					id: "7FF45A8B2E6E9224"
+					type: "checkmark"
+				}
+			]
+			x: 4.0d
+			y: 3.0d
+		}
+		{
+			dependencies: [
+				"24B3EA48F5667552"
+			]
+			id: "688714D5D7460A33"
+			rewards: [
+				{
+					command: "/argent donner {p} 2500"
+					elevate_perms: true
+					id: "5519945E7C78BF89"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					consume_items: "true"
+					count: 6L
+					id: "3FC494CB4B61742A"
+					item: {
+						count: 1
+						id: "minecraft:white_bed"
+					}
+					type: "item"
+				}
+				{
+					consume_items: "true"
+					count: 16L
+					id: "1C381F2C27BA8833"
+					item: {
+						count: 1
+						id: "minecraft:glistering_melon_slice"
+					}
+					type: "item"
+				}
+			]
+			x: 6.0d
+			y: 3.0d
+		}
+		{
+			dependencies: [
 				"788DD4E54A6A6223"
 				"0ED2F75EB32984DE"
 				"62EB8B71CE88A6BB"
+				"2BD3FBE527316C9F"
+				"25273E17EBD095AA"
 			]
 			id: "6B09984DCFEFAC34"
 			rewards: [

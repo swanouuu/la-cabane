@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Jacques",
-        Texts:[{Text:"Tu marches sur mon chemin, là. Je l'ai balayé ce matin."},{Text:"J'ai balayé ce chemin trois fois aujourd'hui. Trois. Fois."},{Text:"Le Président m'a promis une médaille du meilleur balayeur. J'attends toujours."}],
+        Texts:[{Text:"Les Pillards sont passés mardi. Ils ont tout piétiné. Même mon chemin. MON chemin."},{Text:"Tu marches sur mon chemin, là. Je l'ai balayé ce matin."},{Text:"J'ai balayé ce chemin trois fois aujourd'hui. Trois. Fois."},{Text:"Le Président m'a promis une médaille du meilleur balayeur. J'attends toujours."}],
         Buttons:[{
           Label:"bye",
           Name:"Pardon, Jacques",

@@ -1,0 +1,22 @@
+{
+  "parent": "cabane:sept_reliques",
+  "display": {
+    "icon": {
+      "id": "cabane:cle_salle_zero"
+    },
+    "title": {
+      "text": "Beauvais libéré !"
+    },
+    "description": {
+      "text": "Vaincre le Président Augmenté dans la Salle Zéro."
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "victoire": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

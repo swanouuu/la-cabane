@@ -40,7 +40,7 @@ public final class CabaneCommands {
                         .executes(CabaneCommands::annuaire)));
 
         // /start : l'hôte lance la partie (tout le monde passe de la salle d'embarquement à l'avion)
-        dispatcher.register(Commands.literal("start").requires(source -> source.hasPermission(2)).executes(ctx -> {
+        dispatcher.register(Commands.literal("start").requires(CabaneCommands::hote).executes(ctx -> {
             fr.cabane.hub.HubEvents.demarrer(ctx.getSource().getServer(), ctx.getSource());
             return 1;
         }));
@@ -83,7 +83,70 @@ public final class CabaneCommands {
                     int count = HubEvents.spawnNpcs(ctx.getSource().getLevel());
                     ctx.getSource().sendSuccess(() -> Component.literal(count + " PNJ replacés autour de la cabane."), true);
                     return count;
-                })));
+                }))
+                // la Mairie et son laboratoire secret, construits dans un village qui existait déjà
+                .then(Commands.literal("mairie").requires(source -> source.hasPermission(3)).executes(ctx -> {
+                    var level = ctx.getSource().getServer().overworld();
+                    BlockPos centre = fr.cabane.hub.HubData.get(ctx.getSource().getServer()).centre();
+                    if (centre == null) {
+                        ctx.getSource().sendFailure(Component.literal("Beauvais n'est pas encore construit."));
+                        return 0;
+                    }
+                    new fr.cabane.hub.HubBuilder(level, centre).mairieEtSecret();
+                    int count = HubEvents.spawnNpcs(level);
+                    ctx.getSource().sendSuccess(() -> Component.literal("La Mairie et son secret sont construits, " + count + " PNJ replacés."), true);
+                    return 1;
+                }))
+                // un événement : les Pillards du Sud marchent sur le village
+                .then(Commands.literal("raid").requires(source -> source.hasPermission(2))
+                        .executes(ctx -> raid(ctx.getSource(), 6))
+                        .then(Commands.argument("nombre", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 40))
+                                .executes(ctx -> raid(ctx.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "nombre")))))
+                // la Forteresse du Sud : tout le monde peut demander où elle est ; l'hôte la construit, l'ouvre ou la scelle
+                .then(Commands.literal("forteresse").executes(ctx -> forteresse(ctx.getSource()))
+                        .then(Commands.literal("construire").requires(CabaneCommands::hote).executes(ctx -> {
+                            fr.cabane.histoire.Forteresse.lancer(ctx.getSource().getServer().overworld(), true);
+                            ctx.getSource().sendSuccess(() -> Component.literal("Construction de la Forteresse du Sud lancée (une à deux minutes)."), true);
+                            return 1;
+                        }))
+                        .then(Commands.literal("ouvrir").requires(CabaneCommands::hote).executes(ctx -> porteForteresse(ctx.getSource(), true)))
+                        .then(Commands.literal("fermer").requires(CabaneCommands::hote).executes(ctx -> porteForteresse(ctx.getSource(), false)))));
+    }
+
+    /** L'hôte : un admin du serveur, ou le joueur qui a ouvert le monde en solo. */
+    static boolean hote(CommandSourceStack source) {
+        if (source.hasPermission(2)) {
+            return true;
+        }
+        ServerPlayer joueur = source.getPlayer();
+        return joueur != null && !source.getServer().isDedicatedServer() && source.getServer().isSingleplayerOwner(joueur.getGameProfile());
+    }
+
+    private static int raid(CommandSourceStack source, int nombre) {
+        int n = fr.cabane.histoire.Histoire.raid(source.getServer().overworld(), nombre);
+        source.sendSuccess(() -> Component.literal(n + " pillards marchent sur Beauvais."), true);
+        return n;
+    }
+
+    private static int forteresse(CommandSourceStack source) {
+        var data = fr.cabane.hub.HubData.get(source.getServer());
+        BlockPos f = data.forteresse();
+        if (f == null) {
+            source.sendSuccess(() -> Component.literal("La Forteresse du Sud n'a pas encore été repérée (elle se construit, très loin au sud).").withStyle(ChatFormatting.GRAY), false);
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("⚑ La Forteresse du Sud : X " + f.getX() + "  Y " + f.getY() + "  Z " + f.getZ()
+                + (data.forteresseOuverte() ? " — la porte est ouverte." : " — scellée, c'est pour plus tard.")).withStyle(ChatFormatting.GOLD), false);
+        return 1;
+    }
+
+    private static int porteForteresse(CommandSourceStack source, boolean ouverte) {
+        if (!fr.cabane.histoire.Forteresse.porte(source.getServer().overworld(), ouverte)) {
+            source.sendFailure(Component.literal("La Forteresse du Sud n'est pas encore construite (/cabane forteresse construire)."));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(ouverte ? "La Forteresse du Sud est ouverte : la grande herse est levée." : "La Forteresse du Sud est à nouveau scellée."), true);
+        return 1;
     }
 
     private interface PlayerAction {

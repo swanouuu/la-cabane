@@ -14,11 +14,15 @@ hash = "e57d8311aec9f524911ed1313cabf138bb7fa5a2d3ba985a00a2a267ff35ef78"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/agrandir_beauvais.snbt"
-hash = "9716b248cf8ef4e453177029a23841e528bd5b032949afe4740b183dd314e090"
+hash = "d8666758739c136c1b66b2dc5a42fb9c279c4b06badff4d26100e5f488a26552"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/donjons.snbt"
-hash = "43a6f01f7cae8ae798af5447ecfc1f0fa165a838cdd19bb5717414e5f9cc90c1"
+hash = "ee8986dfa4e40927730b4ea9022ba98e079bafccc0726ac92add2ecd56fc9bb1"
+
+[[files]]
+file = "config/ftbquests/quests/chapters/histoire.snbt"
+hash = "c5d3757efc1d91d65e17c295c829e2a355dcaf93579c7430c8814aadb6d7e852"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/la_cabane.snbt"
@@ -26,15 +30,15 @@ hash = "757ee338d60648b370a2ad2307893387c225b6479a1b3aafe865c10a485b6a36"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/le_village.snbt"
-hash = "863ba1b9d63535cf576447757066e3f7926ed994b92f37e38dcd2b640f3600d9"
+hash = "17e24544549669d95993cc2b3f80f2ba84d0bb5214e947c3df6348d12f342d88"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/les_gens.snbt"
-hash = "d4a4ac6fee7d5b757fd6aca05503171c372cd64d6112801241e9b170bbff7e1b"
+hash = "e2901c341847892a895f81e8a6715bfe9195ee49c3d06f1572a32a2300691979"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/reliques.snbt"
-hash = "4a7e3f9e794e46da09af9af0246ad4921821620012064245f316beb2303ad1be"
+hash = "3630e21d261aa40d67d8cf29f1013e547e0b41e1efc00e917092c23771cef71f"
 
 [[files]]
 file = "config/ftbquests/quests/data.snbt"
@@ -42,11 +46,11 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "0a0fc7c54fcc1b288c6433c40a1a0e11b98a54623f2822cf022fc2575a9920ca"
+hash = "b41fae94f2c5acd599b9cb2aa30c6b237cc4e4552d93caf870f8152dbe52f324"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "0a0fc7c54fcc1b288c6433c40a1a0e11b98a54623f2822cf022fc2575a9920ca"
+hash = "b41fae94f2c5acd599b9cb2aa30c6b237cc4e4552d93caf870f8152dbe52f324"
 
 [[files]]
 file = "emotes/bof.json"
@@ -108,7 +112,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "4a6134548d78c59dacf1b5a6325eaa57f1f36964abcaf75b6dd764e6d3accf88"
+hash = "02f5400436b0d98ebda31dd0e5977491b0efed225fb70952ff0d5f6de6514060"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"

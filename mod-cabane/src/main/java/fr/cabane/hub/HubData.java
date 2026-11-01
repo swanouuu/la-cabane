@@ -21,6 +21,12 @@ public class HubData extends SavedData {
     private boolean demarre;
     /** La version des PNJ posés (voir HubEvents.VERSION_PNJ). */
     private int versionPnj;
+    /** Le Président est-il tombé ? */
+    private boolean libere;
+    /** Le centre de la Forteresse du Sud (au sol), une fois construite. */
+    private BlockPos forteresse;
+    /** L'hôte a-t-il ouvert la forteresse (/cabane forteresse ouvrir) ? */
+    private boolean forteresseOuverte;
     private final Set<UUID> kits = new HashSet<>();
 
     public static HubData get(MinecraftServer server) {
@@ -33,6 +39,9 @@ public class HubData extends SavedData {
         NbtUtils.readBlockPos(tag, "centre").ifPresent(pos -> data.centre = pos);
         data.demarre = tag.getBoolean("demarre");
         data.versionPnj = tag.getInt("versionPnj");
+        data.libere = tag.getBoolean("libere");
+        NbtUtils.readBlockPos(tag, "forteresse").ifPresent(pos -> data.forteresse = pos);
+        data.forteresseOuverte = tag.getBoolean("forteresseOuverte");
         ListTag list = tag.getList("kits", Tag.TAG_INT_ARRAY);
         for (Tag entry : list) {
             data.kits.add(NbtUtils.loadUUID(entry));
@@ -47,10 +56,42 @@ public class HubData extends SavedData {
         }
         tag.putBoolean("demarre", demarre);
         tag.putInt("versionPnj", versionPnj);
+        tag.putBoolean("libere", libere);
+        if (forteresse != null) {
+            tag.put("forteresse", NbtUtils.writeBlockPos(forteresse));
+        }
+        tag.putBoolean("forteresseOuverte", forteresseOuverte);
         ListTag list = new ListTag();
         kits.forEach(id -> list.add(NbtUtils.createUUID(id)));
         tag.put("kits", list);
         return tag;
+    }
+
+    public boolean libere() {
+        return libere;
+    }
+
+    public void setLibere(boolean valeur) {
+        libere = valeur;
+        setDirty();
+    }
+
+    public BlockPos forteresse() {
+        return forteresse;
+    }
+
+    public void setForteresse(BlockPos pos) {
+        forteresse = pos;
+        setDirty();
+    }
+
+    public boolean forteresseOuverte() {
+        return forteresseOuverte;
+    }
+
+    public void setForteresseOuverte(boolean valeur) {
+        forteresseOuverte = valeur;
+        setDirty();
     }
 
     public int versionPnj() {

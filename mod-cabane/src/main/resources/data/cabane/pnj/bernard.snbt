@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Bernard",
-        Texts:[{Text:"De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien."},{Text:"Mon singe s'appelle Bernard aussi. C'est pratique quand on crie."},{Text:"Les jeunes, avec leur Piaf… moi j'ai des vrais piafs. Ils font caca partout."}],
+        Texts:[{Text:"Les Pillards viennent du sud, des marais. Ils sentent la vase et la poudre. Le singe les entend venir avant tout le monde."},{Text:"De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien."},{Text:"Mon singe s'appelle Bernard aussi. C'est pratique quand on crie."},{Text:"Les jeunes, avec leur Piaf… moi j'ai des vrais piafs. Ils font caca partout."}],
         Buttons:[{
           Label:"bye",
           Name:"C'est noté, Bernard",

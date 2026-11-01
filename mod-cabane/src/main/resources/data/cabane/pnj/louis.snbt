@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Louis",
-        Texts:[{Text:"Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé."},{Text:"Occupé à quoi ? Ça te regarde pas."},{Text:"Bon… je regardais les nuages. Celui-là ressemble à Mouloud."}],
+        Texts:[{Text:"La nuit, j'entends des machines sous la place. Ma femme dit que c'est mon ventre. C'est pas mon ventre."},{Text:"Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé."},{Text:"Occupé à quoi ? Ça te regarde pas."},{Text:"Bon… je regardais les nuages. Celui-là ressemble à Mouloud."}],
         Buttons:[{
           Label:"bye",
           Name:"D'accord, d'accord",

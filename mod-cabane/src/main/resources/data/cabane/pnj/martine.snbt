@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Martine",
-        Texts:[{Text:"Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour."},{Text:"J'ai voté pour le Hejj. Il n'était pas candidat. J'ai voté quand même."},{Text:"Si vous voyez Vegeta, dites-lui que sa coupe est ridicule. De ma part."}],
+        Texts:[{Text:"Le Président vient faire des discours chaque matin. Le soir, la Mairie est fermée, mais il y a de la lumière… en bas."},{Text:"Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour."},{Text:"J'ai voté pour le Hejj. Il n'était pas candidat. J'ai voté quand même."},{Text:"Si vous voyez Vegeta, dites-lui que sa coupe est ridicule. De ma part."}],
         Buttons:[{
           Label:"bye",
           Name:"Merci du conseil",

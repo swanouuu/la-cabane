@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/pupitre_president"
+    },
+    "facing=east": {
+      "model": "cabane:block/pupitre_president",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/pupitre_president",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/pupitre_president",
+      "y": 270
+    }
+  }
+}

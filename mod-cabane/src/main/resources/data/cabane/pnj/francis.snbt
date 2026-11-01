@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Francis",
-        Texts:[{Text:"Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit."},{Text:"Je vous ai à l'œil. L'autre œil est sur Gribbs."},{Text:"Si vous construisez à côté de chez moi, faites une jolie maison. Pas un truc en terre."}],
+        Texts:[{Text:"Le dernier étranger, il a dormi trois nuits chez moi, et il est reparti avec ma vaisselle. Alors excusez-moi si je compte mes cuillères."},{Text:"Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit."},{Text:"Je vous ai à l'œil. L'autre œil est sur Gribbs."},{Text:"Si vous construisez à côté de chez moi, faites une jolie maison. Pas un truc en terre."}],
         Buttons:[{
           Label:"bye",
           Name:"Promis, on sera sages",

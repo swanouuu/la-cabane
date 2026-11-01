@@ -1,0 +1,476 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "histoire"
+	group: ""
+	icon: {
+		count: 1
+		id: "minecraft:writable_book"
+	}
+	id: "16AB2FF51EB0851E"
+	order_index: 1
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: [
+				"568AFD2416050B14"
+			]
+			id: "01CBF0BA670EB442"
+			rewards: [
+				{
+					id: "1BE27DEAAC8D4FE9"
+					type: "xp_levels"
+					xp_levels: 3
+				}
+				{
+					command: "/argent donner {p} 100"
+					elevate_perms: true
+					id: "4489D74AB3AB7981"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			shape: "gear"
+			size: 1.5d
+			tasks: [
+				{
+					id: "43C53BC6D517E8F8"
+					type: "checkmark"
+				}
+			]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"01CBF0BA670EB442"
+			]
+			id: "7884DA74F6956A35"
+			rewards: [
+				{
+					command: "/argent donner {p} 150"
+					elevate_perms: true
+					id: "07A50EBBBEC93E2D"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "70611B9DF1BCA21C"
+					type: "checkmark"
+				}
+			]
+			x: 2.0d
+			y: -1.0d
+		}
+		{
+			dependencies: [
+				"01CBF0BA670EB442"
+			]
+			id: "47A5313EBBF149FA"
+			rewards: [
+				{
+					command: "/argent donner {p} 150"
+					elevate_perms: true
+					id: "3CF29D5497545338"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "028FCA8B8B8F3C53"
+					type: "checkmark"
+				}
+			]
+			x: 2.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"7884DA74F6956A35"
+			]
+			id: "27216312CFC8D389"
+			rewards: [
+				{
+					id: "7F5F5D8FA346DB8D"
+					type: "xp_levels"
+					xp_levels: 4
+				}
+				{
+					command: "/argent donner {p} 400"
+					elevate_perms: true
+					id: "16E1E88561B099B7"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					entity: "minecraft:pillager"
+					id: "5187820D8BBB77A7"
+					type: "kill"
+					value: 10L
+				}
+			]
+			x: 4.0d
+			y: -1.0d
+		}
+		{
+			dependencies: [
+				"27216312CFC8D389"
+			]
+			id: "0D3F2FBF63AD6E94"
+			rewards: [
+				{
+					id: "0F993E4C4BBAAD33"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "5573CCCB8E809B21"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					entity: "minecraft:vindicator"
+					id: "6D07070A5DD99C40"
+					type: "kill"
+					value: 5L
+				}
+			]
+			x: 6.0d
+			y: -1.0d
+		}
+		{
+			dependencies: [
+				"27216312CFC8D389"
+				"47A5313EBBF149FA"
+			]
+			id: "0DC04F56329BC588"
+			rewards: [
+				{
+					id: "4C70887A907D8C66"
+					type: "xp_levels"
+					xp_levels: 5
+				}
+				{
+					command: "/argent donner {p} 600"
+					elevate_perms: true
+					id: "12783096055F2D97"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "2469038D3E3E22B6"
+					structure: "minecraft:pillager_outpost"
+					type: "structure"
+				}
+			]
+			x: 6.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"0D3F2FBF63AD6E94"
+			]
+			id: "4D25A24F8001BCB4"
+			rewards: [
+				{
+					id: "741003954CD85E8C"
+					type: "xp_levels"
+					xp_levels: 8
+				}
+				{
+					count: 1
+					id: "1D1F338AC52E226C"
+					item: {
+						count: 1
+						id: "minecraft:totem_of_undying"
+					}
+					type: "item"
+				}
+				{
+					command: "/argent donner {p} 2000"
+					elevate_perms: true
+					id: "4C04E9B9A4E8029C"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			shape: "hexagon"
+			tasks: [
+				{
+					id: "6534D5036F5CF9CD"
+					type: "checkmark"
+				}
+			]
+			x: 8.0d
+			y: -1.0d
+		}
+		{
+			dependencies: [
+				"0DC04F56329BC588"
+			]
+			id: "2BC7B019F689DA68"
+			rewards: [
+				{
+					id: "7151FC2A0EAB9592"
+					type: "xp_levels"
+					xp_levels: 6
+				}
+				{
+					command: "/argent donner {p} 1000"
+					elevate_perms: true
+					id: "7BAF103CB3093978"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					advancement: "cabane:histoire/laboratoire"
+					criterion: ""
+					id: "30C1125E9B1F07A8"
+					type: "advancement"
+				}
+			]
+			x: 8.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"2BC7B019F689DA68"
+			]
+			id: "5DFF817B33E4072A"
+			rewards: [
+				{
+					command: "/argent donner {p} 500"
+					elevate_perms: true
+					id: "3CDA73345AF1B94B"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "1C1E03BB55833B97"
+					type: "checkmark"
+				}
+			]
+			x: 10.0d
+			y: 0.0d
+		}
+		{
+			dependencies: [
+				"2BC7B019F689DA68"
+			]
+			id: "575C2983B036C8A6"
+			rewards: [
+				{
+					id: "32B3D4876D3E4843"
+					type: "xp_levels"
+					xp_levels: 6
+				}
+				{
+					command: "/argent donner {p} 1500"
+					elevate_perms: true
+					id: "7ACA7D7B9BA5C620"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					count: 1L
+					id: "104E19545F4BA2F6"
+					item: {
+						count: 1
+						id: "cabane:dossier_secret"
+					}
+					type: "item"
+				}
+			]
+			x: 10.0d
+			y: 2.0d
+		}
+		{
+			dependencies: [
+				"5DFF817B33E4072A"
+				"575C2983B036C8A6"
+			]
+			id: "52C8F8B5C2EEFC5F"
+			rewards: [
+				{
+					count: 1
+					id: "3613CABA20C4481E"
+					item: {
+						count: 1
+						id: "cabane:cle_salle_zero"
+					}
+					type: "item"
+				}
+				{
+					command: "/tellraw {p} {\"text\":\"Brokk : « Sept reliques, une clé. Allez donc rendre visite à votre Président. »\",\"color\":\"gold\"}"
+					elevate_perms: true
+					id: "401770B0E0E9746F"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+				{
+					command: "/argent donner {p} 3000"
+					elevate_perms: true
+					id: "31A449DB00885473"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			shape: "diamond"
+			tasks: [
+				{
+					advancement: "cabane:sept_reliques"
+					criterion: ""
+					id: "112E8EF2B8F1CFB5"
+					type: "advancement"
+				}
+			]
+			x: 12.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"52C8F8B5C2EEFC5F"
+			]
+			id: "753BE5C735570076"
+			rewards: [
+				{
+					command: "/argent donner {p} 1000"
+					elevate_perms: true
+					id: "74D54407543703A7"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "287DA1E2F10EEF66"
+					type: "checkmark"
+				}
+			]
+			x: 14.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"753BE5C735570076"
+			]
+			id: "12B120B96D758D92"
+			rewards: [
+				{
+					id: "0C8B656B8EBD602B"
+					type: "xp_levels"
+					xp_levels: 30
+				}
+				{
+					count: 2
+					id: "59BE4EC4913544D4"
+					item: {
+						count: 1
+						id: "minecraft:netherite_ingot"
+					}
+					type: "item"
+				}
+				{
+					count: 2
+					id: "506BFCEC78CECF7A"
+					item: {
+						count: 1
+						id: "minecraft:diamond_block"
+					}
+					type: "item"
+				}
+				{
+					command: "/title {p} title {\"text\":\"Libérateur de Beauvais\",\"color\":\"gold\"}"
+					elevate_perms: true
+					id: "789890F3C6B83C47"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+				{
+					command: "/argent donner {p} 25000"
+					elevate_perms: true
+					id: "125ADE61EE618888"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			shape: "gear"
+			size: 2.0d
+			tasks: [
+				{
+					advancement: "cabane:histoire/liberation"
+					criterion: ""
+					id: "16A72DF85DDC906D"
+					type: "advancement"
+				}
+			]
+			x: 16.0d
+			y: 1.0d
+		}
+		{
+			dependencies: [
+				"12B120B96D758D92"
+			]
+			id: "3BE3E5007AAA200A"
+			rewards: [
+				{
+					count: 6
+					id: "3FC5F988784B469E"
+					item: {
+						count: 1
+						id: "cabane:biere_86"
+					}
+					type: "item"
+				}
+				{
+					command: "/argent donner {p} 2000"
+					elevate_perms: true
+					id: "4B0D4F19E5DFCF2C"
+					permission_level: 2
+					silent: true
+					type: "command"
+				}
+			]
+			tasks: [
+				{
+					id: "4AB2968F59378651"
+					type: "checkmark"
+				}
+			]
+			x: 18.0d
+			y: 1.0d
+		}
+	]
+}

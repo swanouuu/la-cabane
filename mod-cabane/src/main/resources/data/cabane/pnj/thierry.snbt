@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Thierry",
-        Texts:[{Text:"Moi, j'étais là avant l'avion, avant tout le monde. Faut faire ses preuves, ici."},{Text:"Les preuves, c'est simple : un pont, un port, et une fontaine qui marche."},{Text:"Tu veux un conseil ? Le blackjack, c'est la banque qui gagne. Toujours. Sauf moi, une fois."}],
+        Texts:[{Text:"Quand les Pillards arrivent, la garde du Président protège… le Président. Nous, on se débrouille avec des fourches."},{Text:"Moi, j'étais là avant l'avion, avant tout le monde. Faut faire ses preuves, ici."},{Text:"Les preuves, c'est simple : un pont, un port, et une fontaine qui marche."},{Text:"Tu veux un conseil ? Le blackjack, c'est la banque qui gagne. Toujours. Sauf moi, une fois."}],
         Buttons:[{
           Label:"bye",
           Name:"Je ferai mes preuves",

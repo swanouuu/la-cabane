@@ -438,6 +438,8 @@ public class HubBuilder {
         e.add(new Etape("grand bazar : murs", this::bazarMurs));
         e.add(new Etape("grand bazar : intérieur", this::bazarInterieur));
         e.add(new Etape("maisons", this::maisons));
+        e.add(new Etape("mairie", this::mairie));
+        e.add(new Etape("laboratoire", this::laboratoire));
         e.add(new Etape("forge, puits et champs", this::forgePuitsChamps));
         e.add(new Etape("abords", this::abords));
         e.add(new Etape("décoration", this::decorer));
@@ -2100,6 +2102,316 @@ public class HubBuilder {
         // la forge : un soufflet
         objet(60, 1, 2, "supplementaries:bellows", Direction.NORTH);
         enclos();
+    }
+
+    // ------------------------------------------------------------------ la Mairie et ce qu'elle cache
+
+    /** Où sont les choses de l'histoire, par rapport à la place (pour le mod et les quêtes). */
+    public static final BlockPos CELLULE_PIERRE = new BlockPos(42, -25, 60);
+    public static final BlockPos CELLULE_PRESIDENT = new BlockPos(34, -25, 60);
+    /** Le laboratoire : y entrer, c'est découvrir le secret. */
+    public static final int[] ZONE_SECRETE = {24, -27, 43, 49, -18, 63};
+
+    /**
+     * La Mairie du Président, au sud-est de la place : façade blanche, drapeaux, horloge, toit d'ardoise.
+     * Dans son bureau, une bibliothèque sonne creux : derrière, une échelle descend au laboratoire.
+     */
+    private void mairie() {
+        vider(6, 41, 27, 57, 1, 16);
+        BlockState mur = Blocks.CALCITE.defaultBlockState();
+        BlockState quartz = Blocks.SMOOTH_QUARTZ.defaultBlockState();
+        BlockState pilierQ = Blocks.QUARTZ_PILLAR.defaultBlockState();
+        // le sol, le perron et l'allée jusqu'à l'avenue
+        for (int x = 9; x <= 23; x++) {
+            for (int z = 43; z <= 55; z++) {
+                pose(x, -1, z, Blocks.STONE_BRICKS.defaultBlockState());
+                pose(x, 0, z, x >= 16 && z >= 50 ? Blocks.DARK_OAK_PLANKS.defaultBlockState()
+                        : (x + z) % 2 == 0 ? Blocks.POLISHED_DIORITE.defaultBlockState() : Blocks.POLISHED_ANDESITE.defaultBlockState());
+            }
+        }
+        for (int x = 3; x <= 8; x++) {
+            for (int z = 47; z <= 51; z++) {
+                pose(x, 0, z, x >= 6 ? Blocks.SMOOTH_STONE.defaultBlockState() : Blocks.STONE_BRICKS.defaultBlockState());
+            }
+        }
+        for (int z = 47; z <= 51; z++) {
+            pose(8, 1, z, Blocks.SMOOTH_STONE_SLAB.defaultBlockState());
+        }
+        // les murs : socle de pierre, colonnes de quartz, grandes fenêtres
+        for (int x = 9; x <= 23; x++) {
+            for (int z = 43; z <= 55; z++) {
+                boolean bord = x == 9 || x == 23 || z == 43 || z == 55;
+                if (!bord) {
+                    continue;
+                }
+                boolean colonne = (x == 9 || x == 23) && (z - 43) % 4 == 0 || (z == 43 || z == 55) && (x - 9) % 4 == 0;
+                for (int y = 1; y <= 7; y++) {
+                    boolean entree = x == 9 && z >= 48 && z <= 50 && y <= 4;
+                    boolean fenetre = !colonne && y >= 2 && y <= 5 && ((z == 43 || z == 55) ? (x - 9) % 4 == 2 : (z - 43) % 4 == 2) && !(x == 9 && z >= 47 && z <= 51);
+                    if (entree) {
+                        continue;
+                    }
+                    pose(x, y, z, fenetre ? Blocks.GLASS_PANE.defaultBlockState() : colonne ? pilierQ : y == 1 ? Blocks.STONE_BRICKS.defaultBlockState() : y == 7 ? quartz : mur);
+                }
+            }
+        }
+        // le fronton au-dessus de l'entrée, l'horloge et les drapeaux tricolores
+        for (int z = 46; z <= 52; z++) {
+            pose(9, 8, z, quartz);
+        }
+        for (int z = 47; z <= 51; z++) {
+            pose(9, 9, z, quartz);
+        }
+        pose(9, 10, 49, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+        cadre(8, 9, 49, Direction.WEST, new ItemStack(net.minecraft.world.item.Items.CLOCK));
+        Block[] drapeau = {Blocks.BLUE_WALL_BANNER, Blocks.WHITE_WALL_BANNER, Blocks.RED_WALL_BANNER};
+        for (int k = 0; k < 3; k++) {
+            pose(8, 6, 44 + k, drapeau[k].defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.WEST));
+            pose(8, 6, 52 + k, drapeau[k].defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.WEST));
+        }
+        // le toit à la Mansart, en ardoise, et le petit clocher
+        for (int etage = 0; etage < 4; etage++) {
+            for (int x = 9 + etage; x <= 23 - etage; x++) {
+                for (int z = 43 + etage; z <= 55 - etage; z++) {
+                    pose(x, 8 + etage, z, Blocks.DEEPSLATE_TILES.defaultBlockState());
+                }
+            }
+        }
+        for (int y = 12; y <= 14; y++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    boolean coin = Math.abs(dx) == 1 && Math.abs(dz) == 1;
+                    pose(16 + dx, y, 49 + dz, coin ? quartz : y == 14 ? quartz : Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+        pose(16, 15, 49, Blocks.DEEPSLATE_TILE_SLAB.defaultBlockState());
+        pose(16, 13, 49, Blocks.BELL.defaultBlockState().setValue(net.minecraft.world.level.block.BellBlock.ATTACHMENT,
+                net.minecraft.world.level.block.state.properties.BellAttachType.CEILING));
+        // l'intérieur : le hall et son tapis rouge
+        for (int x = 10; x <= 14; x++) {
+            pose(x, 1, 49, Blocks.RED_CARPET.defaultBlockState());
+        }
+        pose(13, 1, 45, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        pose(13, 1, 46, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        pose(13, 2, 45, Blocks.LANTERN.defaultBlockState());
+        pose(11, 1, 44, Blocks.POTTED_FERN.defaultBlockState());
+        pose(11, 1, 54, Blocks.POTTED_FERN.defaultBlockState());
+        for (int z : new int[] {44, 54}) {
+            for (int y = 3; y <= 5; y += 2) {
+                pose(14, y, z, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, false));
+            }
+        }
+        // la cloison : la salle du Conseil (au nord) et le bureau du Président (au sud)
+        for (int z = 44; z <= 54; z++) {
+            for (int y = 1; y <= 7; y++) {
+                boolean porte = (z == 46 || z == 52) && y <= 2;
+                if (!porte) {
+                    pose(15, y, z, mur);
+                }
+            }
+        }
+        for (int x = 16; x <= 22; x++) {
+            for (int y = 1; y <= 7; y++) {
+                pose(x, y, 49, mur);
+            }
+        }
+        // la salle du Conseil, abandonnée : longue table, chaises vides, poussière
+        for (int x = 17; x <= 21; x++) {
+            pose(x, 1, 46, deco("handcrafted:dark_oak_table", Blocks.DARK_OAK_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.TOP)));
+            pose(x, 1, 45, escalier(Blocks.DARK_OAK_STAIRS, Direction.SOUTH));
+            pose(x, 1, 47, escalier(Blocks.DARK_OAK_STAIRS, Direction.NORTH));
+            pose(x, 6, 46, Blocks.COBWEB.defaultBlockState());
+        }
+        for (int x = 16; x <= 22; x++) {
+            pose(x, 1, 44, Blocks.BOOKSHELF.defaultBlockState());
+            pose(x, 2, 44, Blocks.BOOKSHELF.defaultBlockState());
+        }
+        // le bureau du Président : bureau, fauteuil, drapeaux, bibliothèques… dont une qui sonne creux
+        for (int z = 50; z <= 54; z++) {
+            for (int y = 1; y <= 3; y++) {
+                boolean secrete = z == 53 && y <= 2;
+                pose(22, y, z, secrete ? fr.cabane.CabaneBlocks.BIBLIOTHEQUE_SECRETE.get().defaultBlockState() : Blocks.BOOKSHELF.defaultBlockState());
+            }
+        }
+        pose(19, 1, 51, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        pose(19, 1, 52, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        pose(19, 1, 53, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        pose(20, 1, 52, escalier(Blocks.DARK_OAK_STAIRS, Direction.EAST));
+        pose(19, 2, 51, Blocks.LANTERN.defaultBlockState());
+        objet(19, 2, 53, "supplementaries:globe", null);
+        for (int z = 50; z <= 54; z++) {
+            pose(17, 1, z, Blocks.RED_CARPET.defaultBlockState());
+            pose(18, 1, z, Blocks.RED_CARPET.defaultBlockState());
+        }
+        pose(21, 4, 50, Blocks.BLUE_WALL_BANNER.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.WEST));
+        pose(21, 4, 51, Blocks.WHITE_WALL_BANNER.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.WEST));
+        pose(21, 4, 52, Blocks.RED_WALL_BANNER.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.WEST));
+        // la petite pièce cachée derrière la bibliothèque, et le puits d'échelle
+        for (int x = 23; x <= 26; x++) {
+            for (int z = 52; z <= 54; z++) {
+                for (int y = 0; y <= 4; y++) {
+                    boolean dedans = x >= 23 && x <= 25 && z == 53 && y >= 1 && y <= 3;
+                    if (x == 23 && z == 53 && y >= 1 && y <= 2) {
+                        pose(x, y, z, Blocks.AIR.defaultBlockState());
+                    } else if (!dedans) {
+                        pose(x, y, z, y == 4 ? Blocks.DEEPSLATE_TILES.defaultBlockState() : mur);
+                    } else {
+                        pose(x, y, z, Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+        }
+        pose(24, 2, 53, Blocks.SOUL_LANTERN.defaultBlockState());
+        for (int y = 0; y >= -25; y--) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx != 0 || dz != 0) {
+                        pose(25 + dx, y, 53 + dz, dx == -1 ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.POLISHED_DEEPSLATE.defaultBlockState());
+                    }
+                }
+            }
+            pose(25, y, 53, Blocks.LADDER.defaultBlockState().setValue(net.minecraft.world.level.block.LadderBlock.FACING, Direction.EAST));
+        }
+        texte(8.4, 8.6, 49.5, 90F, "{\"text\":\"MAIRIE\",\"color\":\"gold\",\"bold\":true}", 1.6F, 0x00000000, false);
+        texte(8.4, 7.7, 49.5, 90F, "{\"text\":\"LIBERTÉ · ÉGALITÉ · OBÉISSANCE\",\"color\":\"white\"}", 0.55F, 0x00000000, false);
+        titre(5.5, 4.2, 49.5, "LA MAIRIE", "fermée la nuit, pour votre sécurité", 1.2F);
+    }
+
+    /**
+     * Sous la Mairie : le laboratoire du « projet AUGMENTÉ » (tubes, tables d'opération, cellules, carnets).
+     * La Salle Zéro, elle, est au cœur de la forteresse du Sud.
+     */
+    private void laboratoire() {
+        BlockState blanc = Blocks.WHITE_CONCRETE.defaultBlockState();
+        BlockState gris = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
+        BlockState fer = Blocks.IRON_BLOCK.defaultBlockState();
+        // le couloir depuis le bas de l'échelle
+        boite(24, -26, 52, 32, -22, 54, Blocks.POLISHED_DEEPSLATE.defaultBlockState(), Blocks.POLISHED_DEEPSLATE_SLAB.defaultBlockState());
+        // l'échelle descend jusqu'au sol du couloir, accrochée au mur du fond
+        for (int y = -25; y <= -22; y++) {
+            pose(25, y, 53, Blocks.LADDER.defaultBlockState().setValue(net.minecraft.world.level.block.LadderBlock.FACING, Direction.EAST));
+        }
+        pose(29, -23, 53, Blocks.SOUL_LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        // la grande salle du laboratoire
+        boite(32, -26, 44, 48, -20, 62, blanc, blanc);
+        for (int x = 33; x <= 47; x++) {
+            for (int z = 45; z <= 61; z++) {
+                pose(x, -26, z, (x + z) % 2 == 0 ? blanc : gris);
+                if (x % 3 == 0 && z % 3 == 0) {
+                    pose(x, -20, z, Blocks.SEA_LANTERN.defaultBlockState());
+                }
+            }
+        }
+        for (int y = -25; y <= -23; y++) {
+            for (int z = 52; z <= 54; z++) {
+                pose(32, y, z, Blocks.AIR.defaultBlockState());
+            }
+        }
+        // les tubes : des « sujets » qui flottent dans l'eau
+        String[] sujets = {"minecraft:zombie_villager", "minecraft:drowned", "minecraft:husk", "minecraft:pillager", "minecraft:zombie_villager"};
+        for (int k = 0; k < 5; k++) {
+            int x = 34 + k * 3;
+            for (int y = -25; y <= -22; y++) {
+                pose(x - 1, y, 45, Blocks.GLASS.defaultBlockState());
+                pose(x + 1, y, 45, Blocks.GLASS.defaultBlockState());
+                pose(x, y, 46, Blocks.GLASS.defaultBlockState());
+                pose(x, y, 45, y == -22 ? Blocks.GLASS.defaultBlockState() : Blocks.WATER.defaultBlockState());
+            }
+            pose(x, -26, 45, Blocks.SEA_LANTERN.defaultBlockState());
+            figurant(sujets[k], x + 0.5, -25, 45.5);
+            texte(x + 0.5, -21.3, 46.6, 0F, "{\"text\":\"SUJET 0" + (k + 1) + "\",\"color\":\"red\",\"bold\":true}", 0.5F, 0x00000000, false);
+        }
+        // les tables d'opération, les alambics, le pupitre et ses carnets
+        for (int x = 37; x <= 38; x++) {
+            pose(x, -25, 51, fer);
+            pose(x, -24, 51, Blocks.WHITE_CARPET.defaultBlockState());
+            pose(x, -25, 55, fer);
+            pose(x, -24, 55, Blocks.WHITE_CARPET.defaultBlockState());
+        }
+        pose(41, -25, 50, Blocks.SMOOTH_STONE.defaultBlockState());
+        pose(41, -24, 50, Blocks.BREWING_STAND.defaultBlockState());
+        pose(42, -25, 50, Blocks.SMOOTH_STONE.defaultBlockState());
+        pose(42, -24, 50, Blocks.BREWING_STAND.defaultBlockState());
+        pose(43, -25, 50, Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3));
+        pose(44, -25, 50, Blocks.LAVA_CAULDRON.defaultBlockState());
+        pose(41, -25, 56, Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, Direction.WEST));
+        net.minecraft.world.level.block.LecternBlock.tryPlaceBook(null, level, c.offset(41, -25, 56), level.getBlockState(c.offset(41, -25, 56)),
+                fr.cabane.histoire.Histoire.journalDuPresident());
+        // le bureau du docteur, avec le dossier secret
+        pose(46, -25, 55, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        pose(46, -25, 56, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
+        if (level.getBlockEntity(c.offset(46, -25, 56)) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity coffre) {
+            coffre.setItem(0, new ItemStack(fr.cabane.CabaneItems.DOSSIER_SECRET.get()));
+            coffre.setItem(4, fr.cabane.histoire.Histoire.rapportSujet07());
+            coffre.setItem(13, new ItemStack(net.minecraft.world.item.Items.EMERALD, 12));
+            coffre.setItem(22, new ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 2));
+        }
+        pose(46, -24, 55, Blocks.LANTERN.defaultBlockState());
+        texte(47.4, -22, 53.5, 90F, "[{\"text\":\"PROJET AUGMENTÉ\\n\",\"color\":\"red\",\"bold\":true},{\"text\":\"accès réservé au Président\",\"color\":\"white\",\"bold\":false}]", 0.9F, 0x00000000, false);
+        // les cellules, au fond : barreaux, et des prisonniers
+        for (int x = 33; x <= 47; x++) {
+            for (int y = -25; y <= -21; y++) {
+                pose(x, y, 58, x % 4 == 0 ? fer : Blocks.IRON_BARS.defaultBlockState());
+                if (x % 4 == 0) {
+                    for (int z = 59; z <= 61; z++) {
+                        pose(x, y, z, fer);
+                    }
+                }
+            }
+            pose(x, -26, 60, Blocks.MOSSY_COBBLESTONE.defaultBlockState());
+        }
+        figurant("minecraft:zombie_villager", 38.5, -25, 60.5);
+        figurant("minecraft:husk", 46.5, -25, 60.5);
+        texte(42.5, -21.6, 57.6, 180F, "{\"text\":\"SUJET 07 — PIERRE\",\"color\":\"red\"}", 0.45F, 0x00000000, false);
+        // sur le mur du fond : la carte vers la forteresse du Sud, où se cache la Salle Zéro
+        texte(47.4, -23.6, 50.5, 90F, "[{\"text\":\"SALLE ZÉRO\\n\",\"color\":\"dark_red\",\"bold\":true},{\"text\":\"Forteresse du Sud, chez nos amis les Pillards\\n\",\"color\":\"white\",\"bold\":false},{\"text\":\"10 000 pas plein sud\",\"color\":\"gray\",\"bold\":false}]", 0.7F, 0x00000000, false);
+        cadre(47, -24, 49, Direction.WEST, new ItemStack(net.minecraft.world.item.Items.COMPASS));
+    }
+
+    /** Une boîte creuse : sol et murs en {@code mur}, plafond en {@code plafond}, l'intérieur vidé. */
+    private void boite(int x0, int y0, int z0, int x1, int y1, int z1, BlockState mur, BlockState plafond) {
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                for (int y = y0; y <= y1; y++) {
+                    boolean bord = x == x0 || x == x1 || z == z0 || z == z1 || y == y0;
+                    pose(x, y, z, y == y1 ? plafond : bord ? mur : Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+    }
+
+    /** Un mob immobile et éternel (un « sujet » dans un tube, un prisonnier dans sa cellule). */
+    private void figurant(String id, double x, double y, double z) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("id", id);
+        tag.putBoolean("NoAI", true);
+        tag.putBoolean("Silent", true);
+        tag.putBoolean("Invulnerable", true);
+        tag.putBoolean("PersistenceRequired", true);
+        ListTag tags = new ListTag();
+        tags.add(StringTag.valueOf(TAG));
+        tag.put("Tags", tags);
+        Entity e = EntityType.loadEntityRecursive(tag, level, ent -> {
+            ent.moveTo(c.getX() + x, c.getY() + y, c.getZ() + z, 180F, 0F);
+            return ent;
+        });
+        if (e != null) {
+            level.addFreshEntity(e);
+        }
+    }
+
+    /** Pour la commande « /cabane mairie » : construire la Mairie et son secret dans un village déjà fait. */
+    public void mairieEtSecret() {
+        mairie();
+        laboratoire();
+        // on ne réclaire que les chunks de la Mairie et du laboratoire : la commande reste rapide
+        var moteur = level.getChunkSource().getLightEngine();
+        for (int cx = c.getX() >> 4; cx <= (c.getX() + 50) >> 4; cx++) {
+            for (int cz = (c.getZ() + 40) >> 4; cz <= (c.getZ() + 64) >> 4; cz++) {
+                moteur.lightChunk(level.getChunk(cx, cz), false);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ la vie : arbres, buissons, animaux

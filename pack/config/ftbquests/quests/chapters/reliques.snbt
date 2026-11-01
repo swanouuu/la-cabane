@@ -8,7 +8,7 @@
 		id: "cabane:scarabee_dor"
 	}
 	id: "44CD4C5260BE1635"
-	order_index: 4
+	order_index: 5
 	quest_links: [ ]
 	quests: [
 		{
@@ -18,7 +18,7 @@
 			id: "44EDE10E469B20B0"
 			rewards: [
 				{
-					command: "/cabane carte {p} desert 1500"
+					command: "/cabane carte {p} desert 3500"
 					elevate_perms: true
 					id: "46C16C197E968B0E"
 					permission_level: 2
@@ -117,7 +117,7 @@
 			id: "178AE12232445145"
 			rewards: [
 				{
-					command: "/cabane carte {p} jungle 2500"
+					command: "/cabane carte {p} jungle 4000"
 					elevate_perms: true
 					id: "055348BE28D99772"
 					permission_level: 2
@@ -216,7 +216,7 @@
 			id: "675D84D08440B854"
 			rewards: [
 				{
-					command: "/cabane carte {p} ocean 2000"
+					command: "/cabane carte {p} ocean 3500"
 					elevate_perms: true
 					id: "0CBCDD2F723B68B3"
 					permission_level: 2
@@ -315,7 +315,7 @@
 			id: "3E245369C09E7B82"
 			rewards: [
 				{
-					command: "/cabane carte {p} ciel 4500"
+					command: "/cabane carte {p} ciel 6000"
 					elevate_perms: true
 					id: "677714AA3B1687E8"
 					permission_level: 2
@@ -414,7 +414,7 @@
 			id: "6AD7B0781F8385FC"
 			rewards: [
 				{
-					command: "/cabane carte {p} forteresse 3000"
+					command: "/cabane carte {p} forteresse 5000"
 					elevate_perms: true
 					id: "6C694FAB73403C46"
 					permission_level: 2
@@ -513,7 +513,7 @@
 			id: "510D385C84B27B4C"
 			rewards: [
 				{
-					command: "/cabane carte {p} souterrain 2500"
+					command: "/cabane carte {p} souterrain 4000"
 					elevate_perms: true
 					id: "358D76844D2ACE1D"
 					permission_level: 2
@@ -612,7 +612,7 @@
 			id: "1313B185449CA3E3"
 			rewards: [
 				{
-					command: "/cabane carte {p} mecanique 5000"
+					command: "/cabane carte {p} mecanique 7000"
 					elevate_perms: true
 					id: "4A920EAFFAEE6A9D"
 					permission_level: 2

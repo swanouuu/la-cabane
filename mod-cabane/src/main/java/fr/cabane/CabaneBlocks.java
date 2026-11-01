@@ -43,6 +43,16 @@ public final class CabaneBlocks {
     public static final DeferredBlock<fr.cabane.fumee.Fumee.ChichaBlock> CHICHA = BLOCKS.registerBlock("chicha", fr.cabane.fumee.Fumee.ChichaBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1F).sound(SoundType.GLASS).noOcclusion());
 
+    /** Une bibliothèque du bureau du Président, qui pivote d'un clic : le passage vers le laboratoire. */
+    public static final DeferredBlock<fr.cabane.histoire.Histoire.BibliothequeSecrete> BIBLIOTHEQUE_SECRETE = BLOCKS.registerBlock("bibliotheque_secrete",
+            fr.cabane.histoire.Histoire.BibliothequeSecrete::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(-1F, 3_600_000F).sound(SoundType.WOOD).noLootTable());
+    /** Le pupitre de la Salle Zéro, au cœur de la Forteresse du Sud : la Clé y réveille le Président. Incassable. */
+    public static final DeferredBlock<fr.cabane.histoire.Histoire.PupitreBlock> PUPITRE_PRESIDENT = BLOCKS.registerBlock("pupitre_president",
+            fr.cabane.histoire.Histoire.PupitreBlock::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(-1F, 3_600_000F).sound(SoundType.NETHERITE_BLOCK).noOcclusion().noLootTable()
+                    .lightLevel(s -> 7));
+
     public static final DeferredBlock<EtalBlock> ETAL = BLOCKS.registerBlock("etal", EtalBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F, 3_600_000F).sound(SoundType.WOOD).noOcclusion());
 
@@ -60,7 +70,7 @@ public final class CabaneBlocks {
             () -> IMenuTypeExtension.create(EtalMenu::new));
 
     public static final List<DeferredBlock<?>> TOUS = List.of(COMPTOIR, TABLEAU_CONTRATS, BORNE_TERRAIN, ETAL, MACHINE_A_SOUS, TABLE_ROULETTE,
-            TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE, CHICHA);
+            TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE, CHICHA, BIBLIOTHEQUE_SECRETE, PUPITRE_PRESIDENT);
 
     private static DeferredBlock<BlocInteractif> interactif(String nom, Ouverture ouverture) {
         return BLOCKS.registerBlock(nom, p -> new BlocInteractif(p, ouverture),

@@ -16,7 +16,7 @@
     DialogDataSet:[{
         Label:"default",
         Name:"Gérard",
-        Texts:[{Text:"Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là."},{Text:"Je ronfle ? Moi ? Jamais. C'est la jungle qui ronfle."},{Text:"Vegeta crie tous les matins à six heures. Un jour je vais crier plus fort."}],
+        Texts:[{Text:"Le feu de camp, c'était là que le Conseil se réunissait. Avant. Maintenant c'est juste moi et mon tronc."},{Text:"Le feu de camp, c'est MA place. Tu peux t'asseoir, mais pas sur ce tronc-là."},{Text:"Je ronfle ? Moi ? Jamais. C'est la jungle qui ronfle."},{Text:"Vegeta crie tous les matins à six heures. Un jour je vais crier plus fort."}],
         Buttons:[{
           Label:"bye",
           Name:"Pas de souci",

@@ -31,6 +31,10 @@ public final class CabaneEvents {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
+        // en solo, les commandes (/start, /cabane…) sont toujours permises ; sur un vrai serveur, seulement aux admins
+        if (!event.getServer().isDedicatedServer()) {
+            event.getServer().getPlayerList().setAllowCommandsForAllPlayers(true);
+        }
         HubEvents.onServerStarted(event.getServer());
     }
 
@@ -53,6 +57,9 @@ public final class CabaneEvents {
         }
         if (event.getEntity() instanceof ServerPlayer player) {
             Economie.connexion(player);
+            if (!player.server.isDedicatedServer()) {
+                player.server.getPlayerList().sendPlayerPermissionLevel(player);
+            }
             HubEvents.accueillir(player);
             PhoneCalls.sendState(player);
         }

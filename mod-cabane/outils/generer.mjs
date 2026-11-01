@@ -1,6 +1,8 @@
 // Génère les ressources du mod (textures, modèles, traductions, butins, tags, succès, PNJ).
 // Lancer depuis n'importe où :  node mod-cabane/outils/generer.mjs
 import { genererPnj } from "./pnj.mjs";
+import { genererHistoire } from "./histoire.mjs";
+import { genererBoissons, OFFRES_BOISSONS, CONTRATS_BOISSONS } from "./boissons.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -423,6 +425,9 @@ for (const t of ["roulette", "blackjack", "des", "pile_ou_face"]) {
 }
 bloc("roue_fortune", { front: "cabane:block/roue_fortune_front", side: "minecraft:block/dark_oak_planks", top: "minecraft:block/dark_oak_planks" });
 
+genererHistoire({ ecrire, png, lang });
+genererBoissons({ ecrire, png, lang });
+
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
   "item.cabane.classeur": "Classeur de cartes", "item.cabane.ticket_a_gratter": "Ticket à gratter",
@@ -522,6 +527,7 @@ ecrire("assets/cabane/blockstates/partie_table.json", { variants: { "": { model:
 ecrire("assets/cabane/blockstates/chicha.json", { variants: Object.fromEntries(
   [["north", 0], ["east", 90], ["south", 180], ["west", 270]].map(([f, y]) => [`facing=${f}`, { model: "cabane:block/chicha", ...(y ? { y } : {}) }])) });
 ecrire("data/cabane/loot_table/blocks/chicha.json", { type: "minecraft:block", pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: "cabane:chicha" }] }] });
+offres.push(...OFFRES_BOISSONS);
 offres.forEach(([id, item, nombre, prix], i) => ecrire(`data/cabane/boutique/${id}.json`, { item, nombre, prix, ordre: i }));
 
 // ---- les contrats horaires du marché
@@ -534,6 +540,7 @@ const contrats = [
   ["os", "minecraft:bone", 8, 24, 4], ["poudre", "minecraft:gunpowder", 6, 16, 9], ["redstone", "minecraft:redstone", 16, 32, 4],
   ["cuivre", "minecraft:copper_ingot", 8, 32, 5], ["or", "minecraft:gold_ingot", 4, 12, 22], ["lapis", "minecraft:lapis_lazuli", 8, 24, 6],
 ];
+contrats.push(...CONTRATS_BOISSONS);
 contrats.forEach(([id, item, min, max, prix]) => ecrire(`data/cabane/contrats/${id}.json`, { item, min, max, prix_unitaire: prix }));
 
 // ---- la première série de cartes (à remplacer par les vôtres)
@@ -571,6 +578,7 @@ console.log("Ressources générées dans", RES);
   const aConvertir = [];
   if (fs.existsSync(dossierVoix)) {
     for (const fichier of fs.readdirSync(dossierVoix).sort()) {
+      if (/.(txt|md)$/i.test(fichier)) continue;
       const m = fichier.toLowerCase().match(/^([a-z_]+?)(?:[-_ ]?\d+|-.+)?\.([a-z0-9]+)$/);
       if (!m) continue;
       const [, pnj, ext] = m;

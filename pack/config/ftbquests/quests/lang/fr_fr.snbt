@@ -1,10 +1,18 @@
 {
 	chapter.0F76A38B1018536B.title: "&2Agrandir Beauvais"
+	chapter.16AB2FF51EB0851E.title: "&6&lL'Histoire de Beauvais"
 	chapter.44CD4C5260BE1635.title: "&eLes Sept Reliques"
 	chapter.74547F9A4ABCA689.title: "&bLes gens de Beauvais"
 	chapter.775508E513569867.title: "&aLe Village"
 	chapter.7849F1A38AA6D284.title: "&cLes Grands Donjons"
 	chapter.7DF581286AE72B3C.title: "&6Beauvais"
+	quest.01CBF0BA670EB442.quest_desc: [
+		"Au feu de camp, un vieil homme fume la pipe et regarde le ciel. C'est &6Marcel le Conteur&r : il connaît l'histoire de Beauvais mieux que personne."
+		""
+		"Écoutez-le jusqu'au bout (jusqu'à la prophétie), puis cochez cette quête."
+	]
+	quest.01CBF0BA670EB442.quest_subtitle: "Acte I — Les gens du ciel"
+	quest.01CBF0BA670EB442.title: "&6Marcel le Conteur"
 	quest.03F6D4DFAA073670.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -38,6 +46,16 @@
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
 	quest.0C5B8DC2684CD88F.title: "L'Usine Ancienne"
+	quest.0D3F2FBF63AD6E94.quest_desc: [
+		"Les Vindicateurs sont les gros bras des Pillards. Ils frappent fort. Frappez plus fort."
+	]
+	quest.0D3F2FBF63AD6E94.title: "Les brutes à la hache"
+	quest.0DC04F56329BC588.quest_desc: [
+		"Trouvez un avant-poste des Pillards. Dans leurs coffres, de l'or… frappé du sceau de la Mairie ?"
+		""
+		"Comment des pillards peuvent-ils être payés par le Président ? Il faudra fouiller la Mairie."
+	]
+	quest.0DC04F56329BC588.title: "L'avant-poste"
 	quest.0ED2F75EB32984DE.quest_desc: [
 		"Le Président veut une statue. En or. « Petite, mais en or. »"
 		"Livrez l'or, construisez la statue sur la place du quartier neuf, puis cochez cette quête."
@@ -47,10 +65,17 @@
 		"Les charpentiers du village ont besoin de bois. Beaucoup de bois."
 	]
 	quest.118C2DEDB64B2488.title: "Des planches pour le quartier neuf"
+	quest.12B120B96D758D92.quest_desc: [
+		"Dans la Salle Zéro, utilisez la Clé sur le pupitre. Le Président se réveillera, fusionné avec sa machine."
+		""
+		"Il est très, très fort. Venez tous ensemble, avec vos meilleures armes, des potions, des totems. Et ne lâchez rien."
+	]
+	quest.12B120B96D758D92.quest_subtitle: "Le Président Augmenté"
+	quest.12B120B96D758D92.title: "&6&lLibérer Beauvais"
 	quest.1313B185449CA3E3.quest_desc: [
 		"Vestige des fonderies et des citadelles mécaniques."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 5000 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 7000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.1313B185449CA3E3.title: "Indice : Fonderies Oubliées"
 	quest.138C1D24FD05722C.quest_desc: [
@@ -82,7 +107,7 @@
 	quest.178AE12232445145.quest_desc: [
 		"Gardée au plus profond d'un temple englouti par la jungle."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 2500 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 4000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.178AE12232445145.title: "Indice : Temple de la Jungle"
 	quest.183DCC1F588D2578.quest_desc: [
@@ -97,6 +122,13 @@
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
 	quest.1ABE8225987936FB.title: "Trouver : Forteresses Illageoises"
+	quest.1B1A5FCCDEFCE572.quest_desc: [
+		"Avec les Pillards qui rôdent, Beauvais a besoin d'une vraie police (et pas de la garde du Président)."
+		""
+		"Livrez les matériaux, puis construisez un commissariat dans le quartier neuf : un bureau, une cellule, un parking pour la voiture. Cochez quand c'est fini."
+	]
+	quest.1B1A5FCCDEFCE572.quest_subtitle: "Une vraie police pour Beauvais"
+	quest.1B1A5FCCDEFCE572.title: "Le commissariat"
 	quest.1B47B0E50BBD7040.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -137,10 +169,38 @@
 		"Ginette veut ouvrir une école « pour que les jeunes arrêtent de faire des bêtises ». Il faut des livres."
 	]
 	quest.24B3EA48F5667552.title: "L'école de Ginette"
+	quest.25273E17EBD095AA.quest_desc: [
+		"Gérard réclame un bar. Le Hejj aussi, discrètement. Un comptoir, des tonneaux, une terrasse… et de quoi remplir les verres."
+		""
+		"Livrez les tonneaux et les premières bières (des blondes, à brasser ou à acheter chez Mouloud), construisez la taverne, puis cochez."
+		""
+		"Ensuite, vendez vos boissons : le marché rachète bières, vin et sodas dans ses contrats, et vos étals feront le reste."
+	]
+	quest.25273E17EBD095AA.quest_subtitle: "Pour fêter les retours d'expédition"
+	quest.25273E17EBD095AA.title: "La taverne"
+	quest.27216312CFC8D389.quest_desc: [
+		"Les Pillards rôdent dans la jungle et brûlent les récoltes. Montrez-leur que Beauvais a de nouveaux protecteurs."
+	]
+	quest.27216312CFC8D389.quest_subtitle: "Acte II — Ceux qui viennent des marais"
+	quest.27216312CFC8D389.title: "Les Pillards du Sud"
 	quest.2851541B37712639.quest_desc: [
 		"Ginette trouve que tout le monde est trop maigre. Elle prépare une soupe géante."
 	]
 	quest.2851541B37712639.title: "Mange une carotte"
+	quest.2BC7B019F689DA68.quest_desc: [
+		"La nuit, on entend des machines sous la Mairie. Dans le bureau du Président, une des bibliothèques sonne creux…"
+		""
+		"Trouvez le passage secret, et descendez."
+	]
+	quest.2BC7B019F689DA68.quest_subtitle: "Acte III — Ce qu'on entend sous la terre"
+	quest.2BC7B019F689DA68.title: "La Mairie fermée la nuit"
+	quest.2BD3FBE527316C9F.quest_desc: [
+		"Les raids viennent toujours du sud. Une muraille autour du quartier neuf, avec une porte qui ferme, et les Pillards n'auront qu'à bien se tenir."
+		""
+		"Livrez les pierres, construisez les remparts, puis cochez."
+	]
+	quest.2BD3FBE527316C9F.quest_subtitle: "Contre les raids du sud"
+	quest.2BD3FBE527316C9F.title: "Les remparts"
 	quest.2DC0C447D1E4AB1D.quest_desc: [
 		"Appuie sur &eN&r (ou clic droit avec le téléphone) et choisis ton numéro à 3 ou 4 chiffres."
 		""
@@ -189,6 +249,13 @@
 		"Nyota prépare des remèdes pour les explorateurs qui partent loin."
 	]
 	quest.3B3D0695C73A80A5.title: "Les remèdes de Nyota"
+	quest.3BE3E5007AAA200A.quest_desc: [
+		"Beauvais est libre. Pierre a retrouvé le feu de camp, et le Conseil des Anciens se réunit à nouveau."
+		""
+		"Allez écouter Pierre, puis rendez une petite visite à l'ancien président, dans sa cellule sous la Mairie. Il a sûrement une consultation citoyenne à vous proposer."
+	]
+	quest.3BE3E5007AAA200A.quest_subtitle: "Épilogue"
+	quest.3BE3E5007AAA200A.title: "Le Conseil des Anciens"
 	quest.3CC4A709D08884FC.quest_desc: [
 		"Martine veut que tu dises à Vegeta, près de la tour de guet, que sa coiffure est ridicule."
 		"Va lui parler (à tes risques), puis coche la quête."
@@ -201,7 +268,7 @@
 	quest.3E245369C09E7B82.quest_desc: [
 		"Cachée dans les forteresses qui flottent au-dessus des nuages."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 4500 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 6000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.3E245369C09E7B82.title: "Indice : Citadelles du Ciel"
 	quest.401F3F3D38522062.quest_desc: [
@@ -219,7 +286,7 @@
 	quest.44EDE10E469B20B0.quest_desc: [
 		"Trouvé dans le tombeau du Pharaon, au cœur d'un temple du désert."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 1500 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 3500 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.44EDE10E469B20B0.title: "Indice : Temple du Désert"
 	quest.45A9B3AB9BA55F7F.quest_desc: [
@@ -237,6 +304,12 @@
 	]
 	quest.46E951E0C9BD2820.quest_subtitle: "Faire grandir le village"
 	quest.46E951E0C9BD2820.title: "&6Le grand plan du Hejj"
+	quest.47A5313EBBF149FA.quest_desc: [
+		"Le Président se tient sur la place, entouré de sa garde masquée. Allez le saluer. Souriez : il sourit beaucoup, lui aussi."
+		""
+		"Retenez bien ce qu'il dit. Et ce qu'il ne dit pas. Puis cochez."
+	]
+	quest.47A5313EBBF149FA.title: "Monsieur le Président"
 	quest.47A7652B7F5C287E.quest_desc: [
 		"« Du travail ? Je traverse la rue et je vous en trouve ! » Le Président veut que tu remplisses trois contrats de Mehdi."
 		"Fais-le, puis coche la quête."
@@ -260,6 +333,13 @@
 		"Entre dans le donjon. Méfie-toi, ses gardiens ne t'attendent pas les bras ouverts."
 	]
 	quest.49A7BD08274ACF97.title: "Trouver : Monument des Profondeurs"
+	quest.4D25A24F8001BCB4.quest_desc: [
+		"Un jour, les Pillards du Sud marcheront sur le village (c'est l'hôte qui décide quand !). Ce jour-là, soyez prêts."
+		""
+		"Repoussez-les tous, protégez les habitants, puis cochez cette quête."
+	]
+	quest.4D25A24F8001BCB4.quest_subtitle: "Quand ils attaqueront…"
+	quest.4D25A24F8001BCB4.title: "&cDéfendre Beauvais"
 	quest.4EB5D2C754679374.quest_desc: [
 		"Urga porte des lingots. Elle en veut plus. Toujours plus."
 	]
@@ -267,9 +347,16 @@
 	quest.510D385C84B27B4C.quest_desc: [
 		"Scellé dans la salle du trésor d'une forteresse enfouie."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 2500 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 4000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.510D385C84B27B4C.title: "Indice : Forteresse Souterraine"
+	quest.52C8F8B5C2EEFC5F.quest_desc: [
+		"Seules les Sept Reliques peuvent ouvrir la Salle Zéro. Le Président les a fait cacher très loin, dans les pires donjons du monde."
+		""
+		"Suivez le chapitre &eLes Sept Reliques&r : réunissez-les toutes. Brokk en forgera une clé."
+	]
+	quest.52C8F8B5C2EEFC5F.quest_subtitle: "Acte IV — Aux quatre coins du monde"
+	quest.52C8F8B5C2EEFC5F.title: "&eLes Sept Reliques"
 	quest.52E14CF141DF0919.quest_desc: [
 		"Les sept reliques sont de retour sur le comptoir."
 		""
@@ -292,10 +379,16 @@
 	quest.568AFD2416050B14.quest_desc: [
 		"Votre avion a pris feu au-dessus de la jungle, mais vous avez sauté à temps. Vous voilà à Beauvais."
 		""
-		"Allez parler au &6Hejj du Village&r devant la Grande Cabane : il vous expliquera tout. Puis cochez cette quête."
+		"Allez écouter &6Marcel le Conteur&r, au feu de camp : il vous racontera l'histoire du village (le chapitre &6L'Histoire de Beauvais&r commence là). Le &6Hejj du Village&r, devant la Grande Cabane, vous expliquera le reste. Puis cochez cette quête."
 	]
 	quest.568AFD2416050B14.quest_subtitle: "Le début de tout"
 	quest.568AFD2416050B14.title: "Bienvenue à Beauvais"
+	quest.575C2983B036C8A6.quest_desc: [
+		"Le coffre du laboratoire contient un dossier, le carnet du Président et le rapport du Sujet 07. Tout y est : la potion verte, les Pillards payés, la Salle Zéro."
+		""
+		"Gardez le dossier : c'est la preuve. Et lisez le carnet…"
+	]
+	quest.575C2983B036C8A6.title: "Le dossier « Projet Augmenté »"
 	quest.58089F70BF263FD2.quest_desc: [
 		"Jacques a cassé son balai à force de balayer. Il lui faut de quoi en faire un neuf."
 	]
@@ -324,6 +417,12 @@
 		"Francis veut des tapis partout « pour étouffer les pas des gens de l'avion »."
 	]
 	quest.5D347F22EEDC08B3.title: "Pas de bruit après minuit"
+	quest.5DFF817B33E4072A.quest_desc: [
+		"Au fond du laboratoire, des cellules. Dans l'une d'elles, un homme qui parle encore : Pierre, « parti travailler à la capitale »."
+		""
+		"Écoutez ce qu'il sait, puis cochez."
+	]
+	quest.5DFF817B33E4072A.title: "Le Sujet 07"
 	quest.61BC56987E3E4478.quest_desc: [
 		"Vestige des fonderies et des citadelles mécaniques."
 		""
@@ -357,13 +456,17 @@
 	quest.675D84D08440B854.quest_desc: [
 		"Elle repose dans un monument au fond de l'océan."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 2000 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 3500 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.675D84D08440B854.title: "Indice : Monument des Profondeurs"
 	quest.684BED4BD158F907.quest_desc: [
 		"24 lingots de fer pour la forge du village."
 	]
 	quest.684BED4BD158F907.title: "Le forgeron a besoin de fer"
+	quest.688714D5D7460A33.quest_desc: [
+		"Les blessés des raids et des expéditions ont besoin de soins. Nyota veut des lits propres et de quoi préparer ses remèdes."
+	]
+	quest.688714D5D7460A33.title: "L'infirmerie de Nyota"
 	quest.69337CA8CD88663A.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]
@@ -375,7 +478,7 @@
 	quest.6AD7B0781F8385FC.quest_desc: [
 		"Le trésor le mieux gardé des forteresses illageoises."
 		""
-		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 3000 blocs de la cabane. Prévoyez le voyage !"
+		"Coche cette quête pour recevoir une &6carte au trésor&r. Elle mène à un donjon à environ 5000 blocs de la cabane. Prévoyez le voyage !"
 	]
 	quest.6AD7B0781F8385FC.title: "Indice : Forteresses Illageoises"
 	quest.6B09984DCFEFAC34.quest_desc: [
@@ -418,6 +521,15 @@
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
 	quest.73A740F15D08ECBE.title: "L'Acropole"
+	quest.753BE5C735570076.quest_desc: [
+		"À 10 000 blocs plein sud se dresse la Forteresse du Sud, le repaire des Pillards. Au cœur du donjon : la Salle Zéro."
+		""
+		"Tapez &e/cabane forteresse&r pour ses coordonnées. Pour l'instant elle est scellée : c'est pour plus tard ! L'hôte l'ouvrira quand le moment sera venu."
+		""
+		"Allez la voir de vos yeux, puis cochez."
+	]
+	quest.753BE5C735570076.quest_subtitle: "Acte V — Le repaire"
+	quest.753BE5C735570076.title: "&4La Forteresse du Sud"
 	quest.758C2C41EB15DFBC.quest_desc: [
 		"Un des grands donjons du monde. Trouve-le, entre, et ressors vivant."
 	]
@@ -430,6 +542,12 @@
 		"Karim veut une carte des environs dessinée par toi. « Chouf, on verra si tu sais tenir une boussole. »"
 	]
 	quest.76B1F2887A20E368.title: "Une carte pour Karim"
+	quest.7884DA74F6956A35.quest_desc: [
+		"Les villageois regardent les gens du ciel de travers. Parlez à trois d'entre eux : chacun a une histoire de raid ou de disparition à raconter."
+		""
+		"Jean, Monique, Thierry, Ginette… choisissez. Puis cochez."
+	]
+	quest.7884DA74F6956A35.title: "Ceux qui se méfient"
 	quest.788DD4E54A6A6223.quest_desc: [
 		"Le Hejj a rêvé d'une tour plus haute que les arbres géants. Construisez-la : au moins 60 blocs de haut."
 	]
