@@ -1,0 +1,180 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "cabane:block/labo_metal",
+    "metal": "cabane:block/labo_metal",
+    "danger": "cabane:block/labo_danger",
+    "bouton": "cabane:block/labo_bouton"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        1,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "up": {
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        1,
+        5
+      ],
+      "to": [
+        11,
+        11,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "up": {
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        11,
+        2
+      ],
+      "to": [
+        14,
+        13,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "up": {
+          "texture": "#danger"
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        13,
+        4.5
+      ],
+      "to": [
+        11.5,
+        14.5,
+        11.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bouton"
+        },
+        "south": {
+          "texture": "#bouton"
+        },
+        "east": {
+          "texture": "#bouton"
+        },
+        "west": {
+          "texture": "#bouton"
+        },
+        "down": {
+          "texture": "#bouton"
+        },
+        "up": {
+          "texture": "#bouton"
+        }
+      },
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      }
+    },
+    {
+      "from": [
+        5.5,
+        14.5,
+        5.5
+      ],
+      "to": [
+        10.5,
+        15.5,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bouton"
+        },
+        "south": {
+          "texture": "#bouton"
+        },
+        "east": {
+          "texture": "#bouton"
+        },
+        "west": {
+          "texture": "#bouton"
+        },
+        "down": {
+          "texture": "#bouton"
+        },
+        "up": {
+          "texture": "#bouton"
+        }
+      },
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      }
+    }
+  ]
+}

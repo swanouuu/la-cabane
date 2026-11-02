@@ -1,0 +1,13 @@
+{
+  "type": "cabane:laboratoire",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:laboratoire",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

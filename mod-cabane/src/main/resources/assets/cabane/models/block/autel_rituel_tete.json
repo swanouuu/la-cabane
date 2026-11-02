@@ -1,0 +1,74 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "cabane:block/labo_autel_cote",
+    "cote": "cabane:block/labo_autel_cote",
+    "dessus": "cabane:block/labo_autel_dessus"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        11,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#cote"
+        },
+        "south": {
+          "texture": "#cote"
+        },
+        "east": {
+          "texture": "#cote"
+        },
+        "west": {
+          "texture": "#cote"
+        },
+        "down": {
+          "texture": "#cote"
+        },
+        "up": {
+          "texture": "#dessus"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        11,
+        1
+      ],
+      "to": [
+        13,
+        12.5,
+        4.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#cote"
+        },
+        "south": {
+          "texture": "#cote"
+        },
+        "east": {
+          "texture": "#cote"
+        },
+        "west": {
+          "texture": "#cote"
+        },
+        "down": {
+          "texture": "#cote"
+        },
+        "up": {
+          "texture": "#cote"
+        }
+      }
+    }
+  ]
+}

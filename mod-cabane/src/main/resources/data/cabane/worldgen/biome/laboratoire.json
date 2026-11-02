@@ -1,0 +1,40 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.4,
+  "downfall": 0,
+  "effects": {
+    "sky_color": 0,
+    "fog_color": 1053712,
+    "water_color": 6265404,
+    "water_fog_color": 1846802,
+    "grass_color": 4872762,
+    "foliage_color": 4872762,
+    "ambient_sound": "minecraft:ambient.basalt_deltas.loop",
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 2400,
+      "block_search_extent": 8,
+      "offset": 2
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.soul_sand_valley.additions",
+      "tick_chance": 0.0111
+    },
+    "particle": {
+      "options": {
+        "type": "minecraft:white_ash"
+      },
+      "probability": 0.006
+    },
+    "music": {
+      "sound": "minecraft:music_disc.13",
+      "min_delay": 6000,
+      "max_delay": 14000,
+      "replace_current_music": true
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {},
+  "features": []
+}

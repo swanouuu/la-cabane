@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,part=head": {
+      "model": "cabane:block/autel_rituel_tete"
+    },
+    "facing=north,part=foot": {
+      "model": "cabane:block/autel_rituel_pieds"
+    },
+    "facing=east,part=head": {
+      "model": "cabane:block/autel_rituel_tete",
+      "y": 90
+    },
+    "facing=east,part=foot": {
+      "model": "cabane:block/autel_rituel_pieds",
+      "y": 90
+    },
+    "facing=south,part=head": {
+      "model": "cabane:block/autel_rituel_tete",
+      "y": 180
+    },
+    "facing=south,part=foot": {
+      "model": "cabane:block/autel_rituel_pieds",
+      "y": 180
+    },
+    "facing=west,part=head": {
+      "model": "cabane:block/autel_rituel_tete",
+      "y": 270
+    },
+    "facing=west,part=foot": {
+      "model": "cabane:block/autel_rituel_pieds",
+      "y": 270
+    }
+  }
+}

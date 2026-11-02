@@ -103,5 +103,11 @@
   "subtitles.cabane.voix": "Un habitant parle",
   "item.cabane.photo": "Photo imprimée",
   "entity.cabane.tableau_photo": "Photo accrochée",
-  "subtitles.cabane.voiture": "Voiture de police"
+  "subtitles.cabane.voiture": "Voiture de police",
+  "block.cabane.terminal_labo": "Terminal du Laboratoire",
+  "block.cabane.bouton_retour": "Bouton de retour",
+  "block.cabane.table_experiences": "Table d'expériences",
+  "block.cabane.autel_rituel": "Autel du rituel",
+  "item.cabane.sceau_rituel": "Sceau du rituel",
+  "biome.cabane.laboratoire": "Le Laboratoire"
 }

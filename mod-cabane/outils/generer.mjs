@@ -5,6 +5,7 @@ import { genererHistoire } from "./histoire.mjs";
 import { genererBoissons, OFFRES_BOISSONS, CONTRATS_BOISSONS } from "./boissons.mjs";
 import { genererMarcheNoir, OFFRES_NOIR } from "./marche-noir.mjs";
 import { genererAccessoires, OFFRES_ACCESSOIRES } from "./accessoires.mjs";
+import { genererLabo } from "./labo.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -431,6 +432,7 @@ genererHistoire({ ecrire, png, lang });
 genererBoissons({ ecrire, png, lang });
 genererMarcheNoir({ ecrire, png, lang });
 genererAccessoires({ ecrire, png, lang });
+genererLabo({ ecrire, png, lang });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
