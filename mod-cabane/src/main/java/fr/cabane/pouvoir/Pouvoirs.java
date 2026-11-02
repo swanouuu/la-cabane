@@ -67,7 +67,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Maudit.NOM, Maudit.NOM2);
+    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -148,7 +148,7 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) ? 2 : 1;
+                return pouvoir.equals(Hachibi.NOM2) ? 4 : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) ? 2 : 1;
             }
         }
 
@@ -317,8 +317,8 @@ public final class Pouvoirs {
         }
         EVEILLES.put(joueur.getUUID(), niveau + 1);
         armure(joueur, niveau + 1);
-        if (elu.pouvoir().equals(Hachibi.NOM)) {
-            Hachibi.eveiller(joueur);
+        if (Hachibi.est(elu.pouvoir())) {
+            Hachibi.eveiller(joueur, elu.pouvoir().equals(Hachibi.NOM2) ? niveau + 1 : 0);
         }
         if (Maudit.est(elu.pouvoir())) {
             Maudit.eveiller(joueur, niveau + 1);
@@ -334,12 +334,12 @@ public final class Pouvoirs {
 
     /** Les pouvoirs qui vont ensemble (on passe de l'un à l'autre sans s'endormir) : les deux Susano, les deux marques. */
     private static String famille(String pouvoir) {
-        return pouvoir.startsWith("susano") ? "susano" : Maudit.est(pouvoir) ? Maudit.NOM : pouvoir;
+        return pouvoir.startsWith("susano") ? "susano" : Maudit.est(pouvoir) ? Maudit.NOM : Hachibi.est(pouvoir) ? Hachibi.NOM : pouvoir;
     }
 
     private static boolean hachibi(ServerPlayer joueur) {
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
-        return elu != null && elu.pouvoir().equals(Hachibi.NOM);
+        return elu != null && Hachibi.est(elu.pouvoir());
     }
 
     private static final net.minecraft.resources.ResourceLocation ARMURE = Cabane.id("pouvoir_armure");
@@ -353,8 +353,11 @@ public final class Pouvoirs {
      */
     private static void armure(ServerPlayer joueur, int niveau) {
         boolean fer = Maudit.est(pouvoir(joueur));
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : 20);
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE, niveau == 0 || fer ? 0 : niveau >= 2 ? 12 : 8);
+        // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
+        boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : 20);
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE,
+                niveau == 0 || fer ? 0 : bete ? 10 : niveau >= 2 && !pouvoir(joueur).equals(Hachibi.NOM2) ? 12 : 8);
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, niveau >= 2 ? 0.4 : 0);
     }
 
@@ -709,8 +712,8 @@ public final class Pouvoirs {
         for (String pouvoir : LISTE) {
             // Hachibi et la marque maudite ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (pouvoir.equals(Hachibi.NOM) || Maudit.est(pouvoir)) {
-                Couleur propre = pouvoir.equals(Hachibi.NOM) ? Couleur.ROUGE : Couleur.VIOLET;
+            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir)) {
+                Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))

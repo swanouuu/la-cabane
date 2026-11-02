@@ -142,7 +142,7 @@ public final class ClientSusano {
             return;
         }
         // Hachibi et la marque maudite ont leur propre dessin
-        if (p.pouvoir().equals(fr.cabane.pouvoir.Hachibi.NOM)) {
+        if (fr.cabane.pouvoir.Hachibi.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientMaudit.oublier(p.joueur());
             ClientHachibi.recevoir(p);

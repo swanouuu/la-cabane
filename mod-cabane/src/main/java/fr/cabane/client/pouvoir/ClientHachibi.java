@@ -84,6 +84,20 @@ public final class ClientHachibi {
     private static final class Hachi {
         long debut;
         long fin = -1;
+        /** 0 : Hachibi ; 1 à 4 : le niveau de Hachibi 2 (manteau, bête, bête aux os, poulpe), et depuis quand. */
+        int forme;
+        long formeDebut = -1;
+        /** Niveau 4 : le dernier coup de tentacule (et sa cible, -1 : aucune), le dernier balayage. */
+        long fouet = -1;
+        int fouetCible = -1;
+        Vec3 fouetVers;
+        long balayage = -1;
+        /** La saisie : ce que tient la tentacule (-1 : rien), depuis quand ; le dernier coup de serrage. */
+        int prise = -1;
+        long priseDebut = -1;
+        long serre = -1;
+        /** La bombe en cours : 0 la violette, 1 la grosse, 2 la noire. */
+        int genre;
         boolean bete;
         long beteDebut = -1;
         long beteFin = -1;
@@ -108,6 +122,9 @@ public final class ClientHachibi {
     private static final Map<UUID, Hachi> HACHIS = new HashMap<>();
     private static long dernierClic;
     private static boolean accroupiAvant;
+    /** Niveau 4 : quand on s'est accroupi, et si on a attrapé quelqu'un depuis (alors la bombe ne part pas). */
+    private static long accroupiDebut;
+    private static boolean saisieFaite;
     private static long secousse = -1;
 
     private static double secondes(long depuis) {
@@ -157,6 +174,10 @@ public final class ClientHachibi {
                 h.tPrecedent = p.annonce() ? -1 : 10;
                 HACHIS.put(p.joueur(), h);
             }
+            int forme = p.pouvoir().equals(Hachibi.NOM2) ? p.niveau() : 0;
+            if (forme != h.forme) {
+                changerForme(h, forme, p.annonce() ? maintenant : maintenant - 10_000_000_000L, joueur);
+            }
         } else if (h != null) {
             if (!p.annonce()) {
                 HACHIS.remove(p.joueur());
@@ -168,6 +189,49 @@ public final class ClientHachibi {
                 for (int i = 0; i < 20; i++) {
                     mc.level.addParticle(rouge(1.2F), joueur.getX() + aleat(0.6), joueur.getY() + HASARD.nextDouble() * 2, joueur.getZ() + aleat(0.6), 0, 0.05, 0);
                 }
+            }
+        }
+    }
+
+    /**
+     * Hachibi 2 passe à un autre niveau : la bête sort de sa bulle (niveau 2), le squelette pousse sur elle avec deux
+     * queues de plus (niveau 3), puis elle éclate et il en ressort lui-même, les tentacules dans le dos (niveau 4).
+     */
+    private static void changerForme(Hachi h, int forme, long quand, Player joueur) {
+        Minecraft mc = Minecraft.getInstance();
+        int avant = h.forme;
+        h.forme = forme;
+        h.formeDebut = quand;
+        if ((forme == 2 || forme == 3) && !h.bete) {
+            h.bete = true;
+            h.beteDebut = quand;
+            h.tbPrecedent = quand < System.nanoTime() - 1_000_000_000L ? 10 : -1;
+            h.course = -1;
+        } else if (forme != 2 && forme != 3 && h.bete) {
+            h.bete = false;
+            h.beteFin = quand;
+            h.charge = -1;
+        }
+        if (joueur == null || quand < System.nanoTime() - 1_000_000_000L) {
+            return;
+        }
+        if (forme == 2) {
+            son(joueur, SoundEvents.RAVAGER_ROAR, 1F, 0.7F);
+            son(joueur, SoundEvents.ENDER_DRAGON_GROWL, 0.7F, 1.2F);
+        } else if (forme == 3) {
+            son(joueur, SoundEvents.SKELETON_HORSE_DEATH, 1F, 0.5F);
+            son(joueur, SoundEvents.RAVAGER_ROAR, 1F, 0.5F);
+            son(joueur, SoundEvents.WITHER_SKELETON_AMBIENT, 1F, 0.6F);
+        } else if (forme == 4) {
+            son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.7F, 1.3F);
+            son(joueur, SoundEvents.SQUID_SQUIRT, 1.4F, 0.5F);
+            son(joueur, SoundEvents.ELDER_GUARDIAN_AMBIENT, 1F, 0.8F);
+        }
+        if (forme > avant && forme >= 3) {
+            for (int i = 0; i < 40; i++) {
+                double a = HASARD.nextDouble() * Math.PI * 2;
+                mc.level.addParticle(rouge(1.5F), joueur.getX() + Math.cos(a) * 0.6, joueur.getY() + 0.2 + HASARD.nextDouble() * 2, joueur.getZ() + Math.sin(a) * 0.6,
+                        Math.cos(a) * 0.25, 0.05, Math.sin(a) * 0.25);
             }
         }
     }
@@ -216,6 +280,46 @@ public final class ClientHachibi {
                     }
                 }
             }
+            case Hachibi.GESTE_FOUET -> {
+                h.fouet = maintenant;
+                h.fouetCible = p.cible();
+                h.fouetVers = null;
+                if (joueur != null) {
+                    son(joueur, SoundEvents.SLIME_JUMP, 1F, 0.5F);
+                }
+            }
+            case Hachibi.GESTE_PRISE -> {
+                if (p.cible() >= 0) {
+                    h.prise = p.cible();
+                    h.priseDebut = maintenant;
+                    if (joueur != null) {
+                        son(joueur, SoundEvents.SLIME_JUMP, 1.2F, 0.4F);
+                    }
+                } else {
+                    h.prise = -1;
+                }
+            }
+            case Hachibi.GESTE_SERRE -> {
+                h.serre = maintenant;
+                if (mc.level.getEntity(p.cible()) instanceof net.minecraft.world.entity.Entity proie) {
+                    for (int i = 0; i < 20; i++) {
+                        mc.level.addParticle(rouge(1.2F), proie.getX() + aleat(0.5), proie.getY() + HASARD.nextDouble() * proie.getBbHeight(),
+                                proie.getZ() + aleat(0.5), aleat(0.1), 0.05, aleat(0.1));
+                    }
+                }
+            }
+            case Hachibi.GESTE_LANCE -> {
+                h.prise = -1;
+                if (joueur != null) {
+                    son(joueur, SoundEvents.PLAYER_ATTACK_SWEEP, 1.2F, 0.6F);
+                }
+            }
+            case Hachibi.GESTE_BALAYAGE -> {
+                h.balayage = maintenant;
+                if (joueur != null) {
+                    son(joueur, SoundEvents.SLIME_SQUISH, 1.2F, 0.5F);
+                }
+            }
             case Hachibi.GESTE_COURSE -> {
                 if (p.cible() == 1) {
                     h.course = maintenant;
@@ -241,6 +345,7 @@ public final class ClientHachibi {
             return;
         }
         long maintenant = System.nanoTime();
+        h.genre = p.genre();
         switch (p.etape()) {
             case 0 -> h.charge = maintenant;
             case 1 -> {
@@ -270,7 +375,7 @@ public final class ClientHachibi {
      */
     public static void poser(PlayerModel<?> modele, Player joueur) {
         Hachi h = HACHIS.get(joueur.getUUID());
-        if (!actif(h)) {
+        if (!actif(h) || h.forme == 4) {
             return;
         }
         double t = secondes(h.debut);
@@ -542,17 +647,53 @@ public final class ClientHachibi {
         modele.head.translateAndRotate(ps);
         oreilles(c, ps, OREILLE, 20, lumiere, 0xFFFFFFFF, false);
         ps.popPose();
+        // Hachibi 2, niveau 3 : le squelette pousse sur la bête (la tête est encore grosse : le crâne la suit)
+        boolean os = h.forme == 3;
+        if (os) {
+            ClientSquelette.dessiner(modele, ps, buffers, lumiere, joueur.getSkin().model() == PlayerSkin.Model.SLIM,
+                    (float) lisse(secondes(h.formeDebut) / 0.8));
+            c = buffers.getBuffer(RenderType.entityCutoutNoCull(BETE));
+        }
         grosseTete(modele, 1);
         ps.pushPose();
         modele.body.translateAndRotate(ps);
         float contre = 80 * h.quatre;
         float nouvelles = (float) lisse((tb - 0.9) / (TRANSFORMATION - 0.9));
-        float[][] angles = {{-14, 40}, {14, 40}, {-38, 30}, {38, 30}};
-        for (int i = 0; i < 4; i++) {
-            float pousse = i < 2 ? 1 : Mth.clamp(nouvelles * 2 - (i - 2), 0, 1);
-            queue(c, ps, angles[i][0], angles[i][1], QUEUE_LARGEUR, QUEUE_LONGUEUR, QUEUE_MORCEAUX, t, i, pousse, contre, lumiere, 0xFFFFFFFF, false);
+        // au niveau 3, six queues en éventail, plus épaisses ; les deux dernières poussent avec le squelette
+        float[][] angles = os ? new float[][]{{-12, 46}, {12, 46}, {-34, 36}, {34, 36}, {-56, 26}, {56, 26}} : new float[][]{{-14, 40}, {14, 40}, {-38, 30}, {38, 30}};
+        float epais = os ? 1.25F : 1;
+        float sixieme = (float) lisse((secondes(h.formeDebut) - 0.2) / 0.8);
+        for (int i = 0; i < angles.length; i++) {
+            float pousse = i < 2 ? 1 : i < 4 ? Mth.clamp(nouvelles * 2 - (i - 2), 0, 1) : Mth.clamp(sixieme * 2 - (i - 4), 0, 1);
+            queue(c, ps, angles[i][0], angles[i][1], QUEUE_LARGEUR * epais, QUEUE_LONGUEUR * (os ? 1.1F : 1), QUEUE_MORCEAUX, t, i, pousse, contre, lumiere,
+                    0xFFFFFFFF, false);
         }
         ps.popPose();
+        ps.popPose();
+    }
+
+    /**
+     * Hachibi 2, niveau 4 : le joueur, dessiné par le jeu, et ses huit tentacules collées au bas de son dos (elles
+     * suivent son corps). Celle qui fouette ou balaie est dessinée à part, dans le monde.
+     */
+    private static void tentacules(RenderPlayerEvent.Post event, Hachi h, AbstractClientPlayer joueur) {
+        PoseStack ps = event.getPoseStack();
+        float partiel = event.getPartialTick();
+        PlayerModel<AbstractClientPlayer> modele = event.getRenderer().getModel();
+        float k = (float) (1 - Math.pow(1 - Mth.clamp(secondes(h.formeDebut) / 0.8, 0, 1), 3));
+        if (h.fin >= 0) {
+            k *= 1 - (float) lisse(secondes(h.fin) / DISPARITION);
+        }
+        int sauf = (h.fouet >= 0 && secondes(h.fouet) < ClientPoulpe.DUREE_FOUET ? 1 << ClientPoulpe.FOUET : 0)
+                | (h.balayage >= 0 && secondes(h.balayage) < ClientPoulpe.DUREE_BALAYAGE ? 1 << ClientPoulpe.BALAI : 0)
+                | (h.prise >= 0 ? 1 << ClientPoulpe.PRISE : 0);
+        ps.pushPose();
+        repereModele(ps, joueur, partiel, 1);
+        modele.body.translateAndRotate(ps);
+        ps.scale(1 / 16F, 1 / 16F, 1 / 16F);
+        ps.scale(1, -1, -1);
+        ps.translate(0, -24, 0);
+        ClientPoulpe.toutes(ClientPoulpe.tampon(event.getMultiBufferSource()), ps.last(), event.getPackedLight(), (joueur.tickCount + partiel) / 20.0, k, sauf);
         ps.popPose();
     }
 
@@ -617,19 +758,70 @@ public final class ClientHachibi {
                 }
             }
             dessinerBombe(buffers, m, camera, h, joueur, partiel);
+            if (joueur != null && h.forme == 4 && !joueur.isInvisible()) {
+                coups(ps, buffers, camera, h, joueur, partiel);
+            }
         }
         buffers.endBatch(Types.TRANSLUCIDE);
         buffers.endBatch(Types.LUMIERE);
+        buffers.endBatch(ClientPoulpe.type());
     }
+
+    /**
+     * Niveau 4 : la tentacule qui fouette (vers sa cible, ou droit devant à 9 blocs) et celle qui balaie, dessinées dans
+     * le monde (on les voit aussi en première personne), dans le repère de son corps.
+     */
+    private static void coups(PoseStack ps, MultiBufferSource buffers, Vec3 camera, Hachi h, Player joueur, float partiel) {
+        double tf = h.fouet < 0 ? 9 : secondes(h.fouet) / ClientPoulpe.DUREE_FOUET;
+        double tb = h.balayage < 0 ? 9 : secondes(h.balayage) / ClientPoulpe.DUREE_BALAYAGE;
+        if (tf >= 1 && tb >= 1 && h.prise < 0) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        float lacet = Mth.rotLerp(partiel, joueur.yBodyRotO, joueur.yBodyRot);
+        Vec3 pied = joueur.getPosition(partiel);
+        float echelle = 0.9375F / 16;
+        int lumiere = net.minecraft.client.renderer.LevelRenderer.getLightColor(mc.level, joueur.blockPosition().above());
+        ps.pushPose();
+        ps.translate(pied.x - camera.x, pied.y - camera.y, pied.z - camera.z);
+        ps.mulPose(Axis.YP.rotationDegrees(-lacet));
+        ps.scale(echelle, echelle, echelle);
+        if (tf < 1) {
+            // la cible, ramenée dans le repère de son corps (en pixels du modèle)
+            Vec3 vers = new Vec3(0, 20, 9 / echelle);
+            if (h.fouetCible >= 0 && mc.level.getEntity(h.fouetCible) instanceof net.minecraft.world.entity.Entity cible) {
+                Vec3 d = cible.getPosition(partiel).add(0, cible.getBbHeight() * 0.55, 0).subtract(pied);
+                double a = Math.toRadians(lacet);
+                vers = new Vec3(d.x * Math.cos(a) + d.z * Math.sin(a), d.y, -d.x * Math.sin(a) + d.z * Math.cos(a)).scale(1 / echelle);
+            }
+            ClientPoulpe.fouet(ClientPoulpe.tampon(buffers), ps.last(), lumiere, vers, tf);
+        }
+        if (tb < 1) {
+            ClientPoulpe.balayage(ClientPoulpe.tampon(buffers), ps.last(), lumiere, tb);
+        }
+        if (h.prise >= 0 && mc.level.getEntity(h.prise) instanceof net.minecraft.world.entity.Entity proie) {
+            Vec3 d = proie.getPosition(partiel).add(0, proie.getBbHeight() * 0.5, 0).subtract(pied);
+            double a = Math.toRadians(lacet);
+            Vec3 vers = new Vec3(d.x * Math.cos(a) + d.z * Math.sin(a), d.y, -d.x * Math.sin(a) + d.z * Math.cos(a)).scale(1 / echelle);
+            double serre = h.serre < 0 ? 0 : Math.max(0, 1 - secondes(h.serre) / 0.35);
+            ClientPoulpe.saisie(ClientPoulpe.tampon(buffers), ps.last(), lumiere, vers, secondes(h.priseDebut) / 0.3, serre);
+        }
+        ps.popPose();
+    }
+
+    private static final float[] NOIR = {0.03F, 0.02F, 0.05F};
+    private static final float[] NOIR_BORD = {0.3F, 0.05F, 0.28F};
 
     /** La bombe : qui se charge devant la gueule (des petites boules tournent et s'y jettent), qui file, puis qui explose. */
     private static void dessinerBombe(MultiBufferSource buffers, Matrix4f m, Vec3 camera, Hachi h, Player joueur, float partiel) {
+        double tailleBombe = h.genre == 2 ? 1.65 : h.genre == 1 ? 1.4 : TAILLE_BOMBE;
+        float[] coeur = h.genre == 2 ? NOIR : VIOLET, ombre = h.genre == 2 ? NOIR : VIOLET_SOMBRE, halo = h.genre == 2 ? NOIR_BORD : VIOLET;
         if (h.charge >= 0 && joueur != null) {
             double k = Math.min(1, secondes(h.charge) / (Hachibi.CHARGE_BOMBE / 20.0));
             Vec3 p = gueule(joueur, partiel).subtract(camera);
-            float r = (float) (TAILLE_BOMBE * Math.sqrt(k));
-            sphere(buffers.getBuffer(Types.TRANSLUCIDE), m, p.x, p.y, p.z, r, VIOLET, VIOLET_SOMBRE, 0.95F);
-            sphere(buffers.getBuffer(Types.LUMIERE), m, p.x, p.y, p.z, r * 1.3F, VIOLET, VIOLET, 0.3F);
+            float r = (float) (tailleBombe * Math.sqrt(k));
+            sphere(buffers.getBuffer(Types.TRANSLUCIDE), m, p.x, p.y, p.z, r, coeur, ombre, 0.95F);
+            sphere(buffers.getBuffer(Types.LUMIERE), m, p.x, p.y, p.z, r * 1.3F, halo, halo, 0.3F);
             double t = secondes(h.charge);
             for (int i = 0; i < 9; i++) {
                 double phase = (t * 0.9 + i / 9.0) % 1;
@@ -644,8 +836,8 @@ public final class ClientHachibi {
             double s = secondes(h.tir);
             if (s < 3.2) {
                 Vec3 p = h.depart.add(h.direction.scale(s * VITESSE_BOMBE)).subtract(camera);
-                sphere(buffers.getBuffer(Types.TRANSLUCIDE), m, p.x, p.y, p.z, (float) TAILLE_BOMBE, VIOLET, VIOLET_SOMBRE, 0.95F);
-                sphere(buffers.getBuffer(Types.LUMIERE), m, p.x, p.y, p.z, (float) TAILLE_BOMBE * 1.35F, VIOLET, VIOLET, 0.3F);
+                sphere(buffers.getBuffer(Types.TRANSLUCIDE), m, p.x, p.y, p.z, (float) tailleBombe, coeur, ombre, 0.95F);
+                sphere(buffers.getBuffer(Types.LUMIERE), m, p.x, p.y, p.z, (float) tailleBombe * 1.35F, halo, halo, 0.3F);
             }
         }
         if (h.explosion >= 0 && h.boum != null) {
@@ -653,8 +845,8 @@ public final class ClientHachibi {
             if (s < 0.7) {
                 float k = (float) (s / 0.7);
                 Vec3 p = h.boum.subtract(camera);
-                sphere(buffers.getBuffer(Types.LUMIERE), m, p.x, p.y, p.z, 1.5F + 6.5F * (float) Math.sqrt(k), VIOLET, new float[]{0.9F, 0.8F, 1F}, 0.7F * (1 - k));
-                sphere(buffers.getBuffer(Types.TRANSLUCIDE), m, p.x, p.y, p.z, (float) TAILLE_BOMBE * (1 + 3 * k), VIOLET, VIOLET_SOMBRE, 0.85F * (1 - k));
+                sphere(buffers.getBuffer(Types.LUMIERE), m, p.x, p.y, p.z, 1.5F + 6.5F * (float) Math.sqrt(k) * (float) (tailleBombe / TAILLE_BOMBE), halo, h.genre == 2 ? NOIR_BORD : new float[]{0.9F, 0.8F, 1F}, 0.7F * (1 - k));
+                sphere(buffers.getBuffer(Types.TRANSLUCIDE), m, p.x, p.y, p.z, (float) tailleBombe * (1 + 3 * k), coeur, ombre, 0.85F * (1 - k));
             }
         }
     }
@@ -684,8 +876,8 @@ public final class ClientHachibi {
         }
         int w = g.guiWidth();
         int hh = g.guiHeight();
-        // un voile rouge sur les bords (bien plus fort dans la bête)
-        float voile = h.bete ? 0.38F : 0.14F;
+        // un voile rouge sur les bords (bien plus fort dans la bête, léger avec les tentacules)
+        float voile = h.bete ? 0.38F : h.forme == 4 ? 0.1F : 0.14F;
         int n = 12;
         for (int i = 0; i < n; i++) {
             float k = 1 - i / (float) n;
@@ -704,8 +896,45 @@ public final class ClientHachibi {
         double rechargeBombe = h.dernierTir < 0 ? 0 : Hachibi.RECHARGE_BOMBE / 20.0 - secondes(h.dernierTir);
         String titre;
         String[][] lignes;
-        boolean[] gris = new boolean[4];
-        if (h.bete) {
+        boolean[] gris = new boolean[5];
+        String eveil = ClientSusano.EVEIL.getTranslatedKeyMessage().getString();
+        if (h.forme > 0) {
+            // Hachibi 2 : l'Éveil passe au niveau suivant (manteau, bête, bête aux os, tentacules), puis le rendort
+            String suite = h.forme < 4 ? "Niveau " + (h.forme + 1) : "Rendormir";
+            double bombeRecharge = h.dernierTir < 0 ? 0
+                    : (h.genre == 2 ? Hachibi.RECHARGE_BOMBE_NOIRE : Hachibi.RECHARGE_BOMBE) / 20.0 - secondes(h.dernierTir);
+            String bombe = h.charge >= 0 ? "Bombe (charge…)" : bombeRecharge > 0 ? String.format("Bombe (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe de chakra";
+            if (h.forme == 1) {
+                titre = "HACHIBI 2  ·  MANTEAU";
+                String course = h.course >= 0 ? String.format("Course (%.0f s)", Math.ceil(Hachibi.DUREE_COURSE / 20.0 - secondes(h.course)))
+                        : rechargeCourse > 0 ? String.format("Course (recharge %.0f s)", Math.ceil(rechargeCourse)) : "Course";
+                gris[1] = h.course < 0 && rechargeCourse > 0;
+                lignes = new String[][]{{"Clic gauche", "Griffe"}, {"Accroupi", course}, {eveil, suite}};
+            } else if (h.forme <= 3) {
+                titre = h.forme == 3 ? "HACHIBI 2  ·  BÊTE AUX OS" : "HACHIBI 2  ·  BÊTE";
+                gris[1] = h.charge >= 0 || bombeRecharge > 0;
+                lignes = new String[][]{{"Clic gauche", "Griffe de la bête"}, {"Accroupi", h.forme == 3 && h.charge < 0 && bombeRecharge <= 0 ? "Grosse bombe" : bombe},
+                        {eveil, suite}};
+            } else {
+                titre = "HACHIBI 2  ·  HUIT QUEUES";
+                double fouet = h.fouet < 0 ? 0 : Hachibi.RECHARGE_FOUET / 20.0 - secondes(h.fouet);
+                double balayage = h.balayage < 0 ? 0 : Hachibi.RECHARGE_BALAYAGE / 20.0 - secondes(h.balayage);
+                double prise = h.priseDebut < 0 ? 0 : Hachibi.RECHARGE_PRISE / 20.0 - secondes(h.priseDebut);
+                if (h.prise >= 0) {
+                    lignes = new String[][]{{"Clic gauche", "Lancer"}, {"Clic droit", "Serrer fort"}, {eveil, "Rendormir"}};
+                } else {
+                    gris[0] = fouet > 0;
+                    gris[1] = balayage > 0;
+                    gris[2] = h.charge >= 0 || bombeRecharge > 0;
+                    gris[3] = prise > 0;
+                    lignes = new String[][]{{"Clic gauche", "Coup de tentacule"},
+                            {"Clic droit", balayage > 0 ? String.format("Balayage (%.0f s)", Math.ceil(balayage)) : "Balayage"},
+                            {"Accroupi", h.charge >= 0 ? "Bombe noire (charge…)" : bombeRecharge > 0 ? String.format("Bombe noire (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe noire"},
+                            {"Accroupi + clic droit", prise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(prise)) : "Attraper"},
+                            {eveil, "Rendormir"}};
+                }
+            }
+        } else if (h.bete) {
             double reste = (Hachibi.TRANSFORMATION + Hachibi.DUREE_BETE) / 20.0 - secondes(h.beteDebut);
             titre = String.format("HACHIBI  ·  BÊTE (%d s)", (int) Math.ceil(Math.min(Hachibi.DUREE_BETE / 20.0, Math.max(0, reste))));
             String bombe = h.charge >= 0 ? "Bombe (charge…)" : rechargeBombe > 0 ? String.format("Bombe (%.0f s)", Math.ceil(rechargeBombe)) : "Bombe de chakra";
@@ -769,7 +998,17 @@ public final class ClientHachibi {
             }
             Hachi moi = HACHIS.get(mc.player.getUUID());
             boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi && !accroupiAvant && mc.screen == null && actif(moi) && secondes(moi.debut) > 0.6) {
+            if (actif(moi) && moi.forme == 4) {
+                // au niveau 4, s'accroupir sert aussi à attraper (avec le clic droit) : la bombe part quand on relâche
+                // un appui court, si on n'a rien attrapé entre-temps
+                if (accroupi && !accroupiAvant) {
+                    accroupiDebut = System.nanoTime();
+                    saisieFaite = false;
+                }
+                if (!accroupi && accroupiAvant && !saisieFaite && mc.screen == null && System.nanoTime() - accroupiDebut < 700_000_000L) {
+                    PacketDistributor.sendToServer(new Pouvoirs.Charge());
+                }
+            } else if (accroupi && !accroupiAvant && mc.screen == null && actif(moi) && secondes(moi.debut) > 0.6) {
                 PacketDistributor.sendToServer(new Pouvoirs.Charge());
             }
             accroupiAvant = accroupi;
@@ -839,7 +1078,13 @@ public final class ClientHachibi {
             long recharge = event.isAttack() ? 450_000_000L : 700_000_000L;
             if (System.nanoTime() - dernierClic > recharge) {
                 dernierClic = System.nanoTime();
-                PacketDistributor.sendToServer(event.isAttack() ? new Pouvoirs.Frappe() : new Pouvoirs.Attraper());
+                if (event.isUseItem() && h.forme == 4 && h.prise < 0 && mc.options.keyShift.isDown()) {
+                    // niveau 4 : accroupi + clic droit, la tentacule attrape
+                    saisieFaite = true;
+                    PacketDistributor.sendToServer(new Hachibi.Saisir());
+                } else {
+                    PacketDistributor.sendToServer(event.isAttack() ? new Pouvoirs.Frappe() : new Pouvoirs.Attraper());
+                }
             }
         }
 
@@ -850,7 +1095,7 @@ public final class ClientHachibi {
         @SubscribeEvent
         public static void avant(RenderPlayerEvent.Pre event) {
             Hachi h = HACHIS.get(event.getEntity().getUUID());
-            if (!actif(h) || !(event.getEntity() instanceof AbstractClientPlayer joueur)) {
+            if (!actif(h) || h.forme == 4 || !(event.getEntity() instanceof AbstractClientPlayer joueur)) {
                 return;
             }
             float partiel = event.getPartialTick();
@@ -864,6 +1109,15 @@ public final class ClientHachibi {
                 bete(event, h, joueur);
             } else {
                 manteau(event, h, joueur);
+            }
+        }
+
+        /** Hachibi 2, niveau 4 : ses tentacules, une fois que le jeu l'a dessiné (elles se rétractent quand il se rendort). */
+        @SubscribeEvent
+        public static void apres(RenderPlayerEvent.Post event) {
+            Hachi h = HACHIS.get(event.getEntity().getUUID());
+            if (h != null && h.forme == 4 && event.getEntity() instanceof AbstractClientPlayer joueur && !joueur.isInvisible()) {
+                tentacules(event, h, joueur);
             }
         }
 
