@@ -191,7 +191,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "3f01cb722688fca60e25b5e79d00fd2455bca8de490c718a252ab1a815d2efe3"
+hash = "4f8d55c738aca4dc6b7b71b4baebbd8be689e2db8eb61a34832dc007f1ed5725"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
