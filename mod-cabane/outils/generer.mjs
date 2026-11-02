@@ -605,6 +605,10 @@ console.log("Ressources générées dans", RES);
   // les téléportations de Minato : les coups de tonnerre de Minecraft (pris dans le jeu, pas copiés), à mi-volume
   sons["minato.flash"] = { subtitle: "subtitles.cabane.minato.flash",
     sounds: [1, 2, 3].map((n) => ({ name: `minecraft:ambient/weather/thunder${n}`, volume: 0.5 })) };
+  // le WOOHP (Totally Spies) : un souffle de trident par défaut ; le vrai son de la série n'est que dans le pack privé
+  sons["woohp.aspiration"] = { subtitle: "subtitles.cabane.woohp.aspiration", sounds: [{ name: "minecraft:item/trident/riptide3" }] };
+  // la musique d'ascenseur du QG du WOOHP : « Mall », un disque de Minecraft (pris dans le jeu), pas trop fort
+  sons["musique.woohp"] = { sounds: [{ name: "minecraft:records/mall", stream: true, volume: 0.45 }] };
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");
   const cible = path.join(RES, "assets", "cabane", "sounds", "voix");
   fs.rmSync(cible, { recursive: true, force: true });

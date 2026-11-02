@@ -23,5 +23,22 @@
         "volume": 0.5
       }
     ]
+  },
+  "woohp.aspiration": {
+    "subtitle": "subtitles.cabane.woohp.aspiration",
+    "sounds": [
+      {
+        "name": "minecraft:item/trident/riptide3"
+      }
+    ]
+  },
+  "musique.woohp": {
+    "sounds": [
+      {
+        "name": "minecraft:records/mall",
+        "stream": true,
+        "volume": 0.45
+      }
+    ]
   }
 }

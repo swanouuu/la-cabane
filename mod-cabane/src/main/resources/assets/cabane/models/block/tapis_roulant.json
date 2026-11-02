@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "cabane:block/labo_tapis_cote",
+    "up": "cabane:block/labo_tapis",
+    "down": "cabane:block/labo_metal",
+    "north": "cabane:block/labo_tapis_cote",
+    "south": "cabane:block/labo_tapis_cote",
+    "east": "cabane:block/labo_tapis_cote",
+    "west": "cabane:block/labo_tapis_cote"
+  }
+}

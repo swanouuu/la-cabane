@@ -115,6 +115,55 @@ public final class LaboBlocs {
     }
 
     /**
+     * Un tapis roulant à hauteur de comptoir : tout ce qui est posé dessus (objets, joueurs, animaux) avance vers FACING,
+     * en restant au milieu. Accroupi, on ne se fait pas emporter. Celui du WOOHP apporte les gadgets de Jerry.
+     */
+    public static class TapisRoulant extends HorizontalDirectionalBlock {
+        public static final MapCodec<TapisRoulant> CODEC = simpleCodec(TapisRoulant::new);
+        /** La vitesse donnée à chaque tick (le frottement en mange à peu près la moitié). */
+        private static final double VITESSE = 0.2;
+
+        public TapisRoulant(Properties properties) {
+            super(properties);
+            registerDefaultState(stateDefinition.any().setValue(FACING, Direction.EAST));
+        }
+
+        @Override
+        protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+            return CODEC;
+        }
+
+        @Override
+        protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+            builder.add(FACING);
+        }
+
+        @Override
+        public BlockState getStateForPlacement(BlockPlaceContext context) {
+            return defaultBlockState().setValue(FACING, context.getHorizontalDirection());
+        }
+
+        @Override
+        public void stepOn(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.Entity entite) {
+            if (entite.isShiftKeyDown()) {
+                return;
+            }
+            Direction sens = state.getValue(FACING);
+            // on ramène doucement au milieu du tapis, pour que rien ne tombe sur le côté
+            double milieu = sens.getAxis() == Direction.Axis.X ? pos.getZ() + 0.5 - entite.getZ() : pos.getX() + 0.5 - entite.getX();
+            double vx = sens.getStepX() * VITESSE + (sens.getAxis() == Direction.Axis.Z ? milieu * 0.15 : 0);
+            double vz = sens.getStepZ() * VITESSE + (sens.getAxis() == Direction.Axis.X ? milieu * 0.15 : 0);
+            var v = entite.getDeltaMovement();
+            if (entite instanceof Player) {
+                // le joueur garde un peu de son élan (il peut marcher à contre-courant)
+                entite.setDeltaMovement(v.x * 0.6 + vx * 0.5, v.y, v.z * 0.6 + vz * 0.5);
+            } else {
+                entite.setDeltaMovement(vx, v.y, vz);
+            }
+        }
+    }
+
+    /**
      * La table d'expériences : deux blocs comme un lit (la tête du côté de FACING). On s'y allonge d'un clic droit,
      * les sangles se referment, et l'expérience commence (voir {@link Experiences}). Elle passe pour un lit aux yeux
      * du jeu, ce qui permet aussi d'y coucher les corps de la morgue.

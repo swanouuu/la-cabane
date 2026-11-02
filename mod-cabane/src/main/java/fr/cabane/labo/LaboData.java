@@ -28,6 +28,9 @@ public class LaboData extends SavedData {
     /** Le numéro de la dernière construction : les entités d'une construction plus ancienne sont effacées. */
     private int construction;
     private int experiences;
+    /** Pareil pour le QG du WOOHP, construit dans la même dimension. */
+    private int versionWoohp;
+    private int constructionWoohp;
 
     public static LaboData get(MinecraftServer server) {
         return server.overworld().getDataStorage()
@@ -56,6 +59,8 @@ public class LaboData extends SavedData {
         data.versionConstruite = tag.getInt("version");
         data.construction = tag.getInt("construction");
         data.experiences = tag.getInt("experiences");
+        data.versionWoohp = tag.getInt("versionWoohp");
+        data.constructionWoohp = tag.getInt("constructionWoohp");
         return data;
     }
 
@@ -82,6 +87,8 @@ public class LaboData extends SavedData {
         tag.putInt("version", versionConstruite);
         tag.putInt("construction", construction);
         tag.putInt("experiences", experiences);
+        tag.putInt("versionWoohp", versionWoohp);
+        tag.putInt("constructionWoohp", constructionWoohp);
         return tag;
     }
 
@@ -140,6 +147,22 @@ public class LaboData extends SavedData {
         construction++;
         setDirty();
         return construction;
+    }
+
+    public int versionWoohp() {
+        return versionWoohp;
+    }
+
+    public int constructionWoohp() {
+        return constructionWoohp;
+    }
+
+    /** Une nouvelle construction du WOOHP commence (à cette version) : son numéro. */
+    public int nouvelleConstructionWoohp(int version) {
+        versionWoohp = version;
+        constructionWoohp++;
+        setDirty();
+        return constructionWoohp;
     }
 
     /** Le numéro de la prochaine expérience sur la table. */

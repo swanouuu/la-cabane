@@ -377,6 +377,61 @@ const BIOME = {
   features: [],
 };
 
+// ---------------------------------------------------------------- le WOOHP : son biome, et le tapis roulant des gadgets
+
+// un biome propre et calme pour le QG (le reste de la dimension garde celui du labo, angoissant)
+const BIOME_WOOHP = {
+  has_precipitation: false,
+  temperature: 0.6,
+  downfall: 0.0,
+  effects: {
+    sky_color: 0, fog_color: 0x1a1a40, water_color: 0x3f76e4, water_fog_color: 0x050533, grass_color: 0x6fb85a, foliage_color: 0x5aa04a,
+    // une musique d'ascenseur, presque sans pause
+    music: { sound: "cabane:musique.woohp", min_delay: 20, max_delay: 200, replace_current_music: true },
+  },
+  spawners: {},
+  spawn_costs: {},
+  carvers: {},
+  features: [],
+};
+
+/** Une image de w × h à partir d'une fonction (x, y) → [r, g, b]. */
+function peindreRect(png, w, h, f) {
+  const palette = {}, index = new Map(), grille = [];
+  for (let y = 0; y < h; y++) {
+    let ligne = "";
+    for (let x = 0; x < w; x++) {
+      const c = f(x, y).map((v) => Math.max(0, Math.min(255, Math.round(v))));
+      const cle = c.join(",");
+      if (!index.has(cle)) {
+        const ch = String.fromCodePoint(0x100 + index.size);
+        index.set(cle, ch);
+        palette[ch] = c;
+      }
+      ligne += index.get(cle);
+    }
+    grille.push(ligne);
+  }
+  return png(grille, palette);
+}
+
+// le caoutchouc qui défile : 4 images de 16 × 16, chacune décalée de 2 pixels vers le bas (le sud, sur le dessus du bloc)
+const IMAGES_TAPIS = 4;
+const tapis = (x, y) => {
+  const image = Math.floor(y / 16);
+  const v = (((y % 16) - image * 2) % 16 + 16) % 16;
+  if (x === 0 || x === 15) return [128, 132, 138];
+  if (x === 1 || x === 14) return [44, 44, 48];
+  return v % 8 < 2 ? [78, 78, 88] : teinte([36, 36, 42], (bruit(x, v, 61) - 0.5) * 8);
+};
+const tapisCote = (x, y) => {
+  if (y <= 2) return teinte([38, 38, 44], (bruit(x, y, 62) - 0.5) * 6);
+  if (y === 3) return [20, 20, 24];
+  if ((x === 3 || x === 12) && y === 8) return [180, 184, 190];
+  if (y === 13) return [96, 100, 108];
+  return metal(x, y);
+};
+
 export function genererLabo({ ecrire, png, lang }) {
   const textures = {
     labo_metal: metal, labo_danger: danger, labo_drap: drap, labo_sangle: sangle, labo_bouton: bouton,
@@ -421,8 +476,29 @@ export function genererLabo({ ecrire, png, lang }) {
   ecrire("data/cabane/dimension_type/laboratoire.json", TYPE_DIMENSION);
   ecrire("data/cabane/dimension/laboratoire.json", DIMENSION);
   ecrire("data/cabane/worldgen/biome/laboratoire.json", BIOME);
+  ecrire("data/cabane/worldgen/biome/woohp.json", BIOME_WOOHP);
+
+  // le tapis roulant : le dessus défile (texture animée), dessiné pour avancer vers le sud
+  ecrire("assets/cabane/textures/block/labo_tapis.png", peindreRect(png, 16, 16 * IMAGES_TAPIS, tapis));
+  ecrire("assets/cabane/textures/block/labo_tapis.png.mcmeta", { animation: { frametime: 1 } });
+  ecrire("assets/cabane/textures/block/labo_tapis_cote.png", peindre(png, tapisCote));
+  ecrire("assets/cabane/models/block/tapis_roulant.json", {
+    parent: "minecraft:block/cube",
+    textures: { particle: "cabane:block/labo_tapis_cote", up: "cabane:block/labo_tapis", down: "cabane:block/labo_metal",
+      north: "cabane:block/labo_tapis_cote", south: "cabane:block/labo_tapis_cote", east: "cabane:block/labo_tapis_cote", west: "cabane:block/labo_tapis_cote" },
+  });
+  ecrire("assets/cabane/blockstates/tapis_roulant.json", { variants: Object.fromEntries(
+    ["south", "west", "north", "east"].map((d, i) => [`facing=${d}`, { model: "cabane:block/tapis_roulant", ...(i ? { y: i * 90 } : {}) }])) });
+  ecrire("assets/cabane/models/item/tapis_roulant.json", { parent: "cabane:block/tapis_roulant" });
+  ecrire("data/cabane/loot_table/blocks/tapis_roulant.json", {
+    type: "minecraft:block",
+    pools: [{ rolls: 1, entries: [{ type: "minecraft:item", name: "cabane:tapis_roulant" }], conditions: [{ condition: "minecraft:survives_explosion" }] }],
+  });
 
   Object.assign(lang, {
+    "block.cabane.tapis_roulant": "Tapis roulant",
+    "biome.cabane.woohp": "Le WOOHP",
+    "subtitles.cabane.woohp.aspiration": "WOOHP !",
     "block.cabane.terminal_labo": "Terminal du Laboratoire",
     "block.cabane.bouton_retour": "Bouton de retour",
     "block.cabane.table_experiences": "Table d'expériences",

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=south": {
+      "model": "cabane:block/tapis_roulant"
+    },
+    "facing=west": {
+      "model": "cabane:block/tapis_roulant",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "cabane:block/tapis_roulant",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "cabane:block/tapis_roulant",
+      "y": 270
+    }
+  }
+}

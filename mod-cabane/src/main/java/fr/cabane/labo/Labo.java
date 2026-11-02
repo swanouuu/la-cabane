@@ -43,7 +43,9 @@ import net.neoforged.neoforge.event.entity.player.CanContinueSleepingEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.minecraft.world.item.Item;
+import net.minecraft.sounds.SoundEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -76,17 +78,32 @@ public final class Labo {
     /** L'autel de pierre de la salle des rituels : la même chose que la table, mais c'est un rituel qui s'y joue. */
     public static final DeferredBlock<LaboBlocs.TableExperiences> AUTEL = BLOCKS.registerBlock("autel_rituel", LaboBlocs.TableExperiences::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1F, 3_600_000F).sound(SoundType.DEEPSLATE).noOcclusion().noLootTable());
+    /** Le tapis roulant (celui du WOOHP apporte les gadgets de Jerry) : il se casse et se ramasse. */
+    public static final DeferredBlock<LaboBlocs.TapisRoulant> TAPIS = BLOCKS.registerBlock("tapis_roulant", LaboBlocs.TapisRoulant::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(2F, 6F).sound(SoundType.METAL));
 
     /** Le grand sceau rouge de la salle des rituels : un objet caché (pas dans l'onglet), affiché en grand au sol. */
     private static final DeferredRegister.Items OBJETS = DeferredRegister.createItems(Cabane.MODID);
     public static final DeferredItem<Item> SCEAU = OBJETS.registerSimpleItem("sceau_rituel");
 
+    /**
+     * Le son du WOOHP, juste avant qu'on soit aspiré. Par défaut un souffle de trident ; le vrai son de la série est
+     * seulement dans le pack de sons privé (voix/effets/woohp.aspiration.ogg), jamais sur GitHub.
+     */
+    private static final DeferredRegister<SoundEvent> SONS = DeferredRegister.create(Registries.SOUND_EVENT, Cabane.MODID);
+    public static final DeferredHolder<SoundEvent, SoundEvent> SON_WOOHP = SONS.register("woohp.aspiration",
+            () -> SoundEvent.createVariableRangeEvent(Cabane.id("woohp.aspiration")));
+    /** La musique d'ascenseur du QG (la musique de son biome) : « Mall » de Minecraft, plus doucement. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> MUSIQUE_WOOHP = SONS.register("musique.woohp",
+            () -> SoundEvent.createVariableRangeEvent(Cabane.id("musique.woohp")));
+
     public static void register(IEventBus modBus) {
-        for (DeferredBlock<?> bloc : List.of(TERMINAL, BOUTON_RETOUR, TABLE, AUTEL)) {
+        for (DeferredBlock<?> bloc : List.of(TERMINAL, BOUTON_RETOUR, TABLE, AUTEL, TAPIS)) {
             CabaneItems.ITEMS.registerSimpleBlockItem(bloc);
         }
         BLOCKS.register(modBus);
         OBJETS.register(modBus);
+        SONS.register(modBus);
     }
 
     /** Une nouvelle construction du labo (les entités des constructions précédentes seront refusées). */
@@ -262,7 +279,7 @@ public final class Labo {
     }
 
     /** L'hôte : un admin du serveur, ou le joueur qui a ouvert le monde en solo. */
-    private static boolean hote(CommandSourceStack source) {
+    static boolean hote(CommandSourceStack source) {
         if (source.hasPermission(2)) {
             return true;
         }
@@ -304,7 +321,11 @@ public final class Labo {
         for (ServerPlayer joueur : List.copyOf(labo.players())) {
             // tombé dans le vide (par une fenêtre cassée, un fruit de chorus…) : on le remet à l'arrivée
             if (joueur.getY() < LaboBuilder.SOL - 24) {
-                joueur.teleportTo(labo, ARRIVEE_X, LaboBuilder.SOL + 1, ARRIVEE_Z, ARRIVEE_YAW, 0F);
+                if (Woohp.pres(joueur)) {
+                    Woohp.poserSurLePad(joueur, 0);
+                } else {
+                    joueur.teleportTo(labo, ARRIVEE_X, LaboBuilder.SOL + 1, ARRIVEE_Z, ARRIVEE_YAW, 0F);
+                }
                 joueur.fallDistance = 0;
                 joueur.displayClientMessage(Component.literal("Le vide n'a pas voulu de toi.").withStyle(ChatFormatting.DARK_PURPLE), true);
             }
@@ -348,6 +369,9 @@ public final class Labo {
         } else if (tags.contains(LaboBuilder.TAG) && event.getLevel().getServer() != null
                 && !tags.contains(LaboBuilder.tagConstruction(LaboData.get(event.getLevel().getServer()).construction()))) {
             // un reste d'une construction précédente (son chunk n'était pas chargé quand on a tout effacé)
+            event.setCanceled(true);
+        } else if (tags.contains(WoohpBuilder.TAG) && event.getLevel().getServer() != null
+                && !tags.contains(WoohpBuilder.tagConstruction(LaboData.get(event.getLevel().getServer()).constructionWoohp()))) {
             event.setCanceled(true);
         }
     }

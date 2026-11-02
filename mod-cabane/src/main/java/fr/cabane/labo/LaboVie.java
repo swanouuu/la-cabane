@@ -198,7 +198,8 @@ final class LaboVie {
             }
         }
         for (ServerPlayer joueur : level.players()) {
-            if (r.nextInt(10) != 0) {
+            // seulement au labo : le WOOHP, plus loin dans la même dimension, n'a pas ces bruits-là
+            if (r.nextInt(10) != 0 || Math.abs(joueur.getZ()) > LaboBuilder.BORD + 20) {
                 continue;
             }
             double angle = r.nextDouble() * Math.PI * 2, d = 6 + r.nextDouble() * 10;
