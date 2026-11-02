@@ -206,6 +206,15 @@ public final class PhotoTour {
                 Minecraft.getInstance().options.keyLeft.setDown(e[2].equals("1"));
                 return 2;
             }
+            // « act accroupi 1|0 » : appuyer (ou lâcher) la touche pour s'accroupir ; « act clic-gauche » : un vrai clic gauche
+            case "accroupi" -> {
+                Minecraft.getInstance().options.keyShift.setDown(e[2].equals("1"));
+                return 2;
+            }
+            case "clic-gauche" -> {
+                net.minecraft.client.KeyMapping.click(Minecraft.getInstance().options.keyAttack.getKey());
+                return 2;
+            }
             case "eveil" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Eveil());
                 return 2;
@@ -220,6 +229,39 @@ public final class PhotoTour {
             }
             case "frappe" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Frappe());
+                return 2;
+            }
+            // « act kunai » : le clic droit de Minato ; « act minato-demo » : son combo vu de l'extérieur, sur la créature la plus proche
+            case "kunai" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Minato.Lancer());
+                return 2;
+            }
+            // « act poser » / « act rejoindre » : accroupi + clic droit (la marque), s'accroupir (y aller)
+            case "poser" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Minato.Poser());
+                return 2;
+            }
+            case "rejoindre" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Minato.Rejoindre());
+                return 2;
+            }
+            // « act jeter » : accroupi + clic gauche sans marque (un kunai lancé à la main)
+            case "jeter" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Minato.Jeter());
+                return 2;
+            }
+            case "minato-demo" -> {
+                fr.cabane.client.pouvoir.ClientMinatoCombo.demo();
+                return 2;
+            }
+            // « act chidori » : le clic droit de la marque maudite niveau 2
+            case "chidori" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Maudit.Lancer());
+                return 2;
+            }
+            // « act saisir » : accroupi + clic droit de Hachibi 2 au niveau 4 (une tentacule attrape)
+            case "saisir" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Hachibi.Saisir());
                 return 2;
             }
             case "vue" -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[Integer.parseInt(e[2])]);

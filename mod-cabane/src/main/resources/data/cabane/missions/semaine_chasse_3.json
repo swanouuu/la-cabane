@@ -1,0 +1,29 @@
+{
+  "qui": "gardien",
+  "ordre": 512,
+  "semaine": {
+    "id": "chasse",
+    "nom": "La semaine des chasseurs",
+    "texte": "Les nuits sont mauvaises cette semaine. Les monstres rôdent autour de la palissade, et les gardes ne dorment plus. Va chasser, et reviens me le raconter.",
+    "bonus": 750
+  },
+  "titre": "Toiles et venin",
+  "pitch": "Les araignées tissent jusque sur la Grande Cabane. Chasse-les, et rapporte leur fil : on en fera des filets.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:spider|minecraft:cave_spider",
+      "nombre": 15,
+      "texte": "Vaincre 15 araignées"
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:string",
+      "nombre": 16
+    }
+  ],
+  "merci": "Avec ce fil, on pêchera mieux. Et on dormira mieux.",
+  "recompense": {
+    "argent": 250
+  }
+}

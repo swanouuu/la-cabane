@@ -4,40 +4,11 @@
   CustomName:'{"text":"Ovsie la Fée","color":"light_purple"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","pnj.fee"],
   EasyNPCVersion:3,
   VariantType:"GREEN",
   SkinData:{Type:"DEFAULT"},
   RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:lantern"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.fee",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Ovsie",
-        Texts:[{Text:"Coucou ! Tu collectionnes les cartes ? Les boosters se vendent chez Mouloud, et un classeur garde toute ta collection."},{Text:"Je brille la nuit. Le jour aussi, mais personne ne remarque."},{Text:"Si tu trouves une carte légendaire, je te fais un câlin. Un petit. Je suis petite."},{Text:"Le casino ? C'est mal. … Tu m'emmènes ?"}],
-        Buttons:[{
-          Label:"casino",
-          Name:"Et le casino ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"casino"}]
-        },{
-          Label:"bye",
-          Name:"Merci Ovsie !",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"casino",
-        Name:"Le casino",
-        Texts:[{Text:"Roulette, roue de la fortune, blackjack… Mouloud vend les tables : à vous de construire le plus beau casino de la jungle ! Le gérant remplit la caisse, accroupi + clic droit."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"On s'y met",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

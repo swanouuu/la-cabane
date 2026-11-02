@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:astrape",
+  "prix": 40000,
+  "ordre": 308,
+  "categorie": "relique",
+  "indice": "L'arme de Scylla, la reine de la tempête. Brokk y met la foudre : cuivre et paratonnerres.",
+  "temps": 40,
+  "ingredients": [
+    [
+      "minecraft:lightning_rod",
+      6
+    ],
+    [
+      "minecraft:copper_block",
+      6
+    ],
+    [
+      "minecraft:prismarine_crystals",
+      16
+    ],
+    [
+      "minecraft:diamond",
+      3
+    ]
+  ]
+}

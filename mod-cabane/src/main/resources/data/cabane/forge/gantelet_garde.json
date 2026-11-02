@@ -1,19 +1,26 @@
 {
   "resultat": "cataclysm:gauntlet_of_guard",
-  "prix": 25000,
-  "ordre": 50,
+  "prix": 35000,
+  "ordre": 312,
+  "categorie": "relique",
+  "indice": "Le gantelet du Gardien de l'Ender.",
+  "temps": 40,
   "ingredients": [
     [
       "minecraft:iron_block",
       8
     ],
     [
-      "minecraft:diamond",
-      6
+      "minecraft:obsidian",
+      16
     ],
     [
-      "minecraft:obsidian",
-      8
+      "minecraft:ender_eye",
+      4
+    ],
+    [
+      "minecraft:diamond",
+      6
     ]
   ]
 }

@@ -1,0 +1,41 @@
+{
+  "nom": "Garde de Beauvais",
+  "couleur": "yellow",
+  "voix": "",
+  "qui": "garde_est",
+  "pages": {
+    "default": {
+      "titre": "Garde",
+      "textes": [
+        "Halte, voyageur ! … Ah, tu viens de l'avion en feu. Entre : le Hejj t'attend devant la Grande Cabane.",
+        "Rien à signaler. Sauf un singe qui m'a volé mon casque hier. Si tu le vois, il s'appelle Bernard. Pas l'habitant, le singe.",
+        "Je garde cette porte depuis dix ans. Personne n'a jamais essayé d'entrer par le mur. Heureusement.",
+        "Le soir, on entend des choses dans la jungle. Le plus souvent c'est Gérard qui ronfle."
+      ],
+      "boutons": [
+        {
+          "texte": "Où trouver… ?",
+          "vers": "plan"
+        },
+        {
+          "texte": "Merci !"
+        }
+      ]
+    },
+    "plan": {
+      "titre": "Le plan du village",
+      "textes": [
+        "En remontant la grande allée vers le nord : la boutique de cartes de Jean-Mi à gauche. En face, la Mairie. Au bout, la place et le grand panneau de Karim. À l'ouest de la place, le Grand Bazar (Mouloud, Mehdi). À l'est, la rue, jusqu'à la forge de Brokk. Au nord, la Grande Cabane et le Hejj. Le feu de camp, Marcel et Nyota : au sud-ouest de la place."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Merci !"
+        }
+      ]
+    }
+  }
+}

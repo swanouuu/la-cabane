@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "mcbeauvais",
+  "ingredients": [
+    {
+      "item": "minecraft:cooked_chicken"
+    },
+    {
+      "item": "minecraft:wheat"
+    }
+  ],
+  "result": {
+    "id": "cabane:nuggets",
+    "count": 1
+  }
+}

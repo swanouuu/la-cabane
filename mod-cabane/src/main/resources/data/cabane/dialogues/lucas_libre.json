@@ -1,0 +1,21 @@
+{
+  "nom": "Lucas, le fils de Pierre",
+  "couleur": "aqua",
+  "voix": "",
+  "qui": "lucas",
+  "pages": {
+    "default": {
+      "titre": "Lucas",
+      "textes": [
+        "MON PAPA EST RENTRÉ ! Il avait gardé mon dessin dans sa poche ! Tout froissé !",
+        "Papa m'apprend à pêcher. J'ai attrapé une botte. Il dit que ça compte.",
+        "Quand je serai grand, je serai comme toi. Je sauverai des gens. Et je mangerai des gâteaux tous les jours."
+      ],
+      "boutons": [
+        {
+          "texte": "Salut champion"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "nom": "Vegeta",
+  "couleur": "dark_blue",
+  "voix": "",
+  "qui": "vegeta",
+  "pages": {
+    "default": {
+      "titre": "Vegeta",
+      "textes": [
+        "Hmph. Ma stupide fierté m'empêche de te dire bonjour. Alors je te dis : dégage, insecte.",
+        "Je suis le prince de tous les Saiyans ! … Ici on m'appelle « le monsieur qui crie près de la tour », mais bon.",
+        "Ma stupide fierté… voilà ce qui m'a perdu. Ça, et le blackjack.",
+        "Ton niveau de puissance ? Ridicule. Même Ovsie te met une raclée.",
+        "Kakarot ! … Ah non. C'est toi. Quelle déception.",
+        "Je m'entraîne sous une gravité trois cents fois supérieure. Bon, c'est un sac de sable. Mais il est lourd.",
+        "Plus de huit mille ?! … Ah, c'est le prix d'une parcelle. Je m'emporte."
+      ],
+      "boutons": [
+        {
+          "texte": "Pourquoi tant de fierté ?",
+          "vers": "fierte"
+        },
+        {
+          "texte": "D'accord, prince…"
+        }
+      ]
+    },
+    "fierte": {
+      "titre": "La fierté",
+      "textes": [
+        "Ma stupide fierté, c'est tout ce qui me reste ! Et ma coupe de cheveux. Elle tient toute seule. Sans gel.",
+        "Un prince ne demande jamais son chemin. C'est pour ça que je suis à Beauvais depuis six ans."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Respect, prince"
+        }
+      ]
+    }
+  }
+}

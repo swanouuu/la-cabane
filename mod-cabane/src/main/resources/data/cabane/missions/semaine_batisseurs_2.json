@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 591,
+  "semaine": {
+    "id": "batisseurs",
+    "nom": "La semaine des bâtisseurs",
+    "texte": "Beauvais grandit. Les nouveaux veulent des maisons, les anciens veulent des murs, et Francis veut des tapis. Rapporte des matériaux : le village construira.",
+    "bonus": 600
+  },
+  "titre": "De la pierre",
+  "pitch": "Des briques de pierre, pour les murs. Soixante-quatre.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:stone_bricks",
+      "nombre": 64
+    }
+  ],
+  "merci": "Avec ça, les murs tiendront. Même face aux Pillards.",
+  "recompense": {
+    "argent": 200
+  }
+}

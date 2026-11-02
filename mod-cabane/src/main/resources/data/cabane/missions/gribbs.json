@@ -1,0 +1,21 @@
+{
+  "qui": "cousin",
+  "titre": "Les cailloux peints de Gribbs",
+  "pitch": "J'ai besoin de matière première pour mes œuvres d'art. De la terre cuite. Orange et cyan. C'est très important pour l'art. L'art, c'est très important.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:orange_terracotta",
+      "nombre": 16
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:cyan_terracotta",
+      "nombre": 16
+    }
+  ],
+  "merci": "Magnifique. Avec ça, je vais peindre des cailloux exceptionnels. Mouloud va être jaloux.",
+  "recompense": {
+    "argent": 300
+  }
+}

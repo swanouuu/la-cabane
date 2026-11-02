@@ -79,6 +79,15 @@ public final class CabaneItems {
             () -> new fr.cabane.histoire.Histoire.ObjetLore(new Item.Properties().stacksTo(1).rarity(Rarity.RARE),
                     "« PROJET AUGMENTÉ — CONFIDENTIEL »", "Des noms, des dates, des potions vertes…",
                     "Montre-le au Conteur : le village doit savoir."));
+    // « Où est Pierre ? » : la lettre que Pierre écrit à sa femme depuis sa cellule, le dessin de son fils
+    public static final DeferredItem<fr.cabane.histoire.Histoire.ObjetLore> LETTRE_PIERRE = ITEMS.register("lettre_pierre",
+            () -> new fr.cabane.histoire.Histoire.ObjetLore(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON),
+                    "Pliée en quatre, écrite au charbon.", "« Pour Sylvie. Toi, ne la lis pas. »",
+                    "À rapporter à Sylvie, devant la Mairie."));
+    public static final DeferredItem<fr.cabane.histoire.Histoire.ObjetLore> DESSIN_LUCAS = ITEMS.register("dessin_lucas",
+            () -> new fr.cabane.histoire.Histoire.ObjetLore(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON),
+                    "Un bonhomme avec une cape, un grand soleil,", "et « PAPA » écrit en très gros.",
+                    "À porter à Pierre, dans sa cellule."));
 
     // Les sept reliques, cachées dans les coffres de donjons précis (voir data/cabane/loot_modifiers)
     public static final DeferredItem<RelicItem> SCARABEE_DOR = relique("scarabee_dor", Rarity.UNCOMMON);

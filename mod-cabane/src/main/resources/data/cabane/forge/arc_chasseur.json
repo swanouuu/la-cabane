@@ -1,0 +1,31 @@
+{
+  "resultat": "minecraft:bow",
+  "prix": 7000,
+  "ordre": 102,
+  "categorie": "arme",
+  "nom": "Arc du chasseur",
+  "enchantements": {
+    "minecraft:power": 5,
+    "minecraft:punch": 2,
+    "minecraft:flame": 1,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:string",
+      12
+    ],
+    [
+      "minecraft:stick",
+      6
+    ],
+    [
+      "minecraft:feather",
+      16
+    ],
+    [
+      "minecraft:iron_ingot",
+      4
+    ]
+  ]
+}

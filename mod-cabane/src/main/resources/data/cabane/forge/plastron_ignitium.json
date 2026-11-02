@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:ignitium_chestplate",
+  "prix": 90000,
+  "ordre": 315,
+  "categorie": "relique",
+  "indice": "L'arme d'Ignis, le chevalier de feu. Brokk la refait au feu des blazes : pas besoin d'aller le battre.",
+  "temps": 55,
+  "ingredients": [
+    [
+      "minecraft:netherite_chestplate",
+      1
+    ],
+    [
+      "minecraft:blaze_rod",
+      16
+    ],
+    [
+      "minecraft:magma_block",
+      16
+    ],
+    [
+      "minecraft:gold_block",
+      4
+    ]
+  ]
+}

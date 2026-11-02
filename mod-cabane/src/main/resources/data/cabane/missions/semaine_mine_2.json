@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 521,
+  "semaine": {
+    "id": "mine",
+    "nom": "La semaine de la mine",
+    "texte": "Brokk n'a plus rien à forger, et quand Brokk s'ennuie, il tape sur les murs. Descends à la mine, rapporte du minerai, et fais attention à ce qui vit en bas.",
+    "bonus": 900
+  },
+  "titre": "Les bêtes des cavernes",
+  "pitch": "En bas, il y a des mille-pattes géants, des creepers des grottes et des endermen qui vivent sous terre. Cinq, pour que les mineurs redescendent.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "alexsmobs:centipede_head|creeperoverhaul:cave_creeper|creeperoverhaul:dripstone_creeper|endermanoverhaul:cave_enderman",
+      "nombre": 5,
+      "texte": "Vaincre 5 bêtes des cavernes (mille-pattes, creepers des grottes…)"
+    }
+  ],
+  "merci": "Les mineurs redescendent. En chantant, cette fois.",
+  "recompense": {
+    "argent": 300
+  }
+}

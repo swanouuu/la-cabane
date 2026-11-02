@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:ceraunus",
+  "prix": 70000,
+  "ordre": 309,
+  "categorie": "relique",
+  "indice": "L'arme de Scylla, la reine de la tempête. Brokk y met la foudre : cuivre et paratonnerres.",
+  "temps": 50,
+  "ingredients": [
+    [
+      "minecraft:lightning_rod",
+      8
+    ],
+    [
+      "minecraft:trident",
+      1
+    ],
+    [
+      "minecraft:prismarine_crystals",
+      16
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

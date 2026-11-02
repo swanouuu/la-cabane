@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 542,
+  "semaine": {
+    "id": "mer",
+    "nom": "La semaine de la mer",
+    "texte": "Jean est triste, et quand Jean est triste, il mange du poisson. En plus, les noyés et les skelewags pillent les pêcheurs. Prends une canne et une épée.",
+    "bonus": 800
+  },
+  "titre": "Le trésor du fond",
+  "pitch": "Les pêcheurs remontent parfois des trésors. Une coquille de nautile : rapporte-m'en une.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:nautilus_shell",
+      "nombre": 1
+    }
+  ],
+  "merci": "Elle chante la mer, quand on la colle à l'oreille. Merci.",
+  "recompense": {
+    "argent": 250
+  }
+}

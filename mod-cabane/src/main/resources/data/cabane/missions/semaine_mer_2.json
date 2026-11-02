@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 541,
+  "semaine": {
+    "id": "mer",
+    "nom": "La semaine de la mer",
+    "texte": "Jean est triste, et quand Jean est triste, il mange du poisson. En plus, les noyés et les skelewags pillent les pêcheurs. Prends une canne et une épée.",
+    "bonus": 800
+  },
+  "titre": "Les pilleurs de la mer",
+  "pitch": "Les noyés, les skelewags (ces poissons-squelettes qui jouent aux pirates) et les gardiens attaquent les pêcheurs. Dix.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:drowned|alexsmobs:skelewag|minecraft:guardian|creeperoverhaul:ocean_creeper|creeperoverhaul:beach_creeper|endermanoverhaul:coral_enderman",
+      "nombre": 10,
+      "texte": "Vaincre 10 monstres de la mer (noyés, skelewags…)"
+    }
+  ],
+  "merci": "Les pêcheurs ressortent. Ils t'ont gardé un poisson. Un petit.",
+  "recompense": {
+    "argent": 300
+  }
+}

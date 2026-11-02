@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 550,
+  "semaine": {
+    "id": "desert",
+    "nom": "La semaine du désert",
+    "texte": "Les caravanes du désert ne passent plus : serpents à sonnette, scorpions, momies, tornades de sable vivantes… Cette semaine, on rouvre la route.",
+    "bonus": 800
+  },
+  "titre": "La route des caravanes",
+  "pitch": "Douze créatures du désert : momies, serpents à sonnette, scorpions, gusters, creepers des sables…",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:husk|alexsmobs:rattlesnake|alexsmobs:guster|naturalist:desert_scorpion|creeperoverhaul:desert_creeper|creeperoverhaul:badlands_creeper|endermanoverhaul:desert_enderman|endermanoverhaul:badlands_enderman",
+      "nombre": 12,
+      "texte": "Vaincre 12 créatures du désert"
+    }
+  ],
+  "merci": "La route est rouverte. La première caravane t'apporte des dattes. Enfin, du sable. Ils ont pas de dattes.",
+  "recompense": {
+    "argent": 300
+  }
+}

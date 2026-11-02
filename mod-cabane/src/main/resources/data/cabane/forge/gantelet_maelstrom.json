@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:gauntlet_of_maelstrom",
+  "prix": 55000,
+  "ordre": 307,
+  "categorie": "relique",
+  "indice": "L'arme de Scylla, la reine de la tempête. Brokk y met la foudre : cuivre et paratonnerres.",
+  "temps": 45,
+  "ingredients": [
+    [
+      "minecraft:lightning_rod",
+      8
+    ],
+    [
+      "minecraft:copper_block",
+      8
+    ],
+    [
+      "minecraft:heart_of_the_sea",
+      1
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

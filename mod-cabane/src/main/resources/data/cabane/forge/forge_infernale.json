@@ -1,7 +1,10 @@
 {
   "resultat": "cataclysm:infernal_forge",
   "prix": 60000,
-  "ordre": 80,
+  "ordre": 316,
+  "categorie": "relique",
+  "indice": "Le marteau de la Monstruosité de netherite, au fond du Nether.",
+  "temps": 50,
   "ingredients": [
     [
       "minecraft:netherite_ingot",

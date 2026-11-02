@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:the_incinerator",
+  "prix": 120000,
+  "ordre": 323,
+  "categorie": "relique",
+  "indice": "La grande épée d'Ignis. La plus belle pièce de Brokk.",
+  "temps": 60,
+  "ingredients": [
+    [
+      "minecraft:netherite_sword",
+      1
+    ],
+    [
+      "minecraft:blaze_rod",
+      24
+    ],
+    [
+      "minecraft:magma_block",
+      32
+    ],
+    [
+      "minecraft:diamond_block",
+      2
+    ]
+  ]
+}

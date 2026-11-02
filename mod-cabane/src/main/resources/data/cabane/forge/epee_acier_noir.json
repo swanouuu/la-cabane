@@ -1,7 +1,8 @@
 {
   "resultat": "cataclysm:black_steel_sword",
   "prix": 9000,
-  "ordre": 20,
+  "ordre": 108,
+  "categorie": "arme",
   "ingredients": [
     [
       "minecraft:iron_block",

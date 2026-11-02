@@ -1,0 +1,8 @@
+{
+  "item": "minecraft:potion",
+  "nombre": 1,
+  "prix": 120,
+  "ordre": 7,
+  "vendeur": "pnj.fee",
+  "potion": "minecraft:night_vision"
+}

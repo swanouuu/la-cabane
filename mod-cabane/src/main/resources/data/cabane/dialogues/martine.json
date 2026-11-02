@@ -1,0 +1,22 @@
+{
+  "nom": "Martine",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "martine",
+  "pages": {
+    "default": {
+      "titre": "Martine",
+      "textes": [
+        "Le Président vient faire des discours chaque matin. Le soir, la Mairie est fermée, mais il y a de la lumière… en bas.",
+        "Le Président passe sur la place tous les jours. Ne vous approchez pas trop : ses gardes n'ont aucun humour.",
+        "J'ai voté pour le Hejj. Il n'était pas candidat. J'ai voté quand même.",
+        "Si vous voyez Vegeta, dites-lui que sa coupe est ridicule. De ma part."
+      ],
+      "boutons": [
+        {
+          "texte": "Merci du conseil"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "qui": "marchand",
+  "titre": "Client fidèle",
+  "pitch": "Mon ami ! Mouloud aime les clients fidèles. Va chez Jean-Mi, achète un booster, et montre-le-moi. Pourquoi ? Pour que Jean-Mi sache que c'est moi qui t'envoie. Il me doit une commission.",
+  "objectifs": [
+    {
+      "type": "avoir",
+      "cible": "cabane:booster",
+      "nombre": 1
+    }
+  ],
+  "merci": "Parfait ! Jean-Mi me doit dix pour cent. Tiens, ta part. Mouloud est honnête. Presque.",
+  "recompense": {
+    "argent": 300
+  }
+}

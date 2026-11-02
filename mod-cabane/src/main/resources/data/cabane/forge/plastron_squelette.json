@@ -1,0 +1,20 @@
+{
+  "resultat": "mutantmonsters:mutant_skeleton_chestplate",
+  "prix": 12000,
+  "ordre": 211,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:bone_block",
+      16
+    ],
+    [
+      "minecraft:bone",
+      16
+    ],
+    [
+      "minecraft:iron_ingot",
+      8
+    ]
+  ]
+}

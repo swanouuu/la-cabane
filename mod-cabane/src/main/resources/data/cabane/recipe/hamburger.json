@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "mcbeauvais",
+  "ingredients": [
+    {
+      "item": "minecraft:bread"
+    },
+    {
+      "item": "minecraft:cooked_beef"
+    }
+  ],
+  "result": {
+    "id": "cabane:hamburger",
+    "count": 1
+  }
+}

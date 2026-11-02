@@ -1,0 +1,96 @@
+{
+  "nom": "Macron, Président de Beauvais",
+  "couleur": "gold",
+  "voix": "",
+  "qui": "macron",
+  "pages": {
+    "default": {
+      "titre": "Le Président",
+      "textes": [
+        "Mes chers compatriotes de Beauvais ! Je suis votre Président. Et votre maire. Et, en même temps, un peu les deux.",
+        "Du travail ? Je traverse la place et je vous en trouve ! Mehdi, au Grand Bazar, en a plein.",
+        "C'est notre projeeeet ! … Pardon. Je m'emporte quand il y a du monde.",
+        "Je suis le maître des horloges. Celle de la Grande Cabane retarde de cinq minutes, mais c'est voulu.",
+        "Beauvais sera une start-up nation. Une jungle-up nation. Notez-le, Mehdi, notez.",
+        "Les gens qui ne sont rien, ça n'existe pas à Beauvais. Ici, même Gribbs est quelque chose. On ne sait pas quoi.",
+        "Le blackjack coûte un pognon de dingue. Et pourtant, les gens jouent. C'est fascinant.",
+        "Pensez printemps ! … Ici c'est la jungle, il fait toujours printemps. Ça marche à tous les coups.",
+        "Qu'ils viennent me chercher ! … Non, les gardes, rasseyez-vous, c'était une image.",
+        "Poudre de perlimpinpin ! Ovsie m'en a vendu un sac. Ça ne fait rien du tout.",
+        "Gaulois réfractaire ? Vous ? Non… Vous avez plutôt une tête de Beauvaisien coopératif.",
+        "Tout va très bien à Beauvais. Grâce à moi. Répétez après moi : tout va très bien.",
+        "Les Pillards du Sud ? Je m'en occupe. Personnellement. Enfin, ma garde s'en occupe. Enfin… on y pense.",
+        "Ceux qui disparaissent ? Ils sont partis travailler à la capitale. C'est une chance pour eux.",
+        "La Mairie est fermée la nuit. Pour votre sécurité. Ne cherchez pas à comprendre.",
+        "Les Sept Reliques ? Des superstitions de vieux. Laissez-les où elles sont. Très loin.",
+        "C'est notre projet ! Le projet AUG… le projet. Juste le projet. Circulez."
+      ],
+      "boutons": [
+        {
+          "texte": "Et vos gardes ?",
+          "vers": "gardes"
+        },
+        {
+          "texte": "Votre projet ?",
+          "vers": "projet"
+        },
+        {
+          "texte": "Où est Pierre ?",
+          "vers": "pierre"
+        },
+        {
+          "texte": "Au revoir, Monsieur le Président"
+        }
+      ],
+      "ftb": "47A5313EBBF149FA"
+    },
+    "gardes": {
+      "titre": "La garde",
+      "textes": [
+        "Ma garde rapprochée : quatre guerriers d'élite de la jungle. Je vous le dis avec bienveillance : ne me touchez pas.",
+        "Ils sont invincibles. Je leur ai demandé comment. Ils ont dit : « en même temps ». Je n'ai pas compris non plus."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Compris"
+        }
+      ]
+    },
+    "projet": {
+      "titre": "Le grand projet",
+      "textes": [
+        "Mon grand projet : un pont jusqu'à la lune. On commence par un pont jusqu'à la rivière. Le Hejj a les plans, dans votre livre de quêtes.",
+        "Faire de Beauvais la plus grande ville de la jungle. Avec un port, une gare, et un rond-point. Surtout un rond-point."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Ambitieux"
+        }
+      ]
+    },
+    "pierre": {
+      "titre": "Le Président",
+      "textes": [
+        "Pierre ? Quel Pierre ? Ah, ce Pierre-là. Parti travailler à la capitale. Une belle opportunité. Je l'ai personnellement… accompagné.",
+        "Pierre… Pierre… Il y a tellement de Pierre. Celui à la pétition ? Ah. Oui. Il réfléchit. Longuement. Très profondément. Circulez."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Hmm…"
+        }
+      ]
+    }
+  }
+}

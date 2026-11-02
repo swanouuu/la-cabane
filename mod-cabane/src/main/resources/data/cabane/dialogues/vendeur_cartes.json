@@ -1,0 +1,46 @@
+{
+  "nom": "Jean-Mi Collector",
+  "couleur": "light_purple",
+  "voix": "",
+  "qui": "vendeur_cartes",
+  "pages": {
+    "default": {
+      "titre": "Jean-Mi",
+      "textes": [
+        "Ah. Un client. Laisse-moi deviner : tu ne sais même pas ce qu'est une carte holographique.",
+        "Bienvenue dans le seul vrai commerce culturel de Beauvais. Ne touche pas la vitrine. Ni le comptoir. Ni moi.",
+        "Un booster, c'est cinq cartes. La meilleure arrive toujours en dernier. C'est comme ça, c'est la loi.",
+        "J'ai une légendaire sous plastique depuis quatre ans. Elle ne sort pas. Elle ne sortira jamais."
+      ],
+      "boutons": [
+        {
+          "texte": "Je veux des boosters",
+          "action": "boutique:vendeur_cartes"
+        },
+        {
+          "texte": "Un conseil de pro ?",
+          "vers": "conseil"
+        },
+        {
+          "texte": "Merci Jean-Mi"
+        }
+      ]
+    },
+    "conseil": {
+      "titre": "Jean-Mi",
+      "textes": [
+        "Range tes cartes dans un classeur, clic droit avec le classeur en main. Une carte qui traîne dans un inventaire, c'est une carte qui souffre.",
+        "Les rares brillent, les épiques tremblent, les légendaires assombrissent tout. Si ton écran devient noir, ne crie pas. Pleure en silence."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Noté"
+        }
+      ]
+    }
+  }
+}

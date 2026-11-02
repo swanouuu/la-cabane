@@ -1,0 +1,25 @@
+{
+  "resultat": "alexsmobs:tarantula_hawk_elytra",
+  "prix": 35000,
+  "ordre": 220,
+  "categorie": "armure",
+  "indice": "Des ailes. De vraies ailes. Brokk a pas compris comment, mais ça vole.",
+  "ingredients": [
+    [
+      "minecraft:phantom_membrane",
+      16
+    ],
+    [
+      "minecraft:leather",
+      8
+    ],
+    [
+      "minecraft:string",
+      16
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

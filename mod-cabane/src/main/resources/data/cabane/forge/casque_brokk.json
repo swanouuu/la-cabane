@@ -1,0 +1,27 @@
+{
+  "resultat": "minecraft:diamond_helmet",
+  "prix": 10000,
+  "ordre": 200,
+  "categorie": "armure",
+  "nom": "Casque de Brokk",
+  "enchantements": {
+    "minecraft:protection": 4,
+    "minecraft:respiration": 3,
+    "minecraft:aqua_affinity": 1,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:diamond",
+      5
+    ],
+    [
+      "minecraft:iron_block",
+      1
+    ],
+    [
+      "minecraft:leather",
+      4
+    ]
+  ]
+}

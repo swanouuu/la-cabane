@@ -1,0 +1,22 @@
+{
+  "nom": "Monique",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "monique",
+  "pages": {
+    "default": {
+      "titre": "Monique",
+      "textes": [
+        "On dit qu'il y a une porte secrète à la Mairie. On dit aussi que Gribbs est honnête. On dit beaucoup de choses.",
+        "Ah, vous voilà, vous. On parle de vous à la fontaine, vous savez.",
+        "Pas en bien, pas en mal… On attend de voir.",
+        "Ginette dit que vous êtes poli. Moi je trouve que vous avez un drôle de chapeau."
+      ],
+      "boutons": [
+        {
+          "texte": "On verra bien"
+        }
+      ]
+    }
+  }
+}

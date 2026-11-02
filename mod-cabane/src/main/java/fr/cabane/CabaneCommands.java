@@ -60,7 +60,68 @@ public final class CabaneCommands {
                         // la boutique d'un autre PNJ du village (Jean-Mi et ses cartes…), seulement à côté de lui
                         .then(Commands.literal("cartes").executes(ctx -> run(ctx, j -> Boutique.ouvrirChez(j, "vendeur_cartes")))))
                 .then(Commands.literal("contrats").executes(ctx -> run(ctx, Contrats::ouvrir)))
-                .then(Commands.literal("forge").executes(ctx -> run(ctx, fr.cabane.boutique.Forge::ouvrir)))
+                // la forge de Brokk, éventuellement ouverte sur une catégorie (« relique » : les reliques des boss)
+                .then(Commands.literal("forge").executes(ctx -> run(ctx, j -> fr.cabane.boutique.Forge.ouvrir(j, "")))
+                        .then(Commands.argument("onglet", StringArgumentType.word())
+                                .executes(ctx -> run(ctx, j -> fr.cabane.boutique.Forge.ouvrir(j, StringArgumentType.getString(ctx, "onglet"))))))
+                // les missions des habitants : la liste ; « cacher » masque (ou remet) le suivi à l'écran
+                .then(Commands.literal("missions").executes(ctx -> run(ctx, fr.cabane.pnj.Missions::lister))
+                        .then(Commands.literal("cacher").executes(ctx -> run(ctx, fr.cabane.pnj.Missions::cacher))))
+                // les quêtes de la semaine (chez le Hejj) ; « suivante » : l'hôte passe à la semaine d'après, pour tout le monde
+                .then(Commands.literal("semaine").executes(ctx -> run(ctx, fr.cabane.pnj.Missions::infoSemaine))
+                        .then(Commands.literal("suivante").requires(CabaneCommands::hote).executes(ctx -> {
+                            fr.cabane.pnj.Missions.semaineSuivante(ctx.getSource().getServer());
+                            return 1;
+                        })))
+                // pour l'hôte (et les tests) : parler au PNJ le plus proche portant ce nom de fichier, puis choisir une réponse
+                .then(Commands.literal("parler").requires(CabaneCommands::hote)
+                        .then(Commands.argument("pnj", StringArgumentType.word()).executes(ctx -> {
+                            ServerPlayer joueur = ctx.getSource().getPlayerOrException();
+                            String tag = "pnj." + StringArgumentType.getString(ctx, "pnj");
+                            var pnj = joueur.level().getEntities(joueur, joueur.getBoundingBox().inflate(64), e -> e.getTags().contains(tag)).stream()
+                                    .min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(joueur))).orElse(null);
+                            if (pnj == null) {
+                                ctx.getSource().sendFailure(Component.literal("Personne de ce nom à moins de 64 blocs."));
+                                return 0;
+                            }
+                            fr.cabane.pnj.Dialogues.parler(joueur, pnj);
+                            return 1;
+                        })))
+                // pour les tests : exactement ce que fait un clic droit du joueur sur ce PNJ (côté serveur)
+                .then(Commands.literal("clic").requires(CabaneCommands::hote)
+                        .then(Commands.argument("pnj", StringArgumentType.word()).executes(ctx -> {
+                            ServerPlayer joueur = ctx.getSource().getPlayerOrException();
+                            String tag = "pnj." + StringArgumentType.getString(ctx, "pnj");
+                            var pnj = joueur.level().getEntities(joueur, joueur.getBoundingBox().inflate(8), e -> e.getTags().contains(tag)).stream()
+                                    .min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(joueur))).orElse(null);
+                            if (pnj == null) {
+                                ctx.getSource().sendFailure(Component.literal("Personne de ce nom à moins de 8 blocs."));
+                                return 0;
+                            }
+                            var resultat = joueur.interactOn(pnj, net.minecraft.world.InteractionHand.MAIN_HAND);
+                            ctx.getSource().sendSuccess(() -> Component.literal("Clic droit : " + resultat), false);
+                            return 1;
+                        })))
+                .then(Commands.literal("dialogue").requires(CabaneCommands::hote)
+                        .then(Commands.argument("choix", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 20)).executes(ctx -> {
+                            fr.cabane.pnj.Dialogues.choisirPourTest(ctx.getSource().getPlayerOrException(),
+                                    com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "choix") - 1);
+                            return 1;
+                        })))
+                // pour l'hôte (et les tests) : commander à la borne la plus proche, comme si on touchait l'écran
+                .then(Commands.literal("commander").requires(CabaneCommands::hote)
+                        .then(Commands.argument("article", StringArgumentType.word()).executes(ctx -> {
+                            ServerPlayer joueur = ctx.getSource().getPlayerOrException();
+                            fr.cabane.bouffe.FastFood.ouvrir(joueur, null);
+                            fr.cabane.bouffe.FastFood.commanderPourTest(joueur, StringArgumentType.getString(ctx, "article"));
+                            return 1;
+                        })))
+                // pour l'hôte (et les tests) : commander une pièce à Brokk sans passer par l'écran de la forge
+                .then(Commands.literal("forger").requires(CabaneCommands::hote)
+                        .then(Commands.argument("recette", StringArgumentType.word()).executes(ctx -> {
+                            fr.cabane.boutique.Forge.forgerPourTest(ctx.getSource().getPlayerOrException(), StringArgumentType.getString(ctx, "recette"));
+                            return 1;
+                        })))
                 // la demande du jour du Hejj
                 .then(Commands.literal("hejj")
                         .then(Commands.literal("demande").executes(ctx -> run(ctx, fr.cabane.hub.DemandesHejj::demande)))

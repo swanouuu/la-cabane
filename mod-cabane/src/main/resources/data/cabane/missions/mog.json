@@ -1,0 +1,16 @@
+{
+  "qui": "orque_2",
+  "titre": "Plus chaud !",
+  "pitch": "Mog souffle, souffle, souffle. Mais le feu veut plus. Toi ramener bâtons de blaze. Huit. Avec ça, le feu de Brokk brûlera comme le Nether.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:blaze_rod",
+      "nombre": 8
+    }
+  ],
+  "merci": "PLUS CHAUD ! Ça brûle ! Mog content. Mog a plus de sourcils, mais Mog content.",
+  "recompense": {
+    "argent": 450
+  }
+}

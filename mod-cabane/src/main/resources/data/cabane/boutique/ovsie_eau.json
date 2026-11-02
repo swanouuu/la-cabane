@@ -1,0 +1,8 @@
+{
+  "item": "minecraft:potion",
+  "nombre": 1,
+  "prix": 160,
+  "ordre": 12,
+  "vendeur": "pnj.fee",
+  "potion": "minecraft:water_breathing"
+}

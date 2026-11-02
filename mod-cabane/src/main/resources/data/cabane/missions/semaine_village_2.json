@@ -1,0 +1,30 @@
+{
+  "qui": "gardien",
+  "ordre": 601,
+  "semaine": {
+    "id": "village",
+    "nom": "La semaine du village",
+    "texte": "Cette semaine, pas de monstres, pas de mine : on fait vivre Beauvais. On travaille ensemble, on s'écoute, on se fait des cadeaux. Même toi.",
+    "bonus": 600
+  },
+  "titre": "Prendre des nouvelles",
+  "pitch": "Va voir Marcel au feu de camp, et Nyota. Écoute-les. Ils parlent souvent, mais on les écoute rarement.",
+  "objectifs": [
+    {
+      "type": "parler",
+      "cible": "conteur",
+      "question": "Le Hejj m'envoie écouter une histoire.",
+      "reponse": "Assieds-toi. Ce soir, je te raconte comment Beauvais a été fondé : par trois personnes, un singe et une erreur de navigation."
+    },
+    {
+      "type": "parler",
+      "cible": "guerisseuse",
+      "question": "Le Hejj demande si tu vas bien.",
+      "reponse": "Le Hejj s'inquiète pour moi ? … Dis-lui que oui. Et dis-lui de manger."
+    }
+  ],
+  "merci": "Marcel a raconté, Nyota va bien. Tu vois : ça ne coûte rien, d'écouter.",
+  "recompense": {
+    "argent": 150
+  }
+}

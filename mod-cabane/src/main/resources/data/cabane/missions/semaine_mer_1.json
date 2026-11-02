@@ -1,0 +1,28 @@
+{
+  "qui": "gardien",
+  "ordre": 540,
+  "semaine": {
+    "id": "mer",
+    "nom": "La semaine de la mer",
+    "texte": "Jean est triste, et quand Jean est triste, il mange du poisson. En plus, les noyés et les skelewags pillent les pêcheurs. Prends une canne et une épée.",
+    "bonus": 800
+  },
+  "titre": "Le banquet de Jean",
+  "pitch": "Seize morues cuites et huit saumons cuits. Pour Jean. Et un peu pour nous.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:cooked_cod",
+      "nombre": 16
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:cooked_salmon",
+      "nombre": 8
+    }
+  ],
+  "merci": "Jean a mangé. Jean va mieux. Jean a demandé s'il en restait.",
+  "recompense": {
+    "argent": 250
+  }
+}

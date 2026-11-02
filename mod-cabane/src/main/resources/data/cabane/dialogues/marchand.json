@@ -1,0 +1,28 @@
+{
+  "nom": "Mouloud le Marchand",
+  "couleur": "green",
+  "voix": "",
+  "qui": "marchand",
+  "pages": {
+    "default": {
+      "titre": "Mouloud",
+      "textes": [
+        "Bienvenue au Grand Bazar ! Ici tout est à vendre. Même le comptoir, si tu payes assez.",
+        "Mon ami ! Mon frère ! Mon client préféré ! … C'est quoi ton nom déjà ?",
+        "Prix d'ami aujourd'hui. Les prix d'ami, c'est les mêmes, mais je souris en plus.",
+        "Un téléphone, un parachute, un étal pour vendre tes trucs… et des lunettes de soleil. Pour avoir l'air de quelqu'un.",
+        "Les cartes à collectionner ? Va voir Jean-Mi, sur la grande allée. Moi, je vends des choses utiles.",
+        "Mon cousin Gribbs dit qu'il a de meilleurs prix. Mon cousin Gribbs vend des cailloux peints."
+      ],
+      "boutons": [
+        {
+          "texte": "Voir la boutique",
+          "action": "boutique"
+        },
+        {
+          "texte": "À plus"
+        }
+      ]
+    }
+  }
+}

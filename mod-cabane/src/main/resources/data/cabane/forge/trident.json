@@ -1,0 +1,31 @@
+{
+  "resultat": "minecraft:trident",
+  "prix": 20000,
+  "ordre": 104,
+  "categorie": "arme",
+  "nom": "Trident des profondeurs",
+  "indice": "Un trident, sans aller le prendre aux noyés.",
+  "enchantements": {
+    "minecraft:loyalty": 3,
+    "minecraft:impaling": 5,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:prismarine_shard",
+      32
+    ],
+    [
+      "minecraft:prismarine_crystals",
+      16
+    ],
+    [
+      "minecraft:nautilus_shell",
+      3
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ]
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "qui": "jacques",
+  "titre": "Le balai de Jacques",
+  "pitch": "J'ai cassé mon balai. À force de balayer. Mon chemin est en danger. Il me faut des bâtons et du blé, que je m'en fasse un neuf. Vite, une feuille vient de tomber.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:stick",
+      "nombre": 32
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:wheat",
+      "nombre": 16
+    }
+  ],
+  "merci": "Un balai neuf ! Regarde-moi ce chemin. Impeccable. Tu peux marcher dessus. Doucement.",
+  "recompense": {
+    "argent": 250
+  }
+}

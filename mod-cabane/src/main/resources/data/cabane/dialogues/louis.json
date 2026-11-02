@@ -1,0 +1,22 @@
+{
+  "nom": "Louis",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "louis",
+  "pages": {
+    "default": {
+      "titre": "Louis",
+      "textes": [
+        "La nuit, j'entends des machines sous la place. Ma femme dit que c'est mon ventre. C'est pas mon ventre.",
+        "Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé.",
+        "Occupé à quoi ? Ça te regarde pas.",
+        "Bon… je regardais les nuages. Celui-là ressemble à Mouloud."
+      ],
+      "boutons": [
+        {
+          "texte": "D'accord, d'accord"
+        }
+      ]
+    }
+  }
+}

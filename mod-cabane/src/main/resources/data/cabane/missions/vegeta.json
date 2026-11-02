@@ -1,0 +1,24 @@
+{
+  "qui": "vegeta",
+  "titre": "Ma stupide fierté",
+  "pitch": "Ton niveau de puissance est ridicule. Va combattre des monstres : vingt-cinq squelettes et dix creepers. Quand tu reviendras, on en reparlera. Hmph.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:skeleton|minecraft:stray|minecraft:bogged",
+      "nombre": 25,
+      "texte": "Vaincre 25 squelettes"
+    },
+    {
+      "type": "tuer",
+      "cible": "minecraft:creeper|creeperoverhaul:jungle_creeper|creeperoverhaul:bamboo_creeper|creeperoverhaul:desert_creeper|creeperoverhaul:badlands_creeper|creeperoverhaul:hills_creeper|creeperoverhaul:savannah_creeper|creeperoverhaul:mushroom_creeper|creeperoverhaul:swamp_creeper|creeperoverhaul:dripstone_creeper|creeperoverhaul:cave_creeper|creeperoverhaul:dark_oak_creeper|creeperoverhaul:spruce_creeper|creeperoverhaul:beach_creeper|creeperoverhaul:snowy_creeper|creeperoverhaul:ocean_creeper|creeperoverhaul:birch_creeper",
+      "nombre": 10,
+      "texte": "Vaincre 10 creepers (ceux de la jungle comptent)"
+    }
+  ],
+  "merci": "Hmph. Ton niveau de puissance… a un peu augmenté. Un tout petit peu. Ne prends pas la grosse tête. C'est mon rôle.",
+  "recompense": {
+    "argent": 1000,
+    "xp": 5
+  }
+}

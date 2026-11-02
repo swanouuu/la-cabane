@@ -1,0 +1,17 @@
+{
+  "qui": "thierry",
+  "titre": "Faire ses preuves",
+  "pitch": "Ici, faut faire ses preuves. Les zombies rôdent autour du village la nuit. Nettoie-moi la jungle : vingt zombies. Après, on parlera.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:zombie|minecraft:zombie_villager|minecraft:husk|minecraft:drowned",
+      "nombre": 20,
+      "texte": "Vaincre 20 zombies"
+    }
+  ],
+  "merci": "Vingt ? Pas mal, pour quelqu'un tombé du ciel. Bon. T'as fait tes preuves. Un peu.",
+  "recompense": {
+    "argent": 500
+  }
+}

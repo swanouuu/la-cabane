@@ -1,0 +1,20 @@
+{
+  "qui": "bernard",
+  "apres": [
+    "bernard"
+  ],
+  "titre": "Les plantes qui mordent",
+  "pitch": "Une plante a essayé de manger Bernard. Le singe. Une plante ! Avec des dents ! Dans la jungle, il y en a d'autres : des Foliaaths. Va leur montrer qui mange qui.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "mowziesmobs:foliaath",
+      "nombre": 3,
+      "texte": "Vaincre 3 Foliaaths, les plantes carnivores de la jungle"
+    }
+  ],
+  "merci": "Bernard (le singe) ressort enfin. Il mord les plantes, maintenant. Toutes. Même les miennes.",
+  "recompense": {
+    "argent": 250
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 552,
+  "semaine": {
+    "id": "desert",
+    "nom": "La semaine du désert",
+    "texte": "Les caravanes du désert ne passent plus : serpents à sonnette, scorpions, momies, tornades de sable vivantes… Cette semaine, on rouvre la route.",
+    "bonus": 800
+  },
+  "titre": "Du sable pour le verre",
+  "pitch": "Pour faire du verre, il faut du sable. Beaucoup : cent vingt-huit.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:sand",
+      "nombre": 128
+    }
+  ],
+  "merci": "Il y a du sable partout dans la Grande Cabane, maintenant. Mais on aura des fenêtres.",
+  "recompense": {
+    "argent": 200
+  }
+}

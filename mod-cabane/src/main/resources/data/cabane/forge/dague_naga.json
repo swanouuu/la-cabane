@@ -1,0 +1,25 @@
+{
+  "resultat": "mowziesmobs:naga_fang_dagger",
+  "prix": 9000,
+  "ordre": 107,
+  "categorie": "arme",
+  "indice": "Le croc du Naga, sans affronter le serpent des falaises.",
+  "ingredients": [
+    [
+      "minecraft:iron_ingot",
+      4
+    ],
+    [
+      "minecraft:phantom_membrane",
+      4
+    ],
+    [
+      "minecraft:spider_eye",
+      6
+    ],
+    [
+      "minecraft:emerald",
+      2
+    ]
+  ]
+}

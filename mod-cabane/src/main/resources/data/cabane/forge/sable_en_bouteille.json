@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:sandstorm_in_a_bottle",
+  "prix": 25000,
+  "ordre": 310,
+  "categorie": "relique",
+  "indice": "La tempête de sable du Vestige antique, dans une bouteille.",
+  "temps": 30,
+  "ingredients": [
+    [
+      "minecraft:sand",
+      64
+    ],
+    [
+      "minecraft:ghast_tear",
+      2
+    ],
+    [
+      "minecraft:gold_block",
+      2
+    ],
+    [
+      "minecraft:glass_bottle",
+      1
+    ]
+  ]
+}

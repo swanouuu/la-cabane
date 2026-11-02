@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 562,
+  "semaine": {
+    "id": "betes",
+    "nom": "La semaine des grandes bêtes",
+    "texte": "Les anciens parlent de bêtes énormes : des crocodiles qui avalent un homme, des dragons de Komodo, et des monstres qui ont muté. Cette semaine, on vérifie si les anciens disent vrai.",
+    "bonus": 1000
+  },
+  "titre": "Le mutant",
+  "pitch": "Parfois, la nuit, un monstre a muté : un zombie, un squelette, un creeper ou un enderman énorme. Si tu en croises un, bats-le. Si tu peux.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "mutantmonsters:mutant_zombie|mutantmonsters:mutant_skeleton|mutantmonsters:mutant_creeper|mutantmonsters:mutant_enderman",
+      "nombre": 1,
+      "texte": "Vaincre un monstre mutant"
+    }
+  ],
+  "merci": "Un mutant ?! Tu es fou. Fou et courageux. Le village chantera ton nom. Faux, mais fort.",
+  "recompense": {
+    "argent": 400
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "resultat": "minecraft:netherite_chestplate",
+  "prix": 60000,
+  "ordre": 204,
+  "categorie": "armure",
+  "nom": "Plastron noir de Brokk",
+  "indice": "Le meilleur plastron du monde. Brokk le dit.",
+  "enchantements": {
+    "minecraft:protection": 4,
+    "minecraft:unbreaking": 3,
+    "minecraft:mending": 1
+  },
+  "ingredients": [
+    [
+      "minecraft:netherite_ingot",
+      2
+    ],
+    [
+      "minecraft:diamond",
+      8
+    ],
+    [
+      "minecraft:blaze_rod",
+      4
+    ]
+  ]
+}

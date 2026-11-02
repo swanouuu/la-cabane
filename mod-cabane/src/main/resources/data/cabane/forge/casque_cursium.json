@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:cursium_helmet",
+  "prix": 75000,
+  "ordre": 318,
+  "categorie": "relique",
+  "indice": "Le casque de Maledictus, le roi maudit. Brokk l'a maudit lui-même.",
+  "temps": 55,
+  "ingredients": [
+    [
+      "minecraft:netherite_helmet",
+      1
+    ],
+    [
+      "minecraft:soul_sand",
+      32
+    ],
+    [
+      "minecraft:crying_obsidian",
+      8
+    ],
+    [
+      "minecraft:ghast_tear",
+      4
+    ]
+  ]
+}

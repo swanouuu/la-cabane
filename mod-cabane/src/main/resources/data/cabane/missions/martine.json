@@ -1,0 +1,17 @@
+{
+  "qui": "martine",
+  "titre": "Message pour Vegeta",
+  "pitch": "Vegeta crie près de la tour de guet tous les matins. Dis-lui que sa coupe est ridicule. De ma part. Je veux voir sa tête. Enfin, toi tu la verras. Raconte-moi.",
+  "objectifs": [
+    {
+      "type": "parler",
+      "cible": "vegeta",
+      "question": "Martine trouve ta coupe ridicule.",
+      "reponse": "QUOI ?! Ma coupe tient toute seule, insecte ! SANS GEL ! … Dis à cette femme que le prince des Saiyans ne se laisse pas insulter par… par… Elle a dit ridicule ? Vraiment ridicule ? … Hmph."
+    }
+  ],
+  "merci": "Il a dit « hmph » ? Hahaha ! Il est vexé. Merci, j'ai ma journée.",
+  "recompense": {
+    "argent": 200
+  }
+}

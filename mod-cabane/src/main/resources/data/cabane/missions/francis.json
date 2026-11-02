@@ -1,0 +1,16 @@
+{
+  "qui": "francis",
+  "titre": "Pas de bruit après minuit",
+  "pitch": "Les gens de l'avion font du bruit. Des pas, partout, tout le temps. Il me faut des tapis. Des tapis partout. Pour étouffer les pas. Trente-deux. Marron, pour que ça ne se voie pas.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:brown_carpet",
+      "nombre": 32
+    }
+  ],
+  "merci": "Ah. Le silence. Enfin. Vous voyez, quand vous voulez, vous êtes des gens bien.",
+  "recompense": {
+    "argent": 300
+  }
+}

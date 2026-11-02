@@ -1,0 +1,16 @@
+{
+  "qui": "jean",
+  "titre": "Jean se méfie",
+  "pitch": "« Encore un de l'avion… » Bon. Si tu veux que je te fasse confiance, apporte-moi du poisson grillé. Beaucoup. Je mange quand je suis triste. Et je suis souvent triste, depuis que mon frère est parti.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:cooked_cod",
+      "nombre": 16
+    }
+  ],
+  "merci": "… Il est bon, ce poisson. Bon. Peut-être que tu n'es pas comme les autres. Peut-être.",
+  "recompense": {
+    "argent": 300
+  }
+}

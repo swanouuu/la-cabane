@@ -1,0 +1,21 @@
+{
+  "nom": "Vegeta",
+  "couleur": "dark_purple",
+  "voix": "",
+  "qui": "vegeta",
+  "pages": {
+    "default": {
+      "titre": "Majin Vegeta",
+      "textes": [
+        "J'AI BATTU KAKAROT ! Avec un peu d'aide. Très peu. Presque rien.",
+        "Le M ? Je le garde. Ça me va bien, non ?",
+        "Vous avez choisi le bon camp. Le camp du Prince. Vous aurez une place d'honneur dans mon futur royaume de Beauvais."
+      ],
+      "boutons": [
+        {
+          "texte": "Vive le Prince !"
+        }
+      ]
+    }
+  }
+}

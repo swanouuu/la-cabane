@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 590,
+  "semaine": {
+    "id": "batisseurs",
+    "nom": "La semaine des bâtisseurs",
+    "texte": "Beauvais grandit. Les nouveaux veulent des maisons, les anciens veulent des murs, et Francis veut des tapis. Rapporte des matériaux : le village construira.",
+    "bonus": 600
+  },
+  "titre": "Du bois de jungle",
+  "pitch": "Soixante-quatre bûches de jungle. Les arbres géants en ont à revendre.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:jungle_log",
+      "nombre": 64
+    }
+  ],
+  "merci": "Du bon bois. Ça fera une belle charpente. Ou un nouveau tronc pour Gérard.",
+  "recompense": {
+    "argent": 200
+  }
+}

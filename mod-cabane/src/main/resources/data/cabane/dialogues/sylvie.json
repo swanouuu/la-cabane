@@ -1,0 +1,40 @@
+{
+  "nom": "Sylvie, la femme de Pierre",
+  "couleur": "light_purple",
+  "voix": "",
+  "qui": "sylvie",
+  "pages": {
+    "default": {
+      "titre": "Sylvie",
+      "textes": [
+        "Excusez-moi… Vous n'auriez pas vu mon mari ? Pierre. Grand, un chapeau de paille, il parle trop fort. Il est entré dans cette Mairie il y a trois semaines. Il n'en est jamais ressorti.",
+        "Tous les soirs, je viens ici avec Lucas. On attend. Le Président passe devant nous et il sourit. Il sourit toujours.",
+        "« Parti travailler à la capitale. » Pierre ne serait jamais parti sans embrasser son fils. Jamais."
+      ],
+      "boutons": [
+        {
+          "texte": "Parle-moi de Pierre",
+          "vers": "pierre"
+        },
+        {
+          "texte": "Courage, Sylvie"
+        }
+      ]
+    },
+    "pierre": {
+      "titre": "Pierre",
+      "textes": [
+        "Il est pêcheur, et il fait les blagues les plus nulles de Beauvais. Il avait promis à Lucas de lui apprendre à pêcher. Le jour où il a disparu, il était allé porter une pétition au Président : trente signatures contre les Pillards. Trente. Il était si fier."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "On va le retrouver"
+        }
+      ]
+    }
+  }
+}

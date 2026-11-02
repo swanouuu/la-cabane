@@ -1,0 +1,22 @@
+{
+  "nom": "Ginette",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "ginette",
+  "pages": {
+    "default": {
+      "titre": "Ginette",
+      "textes": [
+        "Ma voisine a disparu. « Partie à la capitale », qu'ils disent. Elle avait quatre-vingt-sept ans.",
+        "Mon petit, tu as une tête à faire des bêtises. Je te surveille.",
+        "Essuie tes pieds avant d'entrer chez les gens. Même chez Brokk. Surtout chez Brokk.",
+        "Tu manges assez ? Tu as l'air maigre. Mange une carotte. Pas des frites, une carotte."
+      ],
+      "boutons": [
+        {
+          "texte": "Oui madame"
+        }
+      ]
+    }
+  }
+}

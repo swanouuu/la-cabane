@@ -1,0 +1,20 @@
+{
+  "resultat": "alexsmobs:flying_fish_boots",
+  "prix": 7000,
+  "ordre": 217,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:cod",
+      8
+    ],
+    [
+      "minecraft:prismarine_shard",
+      8
+    ],
+    [
+      "minecraft:leather",
+      6
+    ]
+  ]
+}

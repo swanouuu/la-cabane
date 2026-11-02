@@ -1,0 +1,20 @@
+{
+  "qui": "jean",
+  "apres": [
+    "jean"
+  ],
+  "titre": "Les crocodiles de la rivière",
+  "pitch": "Je ne peux plus pêcher. Il y a des crocodiles dans la rivière, et ils me regardent. Avec leurs yeux. Trois, ça suffira. Ils comprendront.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "alexsmobs:crocodile|alexsmobs:caiman|naturalist:alligator",
+      "nombre": 3,
+      "texte": "Vaincre 3 crocodiles, caïmans ou alligators"
+    }
+  ],
+  "merci": "Je peux repêcher ! Pierre aurait adoré voir ça. … Il le verra. Je le sais.",
+  "recompense": {
+    "argent": 300
+  }
+}

@@ -64,6 +64,12 @@ public final class Effets {
     /** Un personnage au skin de joueur, à la position donnée (pieds), tourné vers lacet, dans une posture, avec sa coiffure en 3D. */
     public static void personnage(PoseStack pose, MultiBufferSource buffers, ResourceLocation skin, Vec3 pieds, float lacet, Posture p, float alpha,
             int coiffure, float[] couleurCheveux, float echelleCheveux) {
+        personnage(pose, buffers, skin, pieds, lacet, p, alpha, coiffure, couleurCheveux, echelleCheveux, 0xFFFFFF);
+    }
+
+    /** Pareil, avec le skin teinté (0xRRGGBB, multiplié : 0xFFFFFF le laisse tel quel). */
+    public static void personnage(PoseStack pose, MultiBufferSource buffers, ResourceLocation skin, Vec3 pieds, float lacet, Posture p, float alpha,
+            int coiffure, float[] couleurCheveux, float echelleCheveux, int teinte) {
         PlayerModel<LivingEntity> m = modele();
         m.young = false;
         m.crouching = false;
@@ -89,7 +95,7 @@ public final class Effets {
         pose.translate(0, -0.9, 0);
         pose.scale(-0.9375F, -0.9375F, 0.9375F);
         pose.translate(0, -1.501, 0);
-        int couleur = ((int) (Mth.clamp(alpha, 0, 1) * 255) << 24) | 0xFFFFFF;
+        int couleur = ((int) (Mth.clamp(alpha, 0, 1) * 255) << 24) | (teinte & 0xFFFFFF);
         m.renderToBuffer(pose, buffers.getBuffer(RenderType.entityTranslucent(skin)), 0xF000F0, OverlayTexture.NO_OVERLAY, couleur);
         m.head.translateAndRotate(pose);
         cheveux(pose, buffers, coiffure, couleurCheveux, echelleCheveux, 0xF000F0);

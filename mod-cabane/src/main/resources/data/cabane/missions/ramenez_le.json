@@ -1,0 +1,29 @@
+{
+  "qui": "sylvie",
+  "ordre": 4,
+  "apres": [
+    "sous_la_mairie"
+  ],
+  "quand": -1,
+  "titre": "Ramenez-le-nous",
+  "pitch": "Pierre dit que c'est trop dangereux de le sortir maintenant. Alors il faut abattre celui qui le garde enfermé. Marcel dit que vous êtes ceux de la prophétie… Si c'est vrai, alors libérez Beauvais. Libérez-le. Et ramenez-le-nous.",
+  "objectifs": [
+    {
+      "type": "succes",
+      "cible": "cabane:histoire/liberation",
+      "texte": "Vaincre le Président Augmenté (livre : L'Histoire de Beauvais)"
+    }
+  ],
+  "rappel": "Le livre de quêtes vous guidera : « L'Histoire de Beauvais ». Les reliques, la clé, la Salle Zéro… Je vous fais confiance.",
+  "merci": "Il est rentré. Il est là, au feu de camp, avec Lucas sur les épaules. (Elle vous serre dans ses bras, très fort.) Beauvais vous doit tout. Nous, on vous doit Pierre.",
+  "recompense": {
+    "argent": 3000,
+    "objets": [
+      [
+        "minecraft:diamond",
+        4
+      ]
+    ],
+    "xp": 5
+  }
+}

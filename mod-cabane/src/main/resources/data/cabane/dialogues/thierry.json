@@ -1,0 +1,22 @@
+{
+  "nom": "Thierry",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "thierry",
+  "pages": {
+    "default": {
+      "titre": "Thierry",
+      "textes": [
+        "Quand les Pillards arrivent, la garde du Président protège… le Président. Nous, on se débrouille avec des fourches.",
+        "Moi, j'étais là avant l'avion, avant tout le monde. Faut faire ses preuves, ici.",
+        "Les preuves, c'est simple : un pont, un port, et une fontaine qui marche.",
+        "Tu veux un conseil ? Le blackjack, c'est la banque qui gagne. Toujours. Sauf moi, une fois."
+      ],
+      "boutons": [
+        {
+          "texte": "Je ferai mes preuves"
+        }
+      ]
+    }
+  }
+}

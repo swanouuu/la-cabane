@@ -67,7 +67,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2);
+    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -323,6 +323,9 @@ public final class Pouvoirs {
         if (Maudit.est(elu.pouvoir())) {
             Maudit.eveiller(joueur, niveau + 1);
         }
+        if (elu.pouvoir().equals(Minato.NOM)) {
+            Minato.eveiller(joueur);
+        }
         envoyerEtat(joueur, elu, niveau + 1, true);
     }
 
@@ -380,6 +383,7 @@ public final class Pouvoirs {
         ECRASEMENTS.remove(joueur.getUUID());
         Hachibi.endormir(joueur);
         Maudit.endormir(joueur);
+        Minato.endormir(joueur);
         armure(joueur, 0);
         if (EVEILLES.remove(joueur.getUUID()) != null) {
             Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
@@ -710,10 +714,10 @@ public final class Pouvoirs {
     public static void commandes(RegisterCommandsEvent event) {
         LiteralArgumentBuilder<CommandSourceStack> racine = Commands.literal("pouvoir").requires(s -> s.hasPermission(2));
         for (String pouvoir : LISTE) {
-            // Hachibi et la marque maudite ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
+            // Hachibi, la marque maudite et Minato ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir)) {
-                Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Couleur.VIOLET;
+            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || pouvoir.equals(Minato.NOM)) {
+                Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : pouvoir.equals(Minato.NOM) ? Couleur.JAUNE : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))

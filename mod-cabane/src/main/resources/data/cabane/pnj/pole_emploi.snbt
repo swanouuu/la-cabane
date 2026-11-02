@@ -4,44 +4,10 @@
   CustomName:'{"text":"Mehdi de Pôle emploi","color":"blue"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","pnj.pole_emploi"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/mehdi.png"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.pole_emploi",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Mehdi",
-        Texts:[{Text:"Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats sont affichés au-dessus du tableau, ils changent toutes les heures."},{Text:"Prenez un ticket. Il n'y a pas de tickets. Prenez-en un quand même."},{Text:"Votre profil m'intéresse : vous savez porter des choses ? Parfait. Le village a besoin de bois, de fer et de blé."},{Text:"Je travaille ici depuis l'avant-dernier avion. Le dernier, il est en feu, c'est le vôtre."},{Text:"On recrute ! Clic droit sur le tableau pour livrer, accroupi pour voir le détail. Et souriez, ça compte pour le dossier."}],
-        Buttons:[{
-          Label:"contrats",
-          Name:"Voir les contrats",
-          Type:"ACTION",
-          Actions:[{Type:"COMMAND",Cmd:"cabane contrats",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
-        },{
-          Label:"dossier",
-          Name:"Et mon dossier ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"dossier"}]
-        },{
-          Label:"bye",
-          Name:"Merci Mehdi",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"dossier",
-        Name:"Votre dossier",
-        Texts:[{Text:"Votre dossier ? Il manque une pièce justificative. Il en manque toujours une."},{Text:"Votre dossier est en cours de traitement. Il est en cours de traitement depuis mardi. Quel mardi ? Bonne question."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"D'accord…",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

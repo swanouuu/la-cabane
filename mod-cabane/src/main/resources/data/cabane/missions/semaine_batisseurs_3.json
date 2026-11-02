@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 592,
+  "semaine": {
+    "id": "batisseurs",
+    "nom": "La semaine des bâtisseurs",
+    "texte": "Beauvais grandit. Les nouveaux veulent des maisons, les anciens veulent des murs, et Francis veut des tapis. Rapporte des matériaux : le village construira.",
+    "bonus": 600
+  },
+  "titre": "Des fenêtres",
+  "pitch": "Des maisons sans fenêtres, c'est des grottes. Trente-deux blocs de verre.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:glass",
+      "nombre": 32
+    }
+  ],
+  "merci": "Monique va pouvoir regarder chez tout le monde. Je ne sais pas si c'est une bonne nouvelle.",
+  "recompense": {
+    "argent": 150
+  }
+}

@@ -15,6 +15,8 @@ public final class CabaneSons {
     public static final DeferredRegister<SoundEvent> SONS = DeferredRegister.create(Registries.SOUND_EVENT, Cabane.MODID);
 
     public static final DeferredHolder<SoundEvent, SoundEvent> VOITURE = son("voiture");
+    /** Le bruit de chaque téléportation de Minato : un vrai coup de tonnerre (ceux de Minecraft), pas trop fort. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINATO_FLASH = son("minato.flash");
 
     /** Une voix par PNJ : quand on ouvre son dialogue, il dit une de ses répliques enregistrées (s'il en a). */
     public static final List<String> VOIX = List.of("gardien", "cartographe", "marchand", "forgeron", "fee", "pole_emploi", "cousin",

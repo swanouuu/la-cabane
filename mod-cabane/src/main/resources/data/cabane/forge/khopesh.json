@@ -1,7 +1,8 @@
 {
   "resultat": "cataclysm:khopesh",
   "prix": 14000,
-  "ordre": 40,
+  "ordre": 109,
+  "categorie": "arme",
   "ingredients": [
     [
       "minecraft:gold_ingot",

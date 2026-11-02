@@ -1,0 +1,26 @@
+{
+  "resultat": "alexsmobs:dimensional_carver",
+  "prix": 40000,
+  "ordre": 322,
+  "categorie": "relique",
+  "indice": "La lame du Ver du Vide, qui découpe les dimensions.",
+  "temps": 45,
+  "ingredients": [
+    [
+      "minecraft:ender_eye",
+      8
+    ],
+    [
+      "minecraft:obsidian",
+      16
+    ],
+    [
+      "minecraft:amethyst_shard",
+      16
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

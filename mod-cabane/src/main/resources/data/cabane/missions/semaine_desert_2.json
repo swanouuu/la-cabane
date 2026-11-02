@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 551,
+  "semaine": {
+    "id": "desert",
+    "nom": "La semaine du désert",
+    "texte": "Les caravanes du désert ne passent plus : serpents à sonnette, scorpions, momies, tornades de sable vivantes… Cette semaine, on rouvre la route.",
+    "bonus": 800
+  },
+  "titre": "Des cactus pour Ovsie",
+  "pitch": "Ovsie veut un jardin de cactus. Elle dit que ça pique, comme elle. Seize.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:cactus",
+      "nombre": 16
+    }
+  ],
+  "merci": "Ovsie a planté ses cactus. Et s'est piquée. Elle est ravie.",
+  "recompense": {
+    "argent": 200
+  }
+}

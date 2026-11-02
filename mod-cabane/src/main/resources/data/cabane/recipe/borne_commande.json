@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RYR",
+    "IGI",
+    "IDI"
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:red_dye"
+    },
+    "Y": {
+      "item": "minecraft:yellow_dye"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "G": {
+      "item": "minecraft:glass_pane"
+    },
+    "D": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "id": "cabane:borne_commande",
+    "count": 1
+  }
+}

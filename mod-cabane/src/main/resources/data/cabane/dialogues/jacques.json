@@ -1,0 +1,22 @@
+{
+  "nom": "Jacques",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "jacques",
+  "pages": {
+    "default": {
+      "titre": "Jacques",
+      "textes": [
+        "Les Pillards sont passés mardi. Ils ont tout piétiné. Même mon chemin. MON chemin.",
+        "Tu marches sur mon chemin, là. Je l'ai balayé ce matin.",
+        "J'ai balayé ce chemin trois fois aujourd'hui. Trois. Fois.",
+        "Le Président m'a promis une médaille du meilleur balayeur. J'attends toujours."
+      ],
+      "boutons": [
+        {
+          "texte": "Pardon, Jacques"
+        }
+      ]
+    }
+  }
+}

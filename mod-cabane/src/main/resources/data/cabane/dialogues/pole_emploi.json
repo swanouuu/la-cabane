@@ -1,0 +1,51 @@
+{
+  "nom": "Mehdi de Pôle emploi",
+  "couleur": "blue",
+  "voix": "",
+  "qui": "pole_emploi",
+  "pages": {
+    "default": {
+      "titre": "Mehdi",
+      "textes": [
+        "Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats sont affichés au-dessus du tableau, ils changent toutes les heures.",
+        "Prenez un ticket. Il n'y a pas de tickets. Prenez-en un quand même.",
+        "Votre profil m'intéresse : vous savez porter des choses ? Parfait. Le village a besoin de bois, de fer et de blé.",
+        "Je travaille ici depuis l'avant-dernier avion. Le dernier, il est en feu, c'est le vôtre.",
+        "On recrute ! Je vous montre les contrats de l'heure. Et souriez, ça compte pour le dossier."
+      ],
+      "boutons": [
+        {
+          "texte": "Voir les contrats",
+          "action": "contrats"
+        },
+        {
+          "texte": "Et mon dossier ?",
+          "vers": "dossier"
+        },
+        {
+          "texte": "Merci Mehdi"
+        }
+      ]
+    },
+    "dossier": {
+      "titre": "Votre dossier",
+      "textes": [
+        "Votre dossier ? Il manque une pièce justificative. Il en manque toujours une.",
+        "Votre dossier est en cours de traitement. Il est en cours de traitement depuis mardi. Quel mardi ? Bonne question."
+      ],
+      "boutons": [
+        {
+          "texte": "Voir les contrats",
+          "action": "contrats"
+        },
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "D'accord…"
+        }
+      ]
+    }
+  }
+}

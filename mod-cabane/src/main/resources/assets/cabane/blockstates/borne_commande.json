@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/borne_commande"
+    },
+    "facing=east": {
+      "model": "cabane:block/borne_commande"
+    },
+    "facing=south": {
+      "model": "cabane:block/borne_commande"
+    },
+    "facing=west": {
+      "model": "cabane:block/borne_commande"
+    }
+  }
+}

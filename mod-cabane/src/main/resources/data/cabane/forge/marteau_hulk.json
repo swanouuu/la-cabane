@@ -1,0 +1,25 @@
+{
+  "resultat": "mutantmonsters:hulk_hammer",
+  "prix": 20000,
+  "ordre": 113,
+  "categorie": "arme",
+  "indice": "Le marteau du zombie mutant. Brokk l'a refait, en mieux.",
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      6
+    ],
+    [
+      "minecraft:rotten_flesh",
+      32
+    ],
+    [
+      "minecraft:obsidian",
+      4
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ]
+  ]
+}

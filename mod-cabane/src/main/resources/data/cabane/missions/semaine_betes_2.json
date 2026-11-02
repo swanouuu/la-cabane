@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 561,
+  "semaine": {
+    "id": "betes",
+    "nom": "La semaine des grandes bêtes",
+    "texte": "Les anciens parlent de bêtes énormes : des crocodiles qui avalent un homme, des dragons de Komodo, et des monstres qui ont muté. Cette semaine, on vérifie si les anciens disent vrai.",
+    "bonus": 1000
+  },
+  "titre": "Le dragon de Komodo",
+  "pitch": "Un lézard grand comme un cheval, qui mord et qui empoisonne. Il y en a dans les forêts chaudes. Deux.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "alexsmobs:komodo_dragon|naturalist:komodo_dragon",
+      "nombre": 2,
+      "texte": "Vaincre 2 dragons de Komodo"
+    }
+  ],
+  "merci": "Un dragon ! Enfin, un lézard. Un très gros lézard. Bravo.",
+  "recompense": {
+    "argent": 300
+  }
+}

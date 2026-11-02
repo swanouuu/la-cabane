@@ -1,0 +1,25 @@
+{
+  "nom": "Mog, souffleur de forge",
+  "couleur": "dark_green",
+  "voix": "",
+  "qui": "orque_2",
+  "pages": {
+    "default": {
+      "titre": "Mog",
+      "textes": [
+        "Plus chaud ! Toujours plus chaud ! Brokk aime quand ça brûle.",
+        "Mog souffle sur le feu depuis trois jours. Mog a plus de souffle.",
+        "Attention, ça pique. Tout pique ici."
+      ],
+      "boutons": [
+        {
+          "texte": "La forge de Brokk",
+          "action": "forge"
+        },
+        {
+          "texte": "Bon courage"
+        }
+      ]
+    }
+  }
+}

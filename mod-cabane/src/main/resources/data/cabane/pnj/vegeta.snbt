@@ -4,39 +4,10 @@
   CustomName:'{"text":"Vegeta","color":"dark_blue"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj","ambiance_vegeta"],
+  Tags:["cabane_pnj","pnj.vegeta","ambiance_vegeta"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/vegeta.png"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.vegeta",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Vegeta",
-        Texts:[{Text:"Hmph. Ma stupide fierté m'empêche de te dire bonjour. Alors je te dis : dégage, insecte."},{Text:"Je suis le prince de tous les Saiyans ! … Ici on m'appelle « le monsieur qui crie près de la tour », mais bon."},{Text:"Ma stupide fierté… voilà ce qui m'a perdu. Ça, et le blackjack de Mouloud."},{Text:"Ton niveau de puissance ? Ridicule. Même Ovsie te met une raclée."},{Text:"Kakarot ! … Ah non. C'est toi. Quelle déception."},{Text:"Je m'entraîne sous une gravité trois cents fois supérieure. Bon, c'est un sac de sable. Mais il est lourd."},{Text:"Plus de huit mille ?! … Ah, c'est le prix d'une parcelle chez Mouloud. Je m'emporte."}],
-        Buttons:[{
-          Label:"fierte",
-          Name:"Pourquoi tant de fierté ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"fierte"}]
-        },{
-          Label:"bye",
-          Name:"D'accord, prince…",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"fierte",
-        Name:"La fierté",
-        Texts:[{Text:"Ma stupide fierté, c'est tout ce qui me reste ! Et ma coupe de cheveux. Elle tient toute seule. Sans gel."},{Text:"Un prince ne demande jamais son chemin. C'est pour ça que je suis à Beauvais depuis six ans."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"Respect, prince",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

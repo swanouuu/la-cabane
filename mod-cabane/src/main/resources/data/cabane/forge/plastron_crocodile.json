@@ -1,0 +1,20 @@
+{
+  "resultat": "alexsmobs:crocodile_chestplate",
+  "prix": 9000,
+  "ordre": 214,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:leather",
+      16
+    ],
+    [
+      "minecraft:iron_ingot",
+      8
+    ],
+    [
+      "minecraft:slime_ball",
+      4
+    ]
+  ]
+}

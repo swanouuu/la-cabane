@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:monstrous_helm",
+  "prix": 55000,
+  "ordre": 317,
+  "categorie": "relique",
+  "indice": "Le casque à cornes de la Monstruosité de netherite.",
+  "temps": 45,
+  "ingredients": [
+    [
+      "minecraft:netherite_scrap",
+      4
+    ],
+    [
+      "minecraft:magma_block",
+      16
+    ],
+    [
+      "minecraft:blaze_rod",
+      8
+    ],
+    [
+      "minecraft:iron_block",
+      4
+    ]
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "qui": "fee",
+  "titre": "La couronne d'Ovsie",
+  "pitch": "Ma couronne de fleurs a fané ! Je veux des coquelicots et des pissenlits. Seize de chaque. S'il te plaît, s'il te plaît, s'il te plaît !",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:poppy",
+      "nombre": 16
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:dandelion",
+      "nombre": 16
+    }
+  ],
+  "merci": "Elle est magnifique ! Je suis magnifique ! Tiens, un petit sort pour toi. Il brille.",
+  "recompense": {
+    "argent": 300,
+    "objets": [
+      [
+        "minecraft:glow_berries",
+        8
+      ]
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:wrath_of_the_desert",
+  "prix": 40000,
+  "ordre": 311,
+  "categorie": "relique",
+  "indice": "L'arc du Vestige antique, le gardien du désert.",
+  "temps": 40,
+  "ingredients": [
+    [
+      "minecraft:bow",
+      1
+    ],
+    [
+      "minecraft:gold_block",
+      6
+    ],
+    [
+      "minecraft:sandstone",
+      32
+    ],
+    [
+      "minecraft:string",
+      16
+    ]
+  ]
+}

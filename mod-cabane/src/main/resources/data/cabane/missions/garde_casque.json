@@ -1,0 +1,16 @@
+{
+  "qui": "garde_est",
+  "titre": "Le casque du garde",
+  "pitch": "Le singe de Bernard m'a volé mon casque. Encore. Je ne peux pas monter la garde tête nue, c'est le règlement. Trouve-m'en un en fer, je te revaudrai ça.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:iron_helmet",
+      "nombre": 1
+    }
+  ],
+  "merci": "Parfait, il me va. Si tu vois le singe avec l'ancien, ne le provoque pas. Il est armé. D'un casque.",
+  "recompense": {
+    "argent": 250
+  }
+}

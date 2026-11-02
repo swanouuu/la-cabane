@@ -1,0 +1,28 @@
+{
+  "qui": "gardien",
+  "ordre": 570,
+  "semaine": {
+    "id": "recoltes",
+    "nom": "La semaine des récoltes",
+    "texte": "Cette semaine, Beauvais fait ses réserves. La saison des pluies arrive, et Ginette veut nourrir tout le village. Chacun apporte sa part : toi aussi.",
+    "bonus": 600
+  },
+  "titre": "Le grenier du village",
+  "pitch": "Le grenier sonne creux. Rapporte du blé et des carottes.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:wheat",
+      "nombre": 64
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:carrot",
+      "nombre": 32
+    }
+  ],
+  "merci": "Le grenier se remplit. Ginette va pouvoir faire sa soupe géante. Encore.",
+  "recompense": {
+    "argent": 200
+  }
+}

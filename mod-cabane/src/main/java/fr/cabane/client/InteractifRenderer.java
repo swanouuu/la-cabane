@@ -33,6 +33,14 @@ public class InteractifRenderer implements BlockEntityRenderer<InteractifBlockEn
         int clair = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().above());
         if (bloc.ouverture() == BlocInteractif.Ouverture.CONTRATS) {
             contrats(be, ps, buf, clair);
+        } else if (bloc.ouverture() == BlocInteractif.Ouverture.BORNE) {
+            // la borne du McBeauvais, dans le repère du joueur qui l'a posée
+            Direction face = be.getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+            ps.pushPose();
+            ps.translate(0.5, 0, 0.5);
+            Rendu3D.tourner(ps, -face.toYRot());
+            ClientBorne.dessiner(be, partialTick, ps, buf, LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().relative(face)));
+            ps.popPose();
         } else if (bloc.ouverture() == BlocInteractif.Ouverture.BOUTIQUE) {
             vitrine(be, partialTick, ps, buf, clair);
         } else if (bloc.ouverture() == BlocInteractif.Ouverture.TERRAIN) {

@@ -1,0 +1,46 @@
+{
+  "nom": "Ovsie la Fée",
+  "couleur": "light_purple",
+  "voix": "",
+  "qui": "fee",
+  "pages": {
+    "default": {
+      "titre": "Ovsie",
+      "textes": [
+        "Coucou ! Tu collectionnes les cartes ? Jean-Mi vend les boosters, sur la grande allée, et un classeur garde toute ta collection.",
+        "Je brille la nuit. Le jour aussi, mais personne ne remarque.",
+        "Si tu trouves une carte légendaire, je te fais un câlin. Un petit. Je suis petite.",
+        "Le casino ? C'est mal. … Tu m'emmènes ?",
+        "Je vends des petits sorts en bouteille. Ça brille, ça pétille, et parfois ça marche."
+      ],
+      "boutons": [
+        {
+          "texte": "Tes petits sorts",
+          "action": "boutique:pnj.fee"
+        },
+        {
+          "texte": "Et le casino ?",
+          "vers": "casino"
+        },
+        {
+          "texte": "Merci Ovsie !"
+        }
+      ]
+    },
+    "casino": {
+      "titre": "Le casino",
+      "textes": [
+        "Roulette, roue de la fortune, blackjack… Les tables, c'est l'hôte qui les donne : à vous de construire le plus beau casino de la jungle ! Le gérant remplit la caisse, accroupi + clic droit."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "On s'y met"
+        }
+      ]
+    }
+  }
+}

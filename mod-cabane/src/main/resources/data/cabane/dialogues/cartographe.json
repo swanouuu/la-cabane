@@ -1,0 +1,91 @@
+{
+  "nom": "Karim le Chouf",
+  "couleur": "aqua",
+  "voix": "",
+  "qui": "cartographe",
+  "pages": {
+    "default": {
+      "titre": "Karim",
+      "textes": [
+        "Chouf, chouf ! Des cartes, encore des cartes ! Regarde le grand panneau derrière moi : c'est tout le monde connu.",
+        "J'ai étudié la magie des cartes pendant quarante ans. Résultat : je sais plier une carte. Dans le bon sens. Parfois.",
+        "Chaque relique a sa carte. Je te la vends, et la croix rouge te mène droit au donjon. Chouf !",
+        "Ma barbe ? Elle pousse vers le nord. Comme ça je ne me perds jamais.",
+        "Les gens croient que je suis un sorcier. Je suis cartographe. Bon… un peu sorcier aussi."
+      ],
+      "boutons": [
+        {
+          "texte": "Les cartes des reliques",
+          "vers": "cartes"
+        },
+        {
+          "texte": "Le matériel d'explorateur",
+          "action": "boutique:pnj.cartographe"
+        },
+        {
+          "texte": "Un conseil ?",
+          "vers": "conseil"
+        },
+        {
+          "texte": "Merci Karim"
+        }
+      ]
+    },
+    "cartes": {
+      "titre": "Les cartes au trésor",
+      "textes": [
+        "Chaque relique dort dans un donjon lointain, à des milliers de pas d'ici. Ma carte te mène droit dessus : 300 $ la carte. Prévois un lit, à manger, et une Waystone. Chouf !"
+      ],
+      "boutons": [
+        {
+          "texte": "Temple du Désert (3500 blocs)",
+          "action": "tresor:desert:3500:300"
+        },
+        {
+          "texte": "Temple de la Jungle (4000 blocs)",
+          "action": "tresor:jungle:4000:300"
+        },
+        {
+          "texte": "Monument des Profondeurs (3500 blocs)",
+          "action": "tresor:ocean:3500:300"
+        },
+        {
+          "texte": "Citadelles du Ciel (6000 blocs)",
+          "action": "tresor:ciel:6000:300"
+        },
+        {
+          "texte": "Forteresses Illageoises (5000 blocs)",
+          "action": "tresor:forteresse:5000:300"
+        },
+        {
+          "texte": "Forteresse Souterraine (4000 blocs)",
+          "action": "tresor:souterrain:4000:300"
+        },
+        {
+          "texte": "Fonderies Oubliées (7000 blocs)",
+          "action": "tresor:mecanique:7000:300"
+        },
+        {
+          "texte": "Retour",
+          "vers": "default"
+        }
+      ]
+    },
+    "conseil": {
+      "titre": "Conseil",
+      "textes": [
+        "Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit.",
+        "Au nord, la neige. Au sud, le désert. À l'est, des volcans. Et ici, la jungle. Prends un manteau ET de l'eau."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Noté !"
+        }
+      ]
+    }
+  }
+}

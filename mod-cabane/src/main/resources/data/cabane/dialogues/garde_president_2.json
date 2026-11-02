@@ -1,0 +1,22 @@
+{
+  "nom": "Garde présidentiel",
+  "couleur": "dark_red",
+  "voix": "",
+  "qui": "garde_president_2",
+  "pages": {
+    "default": {
+      "titre": "Garde",
+      "textes": [
+        "Circulez. Le Président ne reçoit pas sans rendez-vous.",
+        "Si vous levez la main sur lui, vous aurez affaire à nous quatre.",
+        "…",
+        "Je ne parle pas pendant le service. … Zut."
+      ],
+      "boutons": [
+        {
+          "texte": "Pardon"
+        }
+      ]
+    }
+  }
+}

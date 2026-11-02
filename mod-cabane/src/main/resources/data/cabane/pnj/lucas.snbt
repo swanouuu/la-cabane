@@ -1,0 +1,14 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;188912244,723109092,-1286064627,-375196747],
+  CustomName:'{"text":"Lucas, le fils de Pierre","color":"aqua"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj","pnj.lucas"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/lucas.png"},
+  ModelData:{Scale:{Root:[0.6f,0.6f,0.6f]}},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  Status:{finalized:1b}
+}

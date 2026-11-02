@@ -1,0 +1,16 @@
+{
+  "qui": "gerard",
+  "titre": "Le tronc de Gérard",
+  "pitch": "Quelqu'un s'est assis sur mon tronc. MON tronc. Il est fichu. Il m'en faut un nouveau. Un beau. Seize bûches de jungle, et je me fais un trône.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:jungle_log",
+      "nombre": 16
+    }
+  ],
+  "merci": "Un trône. Un vrai. Le premier qui s'assoit dessus, je ronfle sur lui.",
+  "recompense": {
+    "argent": 250
+  }
+}

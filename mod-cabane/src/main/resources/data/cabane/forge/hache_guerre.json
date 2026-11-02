@@ -1,0 +1,26 @@
+{
+  "resultat": "minecraft:diamond_axe",
+  "prix": 9000,
+  "ordre": 101,
+  "categorie": "arme",
+  "nom": "Hache de guerre de Brokk",
+  "enchantements": {
+    "minecraft:sharpness": 5,
+    "minecraft:efficiency": 4,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:diamond",
+      4
+    ],
+    [
+      "minecraft:iron_block",
+      2
+    ],
+    [
+      "minecraft:obsidian",
+      4
+    ]
+  ]
+}

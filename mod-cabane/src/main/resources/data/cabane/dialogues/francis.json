@@ -1,0 +1,22 @@
+{
+  "nom": "Francis",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "francis",
+  "pages": {
+    "default": {
+      "titre": "Francis",
+      "textes": [
+        "Le dernier étranger, il a dormi trois nuits chez moi, et il est reparti avec ma vaisselle. Alors excusez-moi si je compte mes cuillères.",
+        "Les gens de l'avion, ils arrivent, ils achètent les terrains, et après ça fait du bruit jusqu'à minuit.",
+        "Je vous ai à l'œil. L'autre œil est sur Gribbs.",
+        "Si vous construisez à côté de chez moi, faites une jolie maison. Pas un truc en terre."
+      ],
+      "boutons": [
+        {
+          "texte": "Promis, on sera sages"
+        }
+      ]
+    }
+  }
+}

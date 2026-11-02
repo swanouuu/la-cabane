@@ -1,7 +1,8 @@
 {
   "resultat": "cataclysm:black_steel_targe",
   "prix": 9000,
-  "ordre": 21,
+  "ordre": 206,
+  "categorie": "armure",
   "ingredients": [
     [
       "minecraft:iron_block",

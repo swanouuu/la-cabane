@@ -1,0 +1,16 @@
+{
+  "qui": "forgeron",
+  "titre": "Du fer pour Brokk",
+  "pitch": "Brokk veut du fer. Vingt-quatre lingots. Pour les outils des nouveaux. Les nouveaux cassent tout.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:iron_ingot",
+      "nombre": 24
+    }
+  ],
+  "merci": "Bon fer. Brokk content. Brokk forge des pioches pour les nouveaux. Ils les casseront.",
+  "recompense": {
+    "argent": 350
+  }
+}

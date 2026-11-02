@@ -1,0 +1,26 @@
+{
+  "resultat": "minecraft:diamond_chestplate",
+  "prix": 15000,
+  "ordre": 201,
+  "categorie": "armure",
+  "nom": "Plastron de Brokk",
+  "enchantements": {
+    "minecraft:protection": 4,
+    "minecraft:thorns": 2,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:diamond",
+      8
+    ],
+    [
+      "minecraft:iron_block",
+      2
+    ],
+    [
+      "minecraft:leather",
+      6
+    ]
+  ]
+}

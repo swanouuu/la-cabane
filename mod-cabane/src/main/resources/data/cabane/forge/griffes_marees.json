@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:tidal_claws",
+  "prix": 45000,
+  "ordre": 306,
+  "categorie": "relique",
+  "indice": "Les griffes du Léviathan, le monstre des abysses.",
+  "temps": 40,
+  "ingredients": [
+    [
+      "minecraft:prismarine_shard",
+      24
+    ],
+    [
+      "minecraft:nautilus_shell",
+      4
+    ],
+    [
+      "minecraft:heart_of_the_sea",
+      1
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

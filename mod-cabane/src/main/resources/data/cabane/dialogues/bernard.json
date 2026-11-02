@@ -1,0 +1,22 @@
+{
+  "nom": "Bernard",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "bernard",
+  "pages": {
+    "default": {
+      "titre": "Bernard",
+      "textes": [
+        "Les Pillards viennent du sud, des marais. Ils sentent la vase et la poudre. Le singe les entend venir avant tout le monde.",
+        "De mon temps, on n'avait pas de téléphone. On criait. Et ça marchait très bien.",
+        "Mon singe s'appelle Bernard aussi. C'est pratique quand on crie.",
+        "Les jeunes, avec leur Piaf… moi j'ai des vrais piafs. Ils font caca partout."
+      ],
+      "boutons": [
+        {
+          "texte": "C'est noté, Bernard"
+        }
+      ]
+    }
+  }
+}

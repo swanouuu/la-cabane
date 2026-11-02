@@ -1,0 +1,24 @@
+{
+  "resultat": "endermanoverhaul:corrupted_blade",
+  "prix": 18000,
+  "ordre": 112,
+  "categorie": "arme",
+  "ingredients": [
+    [
+      "minecraft:ender_pearl",
+      12
+    ],
+    [
+      "minecraft:obsidian",
+      8
+    ],
+    [
+      "minecraft:amethyst_shard",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      3
+    ]
+  ]
+}

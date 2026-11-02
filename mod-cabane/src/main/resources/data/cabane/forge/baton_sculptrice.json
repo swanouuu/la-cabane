@@ -1,0 +1,26 @@
+{
+  "resultat": "mowziesmobs:sculptor_staff",
+  "prix": 30000,
+  "ordre": 303,
+  "categorie": "relique",
+  "indice": "Le bâton de la Sculptrice : il fait pousser la roche.",
+  "temps": 40,
+  "ingredients": [
+    [
+      "minecraft:amethyst_shard",
+      16
+    ],
+    [
+      "minecraft:calcite",
+      32
+    ],
+    [
+      "minecraft:blaze_rod",
+      4
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

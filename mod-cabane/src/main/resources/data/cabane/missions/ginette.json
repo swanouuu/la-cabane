@@ -1,0 +1,27 @@
+{
+  "qui": "ginette",
+  "titre": "Mange une carotte",
+  "pitch": "Tout le monde est trop maigre dans ce village. Je fais une soupe géante. Il me faut des carottes et des patates. Beaucoup. Et ne me ramène pas des frites, petit malin.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:carrot",
+      "nombre": 48
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:potato",
+      "nombre": 48
+    }
+  ],
+  "merci": "Voilà. Ce soir, soupe pour tout le monde. Et toi, tu en reprends deux fois. Sans discuter.",
+  "recompense": {
+    "argent": 250,
+    "objets": [
+      [
+        "minecraft:mushroom_stew",
+        2
+      ]
+    ]
+  }
+}

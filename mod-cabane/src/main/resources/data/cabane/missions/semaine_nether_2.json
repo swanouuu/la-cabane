@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 531,
+  "semaine": {
+    "id": "nether",
+    "nom": "La semaine du Nether",
+    "texte": "Mog dit que le feu de la forge s'éteint. Il veut du vrai feu : celui du Nether. Je n'aime pas qu'on y aille… mais Mog pleure, et Mog qui pleure, ça fait de la fumée.",
+    "bonus": 1000
+  },
+  "titre": "Les bêtes du Nether",
+  "pitch": "Vautours des âmes, moustiques cramoisis, serpents d'os, hoglins, ghasts… Le Nether en est plein. Huit.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "alexsmobs:soul_vulture|alexsmobs:crimson_mosquito|alexsmobs:bone_serpent|minecraft:hoglin|minecraft:ghast|minecraft:magma_cube|minecraft:piglin_brute|minecraft:wither_skeleton|endermanoverhaul:nether_wastes_enderman|endermanoverhaul:crimson_forest_enderman|endermanoverhaul:warped_forest_enderman|endermanoverhaul:soulsand_valley_enderman",
+      "nombre": 8,
+      "texte": "Vaincre 8 bêtes du Nether"
+    }
+  ],
+  "merci": "Huit ! Tu reviens entier. C'est le plus important. Tu sens le soufre, par contre.",
+  "recompense": {
+    "argent": 300
+  }
+}

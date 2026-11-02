@@ -27,6 +27,8 @@ public final class CabaneEvents {
         event.addListener(Contrats.INSTANCE);
         event.addListener(Cartes.INSTANCE);
         event.addListener(fr.cabane.boutique.Forge.INSTANCE);
+        event.addListener(fr.cabane.pnj.Dialogues.INSTANCE);
+        event.addListener(fr.cabane.pnj.Missions.INSTANCE);
     }
 
     @SubscribeEvent

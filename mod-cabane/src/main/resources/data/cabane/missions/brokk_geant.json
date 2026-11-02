@@ -1,0 +1,27 @@
+{
+  "qui": "forgeron",
+  "apres": [
+    "brokk_fer"
+  ],
+  "titre": "Le géant de fer",
+  "pitch": "Sous la terre, il y a un géant de fer. Le Wroughtnaut. Son armure, c'est le meilleur métal du monde. Va le battre. Brokk veut savoir que c'est possible. Brokk veut le métal.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "mowziesmobs:ferrous_wroughtnaut",
+      "nombre": 1,
+      "texte": "Vaincre le Wroughtnaut, le géant de fer"
+    }
+  ],
+  "merci": "Tu as battu le géant ?! … Brokk respecte. Brokk respecte beaucoup. Tiens. Du fer, du vrai. Et la forge te fera un prix d'ami. Non. Brokk rigole. Pas de prix d'ami.",
+  "recompense": {
+    "argent": 2500,
+    "objets": [
+      [
+        "minecraft:iron_block",
+        4
+      ]
+    ],
+    "xp": 8
+  }
+}

@@ -4,44 +4,10 @@
   CustomName:'{"text":"Jean-Mi Collector","color":"light_purple"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj","vendeur_cartes"],
+  Tags:["cabane_pnj","pnj.vendeur_cartes","vendeur_cartes"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/vendeur_cartes.png"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.vendeur_cartes",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Jean-Mi",
-        Texts:[{Text:"Ah. Un client. Laisse-moi deviner : tu ne sais même pas ce qu'est une carte holographique."},{Text:"Bienvenue dans le seul vrai commerce culturel de Beauvais. Ne touche pas la vitrine. Ni le comptoir. Ni moi."},{Text:"Un booster, c'est cinq cartes. La meilleure arrive toujours en dernier. C'est comme ça, c'est la loi."},{Text:"J'ai une légendaire sous plastique depuis quatre ans. Elle ne sort pas. Elle ne sortira jamais."},{Text:"Mouloud vendait des boosters, avant. Il les rangeait à côté du pain. À côté du pain ! Une honte."}],
-        Buttons:[{
-          Label:"acheter",
-          Name:"Je veux des boosters",
-          Type:"ACTION",
-          Actions:[{Type:"COMMAND",Cmd:"cabane boutique cartes",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
-        },{
-          Label:"conseil",
-          Name:"Un conseil de pro ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"conseil"}]
-        },{
-          Label:"bye",
-          Name:"Merci Jean-Mi",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"conseil",
-        Name:"Jean-Mi",
-        Texts:[{Text:"Range tes cartes dans un classeur, clic droit avec le classeur en main. Une carte qui traîne dans un inventaire, c'est une carte qui souffre."},{Text:"Les rares brillent, les épiques tremblent, les légendaires assombrissent tout. Si ton écran devient noir, ne crie pas. Pleure en silence."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"Noté",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

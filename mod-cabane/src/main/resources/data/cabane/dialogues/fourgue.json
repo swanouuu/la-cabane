@@ -1,0 +1,50 @@
+{
+  "nom": "Le Fourgue",
+  "couleur": "dark_gray",
+  "voix": "",
+  "qui": "fourgue",
+  "pages": {
+    "default": {
+      "titre": "Le Fourgue",
+      "textes": [
+        "Psst. T'as pas vu de flics en venant ? … Bon. Qu'est-ce que tu veux ?",
+        "Je vends des graines. Pour le jardinage. Rien d'autre. Le jardinage.",
+        "Tu ramènes la marchandise, je paye cash. Pas de questions, pas de reçu.",
+        "La police de Beauvais me cherche depuis des mois. Ils cherchent mal.",
+        "Un conseil d'ami : la descente, c'est pire que la montée. Mais bon, c'est pas mon problème."
+      ],
+      "boutons": [
+        {
+          "texte": "Montre-moi ce que t'as",
+          "action": "fourgue"
+        },
+        {
+          "texte": "J'ai de la marchandise",
+          "action": "fourgue_vendre"
+        },
+        {
+          "texte": "Comment on cuisine ?",
+          "vers": "labo"
+        },
+        {
+          "texte": "J'ai rien vu"
+        }
+      ]
+    },
+    "labo": {
+      "titre": "Le Fourgue",
+      "textes": [
+        "Les graines, tu les plantes sur de la terre labourée, comme du blé. La weed donne des têtes, la coca des feuilles. Un joint, c'est une tête et du papier. Pour le reste, il te faut mon labo : 4 têtes donnent du hash, 6 feuilles et de la poudre à canon donnent de la coke, et la meth… redstone, sucre, poudre de blaze. Elle explose une fois sur cinq. Cuisine dehors."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Compris"
+        }
+      ]
+    }
+  }
+}

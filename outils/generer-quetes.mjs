@@ -298,7 +298,8 @@ const grandir = chapitre("agrandir_beauvais", { titre: "&2Agrandir Beauvais", ic
     recompenses: [donne("grandir/capitale", "minecraft:diamond_block", 2), commande("grandir/capitale", '/title {p} title {"text":"Bâtisseur de Beauvais","color":"gold"}')] }),
 ] });
 
-// ---------------------------------------------------------------- chapitre : les gens de Beauvais (une petite quête par personne)
+// ---------------------------------------------------------------- les gens de Beauvais : leurs quêtes sont maintenant des missions
+// qu'ils proposent eux-mêmes dans leur conversation (mod-cabane/outils/missions.mjs). Ce chapitre n'est plus écrit.
 const service = (k, o) => quete("gens/" + k, { deps: ["village/accueil"], ...o });
 const gens = chapitre("les_gens", { titre: "&bLes gens de Beauvais", icone: "minecraft:cake", ordre: 4, quetes: [
   service("jean", { titre: "Jean se méfie", x: 0, y: -3, argent: 300, desc: ["« Encore un de l'avion… » Jean aime le poisson grillé. Apporte-lui-en, ça l'adoucira peut-être."],
@@ -407,9 +408,9 @@ ecrire("data.snbt", snbt({
   lock_message: "", pause_game: false, progression_mode: "linear", version: 13,
 }));
 ecrire("chapter_groups.snbt", snbt({ chapter_groups: [] }));
-for (const [fichier, chap] of [cabane, histoire, village, grandir, gens, chapReliques, chapDonjons]) ecrire(`chapters/${fichier}.snbt`, snbt(chap));
+for (const [fichier, chap] of [cabane, histoire, village, grandir, chapReliques, chapDonjons]) ecrire(`chapters/${fichier}.snbt`, snbt(chap));
 const langTxt = snbt(lang);
 ecrire("lang/fr_fr.snbt", langTxt);
 ecrire("lang/en_us.snbt", langTxt);
-const n = [cabane, histoire, village, grandir, gens, chapReliques, chapDonjons].reduce((s, [, c]) => s + c.quests.length, 0);
+const n = [cabane, histoire, village, grandir, chapReliques, chapDonjons].reduce((s, [, c]) => s + c.quests.length, 0);
 console.log(`${n} quêtes écrites dans ${SORTIE}`);

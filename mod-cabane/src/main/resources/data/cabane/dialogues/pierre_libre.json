@@ -1,0 +1,23 @@
+{
+  "nom": "Pierre, le revenant",
+  "couleur": "green",
+  "voix": "",
+  "qui": "pierre_libre",
+  "pages": {
+    "default": {
+      "titre": "Pierre",
+      "textes": [
+        "Libre ! Je respire enfin l'air de la jungle. Merci, les gens du ciel. Marcel n'arrête pas de raconter votre combat.",
+        "Le Conseil des Anciens va se réunir à nouveau. Et cette fois, c'est vous qu'on écoutera.",
+        "Je suis allé voir l'ancien président dans ma vieille cellule. Il m'a demandé un référendum. J'ai refusé.",
+        "Sylvie a gardé ma lettre sous son oreiller. Et Lucas a accroché son dessin au-dessus de mon lit. Le super-héros, c'est moi, paraît-il.",
+        "Ce soir, j'apprends à pêcher à Lucas. Je lui avais promis. Dans ma lettre."
+      ],
+      "boutons": [
+        {
+          "texte": "Content de te voir dehors"
+        }
+      ]
+    }
+  }
+}

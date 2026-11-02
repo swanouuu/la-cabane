@@ -1,0 +1,24 @@
+{
+  "resultat": "mowziesmobs:geomancer_robe",
+  "prix": 15000,
+  "ordre": 210,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:amethyst_shard",
+      16
+    ],
+    [
+      "minecraft:calcite",
+      16
+    ],
+    [
+      "minecraft:leather",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ]
+  ]
+}

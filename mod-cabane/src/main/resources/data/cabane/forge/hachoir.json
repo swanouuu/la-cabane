@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:meat_shredder",
+  "prix": 50000,
+  "ordre": 319,
+  "categorie": "relique",
+  "indice": "La scie du Harbinger, la machine du Wither.",
+  "temps": 45,
+  "ingredients": [
+    [
+      "minecraft:iron_block",
+      6
+    ],
+    [
+      "minecraft:redstone_block",
+      6
+    ],
+    [
+      "minecraft:netherite_scrap",
+      2
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ]
+  ]
+}

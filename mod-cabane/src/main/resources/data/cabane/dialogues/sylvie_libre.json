@@ -1,0 +1,21 @@
+{
+  "nom": "Sylvie, la femme de Pierre",
+  "couleur": "light_purple",
+  "voix": "",
+  "qui": "sylvie",
+  "pages": {
+    "default": {
+      "titre": "Sylvie",
+      "textes": [
+        "Il est là. Il est vraiment là, au coin du feu, avec ses blagues nulles. Je ne m'en lasserai jamais.",
+        "Vous voulez dîner avec nous ? Pierre a pêché. Enfin, Lucas a pêché, Pierre a regardé.",
+        "Je passe devant la Mairie, maintenant, et je souris. C'est mon tour."
+      ],
+      "boutons": [
+        {
+          "texte": "Bonne soirée, Sylvie"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:void_forge",
+  "prix": 80000,
+  "ordre": 321,
+  "categorie": "relique",
+  "indice": "Une arme du Vide. Brokk la forge dans l'obsidienne et l'œil de l'Ender.",
+  "temps": 55,
+  "ingredients": [
+    [
+      "minecraft:obsidian",
+      16
+    ],
+    [
+      "minecraft:ender_eye",
+      8
+    ],
+    [
+      "minecraft:crying_obsidian",
+      8
+    ],
+    [
+      "minecraft:netherite_ingot",
+      1
+    ]
+  ]
+}

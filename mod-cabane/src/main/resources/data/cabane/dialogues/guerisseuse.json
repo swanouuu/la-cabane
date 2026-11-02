@@ -1,0 +1,52 @@
+{
+  "nom": "Nyota la Guérisseuse",
+  "couleur": "dark_green",
+  "voix": "",
+  "qui": "guerisseuse",
+  "pages": {
+    "default": {
+      "titre": "Nyota",
+      "textes": [
+        "Assieds-toi près du feu, voyageur. Ici on raconte les histoires des donjons lointains… et de ceux qui n'en sont jamais revenus.",
+        "Une feuille de jungle sur une coupure, et ça repart. Sur une jambe cassée, c'est plus compliqué.",
+        "Le Président m'a demandé une tisane pour le courage. Je lui ai donné de l'eau chaude. Ça a marché.",
+        "Dors dans un lit avant de partir loin : sinon tu repars de l'avion. Et l'avion brûle.",
+        "Tu titubes ? Tu as trop bu, ou trop fumé ? Viens là, que je te soigne."
+      ],
+      "boutons": [
+        {
+          "texte": "Soigne-moi (40 $)",
+          "action": "soigner"
+        },
+        {
+          "texte": "Tes remèdes",
+          "action": "boutique:pnj.guerisseuse"
+        },
+        {
+          "texte": "Une histoire ?",
+          "vers": "histoire"
+        },
+        {
+          "texte": "Merci Nyota"
+        }
+      ]
+    },
+    "histoire": {
+      "titre": "Les histoires du feu",
+      "textes": [
+        "Il y a un géant de fer sous la terre. Brokk rêve de son métal. Ceux qui l'ont croisé parlent tout bas, après.",
+        "Au sud, très loin, un donjon de pierre noire : le PLATO 6Z. Les Pillards y vont, et en reviennent avec de l'or de la Mairie. Étrange, non ?",
+        "Pierre, le mari de Sylvie, venait ici chaque soir. Il racontait des blagues nulles. Il me manque, ses blagues nulles."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Merci Nyota"
+        }
+      ]
+    }
+  }
+}

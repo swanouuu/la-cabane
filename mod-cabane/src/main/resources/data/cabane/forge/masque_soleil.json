@@ -1,7 +1,10 @@
 {
   "resultat": "mowziesmobs:sol_visage",
   "prix": 45000,
-  "ordre": 70,
+  "ordre": 304,
+  "categorie": "relique",
+  "indice": "Le masque du Soleil de Barako, le chef Umvuthana.",
+  "temps": 45,
   "ingredients": [
     [
       "minecraft:gold_block",

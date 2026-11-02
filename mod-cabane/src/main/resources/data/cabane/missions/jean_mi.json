@@ -1,0 +1,22 @@
+{
+  "qui": "vendeur_cartes",
+  "titre": "Un client sérieux",
+  "pitch": "Tu veux que je te prenne au sérieux ? Range tes cartes dans un classeur. Un vrai collectionneur a un classeur. Montre-moi le tien.",
+  "objectifs": [
+    {
+      "type": "avoir",
+      "cible": "cabane:classeur",
+      "nombre": 1
+    }
+  ],
+  "merci": "Un classeur. Bien. Tu n'es plus un touriste. Tu es… un débutant. C'est un progrès. Tiens, un booster. Ne l'ouvre pas devant moi, je ne supporte pas les cris.",
+  "recompense": {
+    "argent": 50,
+    "objets": [
+      [
+        "cabane:booster",
+        1
+      ]
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 581,
+  "semaine": {
+    "id": "ender",
+    "nom": "La semaine de l'Ender",
+    "texte": "Des grandes ombres rôdent dans la jungle, la nuit : les endermen, de toutes les couleurs. Ne les regarde pas dans les yeux… sauf si tu es prêt. Cette semaine, tu es prêt.",
+    "bonus": 1000
+  },
+  "titre": "Les perles",
+  "pitch": "Huit perles de l'Ender. Karim dit qu'elles servent à trouver des choses très loin.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:ender_pearl",
+      "nombre": 8
+    }
+  ],
+  "merci": "Karim est content. Karim n'est jamais content. Garde ça pour toi.",
+  "recompense": {
+    "argent": 250
+  }
+}

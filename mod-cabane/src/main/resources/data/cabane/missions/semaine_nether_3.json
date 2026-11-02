@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 532,
+  "semaine": {
+    "id": "nether",
+    "nom": "La semaine du Nether",
+    "texte": "Mog dit que le feu de la forge s'éteint. Il veut du vrai feu : celui du Nether. Je n'aime pas qu'on y aille… mais Mog pleure, et Mog qui pleure, ça fait de la fumée.",
+    "bonus": 1000
+  },
+  "titre": "Le quartz",
+  "pitch": "Le Nether est plein de quartz blanc. Rapporte-en trente-deux : la Grande Cabane mérite un sol qui brille.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:quartz",
+      "nombre": 32
+    }
+  ],
+  "merci": "Blanc comme les dents de Macron. Merci.",
+  "recompense": {
+    "argent": 250
+  }
+}

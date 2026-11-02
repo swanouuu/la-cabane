@@ -1,0 +1,28 @@
+{
+  "qui": "gardien",
+  "ordre": 572,
+  "semaine": {
+    "id": "recoltes",
+    "nom": "La semaine des récoltes",
+    "texte": "Cette semaine, Beauvais fait ses réserves. La saison des pluies arrive, et Ginette veut nourrir tout le village. Chacun apporte sa part : toi aussi.",
+    "bonus": 600
+  },
+  "titre": "Le marché aux fruits",
+  "pitch": "Des fruits pour les enfants et les malades : des tranches de pastèque et des baies sucrées.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:melon_slice",
+      "nombre": 32
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:sweet_berries",
+      "nombre": 16
+    }
+  ],
+  "merci": "Le singe de Bernard a déjà essayé de les voler. Deux fois. Merci.",
+  "recompense": {
+    "argent": 200
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "nom": "Lucas, le fils de Pierre",
+  "couleur": "aqua",
+  "voix": "",
+  "qui": "lucas",
+  "pages": {
+    "default": {
+      "titre": "Lucas",
+      "textes": [
+        "T'as pas vu mon papa ? Il a un chapeau. Et il fait des blagues nulles. Mais moi je rigole quand même.",
+        "Maman dit qu'il est à la capitale. Mais la capitale c'est où ? Personne sait.",
+        "Quand je serai grand, je serai garde. Comme ça je pourrai entrer dans la Mairie. Et je le chercherai moi-même."
+      ],
+      "boutons": [
+        {
+          "texte": "On va le retrouver, promis"
+        }
+      ]
+    }
+  }
+}

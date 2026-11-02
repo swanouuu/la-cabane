@@ -1,0 +1,20 @@
+{
+  "resultat": "endermanoverhaul:corrupted_shield",
+  "prix": 15000,
+  "ordre": 219,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:ender_pearl",
+      8
+    ],
+    [
+      "minecraft:obsidian",
+      8
+    ],
+    [
+      "minecraft:iron_block",
+      2
+    ]
+  ]
+}

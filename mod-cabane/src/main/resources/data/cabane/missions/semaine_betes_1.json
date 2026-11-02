@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 560,
+  "semaine": {
+    "id": "betes",
+    "nom": "La semaine des grandes bêtes",
+    "texte": "Les anciens parlent de bêtes énormes : des crocodiles qui avalent un homme, des dragons de Komodo, et des monstres qui ont muté. Cette semaine, on vérifie si les anciens disent vrai.",
+    "bonus": 1000
+  },
+  "titre": "Les crocodiles",
+  "pitch": "Dans les rivières et les marais : crocodiles, caïmans, alligators. Trois, et la rivière sera à nous.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "alexsmobs:crocodile|alexsmobs:caiman|naturalist:alligator",
+      "nombre": 3,
+      "texte": "Vaincre 3 crocodiles, caïmans ou alligators"
+    }
+  ],
+  "merci": "Jean va pouvoir repêcher. Il te doit un poisson.",
+  "recompense": {
+    "argent": 300
+  }
+}

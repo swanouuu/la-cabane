@@ -1,0 +1,16 @@
+{
+  "qui": "orque_1",
+  "titre": "Le charbon de Grosh",
+  "pitch": "Grosh a… un peu… mangé le charbon de la forge. Brokk pas content. Brokk très pas content. Toi ramener charbon. Vite. Avant que Brokk voit.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:coal",
+      "nombre": 64
+    }
+  ],
+  "merci": "Brokk a rien vu. Grosh sauvé. Grosh te doit une vie. Ou un charbon. Grosh choisit charbon.",
+  "recompense": {
+    "argent": 400
+  }
+}

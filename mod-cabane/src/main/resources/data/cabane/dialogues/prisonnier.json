@@ -1,0 +1,60 @@
+{
+  "nom": "Pierre, le disparu",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "prisonnier",
+  "pages": {
+    "default": {
+      "titre": "Pierre",
+      "textes": [
+        "Vous… vous n'êtes pas des gardes ? Écoutez-moi : le Président ne protège personne. Les Pillards du Sud, c'est lui qui les envoie. Il leur dit quand frapper.",
+        "Il m'a enfermé parce que je posais trop de questions. Les autres… il leur fait boire la potion verte. Après, ils ne parlent plus.",
+        "Sylvie… Lucas… Est-ce qu'ils savent que je suis là ? Est-ce qu'ils me cherchent encore ?"
+      ],
+      "boutons": [
+        {
+          "texte": "Le projet AUGMENTÉ ?",
+          "vers": "projet"
+        },
+        {
+          "texte": "Comment te sortir de là ?",
+          "vers": "sortir"
+        },
+        {
+          "texte": "Tiens bon, Pierre"
+        }
+      ],
+      "ftb": "5DFF817B33E4072A"
+    },
+    "projet": {
+      "titre": "Le projet AUGMENTÉ",
+      "textes": [
+        "Il veut devenir plus fort que sa garde, plus fort que tout le village. Sa machine l'attend dans la Salle Zéro, au cœur du PLATO 6Z, chez ses amis les Pillards : 10 000 pas plein sud. Seules les Sept Reliques peuvent ouvrir la Salle Zéro, alors il les a fait cacher aux quatre coins du monde, dans les pires donjons. Rapportez-les : Brokk saura en forger une clé."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "On va les trouver"
+        }
+      ]
+    },
+    "sortir": {
+      "titre": "Pas encore",
+      "textes": [
+        "Pas encore. S'il voit ma cellule vide, il saura qu'on est venus. Libérez d'abord Beauvais. Je tiendrai. Et prenez le dossier dans le coffre, là-bas : tout y est écrit."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Tiens bon, Pierre"
+        }
+      ]
+    }
+  }
+}

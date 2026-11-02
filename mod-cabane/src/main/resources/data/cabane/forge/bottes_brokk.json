@@ -1,0 +1,27 @@
+{
+  "resultat": "minecraft:diamond_boots",
+  "prix": 10000,
+  "ordre": 203,
+  "categorie": "armure",
+  "nom": "Bottes de Brokk",
+  "enchantements": {
+    "minecraft:protection": 4,
+    "minecraft:feather_falling": 4,
+    "minecraft:depth_strider": 3,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:diamond",
+      4
+    ],
+    [
+      "minecraft:iron_block",
+      1
+    ],
+    [
+      "minecraft:leather",
+      4
+    ]
+  ]
+}

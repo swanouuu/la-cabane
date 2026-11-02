@@ -1,0 +1,20 @@
+{
+  "resultat": "alexsmobs:roadrunner_boots",
+  "prix": 6000,
+  "ordre": 215,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:feather",
+      16
+    ],
+    [
+      "minecraft:leather",
+      8
+    ],
+    [
+      "minecraft:sugar",
+      8
+    ]
+  ]
+}

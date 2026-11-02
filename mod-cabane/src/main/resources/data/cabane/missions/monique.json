@@ -1,0 +1,16 @@
+{
+  "qui": "monique",
+  "titre": "Les potins de Monique",
+  "pitch": "J'entends tout, à la fontaine. Tout. Mais j'oublie. Il me faudrait un livre et une plume, pour tout noter. Absolument tout. Surtout sur toi.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:writable_book",
+      "nombre": 1
+    }
+  ],
+  "merci": "Parfait. Première page : « Les gens de l'avion. Poli. Drôle de chapeau. À surveiller. » Merci, mon chou.",
+  "recompense": {
+    "argent": 300
+  }
+}

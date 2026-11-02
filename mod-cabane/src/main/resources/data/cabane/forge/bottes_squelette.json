@@ -1,0 +1,20 @@
+{
+  "resultat": "mutantmonsters:mutant_skeleton_boots",
+  "prix": 8000,
+  "ordre": 213,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:bone_block",
+      8
+    ],
+    [
+      "minecraft:bone",
+      8
+    ],
+    [
+      "minecraft:iron_ingot",
+      4
+    ]
+  ]
+}

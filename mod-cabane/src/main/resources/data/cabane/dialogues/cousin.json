@@ -1,0 +1,58 @@
+{
+  "nom": "Gribbs, cousin de Mouloud",
+  "couleur": "dark_aqua",
+  "voix": "",
+  "qui": "cousin",
+  "pages": {
+    "default": {
+      "titre": "Gribbs",
+      "textes": [
+        "Psst ! Toi ! Tu veux une montre ? … J'en ai une, cette fois. Elle donne l'heure. Parfois.",
+        "Mouloud, c'est mon cousin. Enfin, cousin… on a le même oncle. Enfin, oncle… c'est un voisin.",
+        "Je vends des secrets. 15 $ le secret. Des vrais. Presque tous.",
+        "Si un garde te demande, tu m'as jamais vu. Si Mouloud te demande, je suis très beau."
+      ],
+      "boutons": [
+        {
+          "texte": "Montre-moi ta marchandise",
+          "action": "boutique:pnj.cousin"
+        },
+        {
+          "texte": "Un secret (15 $)",
+          "action": "payer:15:secret"
+        },
+        {
+          "texte": "Euh… à plus"
+        }
+      ]
+    },
+    "secret": {
+      "titre": "Un secret de Gribbs",
+      "textes": [
+        "Le Président a peur des poules. C'est vrai. Ne lui dis pas que c'est moi.",
+        "Dans le bureau du Président, à la Mairie, une bibliothèque sonne creux. Une seule. Clique sur la bonne… et descends.",
+        "Le Fourgue, derrière la tour de guet, rachète tout. TOUT. Même ce que tu ne devrais pas avoir.",
+        "Karim vend les cartes des donjons à reliques. Il dit que c'est de la magie. C'est du papier.",
+        "Nyota soigne même la gueule de bois. Je dis ça, je dis rien.",
+        "Brokk forge des armes de monstres. Apporte-lui les matériaux, et beaucoup d'argent. Beaucoup.",
+        "Les sept reliques ouvrent une salle. La Salle Zéro, très loin au sud. Ne me demande pas comment je le sais.",
+        "Mehdi change ses contrats toutes les heures. Les mieux payés partent vite.",
+        "Sylvie attend devant la Mairie tous les soirs. Son Pierre n'est jamais ressorti. Moi, je dis rien. Mais je regarde.",
+        "Le Hejj a une demande différente chaque jour. Il paie bien, pour un vieux sur un porche."
+      ],
+      "boutons": [
+        {
+          "texte": "Un autre secret (15 $)",
+          "action": "payer:15:secret"
+        },
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Merci Gribbs"
+        }
+      ]
+    }
+  }
+}

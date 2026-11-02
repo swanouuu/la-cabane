@@ -1,0 +1,25 @@
+{
+  "nom": "Grosh, apprenti de Brokk",
+  "couleur": "dark_green",
+  "voix": "",
+  "qui": "orque_1",
+  "pages": {
+    "default": {
+      "titre": "Grosh",
+      "textes": [
+        "Grosh pas manger charbon. … Grosh un peu manger charbon.",
+        "Marteau. Enclume. Marteau. Enclume. Grosh aime son travail.",
+        "Toi pas regarder Grosh comme ça."
+      ],
+      "boutons": [
+        {
+          "texte": "La forge de Brokk",
+          "action": "forge"
+        },
+        {
+          "texte": "Bon courage"
+        }
+      ]
+    }
+  }
+}

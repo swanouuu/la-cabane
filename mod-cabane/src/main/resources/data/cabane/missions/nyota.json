@@ -1,0 +1,21 @@
+{
+  "qui": "guerisseuse",
+  "titre": "Les remèdes de Nyota",
+  "pitch": "Les explorateurs partent loin et reviennent en morceaux. Il me faut de quoi les soigner : des carottes dorées et des baies lumineuses.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:golden_carrot",
+      "nombre": 8
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:glow_berries",
+      "nombre": 16
+    }
+  ],
+  "merci": "Avec ça, je soignerai même les plus têtus. Même Vegeta. Surtout Vegeta.",
+  "recompense": {
+    "argent": 500
+  }
+}

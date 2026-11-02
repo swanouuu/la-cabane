@@ -1,0 +1,28 @@
+{
+  "qui": "gardien",
+  "ordre": 522,
+  "semaine": {
+    "id": "mine",
+    "nom": "La semaine de la mine",
+    "texte": "Brokk n'a plus rien à forger, et quand Brokk s'ennuie, il tape sur les murs. Descends à la mine, rapporte du minerai, et fais attention à ce qui vit en bas.",
+    "bonus": 900
+  },
+  "titre": "Ce qui brille",
+  "pitch": "Tout au fond, il y a ce qui brille. Deux diamants et du lapis, pour les outils des explorateurs.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:diamond",
+      "nombre": 2
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:lapis_lazuli",
+      "nombre": 16
+    }
+  ],
+  "merci": "Ça brille. Ne le dis pas à Gribbs.",
+  "recompense": {
+    "argent": 350
+  }
+}

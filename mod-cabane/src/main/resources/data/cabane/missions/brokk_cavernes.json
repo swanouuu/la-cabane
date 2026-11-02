@@ -1,0 +1,20 @@
+{
+  "qui": "forgeron",
+  "apres": [
+    "brokk_fer"
+  ],
+  "titre": "Les mille-pattes de la mine",
+  "pitch": "Les mineurs de Brokk ne descendent plus. Il y a des mille-pattes géants, en bas. Grands comme Grosh. Plus méchants que Grosh. Va les écraser.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "alexsmobs:centipede_head",
+      "nombre": 3,
+      "texte": "Vaincre 3 mille-pattes des cavernes"
+    }
+  ],
+  "merci": "Les mineurs redescendent. Grosh aussi. Grosh avait peur. Grosh dira que non.",
+  "recompense": {
+    "argent": 300
+  }
+}

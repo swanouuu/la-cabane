@@ -467,13 +467,37 @@ skin("fourgue", (img) => {
   jambes(img, (f, x, y) => (y >= 11 ? hex("#f2f2f2") : (f === "dehors" && x === 1) ? hex("#f2f2f2") : gris));
 });
 
+// ---- Sylvie, la femme de Pierre : chignon, robe lilas, tablier de pêcheuse, le foulard de Pierre au cou
+skin("sylvie", (img) => {
+  tete(img, { teint: "#e8b896", cheveux: "#5a3a24", coupe: "chignon", yeux: "#3a6a4a", levres: "#c0606a", joues: "#e89a8a" });
+  const robe = hex("#9a7ac8"), tablier = hex("#efe6d4"), foulard = hex("#2a5a8a"), peau = hex("#e8b896");
+  corps(img, (f, x, y) => {
+    if (y <= 1 && (f === "avant" || f === "arriere")) return (x + y) % 2 ? foulard : fois(foulard, 1.3);
+    if (f === "avant" && y >= 4 && x >= 1 && x <= 6) return y === 4 ? fois(tablier, 0.85) : tablier;
+    if (y === 4) return fois(robe, 0.8);
+    return robe;
+  });
+  bras(img, mains(peau, () => robe, 7));
+  jambes(img, (f, x, y) => (y >= 11 ? hex("#5a3a24") : y <= 5 ? robe : peau));
+});
+
+// ---- Lucas, le fils de Pierre : cheveux en bataille, marinière, short, genoux écorchés
+skin("lucas", (img) => {
+  tete(img, { teint: "#f0c8a0", cheveux: "#c8a050", coupe: "court", yeux: "#3a6ab0", joues: "#f0a090" });
+  const bleu = hex("#2a4a9a"), blanc = hex("#f4f4f0"), short = hex("#7a5a3a"), peau = hex("#f0c8a0");
+  corps(img, (f, x, y) => (y % 3 === 1 ? bleu : blanc));
+  bras(img, mains(peau, (f, x, y) => (y % 3 === 1 ? bleu : blanc), 5));
+  jambes(img, (f, x, y) => (y >= 11 ? hex("#c03030") : y <= 4 ? short : y === 7 && f === "avant" ? hex("#d08070") : peau));
+});
+
 // ================================================================ les choix (la version utilisée en jeu)
 const CHOIX = { hejj: "hejj_a", karim: "karim_a", mouloud: "mouloud_a", gribbs: "gribbs_a", mehdi: "mehdi_a", brokk: "brokk_a",
   ovsie: "ovsie_a", nyota: "nyota_a" };
 for (const [nom, version] of Object.entries(CHOIX)) {
   fs.copyFileSync(path.join(DOSSIER, "versions", version + ".png"), path.join(DOSSIER, nom + ".png"));
 }
-for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier", "fourgue", "vendeur_cartes"]) {
+for (const nom of ["orque_1", "orque_2", "orque_3", "garde_porte_1", "garde_porte_2", "conteur", "prisonnier", "fourgue", "vendeur_cartes",
+  "sylvie", "lucas"]) {
   fs.copyFileSync(path.join(DOSSIER, "versions", nom + ".png"), path.join(DOSSIER, nom + ".png"));
 }
 

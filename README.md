@@ -85,14 +85,32 @@ Les PNJ (Easy NPC) :
 - **Karim le Chouf**, au grand panneau, qui donne les cartes au trésor ;
 - **Mouloud le Marchand** et son cousin **Gribbs**, au Grand Bazar ;
 - **Mehdi de Pôle emploi**, au tableau des contrats ;
-- **Brokk le Forgeron**, et sa **forge spéciale** : il fabrique des armes et armures rares des mods (lance Umvuthana, épée d'acier noir, hache du Wroughtnaut, gantelet de la Terre, masque du Soleil, forge infernale…). Il faut lui rapporter les matériaux et payer le travail ; lui seul sait les faire. Les recettes sont dans `mod-cabane/src/main/resources/data/cabane/forge/` ;
+- **Brokk le Forgeron**, et sa **forge spéciale**, en trois onglets. **Armes** : des pièces vanilla signées Brokk et enchantées (épée, hache de guerre, arc, arbalète, trident, masse) et celles des mods (lance Umvuthana, dague de Naga, épée d'acier noir, khopesh, lame corrompue, marteau de Hulk…). **Armures** : le casque, le plastron, les jambières et les bottes de Brokk, son plastron de netherite, son bouclier, et les armures des mods (masques Umvuthana, robe du géomancien, armure de squelette mutant, plastron de crocodile, élytres de tarantule…). **Reliques des boss** : les armes des boss (Wroughtnaut, Sculptrice, Barako, Ignis, Scylla, le Léviathan, la Monstruosité, le Harbinger, le Ver du Vide…), que Brokk refait sans qu'on ait à battre le boss. Les matériaux sont logiques (le feu des blazes et le magma pour Ignis, le cuivre et les paratonnerres pour Scylla, l'obsidienne et l'œil de l'Ender pour le Vide…) mais jamais un butin de boss ; les reliques coûtent de 12 000 à 120 000 $. Ensuite, **on le regarde forger** : la pièce rougit sur l'enclume monumentale, son marteau se lève et retombe dans les étincelles, la pièce est trempée dans la vapeur puis s'élève au-dessus de l'enclume, et Brokk te la tend (de 15 s à une minute ; une barre en haut de l'écran montre où il en est). Une seule pièce à la fois sur l'enclume : les commandes suivantes attendent leur tour, et une pièce finie attend son propriétaire à la forge. Les recettes sont dans `mod-cabane/outils/forge.mjs` ;
 - **Ovsie la Fée**, **Nyota la Guérisseuse**, les gardes de la grande porte ;
 - **les habitants** : Jean, Jacques, Francis, Louis, Bernard, Gérard, Ginette, Monique, Martine et Thierry. Ils se baladent autour de chez eux et se méfient des nouveaux ;
 - **Vegeta**, qui s'entraîne près de la tour de guet (« ma stupide fierté… ») ;
 - les **orques de Brokk** (Grosh, Mog et Urga), qui travaillent dans sa forge ;
-- **Macron, Président de Beauvais**, sur la place, et ses **quatre gardes présidentiels**. Ils sont invincibles : qui frappe le Président (ou un garde) est pris en chasse pendant deux minutes. Ils finissent par se calmer.
+- **Macron, Président de Beauvais**, sur la place, et ses **quatre gardes présidentiels**. Ils sont invincibles : qui frappe le Président (ou un garde) est pris en chasse pendant deux minutes. Ils finissent par se calmer ;
+- **Sylvie**, la femme de Pierre, et leur fils **Lucas**, qui attendent tous les soirs devant la Mairie (voir « Où est Pierre ? ») ;
 
 Chaque PNJ a plusieurs répliques, tirées au hasard à chaque fois qu'on lui parle. On peut les frapper (ils rougissent et reculent), mais ils ne meurent jamais. Quand le mod est mis à jour, les PNJ du village sont remplacés tout seuls au démarrage suivant.
+
+### Parler aux habitants : boutiques, services et missions
+
+Un clic droit sur un habitant ouvre sa conversation (le mod l'affiche lui-même : portrait, nom, texte qui s'écrit, réponses numérotées, touches 1 à 9). Tout ce qu'il propose marche directement depuis la conversation :
+
+- **les boutiques** (pastille « $ ») : Mouloud, Gribbs (et ses secrets à 15 $), Jean-Mi (boosters), Karim (boussole, longue-vue, lit, Waystone, sac… et les **cartes au trésor des sept reliques**, 300 $ la carte), Ovsie (potions), Nyota (remèdes), le Fourgue (marché noir) ;
+- **les services** : la forge de Brokk (et ses orques y renvoient), les contrats de Mehdi, la demande du jour du Hejj, les **soins de Nyota** (40 $ : toute la vie et plus aucun effet négatif, gueule de bois comprise), le livre de quêtes ouvert au bon chapitre (le Hejj, Marcel) ;
+- **les missions** : ceux qui ont besoin de toi ont un « ! » doré. On lit ce qu'ils demandent et ce qu'on y gagne, on accepte, et la mission s'affiche en haut à droite de l'écran avec sa progression (apporter des objets, vaincre des monstres, poser une question à quelqu'un, trouver un lieu…). Un « ? » gris : en cours. Un « ✔ » vert : c'est fait, va la rendre. Il y en a 35 : le tour du village du Hejj, une par habitant (le balai de Jacques, le singe de Bernard, l'entraînement de Vegeta, le géant de fer de Brokk, les Foliaaths de Bernard, les crocodiles de Jean, les mille-pattes de la mine…), et l'histoire de Pierre. `/cabane missions` les liste, `/cabane missions cacher` masque (ou remet) le suivi à l'écran. Les missions sont dans `mod-cabane/outils/missions.mjs`, les conversations dans `mod-cabane/outils/pnj.mjs`.
+
+### Où est Pierre ?
+
+Sylvie attend devant la Mairie avec Lucas : son mari Pierre y est entré avec une pétition il y a trois semaines, et n'est jamais ressorti. Elle demande de l'aide :
+
+1. **Où est Pierre ?** Interroger son frère Jean, Martine (qui a vu de la lumière sous la Mairie et entendu crier « Sylvie ! ») et Gribbs (qui connaît la bibliothèque qui pivote).
+2. **Sous la Mairie.** Trouver le passage secret, descendre jusqu'à la cellule de Pierre ; il donne une lettre pour sa femme. Sylvie la lit…
+3. **Le dessin de Lucas.** Lucas confie un dessin pour son papa (« c'est un super-héros »).
+4. **Ramenez-le-nous.** Libérer Beauvais (la grande aventure du livre). Après la libération, Pierre, Sylvie et Lucas se retrouvent au feu de camp.
 
 Autour du village, aucune structure (village, donjon, ruine…) ne s'installe dans un rayon de 400 blocs : le spawn reste propre. Et dans toutes les jungles du monde poussent des **arbres géants** au tronc de 4 x 4.
 
@@ -104,7 +122,9 @@ Commandes admin :
 - `/cabane garde <joueur>` lâche la garde présidentielle sur quelqu'un ;
 - `/cabane raid [nombre]` lance un **raid des Pillards du Sud** sur le village (6 par défaut, un ravageur à partir de 8, un évocateur à partir de 12) ;
 - `/cabane forteresse` donne les coordonnées de la Forteresse du Sud (tout le monde peut la taper) ; `/cabane forteresse ouvrir` lève la grande herse le jour du combat final, `fermer` la rescelle, `construire` la reconstruit ;
-- `/cabane mairie` reconstruit la Mairie et son laboratoire (si besoin).
+- `/cabane mairie` reconstruit la Mairie et son laboratoire (si besoin) ;
+- `/cabane forge [arme|armure|relique]` ouvre la forge de Brokk (à côté de lui), sur l'onglet voulu ; `/cabane forger <recette>` commande une pièce sans passer par l'écran (pour tester) ;
+- `/cabane parler <pnj>` et `/cabane dialogue <n>` : parler au PNJ le plus proche et choisir une réponse, sans clic (pour tester).
 
 ## L'histoire de Beauvais
 
@@ -122,6 +142,21 @@ Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en
 - **Les sodas** (coca, fanta, ice tea pêche) : un coup de fouet (vitesse, saut, régénération), et ils font redescendre d'un cran.
 - Tout s'achète chez Mouloud, et tout se fabrique : bouteille vide + blé + sucre (blonde), + cacao (brune), + sucre, sucre et œil d'araignée fermenté (8.6), trois baies sucrées (vin), sucre + deux fougères (pastis), cannes à sucre (rhum) ; pépite de fer + deux sucres + cacao, colorant orange ou glace pour les canettes.
 - **Pour les vendre** : le marché rachète bières, vin et coca dans ses contrats, et chacun peut tenir son étal (ou ouvrir la taverne du village, une quête d'« Agrandir Beauvais »).
+
+## Le fast-food à construire : bornes de commande, frites et burgers
+
+Il n'y a pas de fast-food dans le village, et personne n'en parle : c'est à vous de le construire où vous voulez. Le mod fournit les bornes de commande et la carte (la borne et les plats portent le nom « McBeauvais »).
+
+- **Les bornes de commande** : trois blocs de haut, un grand écran tactile qui fait défiler la carte. Clic droit : on choisit (menus, burgers, à côté, boissons, desserts), on remplit son panier, on paie, et le ticket sort avec son numéro ; la commande arrive deux secondes plus tard. Une borne se fabrique : fer, vitre, redstone, teintures rouge et jaune (rouge, jaune, rouge / fer, vitre, fer / fer, redstone, fer).
+- **La carte** : frites (petit coup de vitesse), hamburger, cheeseburger (absorption), double cheese, **Big Beauvais** (force), **Filet-O-Fish** (respiration sous l'eau), nuggets (minage plus rapide), sundae caramel (résistance au feu), et les menus (avec Coca, Fanta ou Ice Tea). Le **P'tit Menu** contient une carte à collectionner surprise.
+- **Trop de fast-food d'un coup** (cinq plats en deux minutes) : on est ballonné, ralenti et un peu nauséeux.
+- **Tout se cuisine aussi** : deux patates cuites + papier (frites), pain + steak (hamburger), + seau de lait (cheeseburger, deux), cheeseburger + steak (double cheese), deux pains + deux steaks + lait + algue séchée (Big Beauvais, deux), pain + morue cuite + lait (Filet-O-Fish, deux), poulet cuit + blé (nuggets), lait + deux sucres + boule de neige (sundae, deux).
+
+## Les quêtes de la semaine
+
+Chaque lundi (heure de Paris), le Hejj change de thème : **les mêmes quêtes pour tout le monde**, et chacun fait les siennes. Dans sa conversation, le bouton « Les quêtes de la semaine » montre le thème, les trois quêtes, où on en est, la prime et ceux qui ont déjà tout fini. Quand quelqu'un rend les trois, il touche une prime (de 600 à 1 000 $ ; chaque quête rapporte de 150 à 400 $) et tout le serveur l'apprend. À la connexion, chacun voit ce qu'il lui reste à faire ; le lundi, les quêtes de la semaine d'avant disparaissent, rendues ou pas.
+
+Onze thèmes reviennent chacun leur tour, avec les monstres des mods du pack : la jungle (les Foliaaths de Mowzie's Mobs, les creepers de Creeper Overhaul), les chasseurs, la mine (les mille-pattes des cavernes d'Alex's Mobs), le Nether (vautours des âmes, moustiques cramoisis…), la mer (noyés, skelewags), le désert (serpents à sonnette, scorpions, gusters), les grandes bêtes (crocodiles, dragons de Komodo, et un monstre mutant de Mutant Monsters), les récoltes, l'Ender (tous les endermen d'Enderman Overhaul comptent), les bâtisseurs et le village (contrats de Mehdi, nouvelles de Marcel et de Nyota, un gâteau pour Ginette). Ils sont dans `mod-cabane/outils/missions.mjs` (`SEMAINES`). `/cabane semaine` les montre dans le chat ; `/cabane semaine suivante` (l'hôte) passe tout de suite à la semaine d'après, pour tout le monde.
 
 ## Le Hejj et sa demande du jour
 
@@ -196,6 +231,8 @@ Chaque PNJ dit une réplique enregistrée quand on lui parle (s'il en a). Pour a
 
 Pour qu'un PNJ parle **tout seul** de temps en temps quand on passe à côté (toutes les 45 à 90 s), mets ses répliques dans `voix/ambiance/` (par exemple `voix/ambiance/vegeta-1.ogg`) : pour l'instant, seul Vegeta a ce réglage. Ces répliques-là ne vont **ni sur GitHub ni dans le mod** : `construire-instance.bat` les range dans le pack de ressources « Beauvais - voix » de `dist/SakaiMod.zip`, activé d'office. Envoie ce zip à tes potes toi-même (ils le réimportent dans Prism), et mets le même pack sur ton propre Prism.
 
+Pareil pour les bruitages tirés du doublage : `voix/effets/<son>.ogg` remplace le son `cabane:<son>` du mod, seulement dans ce pack (par exemple `voix/effets/minato.flash.ogg` pour les téléportations de Minato). Sans le pack, on entend le son du mod (pour Minato, un coup de tonnerre).
+
 Les noms des PNJ : `gardien` (le Hejj), `cartographe` (Karim), `marchand` (Mouloud), `cousin` (Gribbs), `pole_emploi` (Mehdi), `forgeron` (Brokk), `orque` (les orques), `fee` (Ovsie), `guerisseuse` (Nyota), `garde_est`, `garde_ouest`, `macron`, `garde_president`, `vegeta`, `conteur` (Marcel), `prisonnier` (Pierre), et les habitants `jean`, `jacques`, `francis`, `louis`, `bernard`, `gerard`, `ginette`, `monique`, `martine`, `thierry`.
 
 ## Les skins des personnages
@@ -207,7 +244,7 @@ Les skins des personnages principaux sont dessinés par `mod-cabane/outils/perso
 - **Beauvais** : l'arrivée, le premier coup de fil, les Waystones, le sac à dos, la cuisine, Create.
 - **L'Histoire de Beauvais** : la grande aventure, de Marcel le Conteur jusqu'à la libération (voir plus haut).
 - **Agrandir Beauvais** : le grand chantier du Hejj. On s'installe juste à côté du village, hors de l'enceinte, et on le fait grandir : le quartier neuf, le pont, le port, la gare, le marché couvert, l'école de Ginette, le rond-point et la statue du Président, le **commissariat**, les **remparts** contre les raids, la **taverne**, l'infirmerie de Nyota… jusqu'à « Beauvais, capitale de la jungle ».
-- **Les gens de Beauvais** : une petite quête par habitant (le balai de Jacques, le singe de Bernard, l'entraînement de Vegeta, le dossier complet de Mehdi…).
+- Les petites quêtes des habitants (le balai de Jacques, le singe de Bernard, l'entraînement de Vegeta, le dossier complet de Mehdi…) ne sont plus dans le livre : ce sont des **missions** que chacun propose dans sa conversation (voir « Parler aux habitants »).
 - **Les Sept Reliques** : pour chaque relique, un indice qui donne une carte au trésor, puis le donjon à trouver, puis la relique (cachée dans le coffre au trésor de ce donjon). Avec les sept, on obtient « Le Réveil de la Cabane » et des élytres.
 - **Les Grands Donjons** : 12 donjons géants à visiter et 12 boss (Cataclysm, Mowzie's Mobs).
 

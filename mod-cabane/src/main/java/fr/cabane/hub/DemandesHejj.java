@@ -69,22 +69,30 @@ public final class DemandesHejj {
         return BuiltInRegistries.ITEM.get(ResourceLocation.parse(d.objet()));
     }
 
-    /** « Ta demande du jour ? » */
+    /** « Ta demande du jour ? » (la commande l'écrit dans le chat) */
     public static void demande(ServerPlayer joueur) {
-        int i = indexDuJour();
-        Demande d = DEMANDES.get(i);
-        joueur.sendSystemMessage(Component.literal("Le Hejj : « " + d.texte() + " »").withStyle(ChatFormatting.GOLD));
-        if (demandeAidee == i && AIDES.contains(joueur.getUUID())) {
-            joueur.sendSystemMessage(Component.literal("Tu m'as déjà aidé aujourd'hui. Reviens demain !").withStyle(ChatFormatting.GRAY));
-            return;
-        }
-        int a = joueur.getInventory().countItem(objet(d));
-        joueur.sendSystemMessage(Component.literal("→ " + d.nombre() + " × ").append(new ItemStack(objet(d)).getHoverName())
-                .append(" (tu en as " + a + ") · récompense : ").append(Economie.texte(d.prime())).withStyle(ChatFormatting.YELLOW));
+        joueur.sendSystemMessage(Component.literal("Le Hejj : " + demandeTexte(joueur)).withStyle(ChatFormatting.GOLD));
     }
 
-    /** « J'ai ce qu'il te faut » */
+    /** « J'ai ce qu'il te faut » (la commande l'écrit dans le chat) */
     public static void livrer(ServerPlayer joueur) {
+        joueur.sendSystemMessage(Component.literal("Le Hejj : " + livrerTexte(joueur)).withStyle(ChatFormatting.GOLD));
+    }
+
+    /** La demande du jour, telle que le Hejj la dit dans sa conversation. */
+    public static String demandeTexte(ServerPlayer joueur) {
+        int i = indexDuJour();
+        Demande d = DEMANDES.get(i);
+        if (demandeAidee == i && AIDES.contains(joueur.getUUID())) {
+            return d.texte() + "\n\nMais tu m'as déjà aidé aujourd'hui. Reviens demain !";
+        }
+        int a = joueur.getInventory().countItem(objet(d));
+        return d.texte() + "\n\n→ " + d.nombre() + " × " + new ItemStack(objet(d)).getHoverName().getString()
+                + " (tu en as " + a + ")\nRécompense : " + Economie.format(d.prime());
+    }
+
+    /** On livre la demande du jour : ce que le Hejj répond. */
+    public static String livrerTexte(ServerPlayer joueur) {
         int i = indexDuJour();
         Demande d = DEMANDES.get(i);
         if (demandeAidee != i) {
@@ -92,20 +100,18 @@ public final class DemandesHejj {
             AIDES.clear();
         }
         if (AIDES.contains(joueur.getUUID())) {
-            joueur.sendSystemMessage(Component.literal("Le Hejj : « Tu as déjà fait ta part aujourd'hui. Repose-toi ! »").withStyle(ChatFormatting.GOLD));
-            return;
+            return "Tu as déjà fait ta part aujourd'hui. Repose-toi !";
         }
         Item item = objet(d);
         if (joueur.getInventory().countItem(item) < d.nombre()) {
-            joueur.sendSystemMessage(Component.literal("Le Hejj : « Il m'en faut " + d.nombre() + ", pas un de moins. »").withStyle(ChatFormatting.GOLD));
-            return;
+            return "Il m'en faut " + d.nombre() + " × " + new ItemStack(item).getHoverName().getString() + ", pas un de moins. Tu en as "
+                    + joueur.getInventory().countItem(item) + ".";
         }
         joueur.getInventory().clearOrCountMatchingItems(s -> s.is(item), d.nombre(), joueur.inventoryMenu.getCraftSlots());
         AIDES.add(joueur.getUUID());
         Economie.crediter(joueur.server, joueur.getUUID(), d.prime());
         joueur.level().playSound(null, joueur.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.7F, 1.2F);
-        joueur.sendSystemMessage(Component.literal("Le Hejj : « Beauvais te remercie. » ").withStyle(ChatFormatting.GOLD)
-                .append(Component.literal("+").append(Economie.texte(d.prime())).withStyle(ChatFormatting.GREEN)));
+        return "Beauvais te remercie. Voilà " + Economie.format(d.prime()) + " pour ta peine.";
     }
 
     private DemandesHejj() {

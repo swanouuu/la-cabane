@@ -1,0 +1,28 @@
+{
+  "qui": "gardien",
+  "ordre": 520,
+  "semaine": {
+    "id": "mine",
+    "nom": "La semaine de la mine",
+    "texte": "Brokk n'a plus rien à forger, et quand Brokk s'ennuie, il tape sur les murs. Descends à la mine, rapporte du minerai, et fais attention à ce qui vit en bas.",
+    "bonus": 900
+  },
+  "titre": "Le fer de Brokk",
+  "pitch": "Trente-deux lingots de fer et trente-deux charbons. Brokk arrêtera de taper sur les murs.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:iron_ingot",
+      "nombre": 32
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:coal",
+      "nombre": 32
+    }
+  ],
+  "merci": "Brokk tape sur l'enclume, maintenant. C'est mieux.",
+  "recompense": {
+    "argent": 300
+  }
+}

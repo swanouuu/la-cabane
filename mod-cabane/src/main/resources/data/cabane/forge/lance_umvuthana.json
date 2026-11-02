@@ -1,7 +1,8 @@
 {
   "resultat": "mowziesmobs:spear",
   "prix": 6000,
-  "ordre": 10,
+  "ordre": 106,
+  "categorie": "arme",
   "ingredients": [
     [
       "minecraft:bamboo",

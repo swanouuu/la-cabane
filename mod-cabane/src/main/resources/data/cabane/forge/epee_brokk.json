@@ -1,0 +1,26 @@
+{
+  "resultat": "minecraft:diamond_sword",
+  "prix": 9000,
+  "ordre": 100,
+  "categorie": "arme",
+  "nom": "Épée de Brokk",
+  "enchantements": {
+    "minecraft:sharpness": 5,
+    "minecraft:unbreaking": 3,
+    "minecraft:looting": 2
+  },
+  "ingredients": [
+    [
+      "minecraft:diamond",
+      3
+    ],
+    [
+      "minecraft:iron_block",
+      2
+    ],
+    [
+      "minecraft:blaze_rod",
+      2
+    ]
+  ]
+}

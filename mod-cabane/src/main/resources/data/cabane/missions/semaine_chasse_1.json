@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 510,
+  "semaine": {
+    "id": "chasse",
+    "nom": "La semaine des chasseurs",
+    "texte": "Les nuits sont mauvaises cette semaine. Les monstres rôdent autour de la palissade, et les gardes ne dorment plus. Va chasser, et reviens me le raconter.",
+    "bonus": 750
+  },
+  "titre": "Nettoyer la jungle",
+  "pitch": "Les zombies sortent de partout. Vingt-cinq, et les gardes pourront dormir un peu.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:zombie|minecraft:zombie_villager|minecraft:husk|minecraft:drowned",
+      "nombre": 25,
+      "texte": "Vaincre 25 zombies"
+    }
+  ],
+  "merci": "Les gardes ont dormi pour la première fois depuis des semaines. Ils ronflent, maintenant.",
+  "recompense": {
+    "argent": 250
+  }
+}

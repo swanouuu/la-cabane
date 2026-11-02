@@ -1,0 +1,24 @@
+{
+  "resultat": "alexsmobs:tendon_whip",
+  "prix": 8000,
+  "ordre": 111,
+  "categorie": "arme",
+  "ingredients": [
+    [
+      "minecraft:string",
+      16
+    ],
+    [
+      "minecraft:leather",
+      8
+    ],
+    [
+      "minecraft:iron_ingot",
+      4
+    ],
+    [
+      "minecraft:slime_ball",
+      4
+    ]
+  ]
+}

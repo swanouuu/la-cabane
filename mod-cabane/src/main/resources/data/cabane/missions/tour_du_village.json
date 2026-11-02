@@ -1,0 +1,44 @@
+{
+  "qui": "gardien",
+  "ordre": 0,
+  "titre": "Le tour du village",
+  "ftb": "62BD944D28455283",
+  "pitch": "Avant tout, va saluer ceux qui font tourner Beauvais. Chacun te dira ce qu'il a à offrir. Marcel au feu de camp, Mouloud au Grand Bazar, Mehdi au tableau des contrats, et Brokk à la forge.",
+  "objectifs": [
+    {
+      "type": "parler",
+      "cible": "conteur",
+      "question": "Le Hejj m'envoie vous saluer.",
+      "reponse": "Le Hejj t'envoie ? Alors assieds-toi. Ici, au feu de camp, je raconte l'histoire de Beauvais à ceux qui veulent l'entendre. Elle est longue, et elle n'est pas finie. Demande-moi de te la raconter, quand tu veux."
+    },
+    {
+      "type": "parler",
+      "cible": "marchand",
+      "question": "Le Hejj m'envoie vous saluer.",
+      "reponse": "Un ami du Hejj ? Alors tu es mon ami ! Mon frère ! Ici, au Grand Bazar, téléphone, parachute, étal pour vendre tes trucs… Tout est à vendre. Prix d'ami. Les mêmes, mais je souris."
+    },
+    {
+      "type": "parler",
+      "cible": "pole_emploi",
+      "question": "Le Hejj m'envoie vous saluer.",
+      "reponse": "Enchanté. Les contrats sont sur le tableau, derrière moi : bois, fer, blé… Ils changent toutes les heures et le village paie bien. Je vous ouvre un dossier. Il manquera une pièce. Il en manque toujours une."
+    },
+    {
+      "type": "parler",
+      "cible": "forgeron",
+      "question": "Le Hejj m'envoie vous saluer.",
+      "reponse": "CLANG. Le vieux t'envoie. Bien. Brokk forge ce que personne sait forger : les armes des grands monstres. Toi rapporter matériaux, toi payer. Toi pas toucher l'enclume."
+    }
+  ],
+  "rappel": "Marcel, Mouloud, Mehdi et Brokk. Prends ton temps : un village, ça se découvre.",
+  "merci": "Te voilà Beauvaisien. Enfin… presque. Les gens se méfient encore, mais ils t'ont vu. C'est un début. Tiens, de quoi manger.",
+  "recompense": {
+    "argent": 200,
+    "objets": [
+      [
+        "minecraft:cooked_beef",
+        4
+      ]
+    ]
+  }
+}

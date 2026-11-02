@@ -255,6 +255,7 @@ public final class Contrats extends SimpleJsonResourceReloadListener {
         if (succes != null) {
             joueur.getAdvancements().award(succes, "contrat");
         }
+        fr.cabane.pnj.Missions.evenement(joueur, "contrat");
         joueur.displayClientMessage(Component.literal("Contrat rempli ! +").append(Economie.texte(contrat.recompense()))
                 .withStyle(ChatFormatting.GREEN), true);
         ouvrir(joueur);

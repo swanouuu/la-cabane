@@ -1,7 +1,8 @@
 {
   "resultat": "cataclysm:coral_spear",
   "prix": 16000,
-  "ordre": 42,
+  "ordre": 110,
+  "categorie": "arme",
   "ingredients": [
     [
       "minecraft:prismarine_shard",

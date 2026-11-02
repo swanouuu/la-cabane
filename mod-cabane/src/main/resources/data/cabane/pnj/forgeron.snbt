@@ -4,50 +4,11 @@
   CustomName:'{"text":"Brokk le Forgeron","color":"red"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","pnj.forgeron"],
   EasyNPCVersion:3,
   VariantType:"ORC_WARRIOR",
   SkinData:{Type:"DEFAULT"},
   RenderData:{Type:"CUSTOM_ENTITY",EntityType:"mowziesmobs:ferrous_wroughtnaut"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.forgeron",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Brokk",
-        Texts:[{Text:"CLANG. Brokk forge. Toi regarde. Toi touche pas l'enclume."},{Text:"Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte les matériaux, paie le travail."},{Text:"Mes orques travaillent bien. Sauf Grosh. Grosh mange le charbon."},{Text:"Un jour, je forgerai une épée si grande qu'il faudra deux villages pour la porter."},{Text:"Tu as des bras de brindille. Reviens quand tu pourras soulever un lingot."}],
-        Buttons:[{
-          Label:"forge",
-          Name:"La forge spéciale",
-          Type:"ACTION",
-          Actions:[{Type:"COMMAND",Cmd:"cabane forge",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
-        },{
-          Label:"travail",
-          Name:"Du travail ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"travail"}]
-        },{
-          Label:"bye",
-          Name:"À plus, Brokk",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"travail",
-        Name:"Le travail",
-        Texts:[{Text:"Le Hejj a un livre de quêtes plein de chantiers. Et Mehdi a ses contrats. Moi, je veux du fer. Beaucoup de fer."}],
-        Buttons:[{
-          Label:"contrats",
-          Name:"Voir les contrats",
-          Type:"ACTION",
-          Actions:[{Type:"COMMAND",Cmd:"cabane contrats",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
-        },{
-          Label:"bye",
-          Name:"Compris",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

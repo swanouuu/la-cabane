@@ -1,0 +1,21 @@
+{
+  "nom": "Vegeta",
+  "couleur": "dark_blue",
+  "voix": "",
+  "qui": "vegeta",
+  "pages": {
+    "default": {
+      "titre": "Vegeta",
+      "textes": [
+        "Le M de Babidi a disparu. Ne vous faites pas d'idées : je ne vous dois rien. … Merci.",
+        "Kakarot est reparti s'entraîner. Il a dit que Beauvais était « un super coin pour pique-niquer ». Idiot.",
+        "Si vous racontez à quelqu'un que vous m'avez sauvé, je fais exploser votre maison. Gentiment."
+      ],
+      "boutons": [
+        {
+          "texte": "Promis, prince"
+        }
+      ]
+    }
+  }
+}

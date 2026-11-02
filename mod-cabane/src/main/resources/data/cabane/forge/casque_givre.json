@@ -1,0 +1,20 @@
+{
+  "resultat": "alexsmobs:froststalker_helmet",
+  "prix": 7000,
+  "ordre": 216,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:packed_ice",
+      16
+    ],
+    [
+      "minecraft:leather",
+      8
+    ],
+    [
+      "minecraft:white_wool",
+      4
+    ]
+  ]
+}

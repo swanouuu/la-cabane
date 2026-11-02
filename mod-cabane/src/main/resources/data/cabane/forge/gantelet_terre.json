@@ -1,7 +1,10 @@
 {
   "resultat": "mowziesmobs:earthrend_gauntlet",
   "prix": 30000,
-  "ordre": 60,
+  "ordre": 302,
+  "categorie": "relique",
+  "indice": "Le gantelet de la Sculptrice : il fend la terre.",
+  "temps": 40,
   "ingredients": [
     [
       "minecraft:iron_block",

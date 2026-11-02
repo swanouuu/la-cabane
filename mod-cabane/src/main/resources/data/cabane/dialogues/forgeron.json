@@ -1,0 +1,57 @@
+{
+  "nom": "Brokk le Forgeron",
+  "couleur": "red",
+  "voix": "",
+  "qui": "forgeron",
+  "pages": {
+    "default": {
+      "titre": "Brokk",
+      "textes": [
+        "CLANG. Brokk forge. Toi regarde. Toi touche pas l'enclume.",
+        "Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte les matériaux, paie le travail.",
+        "Épées, haches, arcs, armures… Brokk forge tout. Et Brokk signe ce qu'il forge : une pièce de Brokk, ça se voit.",
+        "Les armes des boss, Brokk sait les refaire. Pas besoin d'aller battre Ignis : rapporte du feu de blaze, du magma, de la netherite. Brokk fait le reste.",
+        "Tu commandes, tu regardes. Brokk tape, Brokk trempe, Brokk te tend la pièce. Personne touche l'enclume pendant ce temps.",
+        "Mes orques travaillent bien. Sauf Grosh. Grosh mange le charbon.",
+        "Un jour, je forgerai une épée si grande qu'il faudra deux villages pour la porter.",
+        "Tu as des bras de brindille. Reviens quand tu pourras soulever un lingot."
+      ],
+      "boutons": [
+        {
+          "texte": "Armes et armures",
+          "action": "forge"
+        },
+        {
+          "texte": "Les reliques des boss",
+          "action": "forge:relique"
+        },
+        {
+          "texte": "Du travail ?",
+          "vers": "travail"
+        },
+        {
+          "texte": "À plus, Brokk"
+        }
+      ]
+    },
+    "travail": {
+      "titre": "Le travail",
+      "textes": [
+        "Brokk veut du fer. Beaucoup de fer. Et le métal du géant de fer, sous la terre. Si Brokk a du travail pour toi, il te le dit tout de suite, en haut. Sinon, va voir les contrats de Mehdi."
+      ],
+      "boutons": [
+        {
+          "texte": "Voir les contrats",
+          "action": "contrats"
+        },
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Compris"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 600,
+  "semaine": {
+    "id": "village",
+    "nom": "La semaine du village",
+    "texte": "Cette semaine, pas de monstres, pas de mine : on fait vivre Beauvais. On travaille ensemble, on s'écoute, on se fait des cadeaux. Même toi.",
+    "bonus": 600
+  },
+  "titre": "Les contrats de Mehdi",
+  "pitch": "Mehdi a trop de contrats et pas assez de bras. Remplis-en trois.",
+  "objectifs": [
+    {
+      "type": "evenement",
+      "cible": "contrat",
+      "nombre": 3,
+      "texte": "Remplir 3 contrats de Mehdi"
+    }
+  ],
+  "merci": "Mehdi a classé ton dossier. Dans la pile « bien ». Elle est petite, cette pile.",
+  "recompense": {
+    "argent": 250
+  }
+}

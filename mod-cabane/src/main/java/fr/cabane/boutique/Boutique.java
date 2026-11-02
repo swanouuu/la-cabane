@@ -90,7 +90,17 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
                     Cabane.LOGGER.warn("Offre {} : objet inconnu, ignorée", id);
                     return;
                 }
-                liste.add(new Offre(id.toString(), new ItemStack(item, GsonHelper.getAsInt(o, "nombre", 1)),
+                ItemStack stack = new ItemStack(item, GsonHelper.getAsInt(o, "nombre", 1));
+                // une potion (« potion » : son identifiant, comme minecraft:healing)
+                if (o.has("potion")) {
+                    var potion = BuiltInRegistries.POTION.getHolder(ResourceLocation.parse(GsonHelper.getAsString(o, "potion")));
+                    if (potion.isEmpty()) {
+                        Cabane.LOGGER.warn("Offre {} : potion inconnue, ignorée", id);
+                        return;
+                    }
+                    stack.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS, new net.minecraft.world.item.alchemy.PotionContents(potion.get()));
+                }
+                liste.add(new Offre(id.toString(), stack,
                         GsonHelper.getAsLong(o, "prix"), GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsString(o, "vendeur", "")));
             } catch (Exception e) {
                 Cabane.LOGGER.warn("Offre {} illisible : {}", id, e.toString());

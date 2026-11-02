@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 571,
+  "semaine": {
+    "id": "recoltes",
+    "nom": "La semaine des récoltes",
+    "texte": "Cette semaine, Beauvais fait ses réserves. La saison des pluies arrive, et Ginette veut nourrir tout le village. Chacun apporte sa part : toi aussi.",
+    "bonus": 600
+  },
+  "titre": "Le four commun",
+  "pitch": "Le four du village chauffe pour rien. Apporte du pain : on le partagera au feu de camp.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:bread",
+      "nombre": 24
+    }
+  ],
+  "merci": "Ça sent bon jusqu'à la palissade. Gérard est déjà là, assis sur son tronc.",
+  "recompense": {
+    "argent": 150
+  }
+}

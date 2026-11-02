@@ -4,25 +4,10 @@
   CustomName:'{"text":"Louis","color":"gray"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","pnj.louis"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/louis.png"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.louis",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.55},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Louis",
-        Texts:[{Text:"La nuit, j'entends des machines sous la place. Ma femme dit que c'est mon ventre. C'est pas mon ventre."},{Text:"Tu cherches quoi ? Le Bazar, c'est par là. La forge, c'est par là. Et moi, je suis occupé."},{Text:"Occupé à quoi ? Ça te regarde pas."},{Text:"Bon… je regardais les nuages. Celui-là ressemble à Mouloud."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"D'accord, d'accord",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

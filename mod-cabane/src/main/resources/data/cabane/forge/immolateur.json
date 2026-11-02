@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:the_immolator",
+  "prix": 70000,
+  "ordre": 314,
+  "categorie": "relique",
+  "indice": "L'arme d'Ignis, le chevalier de feu. Brokk la refait au feu des blazes : pas besoin d'aller le battre.",
+  "temps": 50,
+  "ingredients": [
+    [
+      "minecraft:blaze_rod",
+      24
+    ],
+    [
+      "minecraft:magma_cream",
+      16
+    ],
+    [
+      "minecraft:netherite_ingot",
+      1
+    ],
+    [
+      "minecraft:diamond",
+      4
+    ]
+  ]
+}

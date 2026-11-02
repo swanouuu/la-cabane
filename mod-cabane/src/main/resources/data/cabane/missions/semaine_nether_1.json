@@ -1,0 +1,29 @@
+{
+  "qui": "gardien",
+  "ordre": 530,
+  "semaine": {
+    "id": "nether",
+    "nom": "La semaine du Nether",
+    "texte": "Mog dit que le feu de la forge s'éteint. Il veut du vrai feu : celui du Nether. Je n'aime pas qu'on y aille… mais Mog pleure, et Mog qui pleure, ça fait de la fumée.",
+    "bonus": 1000
+  },
+  "titre": "Le feu de Mog",
+  "pitch": "Les blazes, dans les forteresses : leur feu ne s'éteint jamais. Bats-en six, et rapporte quatre bâtons pour Mog.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:blaze",
+      "nombre": 6,
+      "texte": "Vaincre 6 blazes"
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:blaze_rod",
+      "nombre": 4
+    }
+  ],
+  "merci": "Mog souffle sur le feu en chantant. C'est pire.",
+  "recompense": {
+    "argent": 350
+  }
+}

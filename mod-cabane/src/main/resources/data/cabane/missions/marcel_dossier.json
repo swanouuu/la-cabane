@@ -1,0 +1,17 @@
+{
+  "qui": "conteur",
+  "titre": "Le village doit savoir",
+  "pitch": "On dit qu'il existe un dossier, sous la Mairie. Le « Projet Augmenté ». Si tu le trouves, apporte-le-moi. Pas pour le garder : pour le lire, au feu de camp, à tout le monde. Le village doit savoir.",
+  "objectifs": [
+    {
+      "type": "avoir",
+      "cible": "cabane:dossier_secret",
+      "nombre": 1
+    }
+  ],
+  "merci": "(Marcel lit longtemps, sans rien dire.) … La potion verte. Les Pillards payés. La Salle Zéro. Tout est là. Ce soir, je ne raconterai pas une histoire. Je raconterai la vérité. Garde-le précieusement : c'est la preuve.",
+  "recompense": {
+    "argent": 500,
+    "xp": 3
+  }
+}

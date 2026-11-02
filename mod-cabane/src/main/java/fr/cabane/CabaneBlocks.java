@@ -35,6 +35,9 @@ public final class CabaneBlocks {
     public static final DeferredBlock<BlocInteractif> TABLE_DES = interactif("table_des", Ouverture.DES);
     public static final DeferredBlock<BlocInteractif> ROUE_FORTUNE = interactif("roue_fortune", Ouverture.ROUE);
     public static final DeferredBlock<BlocInteractif> TABLE_PILE_OU_FACE = interactif("table_pile_ou_face", Ouverture.PILE_OU_FACE);
+    /** La borne de commande du McBeauvais : trois blocs de haut, un grand écran tactile (voir fr.cabane.bouffe). */
+    public static final DeferredBlock<BlocInteractif> BORNE_COMMANDE = BLOCKS.registerBlock("borne_commande", p -> new BlocInteractif(p, Ouverture.BORNE),
+            BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5F, 6F).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 6));
 
     /** Les cases invisibles des grandes tables du casino (pas d'objet : elles viennent avec la table). */
     public static final DeferredBlock<fr.cabane.bloc.GrandesTables.Partie> PARTIE_TABLE = BLOCKS.registerBlock("partie_table", fr.cabane.bloc.GrandesTables.Partie::new,
@@ -64,13 +67,13 @@ public final class CabaneBlocks {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<fr.cabane.bloc.InteractifBlockEntity>> INTERACTIF_BE =
             BLOCK_ENTITIES.register("interactif", () -> BlockEntityType.Builder.of(fr.cabane.bloc.InteractifBlockEntity::new,
                     COMPTOIR.get(), TABLEAU_CONTRATS.get(), BORNE_TERRAIN.get(), MACHINE_A_SOUS.get(), TABLE_ROULETTE.get(), TABLE_BLACKJACK.get(),
-                    TABLE_DES.get(), ROUE_FORTUNE.get(), TABLE_PILE_OU_FACE.get()).build(null));
+                    TABLE_DES.get(), ROUE_FORTUNE.get(), TABLE_PILE_OU_FACE.get(), BORNE_COMMANDE.get()).build(null));
 
     public static final DeferredHolder<MenuType<?>, MenuType<EtalMenu>> ETAL_MENU = MENUS.register("etal",
             () -> IMenuTypeExtension.create(EtalMenu::new));
 
     public static final List<DeferredBlock<?>> TOUS = List.of(COMPTOIR, TABLEAU_CONTRATS, BORNE_TERRAIN, ETAL, MACHINE_A_SOUS, TABLE_ROULETTE,
-            TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE, CHICHA, BIBLIOTHEQUE_SECRETE, PUPITRE_PRESIDENT);
+            TABLE_BLACKJACK, TABLE_DES, ROUE_FORTUNE, TABLE_PILE_OU_FACE, CHICHA, BIBLIOTHEQUE_SECRETE, PUPITRE_PRESIDENT, BORNE_COMMANDE);
 
     private static DeferredBlock<BlocInteractif> interactif(String nom, Ouverture ouverture) {
         return BLOCKS.registerBlock(nom, p -> new BlocInteractif(p, ouverture),

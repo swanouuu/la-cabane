@@ -1,0 +1,23 @@
+{
+  "nom": "Macron, ancien président",
+  "couleur": "gray",
+  "voix": "",
+  "qui": "macron_prison",
+  "pages": {
+    "default": {
+      "titre": "L'ancien président",
+      "textes": [
+        "Je n'ai jamais dit ça. Et si je l'ai dit, c'était sorti de son contexte.",
+        "C'était… en même temps une erreur et un succès.",
+        "Je demande un référendum. Non ? Une consultation citoyenne, alors ?",
+        "Je traverse la cellule et je ne trouve pas de travail. Ça ne marche pas dans ce sens-là."
+      ],
+      "boutons": [
+        {
+          "texte": "Bonne retraite"
+        }
+      ],
+      "ftb": "3BE3E5007AAA200A"
+    }
+  }
+}

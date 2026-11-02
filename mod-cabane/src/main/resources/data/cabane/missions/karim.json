@@ -1,0 +1,16 @@
+{
+  "qui": "cartographe",
+  "titre": "Une carte pour Karim",
+  "pitch": "Chouf ! Je veux une carte des environs dessinée par toi. On verra si tu sais tenir une boussole. Une carte remplie, pas une feuille blanche, hein.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:filled_map",
+      "nombre": 1
+    }
+  ],
+  "merci": "Pas mal ! Le nord est en haut, c'est déjà ça. Je l'accroche sur le grand panneau. Dans un coin. En petit.",
+  "recompense": {
+    "argent": 400
+  }
+}

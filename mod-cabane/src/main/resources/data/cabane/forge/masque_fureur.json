@@ -1,0 +1,24 @@
+{
+  "resultat": "mowziesmobs:umvuthana_mask_fury",
+  "prix": 6000,
+  "ordre": 208,
+  "categorie": "armure",
+  "ingredients": [
+    [
+      "minecraft:gold_ingot",
+      4
+    ],
+    [
+      "minecraft:leather",
+      4
+    ],
+    [
+      "minecraft:feather",
+      8
+    ],
+    [
+      "minecraft:bone",
+      4
+    ]
+  ]
+}

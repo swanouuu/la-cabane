@@ -1,0 +1,8 @@
+{
+  "item": "minecraft:potion",
+  "nombre": 1,
+  "prix": 220,
+  "ordre": 14,
+  "vendeur": "pnj.guerisseuse",
+  "potion": "minecraft:strong_healing"
+}

@@ -1,0 +1,16 @@
+{
+  "qui": "louis",
+  "titre": "Les nuages de Louis",
+  "pitch": "Bon… Je regarde les nuages. Toute la journée. Si j'avais une longue-vue, je les verrais de plus près. Ne le dis à personne.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:spyglass",
+      "nombre": 1
+    }
+  ],
+  "merci": "Oh. OH. Celui-là ressemble vraiment à Mouloud. Même la moustache. Merci… Tu peux le dire à personne.",
+  "recompense": {
+    "argent": 400
+  }
+}

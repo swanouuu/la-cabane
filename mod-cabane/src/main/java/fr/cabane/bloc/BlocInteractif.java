@@ -21,7 +21,9 @@ public class BlocInteractif extends HorizontalDirectionalBlock implements net.mi
 
     public enum Ouverture {
         BOUTIQUE(false), CONTRATS(false), TERRAIN(false),
-        MACHINE_A_SOUS(true), ROULETTE(true), BLACKJACK(true), DES(true), ROUE(true), PILE_OU_FACE(true);
+        MACHINE_A_SOUS(true), ROULETTE(true), BLACKJACK(true), DES(true), ROUE(true), PILE_OU_FACE(true),
+        /** La borne de commande du McBeauvais (trois blocs de haut). */
+        BORNE(false);
 
         final boolean cote_client;
 
@@ -123,6 +125,7 @@ public class BlocInteractif extends HorizontalDirectionalBlock implements net.mi
         } else if (player instanceof ServerPlayer joueur) {
             switch (ouverture) {
                 case BOUTIQUE -> Boutique.ouvrir(joueur);
+                case BORNE -> fr.cabane.bouffe.FastFood.ouvrir(joueur, pos);
                 // clic droit : livrer ce qu'on a ; accroupi : la liste détaillée
                 case TERRAIN -> Terrains.cliquer(joueur, pos);
                 case CONTRATS -> {

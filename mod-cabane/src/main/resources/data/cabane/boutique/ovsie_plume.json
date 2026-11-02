@@ -1,0 +1,8 @@
+{
+  "item": "minecraft:potion",
+  "nombre": 1,
+  "prix": 150,
+  "ordre": 8,
+  "vendeur": "pnj.fee",
+  "potion": "minecraft:slow_falling"
+}

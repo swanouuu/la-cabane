@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 511,
+  "semaine": {
+    "id": "chasse",
+    "nom": "La semaine des chasseurs",
+    "texte": "Les nuits sont mauvaises cette semaine. Les monstres rôdent autour de la palissade, et les gardes ne dorment plus. Va chasser, et reviens me le raconter.",
+    "bonus": 750
+  },
+  "titre": "Les archers de la nuit",
+  "pitch": "Les squelettes tirent sur tout ce qui bouge. Même sur les poules. Vingt.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "minecraft:skeleton|minecraft:stray|minecraft:bogged",
+      "nombre": 20,
+      "texte": "Vaincre 20 squelettes"
+    }
+  ],
+  "merci": "Plus une flèche dans les poules. Ginette te remercie. Les poules aussi.",
+  "recompense": {
+    "argent": 250
+  }
+}

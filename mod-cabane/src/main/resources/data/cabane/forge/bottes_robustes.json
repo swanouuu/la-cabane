@@ -1,7 +1,8 @@
 {
   "resultat": "cataclysm:sturdy_boots",
   "prix": 12000,
-  "ordre": 41,
+  "ordre": 207,
+  "categorie": "armure",
   "ingredients": [
     [
       "minecraft:leather",

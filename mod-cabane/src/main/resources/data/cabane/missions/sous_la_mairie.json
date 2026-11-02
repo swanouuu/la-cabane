@@ -1,0 +1,41 @@
+{
+  "qui": "sylvie",
+  "ordre": 2,
+  "quand": -1,
+  "apres": [
+    "ou_est_pierre"
+  ],
+  "titre": "Sous la Mairie",
+  "pitch": "Trouvez ce passage, je vous en prie. Entrez dans la Mairie, trouvez la bibliothèque qui pivote, et descendez. Si Pierre est là-dessous… dites-lui que Lucas et moi, on l'attend. Tous les soirs. Devant cette porte.",
+  "objectifs": [
+    {
+      "type": "succes",
+      "cible": "cabane:histoire/laboratoire",
+      "texte": "Trouver le passage secret sous la Mairie"
+    },
+    {
+      "type": "parler",
+      "cible": "prisonnier",
+      "question": "Pierre ? Sylvie et Lucas vous cherchent !",
+      "reponse": "Sylvie… Lucas… Ils vont bien ? Ils sont dehors, devant la Mairie ? Tous les soirs ?… (il se cache le visage un moment) … Écoutez. Je ne peux pas sortir maintenant : s'il voit ma cellule vide, il saura. Prenez ça. Je l'écris depuis des semaines, au charbon, sur ce qui me reste de papier. Donnez-la à Sylvie. Et dites à Lucas que son papa tient bon.",
+      "donne": "cabane:lettre_pierre"
+    },
+    {
+      "type": "apporter",
+      "cible": "cabane:lettre_pierre",
+      "nombre": 1
+    }
+  ],
+  "rappel": "Il est en bas, n'est-ce pas ? Je le sens. Trouvez-le.",
+  "merci": "(Sylvie déplie la lettre. Ses mains tremblent.)\n« Ma Sylvie. Je suis vivant. Ils m'appellent le Sujet 07. Ils me font boire une potion verte, mais je la recrache dès qu'ils ont le dos tourné. Ne viens pas : c'est trop dangereux. Dis à Lucas que je reviendrai, et que je lui apprendrai à pêcher, comme promis. Je vous aime. — Pierre. »\n… Il est vivant. Il est VIVANT. Merci… merci. Lucas ! Lucas, viens voir !",
+  "recompense": {
+    "argent": 600,
+    "objets": [
+      [
+        "minecraft:golden_apple",
+        2
+      ]
+    ],
+    "xp": 3
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "qui": "gardien",
+  "ordre": 500,
+  "semaine": {
+    "id": "jungle",
+    "nom": "La semaine de la jungle",
+    "texte": "La jungle autour de Beauvais se réveille. Les plantes mordent, les creepers se cachent dans les feuilles, et les crocodiles remontent la rivière. Cette semaine, on la remet à sa place.",
+    "bonus": 800
+  },
+  "titre": "Les plantes qui mordent",
+  "pitch": "Les Foliaaths, ces fleurs géantes avec des dents, poussent jusqu'à la palissade. Arrache-en cinq.",
+  "objectifs": [
+    {
+      "type": "tuer",
+      "cible": "mowziesmobs:foliaath",
+      "nombre": 5,
+      "texte": "Vaincre 5 Foliaaths"
+    }
+  ],
+  "merci": "Cinq ! Les enfants peuvent de nouveau cueillir des fleurs. Les normales.",
+  "recompense": {
+    "argent": 300
+  }
+}

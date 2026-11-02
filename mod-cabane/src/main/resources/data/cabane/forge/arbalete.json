@@ -1,0 +1,30 @@
+{
+  "resultat": "minecraft:crossbow",
+  "prix": 7000,
+  "ordre": 103,
+  "categorie": "arme",
+  "nom": "Arbalète de Brokk",
+  "enchantements": {
+    "minecraft:quick_charge": 3,
+    "minecraft:multishot": 1,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:iron_ingot",
+      8
+    ],
+    [
+      "minecraft:string",
+      8
+    ],
+    [
+      "minecraft:tripwire_hook",
+      2
+    ],
+    [
+      "minecraft:diamond",
+      1
+    ]
+  ]
+}

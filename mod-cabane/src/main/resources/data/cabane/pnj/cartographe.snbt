@@ -4,39 +4,10 @@
   CustomName:'{"text":"Karim le Chouf","color":"aqua"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","pnj.cartographe"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/karim.png"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.cartographe",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Karim",
-        Texts:[{Text:"Chouf, chouf ! Des cartes, encore des cartes ! Regarde le grand panneau derrière moi : c'est tout le monde connu."},{Text:"J'ai étudié la magie des cartes pendant quarante ans. Résultat : je sais plier une carte. Dans le bon sens. Parfois."},{Text:"Chaque relique a sa carte. Fais les quêtes d'indice dans ton livre et je te les donne. Chouf !"},{Text:"Ma barbe ? Elle pousse vers le nord. Comme ça je ne me perds jamais."},{Text:"Les gens croient que je suis un sorcier. Je suis cartographe. Bon… un peu sorcier aussi."}],
-        Buttons:[{
-          Label:"conseil",
-          Name:"Un conseil ?",
-          Type:"ACTION",
-          Actions:[{Type:"OPEN_NAMED_DIALOG",Cmd:"conseil"}]
-        },{
-          Label:"bye",
-          Name:"Merci Karim",
-          Type:"CLOSE"
-        }]
-      },{
-        Label:"conseil",
-        Name:"Conseil",
-        Texts:[{Text:"Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit."},{Text:"Au nord, la neige. Au sud, le désert. À l'est, des volcans. Et ici, la jungle. Prends un manteau ET de l'eau."}],
-        Buttons:[{
-          Label:"bye",
-          Name:"Noté !",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

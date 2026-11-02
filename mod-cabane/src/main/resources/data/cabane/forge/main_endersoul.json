@@ -1,0 +1,24 @@
+{
+  "resultat": "mutantmonsters:endersoul_hand",
+  "prix": 25000,
+  "ordre": 114,
+  "categorie": "arme",
+  "ingredients": [
+    [
+      "minecraft:ender_pearl",
+      16
+    ],
+    [
+      "minecraft:ender_eye",
+      4
+    ],
+    [
+      "minecraft:obsidian",
+      8
+    ],
+    [
+      "minecraft:diamond",
+      2
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "resultat": "minecraft:diamond_leggings",
+  "prix": 13000,
+  "ordre": 202,
+  "categorie": "armure",
+  "nom": "Jambières de Brokk",
+  "enchantements": {
+    "minecraft:protection": 4,
+    "minecraft:swift_sneak": 3,
+    "minecraft:unbreaking": 3
+  },
+  "ingredients": [
+    [
+      "minecraft:diamond",
+      7
+    ],
+    [
+      "minecraft:iron_block",
+      2
+    ],
+    [
+      "minecraft:leather",
+      6
+    ]
+  ]
+}

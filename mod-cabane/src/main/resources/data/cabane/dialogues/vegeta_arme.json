@@ -1,0 +1,21 @@
+{
+  "nom": "Vegeta",
+  "couleur": "dark_red",
+  "voix": "",
+  "qui": "vegeta",
+  "pages": {
+    "default": {
+      "titre": "Vegeta",
+      "textes": [
+        "Il est là. Je le sens… Kakarot. Allez chercher tout le monde. TOUT le monde.",
+        "Ma capsule s'est écrasée ici en le poursuivant. Aujourd'hui, il vient à moi. Réunissez-vous autour de moi, et parlez-moi.",
+        "Vous tremblez ? Normal. Ce qui va se passer dans le ciel de Beauvais, personne ne l'a jamais vu."
+      ],
+      "boutons": [
+        {
+          "texte": "On arrive !"
+        }
+      ]
+    }
+  }
+}

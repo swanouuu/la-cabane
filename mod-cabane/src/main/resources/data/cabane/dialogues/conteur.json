@@ -1,0 +1,92 @@
+{
+  "nom": "Marcel le Conteur",
+  "couleur": "gold",
+  "voix": "",
+  "qui": "conteur",
+  "pages": {
+    "default": {
+      "titre": "Marcel",
+      "textes": [
+        "Ah, des gens du ciel… Asseyez-vous près du feu. Vous voulez savoir pourquoi les gens d'ici vous regardent de travers ? C'est une longue histoire.",
+        "Bonsoir, voyageur. Le feu est chaud, la nuit est longue. Une histoire ?"
+      ],
+      "boutons": [
+        {
+          "texte": "Raconte-moi Beauvais",
+          "vers": "h1"
+        },
+        {
+          "texte": "Le livre de l'histoire",
+          "action": "livre:16AB2FF51EB0851E"
+        },
+        {
+          "texte": "Une autre fois"
+        }
+      ]
+    },
+    "h1": {
+      "titre": "Le temps des Anciens",
+      "textes": [
+        "Il y a longtemps, Beauvais était le village le plus paisible de la jungle. Les arbres géants nous protégeaient, la rivière nous nourrissait, et le Conseil des Anciens décidait de tout, ici, autour de ce feu. Sur le comptoir de la Grande Cabane reposaient les Sept Reliques : tant qu'elles étaient là, aucun malheur n'entrait au village."
+      ],
+      "boutons": [
+        {
+          "texte": "Et ensuite ?",
+          "vers": "h2"
+        }
+      ]
+    },
+    "h2": {
+      "titre": "L'homme en costume",
+      "textes": [
+        "Un jour, un homme en costume est arrivé. Il parlait bien, il souriait beaucoup, il promettait tout : la prospérité, la sécurité… et en même temps, l'inverse. Le Conseil l'a écouté. Puis il a pris le titre de Président, s'est entouré d'une garde masquée, et le Conseil n'a plus jamais été réuni."
+      ],
+      "boutons": [
+        {
+          "texte": "Et ensuite ?",
+          "vers": "h3"
+        }
+      ]
+    },
+    "h3": {
+      "titre": "Les Pillards du Sud",
+      "textes": [
+        "Peu après, les Pillards sont arrivés du sud, des marais. Ils brûlent les récoltes, vident les greniers, et repartent avant l'aube. Le Président dit qu'il nous protège. Mais sa garde ne protège que lui. Et une nuit, les Sept Reliques ont disparu. Personne n'a rien vu. Personne n'a rien entendu."
+      ],
+      "boutons": [
+        {
+          "texte": "Et ensuite ?",
+          "vers": "h4"
+        }
+      ]
+    },
+    "h4": {
+      "titre": "La Mairie",
+      "textes": [
+        "Depuis, la Mairie est fermée la nuit. Certains disent qu'on entend des machines sous la terre. Et des gens disparaissent : « partis travailler à la capitale », dit le Président. Le dernier, c'est Pierre, le mari de Sylvie. Personne n'est jamais revenu de la capitale. On ne sait même pas où elle est, la capitale."
+      ],
+      "boutons": [
+        {
+          "texte": "Et ensuite ?",
+          "vers": "h5"
+        }
+      ]
+    },
+    "h5": {
+      "titre": "La prophétie",
+      "textes": [
+        "Alors oui, on se méfie des étrangers : tous ceux qui sont venus ont fini par voler, ou par trahir. Mais une vieille prophétie dit : « Quand le feu tombera du ciel, ceux qui en sortiront rendront Beauvais à son peuple. » Votre avion est tombé en feu… Faites vos preuves. Le livre de quêtes vous guidera : « L'Histoire de Beauvais »."
+      ],
+      "boutons": [
+        {
+          "texte": "Ouvrir « L'Histoire de Beauvais »",
+          "action": "livre:16AB2FF51EB0851E"
+        },
+        {
+          "texte": "Merci, Marcel"
+        }
+      ],
+      "ftb": "01CBF0BA670EB442"
+    }
+  }
+}

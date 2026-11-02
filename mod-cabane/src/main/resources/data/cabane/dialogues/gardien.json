@@ -1,0 +1,104 @@
+{
+  "nom": "Le Hejj du Village",
+  "couleur": "gold",
+  "voix": "",
+  "qui": "gardien",
+  "pages": {
+    "default": {
+      "titre": "Le Hejj",
+      "textes": [
+        "Vous avez vu ça ? Votre avion a pris feu au-dessus de la jungle ! Beauvais vous accueille… à condition de l'aider à grandir.",
+        "Ah, les gens du ciel. Asseyez-vous. Non, pas là, c'est le banc de Gérard.",
+        "Un village, c'est comme un arbre géant : il pousse lentement, mais il faut l'arroser tous les jours. Vous êtes l'arrosoir.",
+        "J'ai rêvé d'un Beauvais avec un port, un pont, une tour plus haute que les arbres. Mon rêve a besoin de vos bras.",
+        "Le Président dit que c'est lui qui décide. Je le laisse dire. C'est moi qui sais où sont les clés.",
+        "J'étais du Conseil des Anciens, avant. Maintenant je suis… le vieux sur le porche. Va voir Marcel, au feu de camp : il raconte l'histoire mieux que moi.",
+        "Chut. Pas trop fort. Les gardes du Président ont de grandes oreilles sous leurs masques."
+      ],
+      "boutons": [
+        {
+          "texte": "Ta demande du jour ?",
+          "action": "hejj_demande"
+        },
+        {
+          "texte": "Les grands chantiers du village",
+          "action": "livre:0F76A38B1018536B"
+        },
+        {
+          "texte": "Comment aider ?",
+          "vers": "aider"
+        },
+        {
+          "texte": "Où s'installer ?",
+          "vers": "maison"
+        },
+        {
+          "texte": "Et les reliques ?",
+          "vers": "reliques"
+        },
+        {
+          "texte": "À plus tard"
+        }
+      ]
+    },
+    "aider": {
+      "titre": "Agrandir Beauvais",
+      "textes": [
+        "Le village doit grandir : des maisons, un marché, un pont, un port… Les grands chantiers sont dans le livre de quêtes : je te l'ouvre si tu veux. Chaque chantier fini, le village te paie.",
+        "Chaque habitant a un petit service à te demander : parle-leur, ceux qui ont besoin de toi ont un « ! » doré. Mehdi, au Grand Bazar, a des contrats qui changent toutes les heures. Et moi, j'ai ma demande du jour."
+      ],
+      "boutons": [
+        {
+          "texte": "Ouvrir les grands chantiers",
+          "action": "livre:0F76A38B1018536B"
+        },
+        {
+          "texte": "Ta demande du jour ?",
+          "action": "hejj_demande"
+        },
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "On s'y met !"
+        }
+      ]
+    },
+    "maison": {
+      "titre": "Vos maisons",
+      "textes": [
+        "Le cœur du village appartient aux habitants. Vous, installez-vous juste à côté, hors de l'enceinte : construisez vos maisons, vos fermes, vos usines. Et aidez Beauvais à pousser jusqu'à vous.",
+        "Les terrains à vendre, derrière le boulevard, sont pour les commerces : clic droit sur leur borne pour acheter. Pour vivre, sortez par la grande porte et choisissez un coin de jungle. Pas trop près de Gérard."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "Compris"
+        }
+      ]
+    },
+    "reliques": {
+      "titre": "Les Sept Reliques",
+      "textes": [
+        "Sept reliques reposaient sur le comptoir. Elles ont été cachées dans les plus grands donjons du monde, parfois très loin d'ici. Ramenez-les, et le village se réveillera. Karim, au grand panneau, vend les cartes qui y mènent."
+      ],
+      "boutons": [
+        {
+          "texte": "Ouvrir le chapitre des reliques",
+          "action": "livre:44CD4C5260BE1635"
+        },
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "J'y vais !"
+        }
+      ]
+    }
+  }
+}

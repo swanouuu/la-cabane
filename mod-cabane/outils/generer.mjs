@@ -5,6 +5,9 @@ import { genererHistoire } from "./histoire.mjs";
 import { genererBoissons, OFFRES_BOISSONS, CONTRATS_BOISSONS } from "./boissons.mjs";
 import { genererMarcheNoir, OFFRES_NOIR } from "./marche-noir.mjs";
 import { genererAccessoires, OFFRES_ACCESSOIRES } from "./accessoires.mjs";
+import { genererFastFood } from "./fastfood.mjs";
+import { genererMissions } from "./missions.mjs";
+import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -191,6 +194,28 @@ for (const [nom, [grille, palette]] of Object.entries(TEXTURES)) {
   ecrire(`assets/cabane/models/item/${nom}.json`, { parent: "minecraft:item/generated", textures: { layer0: `cabane:item/${nom}` } });
 }
 
+// le kunai de Minato, tenu en main quand le pouvoir est éveillé : en diagonale comme une épée (d'où item/handheld),
+// l'anneau, le manche beige entouré de noir, la bague, les deux crochets recourbés et la lame
+ecrire("assets/cabane/textures/item/kunai_minato.png", png([
+  "................",
+  "..............W.",
+  "............LM..",
+  "...........LMD..",
+  "..........LMD...",
+  ".....PP..LMD....",
+  "....P.PGLMD.....",
+  ".......GGD......",
+  "......KBGG......",
+  ".....KBB.PP.....",
+  "....KBB...P.....",
+  "....RB...P......",
+  ".RRR............",
+  "R..R............",
+  "R..R............",
+  ".RR............."], { W: [240, 244, 250], L: [214, 219, 226], M: [168, 174, 184], D: [112, 118, 128], P: [150, 154, 150],
+  G: [84, 86, 82], B: [222, 190, 140], K: [26, 22, 18], R: [104, 106, 98] }));
+ecrire("assets/cabane/models/item/kunai_minato.json", { parent: "minecraft:item/handheld", textures: { layer0: "cabane:item/kunai_minato" } });
+
 // ---------------------------------------------------------------- traductions (français pour tout le monde)
 const lang = {
   "itemGroup.cabane": "SakaiMod",
@@ -294,21 +319,8 @@ ecrire("data/cabane/loot_table/coffres/tour.json", {
 // ---------------------------------------------------------------- PNJ (Easy NPC) : voir pnj.mjs
 genererPnj(ecrire);
 
-// ---------------------------------------------------------------- la forge de Brokk : lui seul sait faire ces pièces
-const forge = (fichier, resultat, prix, ingredients, ordre) =>
-  ecrire(`data/cabane/forge/${fichier}.json`, JSON.stringify({ resultat, prix, ordre, ingredients }, null, 2) + "\n");
-forge("lance_umvuthana", "mowziesmobs:spear", 6000, [["minecraft:bamboo", 32], ["minecraft:flint", 8], ["minecraft:gold_ingot", 6], ["minecraft:feather", 4]], 10);
-forge("epee_acier_noir", "cataclysm:black_steel_sword", 9000, [["minecraft:iron_block", 4], ["minecraft:coal_block", 8], ["minecraft:diamond", 2]], 20);
-forge("targe_acier_noir", "cataclysm:black_steel_targe", 9000, [["minecraft:iron_block", 6], ["minecraft:coal_block", 6], ["minecraft:leather", 8]], 21);
-forge("casque_forge", "mowziesmobs:wrought_helmet", 12000, [["minecraft:iron_block", 5], ["minecraft:diamond", 2], ["minecraft:leather", 6]], 30);
-forge("hache_forgee", "mowziesmobs:wrought_axe", 15000, [["minecraft:iron_block", 8], ["minecraft:diamond", 4], ["minecraft:blaze_rod", 4]], 31);
-forge("khopesh", "cataclysm:khopesh", 14000, [["minecraft:gold_ingot", 12], ["minecraft:sandstone", 32], ["minecraft:diamond", 3]], 40);
-forge("bottes_robustes", "cataclysm:sturdy_boots", 12000, [["minecraft:leather", 12], ["minecraft:iron_ingot", 16], ["minecraft:slime_ball", 8]], 41);
-forge("lance_corail", "cataclysm:coral_spear", 16000, [["minecraft:prismarine_shard", 24], ["minecraft:nautilus_shell", 2], ["minecraft:diamond", 3]], 42);
-forge("gantelet_garde", "cataclysm:gauntlet_of_guard", 25000, [["minecraft:iron_block", 8], ["minecraft:diamond", 6], ["minecraft:obsidian", 8]], 50);
-forge("gantelet_terre", "mowziesmobs:earthrend_gauntlet", 30000, [["minecraft:iron_block", 6], ["minecraft:amethyst_shard", 16], ["minecraft:diamond", 6], ["minecraft:netherite_scrap", 2]], 60);
-forge("masque_soleil", "mowziesmobs:sol_visage", 45000, [["minecraft:gold_block", 8], ["minecraft:blaze_rod", 12], ["minecraft:magma_cream", 8], ["minecraft:diamond", 8]], 70);
-forge("forge_infernale", "cataclysm:infernal_forge", 60000, [["minecraft:netherite_ingot", 1], ["minecraft:blaze_rod", 16], ["minecraft:magma_block", 16], ["minecraft:diamond", 8]], 80);
+// ---------------------------------------------------------------- la forge de Brokk : voir forge.mjs
+genererForge({ ecrire });
 
 // ================================================================ économie, marché, casino, cartes, parachute
 
@@ -430,6 +442,8 @@ bloc("roue_fortune", { front: "cabane:block/roue_fortune_front", side: "minecraf
 
 genererHistoire({ ecrire, png, lang });
 genererBoissons({ ecrire, png, lang });
+genererFastFood({ ecrire, png, lang });
+console.log(`Missions des habitants : ${genererMissions({ ecrire })}`);
 genererMarcheNoir({ ecrire, png, lang });
 genererAccessoires({ ecrire, png, lang });
 genererLabo({ ecrire, png, lang });
@@ -451,6 +465,10 @@ Object.assign(lang, {
   "death.attack.cabane.chidori": "%1$s a été transpercé par le Chidori de %2$s",
   "death.attack.cabane.chidori.item": "%1$s a été transpercé par le Chidori de %2$s",
   "death.attack.cabane.chidori.player": "%1$s a été transpercé par un Chidori",
+  "subtitles.cabane.minato.flash": "Éclair jaune", "item.cabane.kunai_minato": "Kunai de Minato",
+  "death.attack.cabane.eclair_jaune": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
+  "death.attack.cabane.eclair_jaune.item": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
+  "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
@@ -584,6 +602,9 @@ console.log("Ressources générées dans", RES);
 // ---- les sons : la voiture (synthétisée par le mod) et les voix des PNJ, rangées depuis le dossier voix/ à la racine
 {
   const sons = { voiture: { sounds: [{ name: "minecraft:random/click", stream: true }] } };
+  // les téléportations de Minato : les coups de tonnerre de Minecraft (pris dans le jeu, pas copiés), à mi-volume
+  sons["minato.flash"] = { subtitle: "subtitles.cabane.minato.flash",
+    sounds: [1, 2, 3].map((n) => ({ name: `minecraft:ambient/weather/thunder${n}`, volume: 0.5 })) };
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");
   const cible = path.join(RES, "assets", "cabane", "sounds", "voix");
   fs.rmSync(cible, { recursive: true, force: true });

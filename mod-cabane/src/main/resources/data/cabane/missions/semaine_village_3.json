@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 602,
+  "semaine": {
+    "id": "village",
+    "nom": "La semaine du village",
+    "texte": "Cette semaine, pas de monstres, pas de mine : on fait vivre Beauvais. On travaille ensemble, on s'écoute, on se fait des cadeaux. Même toi.",
+    "bonus": 600
+  },
+  "titre": "Un gâteau pour Ginette",
+  "pitch": "C'est l'anniversaire de Ginette. Elle dit que non. C'est oui. Apporte-lui… enfin, apporte-moi un gâteau.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:cake",
+      "nombre": 1
+    }
+  ],
+  "merci": "Ginette a pleuré. Puis elle a dit qu'il manquait du sucre. C'est une réussite.",
+  "recompense": {
+    "argent": 150
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "qui": "lucas",
+  "ordre": 3,
+  "quand": -1,
+  "apres": [
+    "sous_la_mairie"
+  ],
+  "titre": "Le dessin de Lucas",
+  "pitch": "C'est vrai que mon papa est vivant ? Maman pleure, mais c'est des larmes contentes, elle a dit. Tu peux lui donner mon dessin ? C'est lui, avec une cape, parce que c'est un super-héros. Et le soleil, c'est pour qu'il ait pas froid dans le noir.",
+  "donne": [
+    [
+      "cabane:dessin_lucas",
+      1
+    ]
+  ],
+  "objectifs": [
+    {
+      "type": "parler",
+      "cible": "prisonnier",
+      "question": "Lucas vous a fait un dessin.",
+      "reponse": "Un dessin ? … C'est moi, là, avec la cape ? (il rit, puis il ne rit plus) … Dites-lui que je le garde sur mon cœur. Dites-lui que les super-héros reviennent toujours. Toujours.",
+      "prend": "cabane:dessin_lucas"
+    }
+  ],
+  "rappel": "Tu lui as donné ? Il a aimé la cape ?",
+  "merci": "Il a dit que les super-héros reviennent toujours ? … Je le savais ! Tiens, c'est pour toi : mes plus belles billes. Enfin, des émeraudes, mais moi je dis des billes. Et les cookies de maman : elle dit que c'est pour « le héros de la famille ». C'est toi, le héros. Enfin, un peu papa aussi.",
+  "recompense": {
+    "argent": 250,
+    "objets": [
+      [
+        "minecraft:cookie",
+        12
+      ],
+      [
+        "minecraft:emerald",
+        3
+      ]
+    ]
+  }
+}

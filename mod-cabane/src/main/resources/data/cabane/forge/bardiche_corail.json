@@ -1,0 +1,26 @@
+{
+  "resultat": "cataclysm:coral_bardiche",
+  "prix": 22000,
+  "ordre": 305,
+  "categorie": "relique",
+  "indice": "La hache du Coralssus, le colosse de corail.",
+  "temps": 30,
+  "ingredients": [
+    [
+      "minecraft:prismarine_shard",
+      32
+    ],
+    [
+      "minecraft:prismarine_crystals",
+      16
+    ],
+    [
+      "minecraft:nautilus_shell",
+      2
+    ],
+    [
+      "minecraft:diamond",
+      3
+    ]
+  ]
+}

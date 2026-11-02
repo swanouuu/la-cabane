@@ -1,0 +1,16 @@
+{
+  "qui": "bernard",
+  "titre": "Le singe de Bernard",
+  "pitch": "Bernard (le singe) a faim. Bernard (moi) n'a plus rien. Le singe adore les baies. Il en mange quarante-huit par jour. Quarante-huit !",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:sweet_berries",
+      "nombre": 48
+    }
+  ],
+  "merci": "BERNARD ! À TABLE ! … Il dit merci. Enfin, il crie. Chez lui, c'est merci.",
+  "recompense": {
+    "argent": 300
+  }
+}

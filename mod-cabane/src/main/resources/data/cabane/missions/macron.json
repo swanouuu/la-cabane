@@ -1,0 +1,18 @@
+{
+  "qui": "macron",
+  "quand": -1,
+  "titre": "Traverser la rue",
+  "pitch": "Du travail ? Je traverse la rue et je vous en trouve ! Tenez : allez voir Mehdi et remplissez trois contrats. Vous verrez, c'est une chance. Pour vous. Et en même temps pour moi.",
+  "objectifs": [
+    {
+      "type": "evenement",
+      "cible": "contrat",
+      "nombre": 3,
+      "texte": "Remplir 3 contrats chez Mehdi"
+    }
+  ],
+  "merci": "Vous voyez ? Le plein emploi ! Grâce à moi. Notez-le, Mehdi, notez.",
+  "recompense": {
+    "argent": 500
+  }
+}

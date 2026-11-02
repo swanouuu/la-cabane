@@ -1,0 +1,26 @@
+{
+  "qui": "pole_emploi",
+  "titre": "Le dossier complet",
+  "pitch": "Pour une fois, votre dossier sera complet. Il me faut : du papier, une étiquette, et une horloge. Pour la ponctualité. C'est important, la ponctualité. Pas pour moi, pour vous.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:paper",
+      "nombre": 16
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:name_tag",
+      "nombre": 1
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:clock",
+      "nombre": 1
+    }
+  ],
+  "merci": "Votre dossier est… complet. C'est la première fois. Je vais l'encadrer. Puis le perdre.",
+  "recompense": {
+    "argent": 600
+  }
+}

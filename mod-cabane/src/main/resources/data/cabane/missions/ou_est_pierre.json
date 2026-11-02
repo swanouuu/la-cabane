@@ -1,0 +1,32 @@
+{
+  "qui": "sylvie",
+  "ordre": 1,
+  "quand": -1,
+  "titre": "Où est Pierre ?",
+  "pitch": "Excusez-moi… Vous n'auriez pas vu mon mari ? Pierre. Il y a trois semaines, il est allé à la Mairie avec une pétition contre les Pillards. Le soir, il n'est pas rentré. Le Président dit qu'il est « parti travailler à la capitale ». Pierre ne serait jamais parti sans embrasser Lucas. Jamais. Je vous en supplie, demandez autour de vous : son frère Jean, Martine qui habite en face de la Mairie… et Gribbs. Gribbs entend tout.",
+  "objectifs": [
+    {
+      "type": "parler",
+      "cible": "jean",
+      "question": "Sylvie cherche Pierre… ton frère.",
+      "reponse": "Pierre ? Mon petit frère… Il est entré à la Mairie un mardi soir, sa pétition sous le bras. Je l'ai attendu devant jusqu'à minuit. Il n'est jamais ressorti. Le lendemain matin, son chapeau était posé sur les marches. Le Président m'a souri et m'a dit : « Il est parti à la capitale. » Quelle capitale ? Pierre déteste les voyages. Il a le mal de mer sur une barque."
+    },
+    {
+      "type": "parler",
+      "cible": "martine",
+      "question": "Tu as vu Pierre, le soir où il a disparu ?",
+      "reponse": "Le soir où Pierre a disparu ? Oui… La Mairie était fermée, mais il y avait de la lumière en bas. Sous la terre. Et vers minuit, j'ai entendu quelqu'un crier « Sylvie ! ». J'ai cru que je rêvais. Je n'ai rien dit à personne. J'ai eu peur des gardes. Pardonnez-moi."
+    },
+    {
+      "type": "parler",
+      "cible": "cousin",
+      "question": "Gribbs, tu sais quelque chose sur Pierre ?",
+      "reponse": "Pour Pierre, c'est gratuit. Pierre m'achetait mes cailloux peints, lui. Écoute bien : dans le bureau du Président, il y a une bibliothèque qui sonne creux. Une. Si tu cliques sur la bonne, elle pivote. Et derrière, ça descend. Loin. Moi j'y suis pas allé. Moi je suis beau, pas courageux."
+    }
+  ],
+  "rappel": "Jean, Martine, Gribbs… Quelqu'un a forcément vu quelque chose.",
+  "merci": "Sous la Mairie… Une porte secrète… Mon Dieu. Il est peut-être encore vivant. Je ne peux pas y aller, les gardes me connaissent. Mais vous… vous, vous pourriez.",
+  "recompense": {
+    "argent": 200
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "qui": "orque_3",
+  "titre": "Les lingots d'Urga",
+  "pitch": "Urga porte des lingots. Urga veut porter plus de lingots. Fer et or. Pour montrer à Grosh qui est la meilleure apprentie.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:iron_ingot",
+      "nombre": 32
+    },
+    {
+      "type": "apporter",
+      "cible": "minecraft:gold_ingot",
+      "nombre": 8
+    }
+  ],
+  "merci": "Urga porte tout. D'une main. Grosh pleure. Urga contente.",
+  "recompense": {
+    "argent": 600
+  }
+}

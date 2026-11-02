@@ -4,30 +4,10 @@
   CustomName:'{"text":"Mouloud le Marchand","color":"green"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
-  Tags:["cabane_pnj"],
+  Tags:["cabane_pnj","pnj.marchand"],
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/mouloud.png"},
-  SoundData:{SoundDataSet:[{Type:"DIALOG_OPEN",Name:"cabane:voix.marchand",Volume:1.0f,Pitch:1.0f,Enabled:1b}]},
   ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
-  ActionData:{ActionEventSet:{ON_INTERACTION:[{Type:"OPEN_DEFAULT_DIALOG"}]}},
-  DialogData:{
-    Type:"STANDARD",
-    DialogDataSet:[{
-        Label:"default",
-        Name:"Mouloud",
-        Texts:[{Text:"Bienvenue au Grand Bazar ! Ici tout est à vendre. Même le comptoir, si tu payes assez."},{Text:"Mon ami ! Mon frère ! Mon client préféré ! … C'est quoi ton nom déjà ?"},{Text:"Prix d'ami aujourd'hui. Les prix d'ami, c'est les mêmes, mais je souris en plus."},{Text:"Un téléphone, un parachute, un étal pour vendre tes trucs… et des lunettes de soleil. Pour avoir l'air de quelqu'un."},{Text:"Les cartes à collectionner ? Va voir Jean-Mi, à côté. Moi, je vends des choses utiles."},{Text:"Mon cousin Gribbs dit qu'il a de meilleurs prix. Mon cousin Gribbs vend des cailloux peints."}],
-        Buttons:[{
-          Label:"boutique",
-          Name:"Voir la boutique",
-          Type:"ACTION",
-          Actions:[{Type:"COMMAND",Cmd:"cabane boutique",ExecAsUser:1b,PermLevel:0},{Type:"CLOSE_DIALOG"}]
-        },{
-          Label:"bye",
-          Name:"À plus",
-          Type:"CLOSE"
-        }]
-      }]
-  },
   Status:{finalized:1b}
 }

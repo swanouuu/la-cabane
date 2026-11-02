@@ -1,0 +1,16 @@
+{
+  "qui": "garde_ouest",
+  "titre": "Des torches pour la ronde",
+  "pitch": "La nuit, la ronde autour de la palissade se fait dans le noir complet. Trente-deux torches, et plus personne ne se cogne dans les arbres. Surtout moi.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:torch",
+      "nombre": 32
+    }
+  ],
+  "merci": "Ah, la lumière ! Je vois mes pieds. Je n'avais pas vu mes pieds depuis des mois.",
+  "recompense": {
+    "argent": 150
+  }
+}

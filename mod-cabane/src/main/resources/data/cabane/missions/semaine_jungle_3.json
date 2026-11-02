@@ -1,0 +1,23 @@
+{
+  "qui": "gardien",
+  "ordre": 502,
+  "semaine": {
+    "id": "jungle",
+    "nom": "La semaine de la jungle",
+    "texte": "La jungle autour de Beauvais se réveille. Les plantes mordent, les creepers se cachent dans les feuilles, et les crocodiles remontent la rivière. Cette semaine, on la remet à sa place.",
+    "bonus": 800
+  },
+  "titre": "Le cacao",
+  "pitch": "Ginette veut faire des cookies pour tout le village. Il lui faut du cacao : trente-deux fèves.",
+  "objectifs": [
+    {
+      "type": "apporter",
+      "cible": "minecraft:cocoa_beans",
+      "nombre": 32
+    }
+  ],
+  "merci": "Ça sent le cookie jusqu'à la Grande Cabane. Ginette dit qu'il n'y en aura pas pour toi. Elle ment.",
+  "recompense": {
+    "argent": 200
+  }
+}
