@@ -132,6 +132,13 @@ public final class Pouvoirs {
 
     /** Qui est éveillé en ce moment, et à quel niveau (ça ne survit pas à une déconnexion). */
     private static final Map<UUID, Integer> EVEILLES = new HashMap<>();
+
+    /** Un éveil dure au plus 2 minutes ; ensuite (ou si on s'endort avant), le pouvoir se repose 1 minute. */
+    public static final int DUREE_EVEIL = 2 * 60 * 20;
+    public static final int REPOS_EVEIL = 60 * 20;
+    /** Depuis quand chacun est éveillé, et jusqu'à quand son pouvoir se repose (en ticks du serveur). */
+    private static final Map<UUID, Integer> DEBUT_EVEIL = new HashMap<>();
+    private static final Map<UUID, Integer> REPOS = new HashMap<>();
     private static final Map<UUID, Integer> DERNIERE_FRAPPE = new HashMap<>();
     /** De quel côté le niveau 2 a frappé la dernière fois (il alterne). */
     private static final Map<UUID, Integer> COTE = new HashMap<>();
@@ -315,6 +322,16 @@ public final class Pouvoirs {
             endormir(joueur);
             return;
         }
+        if (niveau == 0) {
+            int maintenant = joueur.server.getTickCount();
+            int repos = REPOS.getOrDefault(joueur.getUUID(), 0) - maintenant;
+            if (repos > 0) {
+                joueur.displayClientMessage(Component.literal("Ton pouvoir se repose… encore " + (repos + 19) / 20 + " s").withStyle(ChatFormatting.RED), true);
+                return;
+            }
+            // monter de niveau ne remet pas le compteur à zéro : les 2 minutes partent du premier éveil
+            DEBUT_EVEIL.put(joueur.getUUID(), maintenant);
+        }
         EVEILLES.put(joueur.getUUID(), niveau + 1);
         armure(joueur, niveau + 1);
         if (Hachibi.est(elu.pouvoir())) {
@@ -386,6 +403,8 @@ public final class Pouvoirs {
         Minato.endormir(joueur);
         armure(joueur, 0);
         if (EVEILLES.remove(joueur.getUUID()) != null) {
+            DEBUT_EVEIL.remove(joueur.getUUID());
+            REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + REPOS_EVEIL);
             Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
             PacketDistributor.sendToAllPlayers(new Etat(joueur.getUUID(), elu == null ? "susano" : elu.pouvoir(),
                     elu == null ? 0 : elu.couleur().ordinal(), 0, false, true));
@@ -650,6 +669,33 @@ public final class Pouvoirs {
     public static void tick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
         int maintenant = server.getTickCount();
+        // l'éveil s'épuise au bout de 2 minutes (on prévient à 1 min, 30 s, puis chaque seconde des 10 dernières)
+        for (Map.Entry<UUID, Integer> entree : new ArrayList<>(DEBUT_EVEIL.entrySet())) {
+            ServerPlayer joueur = server.getPlayerList().getPlayer(entree.getKey());
+            if (joueur == null) {
+                DEBUT_EVEIL.remove(entree.getKey());
+                continue;
+            }
+            int reste = entree.getValue() + DUREE_EVEIL - maintenant;
+            if (reste <= 0) {
+                endormir(joueur);
+                joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose une minute.").withStyle(ChatFormatting.GOLD), false);
+            } else if (reste == 60 * 20 || reste == 30 * 20 || (reste <= 10 * 20 && reste % 20 == 0)) {
+                joueur.displayClientMessage(Component.literal("Éveil : encore " + reste / 20 + " s")
+                        .withStyle(reste <= 10 * 20 ? ChatFormatting.RED : ChatFormatting.GOLD), true);
+            }
+        }
+        // le repos fini, on le dit
+        REPOS.entrySet().removeIf(en -> {
+            if (en.getValue() > maintenant) {
+                return false;
+            }
+            ServerPlayer joueur = server.getPlayerList().getPlayer(en.getKey());
+            if (joueur != null) {
+                joueur.displayClientMessage(Component.literal("Ton pouvoir est reposé : tu peux de nouveau t'éveiller.").withStyle(ChatFormatting.GREEN), true);
+            }
+            return true;
+        });
         // ce que les mains tiennent est arraché jusqu'à la main, la suit (et se fait broyer) ; ou s'écrase au sol
         for (Map.Entry<UUID, Prise> entree : new ArrayList<>(TENUS.entrySet())) {
             ServerPlayer joueur = server.getPlayerList().getPlayer(entree.getKey());
@@ -749,8 +795,9 @@ public final class Pouvoirs {
         Donnees d = Donnees.get(c.getSource().getServer());
         Donnees.Elu ancien = d.elus.get(joueur.getUUID());
         if (ancien != null && !famille(ancien.pouvoir()).equals(famille(pouvoir))) {
-            // on change de pouvoir (Susano, Hachibi, marque maudite) : l'ancien s'endort d'abord
+            // on change de pouvoir (Susano, Hachibi, marque maudite) : l'ancien s'endort d'abord (sans repos)
             endormir(joueur);
+            REPOS.remove(joueur.getUUID());
         }
         Donnees.Elu elu = new Donnees.Elu(pouvoir, couleur, joueur.getGameProfile().getName());
         d.elus.put(joueur.getUUID(), elu);
@@ -774,6 +821,7 @@ public final class Pouvoirs {
     private static int retirer(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         ServerPlayer joueur = EntityArgument.getPlayer(c, "joueur");
         endormir(joueur);
+        REPOS.remove(joueur.getUUID());
         Donnees d = Donnees.get(c.getSource().getServer());
         if (d.elus.remove(joueur.getUUID()) == null) {
             c.getSource().sendFailure(Component.literal(joueur.getGameProfile().getName() + " n'a aucun pouvoir."));
@@ -831,6 +879,8 @@ public final class Pouvoirs {
     @SubscribeEvent
     public static void arret(ServerStoppingEvent event) {
         EVEILLES.clear();
+        DEBUT_EVEIL.clear();
+        REPOS.clear();
         DERNIERE_FRAPPE.clear();
         COTE.clear();
         TENUS.clear();

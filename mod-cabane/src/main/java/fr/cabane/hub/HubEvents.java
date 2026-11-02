@@ -97,6 +97,9 @@ public final class HubEvents {
             new Pnj("sylvie_libre", -21.5, 1, 34.5, 180F, 1),
             new Pnj("lucas_libre", -20.5, 1, 34.5, 180F, 1));
 
+    /** Les PNJ qui ne font plus partie du village : Kylian, l'équipier d'un fast-food que les joueurs n'ont pas encore bâti. */
+    private static final List<String> PARTIS = List.of("equipier");
+
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
     private static final int RAYON_CHUNKS = 10;
 
@@ -119,7 +122,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 13;
+    public static final int VERSION_PNJ = 14;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {
@@ -287,6 +290,11 @@ public final class HubEvents {
             return 0;
         }
         boolean libere = HubData.get(level.getServer()).libere();
+        // ceux qui ne font plus partie du village s'en vont
+        for (Entity e : level.getEntities((Entity) null, new AABB(centre).inflate(160, 120, 160),
+                e -> PARTIS.stream().anyMatch(p -> e.getTags().contains("pnj." + p)))) {
+            e.discard();
+        }
         int count = 0;
         for (Pnj pnj : PNJ) {
             if (!pnj.present(libere)) {

@@ -122,9 +122,9 @@ public final class ClientHachibi {
     private static final Map<UUID, Hachi> HACHIS = new HashMap<>();
     private static long dernierClic;
     private static boolean accroupiAvant;
-    /** Niveau 4 : quand on s'est accroupi, et si on a attrapé quelqu'un depuis (alors la bombe ne part pas). */
+    /** Niveau 4 : quand on s'est accroupi, et si on a lancé la bombe noire depuis (alors la tentacule n'attrape pas). */
     private static long accroupiDebut;
-    private static boolean saisieFaite;
+    private static boolean bombeFaite;
     private static long secousse = -1;
 
     private static double secondes(long depuis) {
@@ -925,12 +925,12 @@ public final class ClientHachibi {
                 } else {
                     gris[0] = fouet > 0;
                     gris[1] = balayage > 0;
-                    gris[2] = h.charge >= 0 || bombeRecharge > 0;
-                    gris[3] = prise > 0;
+                    gris[2] = prise > 0;
+                    gris[3] = h.charge >= 0 || bombeRecharge > 0;
                     lignes = new String[][]{{"Clic gauche", "Coup de tentacule"},
                             {"Clic droit", balayage > 0 ? String.format("Balayage (%.0f s)", Math.ceil(balayage)) : "Balayage"},
-                            {"Accroupi", h.charge >= 0 ? "Bombe noire (charge…)" : bombeRecharge > 0 ? String.format("Bombe noire (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe noire"},
-                            {"Accroupi + clic droit", prise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(prise)) : "Attraper"},
+                            {"Accroupi", prise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(prise)) : "Attraper"},
+                            {"Accroupi + clic droit", h.charge >= 0 ? "Bombe noire (charge…)" : bombeRecharge > 0 ? String.format("Bombe noire (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe noire"},
                             {eveil, "Rendormir"}};
                 }
             }
@@ -999,13 +999,13 @@ public final class ClientHachibi {
             Hachi moi = HACHIS.get(mc.player.getUUID());
             boolean accroupi = mc.options.keyShift.isDown();
             if (actif(moi) && moi.forme == 4) {
-                // au niveau 4, s'accroupir sert aussi à attraper (avec le clic droit) : la bombe part quand on relâche
-                // un appui court, si on n'a rien attrapé entre-temps
+                // au niveau 4, s'accroupir sert aussi à la bombe noire (avec le clic droit) : la tentacule attrape quand on
+                // relâche un appui court, si la bombe n'est pas partie entre-temps
                 if (accroupi && !accroupiAvant) {
                     accroupiDebut = System.nanoTime();
-                    saisieFaite = false;
+                    bombeFaite = false;
                 }
-                if (!accroupi && accroupiAvant && !saisieFaite && mc.screen == null && System.nanoTime() - accroupiDebut < 700_000_000L) {
+                if (!accroupi && accroupiAvant && !bombeFaite && mc.screen == null && System.nanoTime() - accroupiDebut < 700_000_000L) {
                     PacketDistributor.sendToServer(new Pouvoirs.Charge());
                 }
             } else if (accroupi && !accroupiAvant && mc.screen == null && actif(moi) && secondes(moi.debut) > 0.6) {
@@ -1079,9 +1079,9 @@ public final class ClientHachibi {
             if (System.nanoTime() - dernierClic > recharge) {
                 dernierClic = System.nanoTime();
                 if (event.isUseItem() && h.forme == 4 && h.prise < 0 && mc.options.keyShift.isDown()) {
-                    // niveau 4 : accroupi + clic droit, la tentacule attrape
-                    saisieFaite = true;
-                    PacketDistributor.sendToServer(new Hachibi.Saisir());
+                    // niveau 4 : accroupi + clic droit, la bombe noire
+                    bombeFaite = true;
+                    PacketDistributor.sendToServer(new Hachibi.ClicAccroupi());
                 } else {
                     PacketDistributor.sendToServer(event.isAttack() ? new Pouvoirs.Frappe() : new Pouvoirs.Attraper());
                 }

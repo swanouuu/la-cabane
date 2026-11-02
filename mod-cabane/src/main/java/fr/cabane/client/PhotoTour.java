@@ -259,9 +259,14 @@ public final class PhotoTour {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Maudit.Lancer());
                 return 2;
             }
-            // « act saisir » : accroupi + clic droit de Hachibi 2 au niveau 4 (une tentacule attrape)
+            // « act saisir » : accroupi (un appui court) de Hachibi 2 au niveau 4, une tentacule attrape
             case "saisir" -> {
-                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Hachibi.Saisir());
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Charge());
+                return 2;
+            }
+            // « act bombe-noire » : accroupi + clic droit de Hachibi 2 au niveau 4
+            case "bombe-noire" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Hachibi.ClicAccroupi());
                 return 2;
             }
             case "vue" -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[Integer.parseInt(e[2])]);

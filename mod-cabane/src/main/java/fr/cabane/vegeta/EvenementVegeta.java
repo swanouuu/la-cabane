@@ -177,6 +177,11 @@ public final class EvenementVegeta {
 
     // ================================================================ le déclenchement : clic droit sur Vegeta
 
+    /** L'événement est armé et attend un clic droit sur Vegeta : sa conversation ne doit pas le prendre. */
+    public static boolean attendUnClic(Entity e) {
+        return estVegeta(e) && e.getServer() != null && HubData.get(e.getServer()).vegeta() == 1 && phase == Phase.RIEN;
+    }
+
     @SubscribeEvent
     public static void clic(PlayerInteractEvent.EntityInteract event) {
         if (!(event.getEntity() instanceof ServerPlayer joueur) || !estVegeta(event.getTarget())) {

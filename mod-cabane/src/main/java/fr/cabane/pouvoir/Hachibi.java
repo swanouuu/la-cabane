@@ -51,9 +51,10 @@ import org.joml.Vector3f;
  * manteau à deux queues ; niveau 2, la bête à quatre queues ; niveau 3, la bête aux os (six queues, un squelette par-
  * dessus) : tout y est 1,25 fois plus fort, et sa bombe plus grosse ; niveau 4, il redevient lui-même avec huit
  * tentacules de poulpe dans le dos, aussi fort qu'au niveau 3 : clic gauche, une tentacule frappe loin une seule cible
- * (toutes les secondes) ; clic droit, une grande tentacule balaie tout ce qui est devant lui (5 secondes) ; accroupi,
- * une bombe noire, plus forte encore (30 secondes) ; accroupi + clic droit, une tentacule attrape ce qui est devant lui,
- * le soulève et le serre (toutes les 12 secondes) : clic droit le serre fort et le lâche, clic gauche le balance. Ici,
+ * (toutes les secondes) ; clic droit, une grande tentacule balaie tout ce qui est devant lui (5 secondes) ; accroupi
+ * (un appui court), une tentacule attrape ce qui est devant lui, le soulève et le serre (toutes les 12 secondes) : clic
+ * droit le serre fort et le lâche, clic gauche le balance ; accroupi + clic droit, une bombe noire, plus forte encore
+ * (30 secondes). Ici,
  * la bête vient avec l'Éveil (le clic droit ne la fait pas) et elle ne s'arrête pas.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
@@ -162,13 +163,13 @@ public final class Hachibi {
         }
     }
 
-    /** Client → serveur : accroupi + clic droit, au niveau 4 de Hachibi 2 (la saisie). */
-    public record Saisir() implements CustomPacketPayload {
-        public static final Type<Saisir> TYPE = new Type<>(Cabane.id("hachibi_saisir"));
-        public static final StreamCodec<ByteBuf, Saisir> CODEC = StreamCodec.unit(new Saisir());
+    /** Client → serveur : accroupi + clic droit, au niveau 4 de Hachibi 2 (la bombe noire). */
+    public record ClicAccroupi() implements CustomPacketPayload {
+        public static final Type<ClicAccroupi> TYPE = new Type<>(Cabane.id("hachibi_clic_accroupi"));
+        public static final StreamCodec<ByteBuf, ClicAccroupi> CODEC = StreamCodec.unit(new ClicAccroupi());
 
         @Override
-        public Type<Saisir> type() {
+        public Type<ClicAccroupi> type() {
             return TYPE;
         }
     }
@@ -176,9 +177,12 @@ public final class Hachibi {
     @SubscribeEvent
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(Boule.TYPE, Boule.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientHachibi.boule(p)))
-                .playToServer(Saisir.TYPE, Saisir.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
+                .playToServer(ClicAccroupi.TYPE, ClicAccroupi.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur) {
-                        saisir(joueur);
+                        Etat e = ETATS.get(joueur.getUUID());
+                        if (e != null && e.forme == 4) {
+                            bombe(joueur, e, joueur.server.getTickCount());
+                        }
                     }
                 }));
     }
@@ -368,7 +372,7 @@ public final class Hachibi {
         }
     }
 
-    /** Niveau 4, accroupi + clic droit : une tentacule attrape ce qui est le plus près devant lui. */
+    /** Niveau 4, accroupi (un appui court) : une tentacule attrape ce qui est le plus près devant lui. */
     private static void saisir(ServerPlayer joueur) {
         Etat e = ETATS.get(joueur.getUUID());
         if (e == null || e.forme != 4 || e.prise >= 0) {
@@ -525,30 +529,39 @@ public final class Hachibi {
         return e.forme == 4 ? 2 : e.forme == 3 ? 1 : 0;
     }
 
-    /** S'accroupir : la course (manteau), ou la bombe de chakra (bête, et niveau 4 de Hachibi 2 : la bombe noire). */
+    /** S'accroupir : la course (manteau), la bombe de chakra (bête), ou au niveau 4 de Hachibi 2 la tentacule qui attrape. */
     static void accroupi(ServerPlayer joueur) {
         Etat e = ETATS.get(joueur.getUUID());
         if (e == null) {
             return;
         }
         int maintenant = joueur.server.getTickCount();
-        if (e.bete || e.forme == 4) {
-            boolean sortie = !e.bete || e.forme > 0 ? maintenant >= e.beteDebut + TRANSFORMATION : maintenant >= e.beteFin - DUREE_BETE;
-            if (e.chargeDebut < 0 && e.vol == null && maintenant >= e.bombeRecharge && sortie) {
-                e.chargeDebut = maintenant;
-                envoyer(joueur, new Boule(joueur.getUUID(), 0, new Vector3f(), new Vector3f(), genre(e)));
-                joueur.serverLevel().playSound(null, joueur.getX(), joueur.getY(), joueur.getZ(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 1.5F,
-                        e.forme == 4 ? 0.5F : 0.7F);
-            } else if (e.forme == 4 && maintenant < e.bombeRecharge) {
-                joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("La bombe noire se recharge… "
-                        + (e.bombeRecharge - maintenant + 19) / 20 + " s").withStyle(net.minecraft.ChatFormatting.RED), true);
-            }
+        if (e.forme == 4) {
+            saisir(joueur);
+            return;
+        }
+        if (e.bete) {
+            bombe(joueur, e, maintenant);
             return;
         }
         if (e.courseFin < 0 && maintenant >= e.courseRecharge) {
             e.courseFin = maintenant + DUREE_COURSE;
             vitesse(joueur, e);
             Pouvoirs.geste(joueur, GESTE_COURSE, 1);
+        }
+    }
+
+    /** La bombe de chakra de la bête (accroupi), ou la bombe noire du niveau 4 (accroupi + clic droit) : elle se charge. */
+    private static void bombe(ServerPlayer joueur, Etat e, int maintenant) {
+        boolean sortie = !e.bete || e.forme > 0 ? maintenant >= e.beteDebut + TRANSFORMATION : maintenant >= e.beteFin - DUREE_BETE;
+        if (e.chargeDebut < 0 && e.vol == null && maintenant >= e.bombeRecharge && sortie) {
+            e.chargeDebut = maintenant;
+            envoyer(joueur, new Boule(joueur.getUUID(), 0, new Vector3f(), new Vector3f(), genre(e)));
+            joueur.serverLevel().playSound(null, joueur.getX(), joueur.getY(), joueur.getZ(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 1.5F,
+                    e.forme == 4 ? 0.5F : 0.7F);
+        } else if (e.forme == 4 && maintenant < e.bombeRecharge) {
+            joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("La bombe noire se recharge… "
+                    + (e.bombeRecharge - maintenant + 19) / 20 + " s").withStyle(net.minecraft.ChatFormatting.RED), true);
         }
     }
 

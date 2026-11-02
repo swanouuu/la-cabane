@@ -588,6 +588,10 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
             if (!cible.getTags().contains("cabane_pnj") || !cible.isAlive()) {
                 return;
             }
+            // l'événement de Vegeta, armé par l'hôte, se lance d'un clic droit sur lui (fr.cabane.vegeta)
+            if (fr.cabane.vegeta.EvenementVegeta.attendUnClic(cible)) {
+                return;
+            }
             // la baguette d'Easy NPC (pour l'hôte qui veut modifier un PNJ) passe toujours
             ItemStack tenu = event.getEntity().getItemInHand(event.getHand());
             if (!tenu.isEmpty() && BuiltInRegistries.ITEM.getKey(tenu.getItem()).getNamespace().startsWith("easy_npc")) {
