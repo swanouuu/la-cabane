@@ -27,6 +27,15 @@ public final class PhotoTour {
     private static int index = -1;
     private static int attente;
     private static String[] point;
+    /** « act recul N » : la caméra à la troisième personne recule à N blocs (0 : la distance normale), pour les grands pouvoirs. */
+    private static float recul;
+
+    @SubscribeEvent
+    public static void distanceCamera(net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent event) {
+        if (recul > 0) {
+            event.setDistance(recul);
+        }
+    }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
@@ -279,6 +288,15 @@ public final class PhotoTour {
                 return 2;
             }
             case "vue" -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[Integer.parseInt(e[2])]);
+            case "recul" -> recul = Float.parseFloat(e[2]);
+            case "regard" -> {
+                // tourne la tête sans bouger (un point de vue ramènerait le joueur)
+                var j = Minecraft.getInstance().player;
+                j.setYRot(Float.parseFloat(e[2]));
+                j.setXRot(Float.parseFloat(e[3]));
+                j.yRotO = j.getYRot();
+                j.xRotO = j.getXRot();
+            }
             case "numero" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                     new fr.cabane.telephone.PhoneNetwork.Action(fr.cabane.telephone.PhoneNetwork.Action.CHOISIR_NUMERO, reste));
             case "contact" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(

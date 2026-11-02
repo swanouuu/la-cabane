@@ -74,6 +74,9 @@
   "item.cabane.lunettes_pixel": "Lunettes « deal with it »",
   "item.cabane.moustache": "Moustache",
   "item.cabane.nez_clown": "Nez de clown",
+  "block.cabane.tapis_roulant": "Tapis roulant",
+  "biome.cabane.woohp": "Le WOOHP",
+  "subtitles.cabane.woohp.aspiration": "WOOHP !",
   "block.cabane.terminal_labo": "Terminal du Laboratoire",
   "block.cabane.bouton_retour": "Bouton de retour",
   "block.cabane.table_experiences": "Table d'expériences",
@@ -122,12 +125,12 @@
   "death.attack.cabane.chidori": "%1$s a été transpercé par le Chidori de %2$s",
   "death.attack.cabane.chidori.item": "%1$s a été transpercé par le Chidori de %2$s",
   "death.attack.cabane.chidori.player": "%1$s a été transpercé par un Chidori",
+  "death.attack.cabane.amaterasu": "%1$s a brûlé dans les flammes noires",
+  "death.attack.cabane.amaterasu.item": "%1$s a brûlé dans les flammes noires de %2$s",
+  "death.attack.cabane.amaterasu.player": "%1$s a brûlé dans les flammes noires de %2$s",
   "subtitles.cabane.minato.flash": "Éclair jaune",
   "item.cabane.kunai_minato": "Kunai de Minato",
   "death.attack.cabane.eclair_jaune": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
   "death.attack.cabane.eclair_jaune.item": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
-  "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune",
-  "block.cabane.tapis_roulant": "Tapis roulant",
-  "biome.cabane.woohp": "Le WOOHP",
-  "subtitles.cabane.woohp.aspiration": "WOOHP !"
+  "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune"
 }

@@ -67,7 +67,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM,
+    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM,
             Espionne.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
@@ -124,11 +124,13 @@ public final class Pouvoirs {
 
     private static final Force NIVEAU_1 = new Force(5, 9, 12, 6, 1.5F, 5, 2.4, 8, 1.6);
     private static final Force NIVEAU_2 = new Force(6.5, 14, 8, 8, 2.5F, 8, 2.9, 12, 1.9);
+    /** Le chevalier (niveau 3) : son épée porte plus loin et coupe plus fort ; il va aussi vite qu'au niveau 2. */
+    private static final Force NIVEAU_3 = new Force(8.5, 16, 8, 8, 2.5F, 8, 2.9, 14, 1.9);
     private static final float ECRASEMENT = 16;
     private static final float ONDE = 6;
 
     private static Force force(int niveau) {
-        return niveau >= 2 ? NIVEAU_2 : NIVEAU_1;
+        return niveau >= 3 ? NIVEAU_3 : niveau >= 2 ? NIVEAU_2 : NIVEAU_1;
     }
 
     /** Qui est éveillé en ce moment, et à quel niveau (ça ne survit pas à une déconnexion). */
@@ -156,7 +158,7 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return pouvoir.equals(Hachibi.NOM2) ? 4 : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) ? 2 : 1;
+                return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3 : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) ? 2 : 1;
             }
         }
 
@@ -262,6 +264,11 @@ public final class Pouvoirs {
     public static final int ECRASE = 4;
     /** L'écrasement touche le sol à ce moment-là (en ticks après le clic) : l'animation est calée dessus. */
     public static final int IMPACT = 8;
+    /** Niveau 3 : il tend l'arc ; puis la flèche part ({@code cible} : l'entité touchée, -1 si rien). */
+    public static final int ARC = 5;
+    public static final int FLECHE = 6;
+    /** Niveau 3, accroupi : le grand coup d'épée, qui embrase tout autour de flammes noires. */
+    public static final int GRAND_COUP = 7;
 
     /**
      * Serveur → ceux qui voient ce joueur : un geste de son Susano. Pour une frappe, {@code cible} est le bras (0 droit,
@@ -323,7 +330,9 @@ public final class Pouvoirs {
             endormir(joueur);
             return;
         }
-        if (niveau == 0) {
+        // « susanodev » (pour l'hôte) : droit au chevalier, sans limite de temps ni repos
+        boolean dev = elu.pouvoir().equals(Susano3.DEV);
+        if (niveau == 0 && !dev) {
             int maintenant = joueur.server.getTickCount();
             int repos = REPOS.getOrDefault(joueur.getUUID(), 0) - maintenant;
             if (repos > 0) {
@@ -333,8 +342,9 @@ public final class Pouvoirs {
             // monter de niveau ne remet pas le compteur à zéro : les 2 minutes partent du premier éveil
             DEBUT_EVEIL.put(joueur.getUUID(), maintenant);
         }
-        EVEILLES.put(joueur.getUUID(), niveau + 1);
-        armure(joueur, niveau + 1);
+        int suivant = dev ? 3 : niveau + 1;
+        EVEILLES.put(joueur.getUUID(), suivant);
+        armure(joueur, suivant);
         if (Hachibi.est(elu.pouvoir())) {
             Hachibi.eveiller(joueur, elu.pouvoir().equals(Hachibi.NOM2) ? niveau + 1 : 0);
         }
@@ -347,7 +357,7 @@ public final class Pouvoirs {
         if (Espionne.est(elu.pouvoir())) {
             Espionne.eveiller(joueur);
         }
-        envoyerEtat(joueur, elu, niveau + 1, true);
+        envoyerEtat(joueur, elu, suivant, true);
     }
 
     /** Le pouvoir de ce joueur : sa liste blanche (« susano », « hachibi »…), ou rien. */
@@ -380,10 +390,12 @@ public final class Pouvoirs {
         boolean fer = Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur));
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : 20);
+        // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
+        boolean chevalier = Susano3.est(pouvoir(joueur)) && niveau >= 3;
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : chevalier ? 24 : 20);
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE,
-                niveau == 0 || fer ? 0 : bete ? 10 : niveau >= 2 && !pouvoir(joueur).equals(Hachibi.NOM2) ? 12 : 8);
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, niveau >= 2 ? 0.4 : 0);
+                niveau == 0 || fer ? 0 : bete ? 10 : chevalier ? 14 : niveau >= 2 && !pouvoir(joueur).equals(Hachibi.NOM2) ? 12 : 8);
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, chevalier ? 0.6 : niveau >= 2 ? 0.4 : 0);
     }
 
     private static void modif(ServerPlayer joueur, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribut,
@@ -406,11 +418,14 @@ public final class Pouvoirs {
         Hachibi.endormir(joueur);
         Maudit.endormir(joueur);
         Minato.endormir(joueur);
+        Susano3.endormir(joueur);
         Espionne.endormir(joueur);
         armure(joueur, 0);
         if (EVEILLES.remove(joueur.getUUID()) != null) {
             DEBUT_EVEIL.remove(joueur.getUUID());
-            REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + REPOS_EVEIL);
+            if (!pouvoir(joueur).equals(Susano3.DEV)) {
+                REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + REPOS_EVEIL);
+            }
             Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
             PacketDistributor.sendToAllPlayers(new Etat(joueur.getUUID(), elu == null ? "susano" : elu.pouvoir(),
                     elu == null ? 0 : elu.couleur().ordinal(), 0, false, true));
@@ -524,6 +539,11 @@ public final class Pouvoirs {
             return;
         }
         if (niveau == 0 || ECRASEMENTS.containsKey(joueur.getUUID())) {
+            return;
+        }
+        // le chevalier n'attrape plus : il tire à l'arc (les flammes noires)
+        if (niveau >= 3) {
+            Susano3.tirer(joueur);
             return;
         }
         if (TENUS.containsKey(joueur.getUUID())) {
@@ -657,6 +677,11 @@ public final class Pouvoirs {
             return;
         }
         if (niveau == 0) {
+            return;
+        }
+        // le chevalier ne charge pas : il abat son épée, et tout autour s'embrase de flammes noires
+        if (niveau >= 3) {
+            Susano3.grandCoup(joueur);
             return;
         }
         int maintenant = joueur.server.getTickCount();

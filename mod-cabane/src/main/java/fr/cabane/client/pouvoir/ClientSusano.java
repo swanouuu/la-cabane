@@ -78,6 +78,12 @@ public final class ClientSusano {
         long debut;
         /** Quand il est passé au niveau 2 (-1 sinon). */
         long debut2 = -1;
+        /** Quand il est passé au niveau 3, le chevalier (-1 sinon). */
+        long debut3 = -1;
+        double t3Precedent = -1;
+        /** Quand il a commencé à tendre l'arc (-1 sinon), et à lever l'épée pour le grand coup. */
+        long tir = -1;
+        long grand = -1;
         long fin = -1;
         /** Le dernier geste (frappe, charge, jet, écrasement), de quel bras, et quand il a commencé. */
         int geste = Pouvoirs.FRAPPE;
@@ -129,6 +135,17 @@ public final class ClientSusano {
         return s.niveau >= 2 && s.debut2 >= 0 ? secondes(s.debut2) : -1;
     }
 
+    /** Le temps depuis le passage au niveau 3 (négatif s'il n'y est pas). */
+    static double t3(Susano s) {
+        return s.niveau >= 3 && s.debut3 >= 0 ? secondes(s.debut3) : -1;
+    }
+
+    /** Le dernier geste, pour le chevalier : le coup d'épée (de 0 à 1, 1 s'il n'y en a pas), son côté, et le tir. */
+    private static ClientSusano3.Gestes gestes(Susano s) {
+        double coup = s.coup >= 0 && s.geste == Pouvoirs.FRAPPE ? Math.min(1, secondes(s.coup) / DUREE_COUP) : 1;
+        return new ClientSusano3.Gestes(coup, s.cote, s.tir >= 0 ? secondes(s.tir) : -1, s.grand >= 0 ? secondes(s.grand) : -1);
+    }
+
     /** De 0 (niveau 1) à 1 (niveau 2 tout formé) : tout le squelette grandit avec. */
     private static float grandeur(Susano s) {
         return rebond((t2(s) - MONTEE) / 0.45);
@@ -178,10 +195,11 @@ public final class ClientSusano {
         Player joueur = mc.level.getPlayerByUUID(p.joueur());
         long maintenant = System.nanoTime();
         if (p.eveille()) {
+            boolean direct = p.niveau() >= 3;
             if (!eveille(s)) {
                 s = new Susano();
-                s.debut = maintenant - (p.annonce() ? 0 : (long) (FORME * 1e9));
-                s.tPrecedent = p.annonce() ? -1 : FORME;
+                s.debut = maintenant - (p.annonce() && !direct ? 0 : (long) (FORME * 1e9));
+                s.tPrecedent = p.annonce() && !direct ? -1 : FORME;
                 s.niveau = 1;
                 SUSANOS.put(p.joueur(), s);
                 if (p.annonce() && joueur != null) {
@@ -190,11 +208,22 @@ public final class ClientSusano {
             }
             if (p.niveau() >= 2 && s.niveau < 2) {
                 s.niveau = 2;
-                s.debut2 = maintenant - (p.annonce() ? 0 : 10_000_000_000L);
-                s.t2Precedent = p.annonce() ? -1 : 10;
+                s.debut2 = maintenant - (p.annonce() && !direct ? 0 : 10_000_000_000L);
+                s.t2Precedent = p.annonce() && !direct ? -1 : 10;
             } else if (p.niveau() < 2) {
                 s.niveau = 1;
                 s.debut2 = -1;
+            }
+            if (p.niveau() >= 3 && s.niveau < 3) {
+                s.niveau = 3;
+                s.debut3 = maintenant - (p.annonce() ? 0 : 10_000_000_000L);
+                s.t3Precedent = p.annonce() ? -1 : 10;
+                s.tir = -1;
+            } else if (p.niveau() < 3) {
+                s.debut3 = -1;
+                if (s.niveau > 2) {
+                    s.niveau = 2;
+                }
             }
             s.couleur = couleur;
             s.pouvoir = p.pouvoir();
@@ -231,6 +260,34 @@ public final class ClientSusano {
         }
         Player joueur = mc.level.getPlayerByUUID(p.joueur());
         long maintenant = System.nanoTime();
+        if (p.geste() == Pouvoirs.ARC) {
+            s.tir = maintenant;
+            if (joueur != null) {
+                son(joueur, SoundEvents.CROSSBOW_LOADING_START.value(), 1F, 0.5F);
+                son(joueur, SoundEvents.ENDER_DRAGON_FLAP, 0.7F, 1.3F);
+            }
+            return;
+        }
+        if (p.geste() == Pouvoirs.GRAND_COUP) {
+            s.grand = maintenant;
+            if (joueur != null) {
+                ClientSusano3.vague(joueur);
+                son(joueur, SoundEvents.ENDER_DRAGON_GROWL, 0.6F, 0.6F);
+                son(joueur, SoundEvents.PLAYER_ATTACK_SWEEP, 1F, 0.4F);
+                // l'écran tremble chez ceux qui sont assez près quand l'épée touche le sol
+                if (mc.player != null && mc.player.distanceTo(joueur) < 24) {
+                    secousse = maintenant + (long) (fr.cabane.pouvoir.Susano3.IMPACT_GRAND * 50_000_000L);
+                }
+            }
+            return;
+        }
+        if (p.geste() == Pouvoirs.FLECHE) {
+            if (joueur != null) {
+                ClientSusano3.lancer(joueur, p.cible(), joueur.yBodyRot, ClientSusano3.forme(t3(s)).taille());
+                son(joueur, SoundEvents.CROSSBOW_SHOOT, 1F, 0.5F);
+            }
+            return;
+        }
         if (p.geste() == Pouvoirs.PRISE) {
             s.tient = p.cible() >= 0;
             s.prise = s.tient ? maintenant : -1;
@@ -316,6 +373,23 @@ public final class ClientSusano {
         double t2 = t2(s);
         float k = (float) (lisse(t / 0.35) * (1 - lisse((t - JAILLISSEMENT - 0.1) / 0.4)));
         float rire = t2 < 0 ? 0 : (float) (lisse(t2 / 0.3) * (1 - lisse((t2 - MONTEE - 0.05) / 0.35)));
+        double t3 = t3(s);
+        if (t3 >= 0) {
+            // le chevalier : il éclate d'un rire de fou, la tête renversée, les bras grands ouverts, et il tressaute
+            float fou = ClientSusano3.forme(t3).rire();
+            if (fou > 0) {
+                float secoue = Mth.sin((float) t3 * 26);
+                modele.head.xRot = Mth.lerp(fou, modele.head.xRot, -0.7F + secoue * 0.1F);
+                modele.hat.copyFrom(modele.head);
+                modele.rightArm.xRot = Mth.lerp(fou, modele.rightArm.xRot, -0.35F);
+                modele.rightArm.zRot = Mth.lerp(fou, modele.rightArm.zRot, 1.2F + secoue * 0.06F);
+                modele.leftArm.xRot = Mth.lerp(fou, modele.leftArm.xRot, -0.35F);
+                modele.leftArm.zRot = Mth.lerp(fou, modele.leftArm.zRot, -1.2F - secoue * 0.06F);
+                modele.rightSleeve.copyFrom(modele.rightArm);
+                modele.leftSleeve.copyFrom(modele.leftArm);
+            }
+            return;
+        }
         k = Math.max(k, rire);
         if (k <= 0) {
             return;
@@ -434,11 +508,20 @@ public final class ClientSusano {
 
     private static final int BRAS = 0;
     private static final int CAGE = 1;
-    private static final int OEIL = 2;
-    private static final int SOMBRE = 3;
+    static final int OEIL = 2;
+    static final int SOMBRE = 3;
+    /** Les genres du chevalier (niveau 3) : l'armure, la calotte du heaume, la chair, les fibres, la lame, les flammes, la cape, le bas du corps. */
+    static final int ARMURE = 4;
+    static final int CASQUE = 5;
+    static final int CHAIR = 6;
+    static final int FIBRE = 7;
+    static final int LAME = 8;
+    static final int FLAMME = 9;
+    static final int CAPE = 10;
+    static final int VAPEUR = 11;
 
     /** Un os : une boîte, dans son repère ; {@code force} de 0 à 1 ; {@code genre} : bras, cage, œil ou partie sombre. */
-    private record Os(PoseStack.Pose repere, float x0, float y0, float z0, float x1, float y1, float z1, float force, int genre) {
+    record Os(PoseStack.Pose repere, float x0, float y0, float z0, float x1, float y1, float z1, float force, int genre) {
     }
 
     private static final Vector3f AVANT = new Vector3f(0, 0, 1);
@@ -698,15 +781,42 @@ public final class ClientSusano {
             float echelle = 1 + disparition * 0.25F;
             ps.scale(echelle, echelle, echelle);
             List<Os> liste = new ArrayList<>();
+            double t3 = t3(s);
+            ClientSusano3.Forme f3 = t3 >= 0 ? ClientSusano3.forme(t3) : null;
+            if (f3 != null) {
+                ps.pushPose();
+                float g3 = 1 + 0.3F * f3.taille();
+                ps.scale(g3, g3, g3);
+            }
             squelette(liste, ps, s, t, lacetTete, tangageTete);
+            if (f3 != null) {
+                ps.popPose();
+                float fondu = 1 - f3.armure();
+                for (int i = 0; i < liste.size(); i++) {
+                    Os o = liste.get(i);
+                    liste.set(i, new Os(o.repere(), o.x0(), o.y0(), o.z0(), o.x1(), o.y1(), o.z1(), o.force() * fondu, o.genre()));
+                }
+                liste.removeIf(o -> o.force() <= 0.01F);
+                // le chevalier, les pieds au sol
+                ps.pushPose();
+                ps.translate(0, 0.35F, 0);
+                ClientSusano3.chevalier(liste, ps, f3, s.couleur, gestes(s), lacetTete, tangageTete, t);
+                ps.popPose();
+            }
             float opacite = 1 - disparition;
             for (Os o : liste) {
                 Vector3f c = o.repere().pose().transformPosition(new Vector3f((o.x0() + o.x1()) / 2, (o.y0() + o.y1()) / 2, (o.z0() + o.z1()) / 2));
                 s.os.add(new Vec3(c.x + camera.x, c.y + camera.y, c.z + camera.z));
             }
-            dessinerOs(buffers, liste, s.couleur, opacite, eclat, premierePersonne, g);
+            dessinerOs(buffers, liste, s.couleur, opacite, eclat, premierePersonne, g, f3 != null && f3.armure() > 0.5F);
             aura(buffers, ps, s, t, g, opacite * (premierePersonne ? 0.35F : 1));
-            if (s.coup >= 0 && s.fin < 0 && s.geste == Pouvoirs.FRAPPE) {
+            if (f3 != null && s.fin < 0) {
+                // la traînée des coups d'épée du chevalier
+                ps.pushPose();
+                ps.translate(0, 0.35F, 0);
+                ClientSusano3.trainee(buffers.getBuffer(Types.CORPS), ps.last().pose(), s.couleur, gestes(s), f3.taille());
+                ps.popPose();
+            } else if (s.coup >= 0 && s.fin < 0 && s.geste == Pouvoirs.FRAPPE) {
                 ps.pushPose();
                 if (s.cote == 1) {
                     ps.scale(-1, 1, 1);
@@ -732,7 +842,17 @@ public final class ClientSusano {
     /** Les traits du contour : la couleur du Susano en plus foncé (sauf le noir, où ils sont blancs). */
     private static final float[] BLANC = {1F, 1F, 1F};
 
-    private static void dessinerOs(MultiBufferSource buffers, List<Os> liste, Couleur couleur, float opacite, float eclat, boolean premierePersonne, float g) {
+    /** Une couleur entre le corps (0) et le contour (1) du Susano, puis vers le blanc. */
+    private static float[] teinte(Couleur couleur, float versContour, float versBlanc) {
+        float[] a = rvb(couleur == Couleur.NOIR ? 0x16141E : couleur.corps), b = rvb(couleur.contour), r = new float[3];
+        for (int i = 0; i < 3; i++) {
+            r[i] = Mth.lerp(versBlanc, Mth.lerp(versContour, a[i], b[i]), 1);
+        }
+        return r;
+    }
+
+    private static void dessinerOs(MultiBufferSource buffers, List<Os> liste, Couleur couleur, float opacite, float eclat, boolean premierePersonne, float g,
+                                   boolean chevalier) {
         float[] corps = rvb(couleur.corps);
         float[] sombre = {corps[0] * 0.18F, corps[1] * 0.18F, corps[2] * 0.18F};
         float[] contour = rvb(couleur.contour);
@@ -741,10 +861,19 @@ public final class ClientSusano {
         float[] trait = couleur == Couleur.NOIR ? BLANC : new float[]{corps[0] * 0.42F, corps[1] * 0.42F, corps[2] * 0.42F};
         VertexConsumer c = buffers.getBuffer(Types.CORPS);
         for (Os o : liste) {
-            float transparence = premierePersonne && o.genre() == CAGE ? 0.35F : 1;
+            // vu de l'intérieur (à la première personne), le corps du Susano s'efface presque : on voit à travers ; les armes restent
+            float transparence = premierePersonne && o.genre() == CAGE ? 0.35F : interieur(o, premierePersonne);
+            boolean noir = couleur == Couleur.NOIR;
             switch (o.genre()) {
                 case OEIL -> faces(c, o, JAUNE, opacite);
                 case SOMBRE -> faces(c, o, sombre, Math.min(1, 0.95F * o.force() * opacite));
+                case ARMURE, CASQUE -> faces(c, o, noir ? rvb(0x16141E) : teinte(couleur, 0.45F, 0), Math.min(1, (noir ? 0.94F : 0.86F) * o.force() * opacite * transparence));
+                case CHAIR -> faces(c, o, teinte(couleur, 0.15F, 0), Math.min(1, (noir ? 0.82F : 0.45F) * o.force() * opacite * transparence));
+                case FIBRE -> faces(c, o, teinte(couleur, 1, 0.35F), Math.min(1, 0.95F * o.force() * opacite * transparence));
+                case LAME -> faces(c, o, teinte(couleur, 0.6F, 0.25F), Math.min(1, 0.75F * o.force() * opacite * transparence));
+                case FLAMME -> faces(c, o, noir ? rvb(0x18141E) : teinte(couleur, 0.4F, 0), Math.min(1, (noir ? 0.92F : 0.82F) * o.force() * opacite));
+                case CAPE -> faces(c, o, noir ? rvb(0x16141E) : teinte(couleur, 0, 0), Math.min(1, (noir ? 0.85F : 0.6F) * o.force() * opacite * transparence));
+                case VAPEUR -> faces(c, o, teinte(couleur, 0.3F, 0), Math.min(1, 0.25F * o.force() * opacite * transparence));
                 default -> faces(c, o, corps, Math.min(1, base * o.force() * opacite * transparence * (1 + eclat)));
             }
         }
@@ -756,18 +885,40 @@ public final class ClientSusano {
                 faces(l, gonfle(o, 0.06F), JAUNE_LUEUR, 0.6F * opacite);
                 faces(l, gonfle(o, 0.2F), JAUNE_LUEUR, 0.3F * opacite);
                 faces(l, gonfle(o, 0.42F), JAUNE_LUEUR, 0.12F * opacite);
-            } else if (couleur != Couleur.NOIR) {
-                float a = 0.14F * o.force() * opacite * (premierePersonne && o.genre() == CAGE ? 0.3F : 1) * (1 + eclat * 3);
+            } else if (o.genre() == FIBRE || o.genre() == LAME || o.genre() == FLAMME) {
+                faces(l, gonfle(o, 0.05F), contour, (o.genre() == FIBRE ? 0.35F : 0.12F) * o.force() * opacite * interieur(o, premierePersonne));
+            } else if (couleur != Couleur.NOIR && o.genre() != CHAIR && o.genre() != VAPEUR) {
+                float a = 0.14F * o.force() * opacite * (premierePersonne && o.genre() == CAGE ? 0.3F : 1) * (1 + eclat * 3) * interieur(o, premierePersonne);
                 faces(l, gonfle(o, 0.05F), contour, a);
             }
         }
         // les traits, dans la couleur du Susano en plus foncé (en blanc sur le noir)
         VertexConsumer lignes = buffers.getBuffer(RenderType.lines());
+        float[] clair = couleur == Couleur.NOIR ? BLANC : teinte(couleur, 0.75F, 0.35F);
         for (Os o : liste) {
-            if (o.genre() != SOMBRE) {
-                aretes(lignes, o, trait, Math.min(1, 0.9F * o.force() * opacite * (premierePersonne && o.genre() == CAGE ? 0.4F : 1)));
+            int genre = o.genre();
+            if (genre == SOMBRE || genre == OEIL || genre == FIBRE || genre == FLAMME || genre == VAPEUR || genre == CASQUE
+                    || chevalier && (genre == CHAIR || genre == CAGE || genre == BRAS)
+                    || interieur(o, premierePersonne) < 0.5F) {
+                continue;
             }
+            boolean arme = genre == ARMURE || genre == LAME || genre == CAPE;
+            float a = arme ? (genre == CAPE ? 0.18F : couleur == Couleur.NOIR ? 0.6F : genre == LAME ? 0.6F : 0.3F) : 0.9F;
+            aretes(lignes, o, arme ? clair : trait, Math.min(1, a * o.force() * opacite * (premierePersonne && genre == CAGE ? 0.4F : 1)));
         }
+    }
+
+    /**
+     * Vu de l'intérieur (à la première personne), le corps du chevalier tout près de l'œil s'efface presque, un peu plus
+     * loin il est pâle ; les bras et les armes, plus loin, restent bien visibles.
+     */
+    private static float interieur(Os o, boolean premierePersonne) {
+        int g = o.genre();
+        if (!premierePersonne || !(g == ARMURE || g == CASQUE || g == CHAIR || g == CAPE || g == VAPEUR || g == FIBRE || g == LAME)) {
+            return 1;
+        }
+        float d = o.repere().pose().transformPosition(new Vector3f((o.x0() + o.x1()) / 2, (o.y0() + o.y1()) / 2, (o.z0() + o.z1()) / 2)).length();
+        return d < 2.6F ? 0.04F : d < 4.5F ? 0.25F : 0.85F;
     }
 
     private static Os gonfle(Os o, float d) {
@@ -934,7 +1085,7 @@ public final class ClientSusano {
         }
     }
 
-    private static final class Types extends RenderType {
+    static final class Types extends RenderType {
         /** Le chakra : translucide, visible des deux côtés, sans cacher ce qui est derrière. */
         static final RenderType CORPS = create("cabane_susano_corps", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 65536,
                 false, true, CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setWriteMaskState(COLOR_WRITE)
@@ -961,13 +1112,24 @@ public final class ClientSusano {
         boolean grand = s.niveau >= 2;
         double recharge = (RECHARGE_CHARGE - (System.nanoTime() - derniereCharge)) / 1e9;
         double rechargePrise = grand && s.dernierePrise >= 0 && !s.tient ? Pouvoirs.RECHARGE_PRISE_2 / 20.0 - secondes(s.dernierePrise) : 0;
+        boolean chevalier = s.niveau >= 3;
+        boolean plus = s.niveau == 1 && (s.pouvoir.equals("susano2") || fr.cabane.pouvoir.Susano3.est(s.pouvoir))
+                || s.niveau == 2 && fr.cabane.pouvoir.Susano3.est(s.pouvoir);
+        double rechargeArc = chevalier && s.tir >= 0 ? fr.cabane.pouvoir.Susano3.RECHARGE_ARC / 20.0 - secondes(s.tir) : 0;
+        double rechargeGrand = chevalier && s.grand >= 0 ? fr.cabane.pouvoir.Susano3.RECHARGE_GRAND / 20.0 - secondes(s.grand) : 0;
+        if (chevalier) {
+            rechargePrise = rechargeArc;
+            recharge = rechargeGrand;
+        }
         String[][] lignes = {
-                {"Clic gauche", s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
-                {"Clic droit", s.tient ? (grand ? "Écraser au sol" : "Lâcher") : rechargePrise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(rechargePrise)) : "Attraper"},
-                {"Accroupi", recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
-                {EVEIL.getTranslatedKeyMessage().getString(), !grand && s.pouvoir.equals("susano2") ? "Niveau 2" : "Rendormir"}};
+                {"Clic gauche", chevalier ? "Épée (gauche, droite)" : s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
+                {"Clic droit", chevalier ? (rechargeArc > 0 ? String.format("Arc, flammes noires (%.0f s)", Math.ceil(rechargeArc)) : "Arc, flammes noires")
+                        : s.tient ? (grand ? "Écraser au sol" : "Lâcher") : rechargePrise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(rechargePrise)) : "Attraper"},
+                {"Accroupi", chevalier ? (recharge > 0 ? String.format("Grand coup, flammes noires (%.0f s)", Math.ceil(recharge)) : "Grand coup, flammes noires")
+                        : recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
+                {EVEIL.getTranslatedKeyMessage().getString(), plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
         Font font = mc.font;
-        String titre = grand ? "SUSANO  ·  NIVEAU 2" : "SUSANO";
+        String titre = chevalier ? "SUSANO  ·  NIVEAU 3" : grand ? "SUSANO  ·  NIVEAU 2" : "SUSANO";
         int largeurTouche = 0;
         int largeurAction = font.width(titre) - 10;
         for (String[] l : lignes) {
@@ -1066,6 +1228,36 @@ public final class ClientSusano {
                         son(joueur, SoundEvents.ELDER_GUARDIAN_CURSE, 0.5F, 1.3F);
                     }
                     s.t2Precedent = t2;
+                }
+                double t3 = t3(s);
+                if (t3 >= 0) {
+                    // le chevalier : il rit, les fibres et la chair poussent, l'armure se pose, le heaume se ferme, les armes se forment
+                    double avant = s.t3Precedent;
+                    if (avant < 0 && t3 >= 0) {
+                        son(joueur, SoundEvents.WITCH_CELEBRATE, 1F, 0.5F);
+                        son(joueur, SoundEvents.EVOKER_PREPARE_SUMMON, 0.9F, 0.7F);
+                    }
+                    if (avant < 0.6 && t3 >= 0.6) {
+                        son(joueur, SoundEvents.WITCH_CELEBRATE, 0.9F, 0.45F);
+                        son(joueur, SoundEvents.SOUL_ESCAPE.value(), 1F, 0.6F);
+                    }
+                    if (avant < 1.3 && t3 >= 1.3) {
+                        son(joueur, SoundEvents.BEACON_ACTIVATE, 1F, 0.5F);
+                        gerbe(mc, joueur, s, 80, 2.4);
+                    }
+                    if (avant < 1.9 && t3 >= 1.9) {
+                        son(joueur, SoundEvents.ARMOR_EQUIP_NETHERITE.value(), 1F, 0.5F);
+                        son(joueur, SoundEvents.ANVIL_USE, 0.7F, 0.6F);
+                    }
+                    if (avant < 2.75 && t3 >= 2.75) {
+                        son(joueur, SoundEvents.ANVIL_LAND, 0.8F, 0.5F);
+                        son(joueur, SoundEvents.ELDER_GUARDIAN_CURSE, 0.5F, 1.2F);
+                    }
+                    if (avant < 3.0 && t3 >= 3.0) {
+                        son(joueur, SoundEvents.FIRECHARGE_USE, 1F, 0.5F);
+                        son(joueur, SoundEvents.TRIDENT_RETURN, 1F, 0.6F);
+                    }
+                    s.t3Precedent = t3;
                 }
                 // la charge laisse une traînée de chakra derrière elle
                 if (s.geste == Pouvoirs.CHARGE && s.coup >= 0 && secondes(s.coup) < 0.5) {
