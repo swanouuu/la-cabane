@@ -455,7 +455,7 @@ Object.assign(lang, {
   "block.cabane.etal": "Étal", "block.cabane.machine_a_sous": "Machine à sous", "block.cabane.table_roulette": "Table de roulette",
   "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
-  "entity.cabane.parachute": "Parachute",
+  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi",
   "item.cabane.puff_rose": "Puff rose (goût surprise)", "item.cabane.puff_bleue": "Puff bleue (goût surprise)", "item.cabane.puff_menthe": "Puff verte (goût surprise)",
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",

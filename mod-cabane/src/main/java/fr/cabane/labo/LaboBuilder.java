@@ -66,7 +66,7 @@ import net.minecraft.world.phys.AABB;
  */
 final class LaboBuilder {
     /** À augmenter quand on change le labo : il se reconstruit tout seul à la visite suivante. */
-    static final int VERSION = 4;
+    static final int VERSION = 5;
     static final int SOL = 64;
     static final String TAG = "cabane_labo";
     /** Les corps couchés (voir Labo.onSommeil). */
@@ -1224,6 +1224,9 @@ final class LaboBuilder {
         BlockState autel = Labo.AUTEL.get().defaultBlockState().setValue(LaboBlocs.TableExperiences.FACING, Direction.EAST);
         pose(RX, 3, RZ, autel.setValue(LaboBlocs.TableExperiences.PART, BedPart.FOOT));
         pose(RX + 1, 3, RZ, autel.setValue(LaboBlocs.TableExperiences.PART, BedPart.HEAD));
+        // le bouton du sceau, au pied de l'autel : il libère le Hachibi derrière le mur est (voir Scellement)
+        pose(Scellement.BOUTON.getX(), Scellement.BOUTON.getY(), Scellement.BOUTON.getZ(), Blocks.CRIMSON_BUTTON.defaultBlockState()
+                .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR).setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST));
         for (int k = 0; k < 10; k++) {
             int x = RX + rnd.nextInt(9) - 4, z = RZ + rnd.nextInt(9) - 4;
             int y = Math.abs(x - RX) <= 2 && Math.abs(z - RZ) <= 2 ? 3 : 2;

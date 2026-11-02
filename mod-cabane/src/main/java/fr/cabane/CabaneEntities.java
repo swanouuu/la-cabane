@@ -31,6 +31,11 @@ public final class CabaneEntities {
             () -> EntityType.Builder.<fr.cabane.vegeta.KiBlast>of(fr.cabane.vegeta.KiBlast::new, MobCategory.MISC)
                     .sized(0.5F, 0.5F).clientTrackingRange(8).updateInterval(2).build("ki_blast"));
 
+    /** Le Hachibi géant : sa boîte est petite (il ne touche rien), son dessin fait 76 blocs de haut. */
+    public static final DeferredHolder<EntityType<?>, EntityType<fr.cabane.hachibi3.Hachibi3>> HACHIBI3 = ENTITIES.register("hachibi3",
+            () -> EntityType.Builder.<fr.cabane.hachibi3.Hachibi3>of(fr.cabane.hachibi3.Hachibi3::new, MobCategory.MISC)
+                    .sized(8F, 16F).clientTrackingRange(20).updateInterval(20).fireImmune().build("hachibi3"));
+
     static void register(IEventBus modBus) {
         modBus.addListener((net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent e) ->
                 e.put(COMBATTANT_Z.get(), fr.cabane.vegeta.CombattantZ.attributs().build()));

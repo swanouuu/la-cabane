@@ -170,6 +170,10 @@ final class LaboVie {
 
     /** Dans la salle des rituels, l'obscurité respire : on n'y voit presque que le sceau. */
     private static void penombre(ServerLevel level) {
+        if (Scellement.ouvert(level)) {
+            // le mur est cassé : il faut qu'on voie le Hachibi derrière
+            return;
+        }
         for (ServerPlayer joueur : level.players()) {
             double dx = (joueur.getX() - LaboBuilder.RX - 0.5) / 15.5, dz = (joueur.getZ() - LaboBuilder.RZ - 0.5) / 13.5;
             if (dx * dx + dz * dz > 1.1) {
