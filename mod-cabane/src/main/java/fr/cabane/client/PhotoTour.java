@@ -35,7 +35,8 @@ public final class PhotoTour {
             return;
         }
         if (etapes == null) {
-            Path fichier = mc.gameDirectory.toPath().resolve("cabane-photos.txt");
+            // CABANE_PHOTOS : un autre fichier de captures (pour que deux tests ne se marchent pas dessus)
+            Path fichier = mc.gameDirectory.toPath().resolve(System.getenv().getOrDefault("CABANE_PHOTOS", "cabane-photos.txt"));
             if (!Files.exists(fichier)) {
                 etapes = List.of();
                 return;
@@ -195,6 +196,33 @@ public final class PhotoTour {
     private static int agir(String[] e) {
         String reste = String.join(" ", java.util.Arrays.copyOfRange(e, 2, e.length));
         switch (e[1]) {
+            // « act eveil » / « act frappe » : la touche Éveil, le clic gauche du pouvoir ; « act vue 0|1|2 » : F5
+            // « act avancer 1|0 » : appuyer (ou lâcher) la touche pour avancer
+            case "avancer" -> {
+                Minecraft.getInstance().options.keyUp.setDown(e[2].equals("1"));
+                return 2;
+            }
+            case "gauche" -> {
+                Minecraft.getInstance().options.keyLeft.setDown(e[2].equals("1"));
+                return 2;
+            }
+            case "eveil" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Eveil());
+                return 2;
+            }
+            case "attraper" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Attraper());
+                return 2;
+            }
+            case "charge" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Charge());
+                return 2;
+            }
+            case "frappe" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Frappe());
+                return 2;
+            }
+            case "vue" -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[Integer.parseInt(e[2])]);
             case "numero" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                     new fr.cabane.telephone.PhoneNetwork.Action(fr.cabane.telephone.PhoneNetwork.Action.CHOISIR_NUMERO, reste));
             case "contact" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(

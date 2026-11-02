@@ -23,14 +23,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
- * La marque des élus : {@code /animation <joueur> [joueur] [joueur]} (OP seulement, trois joueurs au plus). Chez les
+ * La marque des élus : {@code /animation eludufeu <joueur> [joueur] [joueur]} (OP seulement, trois joueurs au plus). Chez les
  * joueurs choisis, et chez eux seuls, les yeux se ferment, ils regardent leur main, une flamme s'y grave en brûlant,
  * puis le rendez-vous s'affiche. Les autres ne voient rien. Le serveur ne fait qu'envoyer le message aux élus : tout le
  * spectacle se joue sur leur écran ({@link ClientMarque}).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Marque {
-    public static final String RENDEZ_VOUS = "Rendez-vous en haut du bâtiment principal dans 10 minutes.";
+    /** Le rendez-vous (en grand), puis la consigne (en dessous, plus petit). */
+    public static final String RENDEZ_VOUS = "Rendez-vous en haut du bâtiment principal dans 10 minutes.\n"
+            + "Garde le silence : personne d'autre ne doit savoir.";
 
     /** Serveur → client : l'animation commence, avec ce message à la fin. */
     public record Lancer(String message) implements CustomPacketPayload {
@@ -51,9 +53,10 @@ public final class Marque {
     @SubscribeEvent
     public static void commandes(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("animation").requires(s -> s.hasPermission(2))
-                .then(Commands.argument("joueur1", EntityArgument.player()).executes(c -> lancer(c, 1))
-                        .then(Commands.argument("joueur2", EntityArgument.player()).executes(c -> lancer(c, 2))
-                                .then(Commands.argument("joueur3", EntityArgument.player()).executes(c -> lancer(c, 3))))));
+                .then(Commands.literal("eludufeu")
+                        .then(Commands.argument("joueur1", EntityArgument.player()).executes(c -> lancer(c, 1))
+                                .then(Commands.argument("joueur2", EntityArgument.player()).executes(c -> lancer(c, 2))
+                                        .then(Commands.argument("joueur3", EntityArgument.player()).executes(c -> lancer(c, 3)))))));
     }
 
     private static int lancer(CommandContext<CommandSourceStack> c, int nombre) throws CommandSyntaxException {
