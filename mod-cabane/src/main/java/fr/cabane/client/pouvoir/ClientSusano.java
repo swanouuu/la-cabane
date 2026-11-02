@@ -86,6 +86,8 @@ public final class ClientSusano {
         /** La main tient quelqu'un, depuis ce moment-là. */
         boolean tient;
         long prise = -1;
+        /** La dernière prise au niveau 2 (elle se recharge). */
+        long dernierePrise = -1;
         double tPrecedent = -1;
         double t2Precedent = -1;
         /** Le centre de chaque os dans le monde, à la dernière image (pour les particules). */
@@ -207,6 +209,9 @@ public final class ClientSusano {
         if (p.geste() == Pouvoirs.PRISE) {
             s.tient = p.cible() >= 0;
             s.prise = s.tient ? maintenant : -1;
+            if (s.tient && s.niveau >= 2) {
+                s.dernierePrise = maintenant;
+            }
             if (s.tient && joueur != null) {
                 son(joueur, SoundEvents.ENDER_DRAGON_FLAP, 0.7F, 1.4F);
             }
@@ -699,8 +704,7 @@ public final class ClientSusano {
     /** Les yeux : jaune pétant, quelle que soit la couleur du Susano. */
     private static final float[] JAUNE = {1F, 0.9F, 0.15F};
     private static final float[] JAUNE_LUEUR = {1F, 0.75F, 0.05F};
-    /** Les traits du contour : noirs, sauf sur le Susano noir, où ils sont blancs. */
-    private static final float[] TRAIT = {0F, 0F, 0F};
+    /** Les traits du contour : la couleur du Susano en plus foncé (sauf le noir, où ils sont blancs). */
     private static final float[] BLANC = {1F, 1F, 1F};
 
     private static void dessinerOs(MultiBufferSource buffers, List<Os> liste, Couleur couleur, float opacite, float eclat, boolean premierePersonne, float g) {
@@ -709,7 +713,7 @@ public final class ClientSusano {
         float[] contour = rvb(couleur.contour);
         // au niveau 2, le chakra s'épaissit : on voit beaucoup moins à travers
         float base = couleur == Couleur.NOIR ? 0.92F : Mth.lerp(Mth.clamp(g, 0, 1), 0.5F, 0.85F);
-        float[] trait = couleur == Couleur.NOIR ? BLANC : TRAIT;
+        float[] trait = couleur == Couleur.NOIR ? BLANC : new float[]{corps[0] * 0.42F, corps[1] * 0.42F, corps[2] * 0.42F};
         VertexConsumer c = buffers.getBuffer(Types.CORPS);
         for (Os o : liste) {
             float transparence = premierePersonne && o.genre() == CAGE ? 0.35F : 1;
@@ -732,7 +736,7 @@ public final class ClientSusano {
                 faces(l, gonfle(o, 0.05F), contour, a);
             }
         }
-        // les traits, en noir (en blanc sur le noir)
+        // les traits, dans la couleur du Susano en plus foncé (en blanc sur le noir)
         VertexConsumer lignes = buffers.getBuffer(RenderType.lines());
         for (Os o : liste) {
             if (o.genre() != SOMBRE) {
@@ -931,9 +935,10 @@ public final class ClientSusano {
         }
         boolean grand = s.niveau >= 2;
         double recharge = (RECHARGE_CHARGE - (System.nanoTime() - derniereCharge)) / 1e9;
+        double rechargePrise = grand && s.dernierePrise >= 0 && !s.tient ? Pouvoirs.RECHARGE_PRISE_2 / 20.0 - secondes(s.dernierePrise) : 0;
         String[][] lignes = {
                 {"Clic gauche", s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
-                {"Clic droit", s.tient ? (grand ? "Écraser au sol" : "Lâcher") : "Attraper"},
+                {"Clic droit", s.tient ? (grand ? "Écraser au sol" : "Lâcher") : rechargePrise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(rechargePrise)) : "Attraper"},
                 {"Accroupi", recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
                 {EVEIL.getTranslatedKeyMessage().getString(), !grand && s.pouvoir.equals("susano2") ? "Niveau 2" : "Rendormir"}};
         Font font = mc.font;
@@ -954,7 +959,7 @@ public final class ClientSusano {
         g.drawString(font, titre, x + 8, y + 6, teinte, true);
         for (int i = 0; i < lignes.length; i++) {
             int ly = y + 21 + i * 13;
-            boolean grise = i == 2 && recharge > 0;
+            boolean grise = i == 2 && recharge > 0 || i == 1 && rechargePrise > 0;
             // la touche, dans un petit cadre
             g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
             g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);

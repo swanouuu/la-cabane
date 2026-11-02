@@ -445,6 +445,9 @@ public final class Pouvoirs {
     private static final Map<UUID, Integer> ECRASEMENTS = new HashMap<>();
     /** La main met ce temps (en ticks) à arracher sa prise et à la ramener à elle. */
     private static final int ARRACHER = 7;
+    /** Au niveau 2, on ne peut attraper (et donc écraser) qu'une fois toutes les 12 secondes : sinon c'est trop fort. */
+    public static final int RECHARGE_PRISE_2 = 240;
+    private static final Map<UUID, Integer> DERNIERE_PRISE = new HashMap<>();
 
     /** Où la main droite tient sa prise : devant, à droite (plus loin et plus haut au niveau 2, le Susano est plus grand). */
     private static Vec3 main(ServerPlayer joueur) {
@@ -477,6 +480,12 @@ public final class Pouvoirs {
             }
             return;
         }
+        int maintenant = joueur.server.getTickCount();
+        int reste = DERNIERE_PRISE.getOrDefault(joueur.getUUID(), -10_000) + RECHARGE_PRISE_2 - maintenant;
+        if (niveau >= 2 && reste > 0) {
+            joueur.displayClientMessage(Component.literal("La main se reforme… " + (reste + 19) / 20 + " s").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
         Force f = force(niveau);
         Vec3 devant = devant(joueur);
         LivingEntity proie = null;
@@ -495,7 +504,10 @@ public final class Pouvoirs {
             joueur.displayClientMessage(Component.literal("Personne à attraper devant toi.").withStyle(ChatFormatting.GRAY), true);
             return;
         }
-        TENUS.put(joueur.getUUID(), new Prise(proie.getId(), joueur.server.getTickCount(), proie.position()));
+        TENUS.put(joueur.getUUID(), new Prise(proie.getId(), maintenant, proie.position()));
+        if (niveau >= 2) {
+            DERNIERE_PRISE.put(joueur.getUUID(), maintenant);
+        }
         geste(joueur, PRISE, proie.getId());
     }
 
@@ -669,20 +681,27 @@ public final class Pouvoirs {
     public static void commandes(RegisterCommandsEvent event) {
         LiteralArgumentBuilder<CommandSourceStack> racine = Commands.literal("pouvoir").requires(s -> s.hasPermission(2));
         for (String pouvoir : LISTE) {
-            // Hachibi est toujours rouge : pas de couleur à choisir
+            // Hachibi est toujours rouge ; pour le Susano, la couleur est facultative (violet si on ne la donne pas)
             var joueur = Commands.argument("joueur", EntityArgument.player());
             if (pouvoir.equals(Hachibi.NOM)) {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.ROUGE));
             } else {
-                joueur.then(Commands.argument("couleur", StringArgumentType.word())
-                        .suggests((c, b) -> SharedSuggestionProvider.suggest(Couleur.noms(), b))
-                        .executes(c -> ajouter(c, pouvoir, Couleur.lire(StringArgumentType.getString(c, "couleur")))));
+                joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))
+                        .then(Commands.argument("couleur", StringArgumentType.word())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(Couleur.noms(), b))
+                                .executes(c -> ajouter(c, pouvoir, Couleur.lire(StringArgumentType.getString(c, "couleur")))));
             }
             racine.then(Commands.literal(pouvoir)
                     .then(Commands.literal("ajouter").then(joueur))
                     .then(Commands.literal("retirer").then(Commands.argument("joueur", EntityArgument.player())
                             .executes(Pouvoirs::retirer))));
         }
+        // retirer n'a pas besoin du nom du pouvoir : « /pouvoir retirer <joueur> » marche aussi (et « /pouvoir retirer susano <joueur> »)
+        var retirer = Commands.literal("retirer").then(Commands.argument("joueur", EntityArgument.player()).executes(Pouvoirs::retirer));
+        for (String pouvoir : LISTE) {
+            retirer.then(Commands.literal(pouvoir).then(Commands.argument("joueur", EntityArgument.player()).executes(Pouvoirs::retirer)));
+        }
+        racine.then(retirer);
         racine.then(Commands.literal("liste").executes(Pouvoirs::liste));
         event.getDispatcher().register(racine);
     }
@@ -781,6 +800,7 @@ public final class Pouvoirs {
         ECRASEMENTS.clear();
         CHARGES.clear();
         DERNIERE_CHARGE.clear();
+        DERNIERE_PRISE.clear();
     }
 
     private Pouvoirs() {

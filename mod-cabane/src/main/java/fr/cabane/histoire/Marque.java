@@ -4,6 +4,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import fr.cabane.Cabane;
 import fr.cabane.client.cinema.ClientMarque;
+import fr.cabane.client.cinema.ClientMarqueMaudite;
 import io.netty.buffer.ByteBuf;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -27,6 +28,10 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  * joueurs choisis, et chez eux seuls, les yeux se ferment, ils regardent leur main, une flamme s'y grave en brûlant,
  * puis le rendez-vous s'affiche. Les autres ne voient rien. Le serveur ne fait qu'envoyer le message aux élus : tout le
  * spectacle se joue sur leur écran ({@link ClientMarque}).
+ * <p>
+ * La marque maudite : {@code /animation marquemaudite <joueur>} (un seul joueur). Une douleur, il tourne la tête vers
+ * son épaule et y découvre trois virgules noires, puis il comprend qu'il ne devrait pas en parler
+ * ({@link ClientMarqueMaudite}).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Marque {
@@ -45,9 +50,25 @@ public final class Marque {
         }
     }
 
+    /** Ce que le marqué se dit à la fin (en grand, puis dans son tchat). */
+    public static final String SILENCE = "Je ne devrais pas en parler.";
+
+    /** Serveur → client : la marque maudite apparaît, avec ce message à la fin. */
+    public record Maudite(String message) implements CustomPacketPayload {
+        public static final Type<Maudite> TYPE = new Type<>(Cabane.id("marque_maudite"));
+        public static final StreamCodec<ByteBuf, Maudite> CODEC = ByteBufCodecs.STRING_UTF8.map(Maudite::new, Maudite::message);
+
+        @Override
+        public Type<Maudite> type() {
+            return TYPE;
+        }
+    }
+
     @SubscribeEvent
     public static void reseau(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToClient(Lancer.TYPE, Lancer.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientMarque.demarrer(p.message())));
+        event.registrar("1")
+                .playToClient(Lancer.TYPE, Lancer.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientMarque.demarrer(p.message())))
+                .playToClient(Maudite.TYPE, Maudite.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientMarqueMaudite.demarrer(p.message())));
     }
 
     @SubscribeEvent
@@ -56,7 +77,16 @@ public final class Marque {
                 .then(Commands.literal("eludufeu")
                         .then(Commands.argument("joueur1", EntityArgument.player()).executes(c -> lancer(c, 1))
                                 .then(Commands.argument("joueur2", EntityArgument.player()).executes(c -> lancer(c, 2))
-                                        .then(Commands.argument("joueur3", EntityArgument.player()).executes(c -> lancer(c, 3)))))));
+                                        .then(Commands.argument("joueur3", EntityArgument.player()).executes(c -> lancer(c, 3))))))
+                .then(Commands.literal("marquemaudite")
+                        .then(Commands.argument("joueur", EntityArgument.player()).executes(Marque::maudire))));
+    }
+
+    private static int maudire(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        ServerPlayer joueur = EntityArgument.getPlayer(c, "joueur");
+        PacketDistributor.sendToPlayer(joueur, new Maudite(SILENCE));
+        c.getSource().sendSuccess(() -> Component.literal("La marque maudite apparaît sur l'épaule de " + joueur.getGameProfile().getName()), false);
+        return 1;
     }
 
     private static int lancer(CommandContext<CommandSourceStack> c, int nombre) throws CommandSyntaxException {

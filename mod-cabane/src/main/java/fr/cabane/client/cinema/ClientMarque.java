@@ -139,7 +139,7 @@ public final class ClientMarque {
 
     // ================================================================ le scénario
 
-    private static double lisse(double x) {
+    static double lisse(double x) {
         x = Mth.clamp(x, 0, 1);
         return x * x * (3 - 2 * x);
     }
@@ -351,6 +351,23 @@ public final class ClientMarque {
 
     // ================================================================ l'écran
 
+    /** Les paupières (0 : ouvertes, 1 : fermées), et l'ombre qu'elles font avant de se fermer. */
+    static void paupieres(GuiGraphics g, int w, int h, float fermeture) {
+        if (fermeture <= 0.001F) {
+            return;
+        }
+        bords(g, w, h, fermeture * 0.7F, 0, 0, 0);
+        int plume = h / 6;
+        int bord = Math.round(fermeture * (h / 2F + plume));
+        int plein = bord - plume;
+        if (plein > 0) {
+            g.fill(0, 0, w, plein, 0xFF000000);
+            g.fill(0, h - plein, w, h, 0xFF000000);
+        }
+        g.fillGradient(0, plein, w, bord, 0xFF000000, 0x00000000);
+        g.fillGradient(0, h - bord, w, h - plein, 0x00000000, 0xFF000000);
+    }
+
     private static void dessinerEcran(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         int w = g.guiWidth();
@@ -366,20 +383,7 @@ public final class ClientMarque {
         if (eclair > 0.02F) {
             g.fill(0, 0, w, h, couleur(eclair * eclair * 0.5F, 255, 190, 120));
         }
-        // les paupières, et l'ombre qu'elles font avant de se fermer
-        float fermeture = fermeture(t);
-        if (fermeture > 0.001F) {
-            bords(g, w, h, fermeture * 0.7F, 0, 0, 0);
-            int plume = h / 6;
-            int bord = Math.round(fermeture * (h / 2F + plume));
-            int plein = bord - plume;
-            if (plein > 0) {
-                g.fill(0, 0, w, plein, 0xFF000000);
-                g.fill(0, h - plein, w, h, 0xFF000000);
-            }
-            g.fillGradient(0, plein, w, bord, 0xFF000000, 0x00000000);
-            g.fillGradient(0, h - bord, w, h - plein, 0x00000000, 0xFF000000);
-        }
+        paupieres(g, w, h, fermeture(t));
         float pensee = (float) (lisse((t - 0.25) / 0.5) * (1 - lisse((t - 4.9) / 0.5)));
         if (pensee > 0.02F) {
             g.drawCenteredString(mc.font, Component.literal(PENSEE).withStyle(ChatFormatting.ITALIC), w / 2, h - 34, couleur(pensee, 235, 235, 235));
@@ -403,7 +407,7 @@ public final class ClientMarque {
     }
 
     /** Un texte centré et cerclé de rouge sombre ; renvoie où il s'arrête. */
-    private static float texte(GuiGraphics g, Font font, String texte, int w, float y, float echelle, float a, int couleur) {
+    static float texte(GuiGraphics g, Font font, String texte, int w, float y, float echelle, float a, int couleur) {
         if (a <= 0.02F) {
             return y;
         }
@@ -428,7 +432,7 @@ public final class ClientMarque {
     }
 
     /** Un dégradé sur les quatre bords de l'écran, fort au bord, nul vers le milieu. */
-    private static void bords(GuiGraphics g, int w, int h, float force, int r, int v, int b) {
+    static void bords(GuiGraphics g, int w, int h, float force, int r, int v, int b) {
         int n = 14;
         int lx = w / 4;
         int ly = h / 4;
@@ -446,7 +450,7 @@ public final class ClientMarque {
         }
     }
 
-    private static int couleur(float a, int r, int v, int b) {
+    static int couleur(float a, int r, int v, int b) {
         return (Math.round(Mth.clamp(a, 0, 1) * 255) << 24) | r << 16 | v << 8 | b;
     }
 
