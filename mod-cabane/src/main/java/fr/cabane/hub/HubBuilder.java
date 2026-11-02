@@ -1631,72 +1631,104 @@ public class HubBuilder {
      * étagères et boosters accrochés aux murs), et le kiosque d'infos (où trouver qui, et quoi).
      */
     private void boutiquesDeLaPlace() {
-        boutiqueCartes(-31, -31);
+        // sur la grande allée, entre la place et la grande porte, en face de la Mairie : tout le monde passe devant
+        boutiqueCartes(BOUTIQUE_CARTES[0], BOUTIQUE_CARTES[1], Direction.EAST);
+        chemin(BOUTIQUE_CARTES[0] + 1, BOUTIQUE_CARTES[1] - 1, -3, BOUTIQUE_CARTES[1] + 1);
         kiosque(31, -21);
     }
 
-    /** L'échoppe de Jean-Mi : 9 x 7, la porte et la vitrine au sud. (x0, z0) : son coin nord-ouest. */
-    private void boutiqueCartes(int x0, int z0) {
-        int x1 = x0 + 8, z1 = z0 + 6;
-        vider(x0 - 1, z0 - 1, x1 + 1, z1 + 3, 1, 9);
+    /**
+     * L'échoppe de Jean-Mi : 9 de large, 8 de profondeur, la porte et la vitrine sur la façade. (ox, oz) : la porte ;
+     * face : vers où elle donne. Du fond vers la porte : les étagères, la place de Jean-Mi, le comptoir, puis les vitrines
+     * à boosters de chaque côté.
+     */
+    private void boutiqueCartes(int ox, int oz, Direction face) {
+        Direction fond = face.getOpposite();
+        Direction cote = face.getClockWise();
+        // u : de gauche à droite (-4 à 4), v : de la façade (0) vers le fond (7)
+        java.util.function.BiFunction<Integer, Integer, int[]> ici = (u, v) ->
+                new int[] {ox + u * cote.getStepX() + v * fond.getStepX(), oz + u * cote.getStepZ() + v * fond.getStepZ()};
+        // place nette tout autour (et devant, pour l'auvent et l'allée)
+        for (int u = -6; u <= 6; u++) {
+            for (int v = -3; v <= 9; v++) {
+                int[] p = ici.apply(u, v);
+                for (int y = 1; y <= 9; y++) {
+                    pose(p[0], y, p[1], AIR);
+                }
+            }
+        }
         BlockState mur = Blocks.WHITE_TERRACOTTA.defaultBlockState();
         BlockState violet = Blocks.PURPLE_TERRACOTTA.defaultBlockState();
-        for (int x = x0; x <= x1; x++) {
-            for (int z = z0; z <= z1; z++) {
-                pose(x, 0, z, (x + z) % 2 == 0 ? Blocks.PURPLE_GLAZED_TERRACOTTA.defaultBlockState() : Blocks.WHITE_CONCRETE.defaultBlockState());
-                boolean bord = x == x0 || x == x1 || z == z0 || z == z1;
+        for (int u = -4; u <= 4; u++) {
+            for (int v = 0; v <= 7; v++) {
+                int[] p = ici.apply(u, v);
+                pose(p[0], 0, p[1], (u + v) % 2 == 0 ? Blocks.PURPLE_GLAZED_TERRACOTTA.defaultBlockState() : Blocks.WHITE_CONCRETE.defaultBlockState());
+                boolean bord = Math.abs(u) == 4 || v == 0 || v == 7;
+                boolean coin = Math.abs(u) == 4 && (v == 0 || v == 7);
                 for (int y = 1; y <= 5; y++) {
                     BlockState b = AIR;
                     if (bord) {
-                        boolean coin = (x == x0 || x == x1) && (z == z0 || z == z1);
-                        boolean porte = z == z1 && x == x0 + 4 && y <= 2;
-                        boolean vitrine = z == z1 && !coin && Math.abs(x - (x0 + 4)) >= 2 && y >= 1 && y <= 3;
-                        b = porte ? AIR : vitrine ? Blocks.GLASS_PANE.defaultBlockState() : coin ? violet : y == 5 ? violet : mur;
+                        boolean porte = v == 0 && u == 0 && y <= 2;
+                        boolean vitrine = v == 0 && !coin && Math.abs(u) >= 2 && y <= 3;
+                        b = porte ? AIR : vitrine ? Blocks.GLASS_PANE.defaultBlockState() : coin || y == 5 ? violet : mur;
                     }
-                    pose(x, y, z, b);
+                    pose(p[0], y, p[1], b);
                 }
-                pose(x, 6, z, Blocks.PURPLE_CONCRETE.defaultBlockState());
+                pose(p[0], 6, p[1], Blocks.PURPLE_CONCRETE.defaultBlockState());
             }
         }
-        pose(x0 + 4, 1, z1, Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.SOUTH));
-        pose(x0 + 4, 2, z1, Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.SOUTH)
+        int[] porte = ici.apply(0, 0);
+        pose(porte[0], 1, porte[1], Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, face));
+        pose(porte[0], 2, porte[1], Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, face)
                 .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
-        // l'auvent rayé violet et blanc, au-dessus de la vitrine
-        for (int x = x0; x <= x1; x++) {
-            pose(x, 4, z1 + 1, (x % 2 == 0 ? Blocks.PURPLE_WOOL : Blocks.WHITE_WOOL).defaultBlockState());
-            pose(x, 4, z1 + 2, (x % 2 == 0 ? Blocks.PURPLE_CARPET : Blocks.WHITE_CARPET).defaultBlockState());
+        // l'auvent rayé violet et blanc au-dessus de la vitrine, deux lanternes de part et d'autre de la porte
+        for (int u = -4; u <= 4; u++) {
+            int[] a = ici.apply(u, -1);
+            pose(a[0], 4, a[1], (Math.floorMod(u, 2) == 0 ? Blocks.PURPLE_WOOL : Blocks.WHITE_WOOL).defaultBlockState());
+            int[] b = ici.apply(u, -2);
+            pose(b[0], 4, b[1], (Math.floorMod(u, 2) == 0 ? Blocks.PURPLE_CARPET : Blocks.WHITE_CARPET).defaultBlockState());
         }
-        pose(x0 + 2, 1, z1 + 1, Blocks.LANTERN.defaultBlockState());
-        pose(x1 - 2, 1, z1 + 1, Blocks.LANTERN.defaultBlockState());
-        // dedans : le comptoir, les étagères, les vitrines à boosters, des lanternes
-        for (int x = x0 + 2; x <= x1 - 2; x++) {
-            pose(x, 1, z0 + 2, x == x0 + 4 ? Blocks.CHISELED_BOOKSHELF.defaultBlockState() : Blocks.POLISHED_ANDESITE.defaultBlockState());
-            pose(x, 2, z0 + 2, Blocks.SMOOTH_STONE_SLAB.defaultBlockState());
+        for (int u : new int[] {-2, 2}) {
+            int[] l = ici.apply(u, -1);
+            pose(l[0], 1, l[1], Blocks.LANTERN.defaultBlockState());
         }
-        for (int x = x0 + 1; x <= x1 - 1; x++) {
-            pose(x, 1, z0 + 1, Blocks.BOOKSHELF.defaultBlockState());
-            pose(x, 2, z0 + 1, Blocks.BOOKSHELF.defaultBlockState());
+        // dedans : les étagères au fond, Jean-Mi derrière son comptoir, les vitrines à boosters de chaque côté
+        for (int u = -3; u <= 3; u++) {
+            int[] e = ici.apply(u, 6);
+            pose(e[0], 1, e[1], Blocks.BOOKSHELF.defaultBlockState());
+            pose(e[0], 2, e[1], Blocks.BOOKSHELF.defaultBlockState());
         }
-        for (int z = z0 + 3; z <= z1 - 1; z++) {
-            pose(x0 + 1, 1, z, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-            pose(x0 + 1, 2, z, Blocks.GLASS.defaultBlockState());
-            pose(x1 - 1, 1, z, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
-            pose(x1 - 1, 2, z, Blocks.GLASS.defaultBlockState());
+        for (int u = -2; u <= 2; u++) {
+            int[] c = ici.apply(u, 4);
+            pose(c[0], 1, c[1], u == 0 ? Blocks.CHISELED_BOOKSHELF.defaultBlockState() : Blocks.POLISHED_ANDESITE.defaultBlockState());
+            pose(c[0], 2, c[1], Blocks.SMOOTH_STONE_SLAB.defaultBlockState());
+        }
+        for (int v = 1; v <= 3; v++) {
+            for (int u : new int[] {-3, 3}) {
+                int[] d = ici.apply(u, v);
+                pose(d[0], 1, d[1], Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+                pose(d[0], 2, d[1], Blocks.GLASS.defaultBlockState());
+            }
         }
         ItemStack booster = new ItemStack(fr.cabane.CabaneItems.BOOSTER.get());
         ItemStack classeur = new ItemStack(fr.cabane.CabaneItems.CLASSEUR.get());
-        for (int x = x0 + 1; x <= x1 - 1; x += 2) {
-            cadre(x, 3, z0 + 1, Direction.SOUTH, x == x0 + 4 + 1 ? classeur : booster);
+        for (int u = -3; u <= 3; u += 2) {
+            int[] f = ici.apply(u, 6);
+            cadre(f[0], 3, f[1], face, u == 1 ? classeur : booster);
         }
-        cadre(x0 + 1, 3, z0 + 4, Direction.EAST, booster);
-        cadre(x1 - 1, 3, z0 + 4, Direction.WEST, classeur);
-        for (int[] l : new int[][] {{x0 + 2, z0 + 4}, {x1 - 2, z0 + 4}}) {
+        int[] g = ici.apply(-3, 2);
+        cadre(g[0], 3, g[1], cote, booster);
+        int[] dr = ici.apply(3, 2);
+        cadre(dr[0], 3, dr[1], cote.getOpposite(), classeur);
+        for (int[] l : new int[][] {ici.apply(-2, 2), ici.apply(2, 2), ici.apply(0, 5)}) {
             pose(l[0], 5, l[1], Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
         }
-        // l'allée jusqu'à la place
-        chemin(x0 + 3, z1 + 1, x0 + 5, z1 + 6);
-        titre(x0 + 4.5, 7.4, z1 + 0.5, "JEAN-MI COLLECTOR", "cartes · boosters · classeurs", 1.1F);
+        int[] t = ici.apply(0, -1);
+        titre(t[0] + 0.5, 7.4, t[1] + 0.5, "JEAN-MI COLLECTOR", "cartes · boosters · classeurs", 1.1F);
     }
+
+    /** La porte de la boutique de cartes (x, z), sur le côté ouest de la grande allée. */
+    public static final int[] BOUTIQUE_CARTES = {-6, 62};
 
     /** Le kiosque d'infos : un petit pavillon ouvert, et un grand tableau qui dit où trouver qui. (x, z) : son centre. */
     private void kiosque(int kx, int kz) {

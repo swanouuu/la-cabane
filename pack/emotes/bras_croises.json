@@ -1,0 +1,65 @@
+{
+  "name": "Bras croisés",
+  "author": "Beauvais",
+  "description": "J'attends.",
+  "uuid": "5aa509ea-2d34-463d-ff04-e89063e52a9d",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 6,
+    "beginTick": 6,
+    "endTick": 60,
+    "stopTick": 63,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -55,
+          "yaw": -42,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -50,
+          "yaw": 42,
+          "roll": 0
+        },
+        "head": {
+          "pitch": -4
+        }
+      },
+      {
+        "tick": 60,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -55,
+          "yaw": -42,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -50,
+          "yaw": 42,
+          "roll": 0
+        },
+        "head": {
+          "pitch": -4
+        }
+      }
+    ]
+  }
+}

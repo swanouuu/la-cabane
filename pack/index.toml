@@ -61,20 +61,76 @@ file = "emotes/bof.json"
 hash = "fa0024b046aeda8f6aa1a31b625519d9fc83f3724165ae17699620a6978b009a"
 
 [[files]]
+file = "emotes/bras_croises.json"
+hash = "96944574d95153c9333d58d9c481fab239db6ec9cfa6f92e33e9f28b7c792ea4"
+
+[[files]]
+file = "emotes/coucou.json"
+hash = "cfacaba720eb51b958ce784ac228ed0fa9a62b495f1158cb960897e6b38ac93f"
+
+[[files]]
 file = "emotes/dab.json"
 hash = "08dceaf47513092fc5f598fc349ca3cf3a2dcf9a18b8915fb5c63ac5989918cb"
+
+[[files]]
+file = "emotes/danse_de_base.json"
+hash = "7923d1b6cd81bf435b48c64342b81e8f33ebf46e2f9a932fa09b31a7725fa469"
+
+[[files]]
+file = "emotes/danse_des_canards.json"
+hash = "7297588c3a715c0aee0bab12e8b308cb541d4af9825788c1e43cacc909d18913"
 
 [[files]]
 file = "emotes/floss.json"
 hash = "975aeb94e17d05eb684e818b3a72b1be3e83e6eec97de8e9e3796f2eba03e0c9"
 
 [[files]]
+file = "emotes/gangnam_style.json"
+hash = "3c6ad933c61bb5962f7bf5b91dbc8ff251ec885d42f3179fd7331397caa918b9"
+
+[[files]]
+file = "emotes/griddy.json"
+hash = "113d329a1ed057b68465befb53fd089ed0852a04ca2dddade4eef5346fd3185b"
+
+[[files]]
 file = "emotes/headbang.json"
 hash = "141148a2c2576a721c64fc39f9f08d8d06b0d72117608aec1c62d63f3bc31329"
 
 [[files]]
+file = "emotes/macarena.json"
+hash = "7f8662b1728fc15d525d1b4217b4a335d098675f512e988922547819db9e368d"
+
+[[files]]
+file = "emotes/mains_aux_hanches.json"
+hash = "3757b8b077a5eea498e548f41dff6bc766fca4094f33d75bce5d06bee6f62c62"
+
+[[files]]
+file = "emotes/mains_en_l_air.json"
+hash = "aca5be300371261b5e53deb5a39dd0d2bb1580805cafb77eeb575c0326526994"
+
+[[files]]
+file = "emotes/mains_sur_la_tete.json"
+hash = "0627b23f71793abf3412286b68945d180f270543826e8867a427963fc2045c3d"
+
+[[files]]
+file = "emotes/mort_de_rire.json"
+hash = "10d5659b3fcda2f81bd2ac38c7e7fda33ab393554667e78c404503cf9bbfec18"
+
+[[files]]
 file = "emotes/muscles.json"
 hash = "b4aa9a62894c50fc09e503f5e033b09fd0f66260c09c4b4d993155169ae06e52"
+
+[[files]]
+file = "emotes/orange_justice.json"
+hash = "34740238a14194dfe55bec82dc08ea2af1ec269e07decd5f0426307fb078f2b1"
+
+[[files]]
+file = "emotes/pointer.json"
+hash = "32b71655907236cbbb1f732942b566fb58bab69d6e07e1f427e1e83d8d63d052"
+
+[[files]]
+file = "emotes/reflechir.json"
+hash = "12313c12ea7d75f59612eb91f8894a03b04d8fa9d2e87dc7d6e0c2c2fe0eade4"
 
 [[files]]
 file = "emotes/salut.json"
@@ -83,6 +139,14 @@ hash = "3a122417d4560ad8a21c457c44fb67af12a9bb0679198f940216e74bac7de48e"
 [[files]]
 file = "emotes/t_pose.json"
 hash = "5841369a125cd907160de81dcffd2484cccd1906bd16366a4fd138f9c0df3bf6"
+
+[[files]]
+file = "emotes/take_the_l.json"
+hash = "50f0b00d24fa5bdbd926212b401da916deac0d4a32fd17be6974653f6f524c9c"
+
+[[files]]
+file = "emotes/twerk.json"
+hash = "5453296f9106a13f9d6c05cbfb732a840db4352b11186ec68c6a14920ca01fbe"
 
 [[files]]
 file = "mods/alexs-mobs-continued.pw.toml"

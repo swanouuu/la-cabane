@@ -1,0 +1,65 @@
+{
+  "name": "Mains sur la tête",
+  "author": "Beauvais",
+  "description": "Pour une arrestation dans les règles.",
+  "uuid": "521877b3-adfb-4a56-e8ca-9032c5ebc396",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 6,
+    "beginTick": 6,
+    "endTick": 60,
+    "stopTick": 63,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -160,
+          "yaw": -55,
+          "roll": 50
+        },
+        "leftArm": {
+          "pitch": -160,
+          "yaw": 55,
+          "roll": -50
+        },
+        "head": {
+          "pitch": 10
+        }
+      },
+      {
+        "tick": 60,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -160,
+          "yaw": -55,
+          "roll": 50
+        },
+        "leftArm": {
+          "pitch": -160,
+          "yaw": 55,
+          "roll": -50
+        },
+        "head": {
+          "pitch": 10
+        }
+      }
+    ]
+  }
+}

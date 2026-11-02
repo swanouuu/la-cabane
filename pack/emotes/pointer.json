@@ -1,0 +1,59 @@
+{
+  "name": "Toi !",
+  "author": "Beauvais",
+  "description": "C'est toi que je regarde.",
+  "uuid": "d6ab11b7-8227-b560-1c5d-b542ce91fd49",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 4,
+    "beginTick": 4,
+    "endTick": 60,
+    "stopTick": 63,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -90,
+          "yaw": -5
+        },
+        "head": {
+          "pitch": 0
+        },
+        "torso": {
+          "yaw": -8
+        }
+      },
+      {
+        "tick": 60,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -90,
+          "yaw": -5
+        },
+        "head": {
+          "pitch": 0
+        },
+        "torso": {
+          "yaw": -8
+        }
+      }
+    ]
+  }
+}

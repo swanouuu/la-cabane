@@ -1,0 +1,144 @@
+{
+  "name": "Coucou",
+  "author": "Beauvais",
+  "description": "Salut à toi !",
+  "uuid": "a2a9e6e8-470b-de63-fcf8-105991635e6a",
+  "emote": {
+    "isLoop": "false",
+    "returnTick": 0,
+    "beginTick": 4,
+    "endTick": 40,
+    "stopTick": 43,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 150
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 8,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 120
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 12,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 150
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 16,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 120
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 20,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 150
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 24,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 120
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 28,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 150
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 32,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 120
+        },
+        "head": {
+          "roll": -6
+        }
+      },
+      {
+        "tick": 40,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "roll": 0
+        },
+        "head": {
+          "roll": 0
+        }
+      }
+    ]
+  }
+}

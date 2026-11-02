@@ -1,0 +1,65 @@
+{
+  "name": "Mains aux hanches",
+  "author": "Beauvais",
+  "description": "Alors, on fait quoi ?",
+  "uuid": "56f4e321-9143-35d3-5ec3-cb338956f7c1",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 6,
+    "beginTick": 6,
+    "endTick": 60,
+    "stopTick": 63,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -15,
+          "yaw": -10,
+          "roll": 35
+        },
+        "leftArm": {
+          "pitch": -15,
+          "yaw": 10,
+          "roll": -35
+        },
+        "torso": {
+          "pitch": -3
+        }
+      },
+      {
+        "tick": 60,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -15,
+          "yaw": -10,
+          "roll": 35
+        },
+        "leftArm": {
+          "pitch": -15,
+          "yaw": 10,
+          "roll": -35
+        },
+        "torso": {
+          "pitch": -3
+        }
+      }
+    ]
+  }
+}

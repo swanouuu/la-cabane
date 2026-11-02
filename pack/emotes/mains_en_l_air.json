@@ -1,0 +1,61 @@
+{
+  "name": "Les mains en l'air !",
+  "author": "Beauvais",
+  "description": "Je me rends, monsieur l'agent.",
+  "uuid": "517dbd6c-8be6-58d3-d131-97d09964718f",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 6,
+    "beginTick": 6,
+    "endTick": 60,
+    "stopTick": 63,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -170,
+          "roll": 12
+        },
+        "leftArm": {
+          "pitch": -170,
+          "roll": -12
+        },
+        "head": {
+          "pitch": -8
+        }
+      },
+      {
+        "tick": 60,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -170,
+          "roll": 12
+        },
+        "leftArm": {
+          "pitch": -170,
+          "roll": -12
+        },
+        "head": {
+          "pitch": -8
+        }
+      }
+    ]
+  }
+}

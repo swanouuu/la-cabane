@@ -1,0 +1,137 @@
+{
+  "name": "Je réfléchis…",
+  "author": "Beauvais",
+  "description": "Hmm.",
+  "uuid": "a8b0c5a2-7351-4eb4-08d3-1c0c983f89f2",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 4,
+    "beginTick": 4,
+    "endTick": 64,
+    "stopTick": 67,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -125,
+          "yaw": -35,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -45,
+          "yaw": 40
+        },
+        "head": {
+          "pitch": 12,
+          "roll": 6
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -128,
+          "yaw": -35,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -45,
+          "yaw": 40
+        },
+        "head": {
+          "pitch": 8,
+          "roll": -4
+        }
+      },
+      {
+        "tick": 24,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -125,
+          "yaw": -35,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -45,
+          "yaw": 40
+        },
+        "head": {
+          "pitch": 12,
+          "roll": 6
+        }
+      },
+      {
+        "tick": 34,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -128,
+          "yaw": -35,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -45,
+          "yaw": 40
+        },
+        "head": {
+          "pitch": 8,
+          "roll": -4
+        }
+      },
+      {
+        "tick": 44,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -125,
+          "yaw": -35,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -45,
+          "yaw": 40
+        },
+        "head": {
+          "pitch": 12,
+          "roll": 6
+        }
+      },
+      {
+        "tick": 54,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -128,
+          "yaw": -35,
+          "roll": 0
+        },
+        "leftArm": {
+          "pitch": -45,
+          "yaw": 40
+        },
+        "head": {
+          "pitch": 8,
+          "roll": -4
+        }
+      }
+    ]
+  }
+}
