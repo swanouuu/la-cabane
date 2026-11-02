@@ -67,7 +67,8 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM);
+    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM,
+            Espionne.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -343,6 +344,9 @@ public final class Pouvoirs {
         if (elu.pouvoir().equals(Minato.NOM)) {
             Minato.eveiller(joueur);
         }
+        if (Espionne.est(elu.pouvoir())) {
+            Espionne.eveiller(joueur);
+        }
         envoyerEtat(joueur, elu, niveau + 1, true);
     }
 
@@ -372,7 +376,8 @@ public final class Pouvoirs {
      * {@link Maudit}). Endormi (niveau 0), plus rien.
      */
     private static void armure(ServerPlayer joueur, int niveau) {
-        boolean fer = Maudit.est(pouvoir(joueur));
+        // la marque maudite et les espionnes (leur combinaison) : comme du fer
+        boolean fer = Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur));
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : 20);
@@ -401,6 +406,7 @@ public final class Pouvoirs {
         Hachibi.endormir(joueur);
         Maudit.endormir(joueur);
         Minato.endormir(joueur);
+        Espionne.endormir(joueur);
         armure(joueur, 0);
         if (EVEILLES.remove(joueur.getUUID()) != null) {
             DEBUT_EVEIL.remove(joueur.getUUID());
@@ -439,7 +445,7 @@ public final class Pouvoirs {
      */
     private static void frapper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -510,7 +516,7 @@ public final class Pouvoirs {
      */
     private static void attraper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -643,7 +649,7 @@ public final class Pouvoirs {
     /** Le Susano pique droit devant : le joueur file, et tout ce qu'il traverse est fauché. */
     private static void charger(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -676,7 +682,7 @@ public final class Pouvoirs {
                 DEBUT_EVEIL.remove(entree.getKey());
                 continue;
             }
-            int reste = entree.getValue() + DUREE_EVEIL - maintenant;
+            int reste = entree.getValue() + (Espionne.est(pouvoir(joueur)) ? Espionne.DUREE_EVEIL : DUREE_EVEIL) - maintenant;
             if (reste <= 0) {
                 endormir(joueur);
                 joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose une minute.").withStyle(ChatFormatting.GOLD), false);
@@ -765,6 +771,12 @@ public final class Pouvoirs {
             if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || pouvoir.equals(Minato.NOM)) {
                 Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : pouvoir.equals(Minato.NOM) ? Couleur.JAUNE : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
+            } else if (Espionne.est(pouvoir)) {
+                // les espionnes : vert (Sam), rouge (Clover) ou jaune (Alex), rouge par défaut
+                joueur.executes(c -> ajouter(c, pouvoir, Couleur.ROUGE))
+                        .then(Commands.argument("couleur", StringArgumentType.word())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("vert", "rouge", "jaune"), b))
+                                .executes(c -> ajouter(c, pouvoir, Couleur.lire(StringArgumentType.getString(c, "couleur")))));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))
                         .then(Commands.argument("couleur", StringArgumentType.word())
@@ -790,6 +802,10 @@ public final class Pouvoirs {
         ServerPlayer joueur = EntityArgument.getPlayer(c, "joueur");
         if (couleur == null) {
             c.getSource().sendFailure(Component.literal("Couleur inconnue. Possibles : " + String.join(", ", Couleur.noms())));
+            return 0;
+        }
+        if (Espionne.est(pouvoir) && !Espionne.couleurPermise(couleur)) {
+            c.getSource().sendFailure(Component.literal("Les espionnes sont en vert (Sam), rouge (Clover) ou jaune (Alex)."));
             return 0;
         }
         Donnees d = Donnees.get(c.getSource().getServer());

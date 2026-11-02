@@ -141,7 +141,16 @@ public final class ClientSusano {
         if (mc.level == null) {
             return;
         }
-        // Hachibi, la marque maudite et Minato ont leur propre dessin
+        // Hachibi, la marque maudite, Minato et les espionnes ont leur propre dessin
+        if (fr.cabane.pouvoir.Espionne.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.oublier(p.joueur());
+            ClientMinato.oublier(p.joueur());
+            ClientEspionne.recevoir(p);
+            return;
+        }
+        ClientEspionne.oublier(p.joueur());
         if (p.pouvoir().equals(fr.cabane.pouvoir.Minato.NOM)) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());

@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Après la pose habituelle du joueur : le Susano peut lui faire porter la main à l'œil (pendant l'éveil), et Hachibi
- * le fait rugir, puis marcher à quatre pattes.
+ * le fait rugir, puis marcher à quatre pattes ; une espionne éveillée devient toute fine, perchée sur ses talons.
  */
 @Mixin(PlayerModel.class)
 public abstract class PlayerModelMixin {
@@ -20,6 +20,7 @@ public abstract class PlayerModelMixin {
         if (entite instanceof Player joueur) {
             ClientSusano.poserBras((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.pouvoir.ClientHachibi.poser((PlayerModel<?>) (Object) this, joueur);
+            fr.cabane.client.pouvoir.ClientEspionne.poser((PlayerModel<?>) (Object) this, joueur);
         }
     }
 }

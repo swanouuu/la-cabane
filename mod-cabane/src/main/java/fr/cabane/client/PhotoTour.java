@@ -215,6 +215,15 @@ public final class PhotoTour {
                 net.minecraft.client.KeyMapping.click(Minecraft.getInstance().options.keyAttack.getKey());
                 return 2;
             }
+            // « act clic-droit » : un vrai clic droit ; « act sauter 1|0 » : appuyer (ou lâcher) la touche pour sauter
+            case "clic-droit" -> {
+                net.minecraft.client.KeyMapping.click(Minecraft.getInstance().options.keyUse.getKey());
+                return 2;
+            }
+            case "sauter" -> {
+                Minecraft.getInstance().options.keyJump.setDown(e[2].equals("1"));
+                return 2;
+            }
             case "eveil" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Eveil());
                 return 2;

@@ -402,8 +402,8 @@ public final class ClientMaudit {
         return basSasukeLu;
     }
 
-    /** La peau telle qu'elle est sur la carte graphique (64 × 64, en ABGR), ou null. */
-    private static int[] lire(ResourceLocation texture) {
+    /** La peau telle qu'elle est sur la carte graphique (64 × 64, en ABGR), ou null (les espionnes s'en servent aussi). */
+    static int[] lire(ResourceLocation texture) {
         try {
             RenderSystem.bindTexture(Minecraft.getInstance().getTextureManager().getTexture(texture).getId());
             if (GlStateManager._getTexLevelParameter(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH) != 64

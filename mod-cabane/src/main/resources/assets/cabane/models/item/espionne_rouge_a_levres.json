@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "cabane:item/espionne_rouge_a_levres"
+  }
+}
