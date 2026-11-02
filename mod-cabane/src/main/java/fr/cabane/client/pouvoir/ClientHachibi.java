@@ -61,7 +61,7 @@ import org.joml.Vector3f;
 public final class ClientHachibi {
     private static final ResourceLocation BETE = Cabane.id("textures/entity/hachibi_bete.png");
     private static final ResourceLocation YEUX = Cabane.id("textures/entity/hachibi_yeux.png");
-    private static final ResourceLocation MANTEAU = Cabane.id("textures/entity/hachibi_manteau.png");
+    static final ResourceLocation MANTEAU = Cabane.id("textures/entity/hachibi_manteau.png");
     /** Le manteau : le rugissement, puis la première queue, puis la seconde. */
     private static final double QUEUE_1 = 0.45;
     private static final double QUEUE_2 = 1.15;
@@ -485,7 +485,7 @@ public final class ClientHachibi {
      * Le corps redessiné partie par partie, chacune gonflée autour de son centre (en pixels de peau) un peu plus que sa
      * deuxième couche ({@code plus} : encore plus, pour le halo).
      */
-    private static void enveloppe(PlayerModel<?> m, PoseStack ps, VertexConsumer c, boolean fin, float plus, int couleur) {
+    static void enveloppe(PlayerModel<?> m, PoseStack ps, VertexConsumer c, boolean fin, float plus, int couleur) {
         partie(m.head, ps, c, 0, -4, 0, 1.12F * plus, 1.12F * plus, 1.12F * plus, couleur);
         partie(m.body, ps, c, 0, 6, 0, 1.12F * plus, 1.07F * plus, 1.25F * plus, couleur);
         partie(m.rightArm, ps, c, fin ? -0.5F : -1, 4, 0, 1.24F * plus, 1.07F * plus, 1.2F * plus, couleur);

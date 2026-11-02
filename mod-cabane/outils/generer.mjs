@@ -446,6 +446,9 @@ Object.assign(lang, {
   "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
   "key.cabane.sirene": "Sirène de la voiture de police", "key.cabane.eveil": "Éveil (pouvoir)", "block.cabane.partie_table": "Table du casino",
   "subtitles.cabane.voix": "Un habitant parle", "item.cabane.photo": "Photo imprimée", "entity.cabane.tableau_photo": "Photo accrochée", "subtitles.cabane.voiture": "Voiture de police",
+  "death.attack.cabane.chidori": "%1$s a été transpercé par le Chidori de %2$s",
+  "death.attack.cabane.chidori.item": "%1$s a été transpercé par le Chidori de %2$s",
+  "death.attack.cabane.chidori.player": "%1$s a été transpercé par un Chidori",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);

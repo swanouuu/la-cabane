@@ -141,13 +141,21 @@ public final class ClientSusano {
         if (mc.level == null) {
             return;
         }
-        // Hachibi a son propre dessin
+        // Hachibi et la marque maudite ont leur propre dessin
         if (p.pouvoir().equals(fr.cabane.pouvoir.Hachibi.NOM)) {
             SUSANOS.remove(p.joueur());
+            ClientMaudit.oublier(p.joueur());
             ClientHachibi.recevoir(p);
             return;
         }
+        if (fr.cabane.pouvoir.Maudit.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.recevoir(p);
+            return;
+        }
         ClientHachibi.oublier(p.joueur());
+        ClientMaudit.oublier(p.joueur());
         Couleur couleur = Couleur.values()[Mth.clamp(p.couleur(), 0, Couleur.values().length - 1)];
         Susano s = SUSANOS.get(p.joueur());
         Player joueur = mc.level.getPlayerByUUID(p.joueur());

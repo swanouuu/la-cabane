@@ -67,7 +67,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM);
+    public static final List<String> LISTE = List.of("susano", "susano2", Hachibi.NOM, Maudit.NOM, Maudit.NOM2);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -148,7 +148,7 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return pouvoir.equals("susano2") ? 2 : 1;
+                return pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) ? 2 : 1;
             }
         }
 
@@ -320,7 +320,21 @@ public final class Pouvoirs {
         if (elu.pouvoir().equals(Hachibi.NOM)) {
             Hachibi.eveiller(joueur);
         }
+        if (Maudit.est(elu.pouvoir())) {
+            Maudit.eveiller(joueur, niveau + 1);
+        }
         envoyerEtat(joueur, elu, niveau + 1, true);
+    }
+
+    /** Le pouvoir de ce joueur : sa liste blanche (« susano », « hachibi »…), ou rien. */
+    private static String pouvoir(ServerPlayer joueur) {
+        Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
+        return elu == null ? "" : elu.pouvoir();
+    }
+
+    /** Les pouvoirs qui vont ensemble (on passe de l'un à l'autre sans s'endormir) : les deux Susano, les deux marques. */
+    private static String famille(String pouvoir) {
+        return pouvoir.startsWith("susano") ? "susano" : Maudit.est(pouvoir) ? Maudit.NOM : pouvoir;
     }
 
     private static boolean hachibi(ServerPlayer joueur) {
@@ -334,11 +348,13 @@ public final class Pouvoirs {
 
     /**
      * Un pouvoir éveillé protège comme une armure de diamant complète (sans enchantement) ; le Susano niveau 2, comme
-     * de la netherite. Endormi (niveau 0), plus rien.
+     * de la netherite ; la marque maudite, comme une armure de fer, deux fois plus au niveau 2 (sa Protection est dans
+     * {@link Maudit}). Endormi (niveau 0), plus rien.
      */
     private static void armure(ServerPlayer joueur, int niveau) {
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau > 0 ? 20 : 0);
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE, niveau == 0 ? 0 : niveau >= 2 ? 12 : 8);
+        boolean fer = Maudit.est(pouvoir(joueur));
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : 20);
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE, niveau == 0 || fer ? 0 : niveau >= 2 ? 12 : 8);
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, niveau >= 2 ? 0.4 : 0);
     }
 
@@ -360,6 +376,7 @@ public final class Pouvoirs {
         CHARGES.remove(joueur.getUUID());
         ECRASEMENTS.remove(joueur.getUUID());
         Hachibi.endormir(joueur);
+        Maudit.endormir(joueur);
         armure(joueur, 0);
         if (EVEILLES.remove(joueur.getUUID()) != null) {
             Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
@@ -396,6 +413,9 @@ public final class Pouvoirs {
      */
     private static void frapper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
+        if (Maudit.est(pouvoir(joueur))) {
+            return;
+        }
         if (niveau > 0 && hachibi(joueur)) {
             Hachibi.griffe(joueur);
             return;
@@ -464,6 +484,9 @@ public final class Pouvoirs {
      */
     private static void attraper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
+        if (Maudit.est(pouvoir(joueur))) {
+            return;
+        }
         if (niveau > 0 && hachibi(joueur)) {
             Hachibi.bete(joueur);
             return;
@@ -594,6 +617,9 @@ public final class Pouvoirs {
     /** Le Susano pique droit devant : le joueur file, et tout ce qu'il traverse est fauché. */
     private static void charger(ServerPlayer joueur) {
         int niveau = niveau(joueur);
+        if (Maudit.est(pouvoir(joueur))) {
+            return;
+        }
         if (niveau > 0 && hachibi(joueur)) {
             Hachibi.accroupi(joueur);
             return;
@@ -681,10 +707,11 @@ public final class Pouvoirs {
     public static void commandes(RegisterCommandsEvent event) {
         LiteralArgumentBuilder<CommandSourceStack> racine = Commands.literal("pouvoir").requires(s -> s.hasPermission(2));
         for (String pouvoir : LISTE) {
-            // Hachibi est toujours rouge ; pour le Susano, la couleur est facultative (violet si on ne la donne pas)
+            // Hachibi et la marque maudite ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (pouvoir.equals(Hachibi.NOM)) {
-                joueur.executes(c -> ajouter(c, pouvoir, Couleur.ROUGE));
+            if (pouvoir.equals(Hachibi.NOM) || Maudit.est(pouvoir)) {
+                Couleur propre = pouvoir.equals(Hachibi.NOM) ? Couleur.ROUGE : Couleur.VIOLET;
+                joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))
                         .then(Commands.argument("couleur", StringArgumentType.word())
@@ -714,8 +741,8 @@ public final class Pouvoirs {
         }
         Donnees d = Donnees.get(c.getSource().getServer());
         Donnees.Elu ancien = d.elus.get(joueur.getUUID());
-        if (ancien != null && ancien.pouvoir().equals(Hachibi.NOM) != pouvoir.equals(Hachibi.NOM)) {
-            // on change de pouvoir (Susano ↔ Hachibi) : l'ancien s'endort d'abord
+        if (ancien != null && !famille(ancien.pouvoir()).equals(famille(pouvoir))) {
+            // on change de pouvoir (Susano, Hachibi, marque maudite) : l'ancien s'endort d'abord
             endormir(joueur);
         }
         Donnees.Elu elu = new Donnees.Elu(pouvoir, couleur, joueur.getGameProfile().getName());
@@ -727,6 +754,9 @@ public final class Pouvoirs {
             int permis = Math.min(niveau, elu.niveauMax());
             EVEILLES.put(joueur.getUUID(), permis);
             armure(joueur, permis);
+            if (Maudit.est(pouvoir)) {
+                Maudit.eveiller(joueur, permis);
+            }
             envoyerEtat(joueur, elu, permis, false);
         }
         c.getSource().sendSuccess(() -> Component.literal(joueur.getGameProfile().getName() + " a le " + pouvoir + " (" + couleur.nom
