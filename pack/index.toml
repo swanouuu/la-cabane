@@ -37,10 +37,6 @@ file = "config/ftbquests/quests/chapters/le_village.snbt"
 hash = "17e24544549669d95993cc2b3f80f2ba84d0bb5214e947c3df6348d12f342d88"
 
 [[files]]
-file = "config/ftbquests/quests/chapters/les_gens.snbt"
-hash = "e2901c341847892a895f81e8a6715bfe9195ee49c3d06f1572a32a2300691979"
-
-[[files]]
 file = "config/ftbquests/quests/chapters/reliques.snbt"
 hash = "3630e21d261aa40d67d8cf29f1013e547e0b41e1efc00e917092c23771cef71f"
 
