@@ -909,11 +909,11 @@ public final class ClientHachibi {
                 String course = h.course >= 0 ? String.format("Course (%.0f s)", Math.ceil(Hachibi.DUREE_COURSE / 20.0 - secondes(h.course)))
                         : rechargeCourse > 0 ? String.format("Course (recharge %.0f s)", Math.ceil(rechargeCourse)) : "Course";
                 gris[1] = h.course < 0 && rechargeCourse > 0;
-                lignes = new String[][]{{"Clic gauche", "Griffe"}, {"Accroupi", course}, {eveil, suite}};
+                lignes = new String[][]{{Clavier.gauche(), "Griffe"}, {Clavier.accroupi(), course}, {eveil, suite}};
             } else if (h.forme <= 3) {
                 titre = h.forme == 3 ? "HACHIBI 2  ·  BÊTE AUX OS" : "HACHIBI 2  ·  BÊTE";
                 gris[1] = h.charge >= 0 || bombeRecharge > 0;
-                lignes = new String[][]{{"Clic gauche", "Griffe de la bête"}, {"Accroupi", h.forme == 3 && h.charge < 0 && bombeRecharge <= 0 ? "Grosse bombe" : bombe},
+                lignes = new String[][]{{Clavier.gauche(), "Griffe de la bête"}, {Clavier.accroupi(), h.forme == 3 && h.charge < 0 && bombeRecharge <= 0 ? "Grosse bombe" : bombe},
                         {eveil, suite}};
             } else {
                 titre = "HACHIBI 2  ·  HUIT QUEUES";
@@ -921,16 +921,16 @@ public final class ClientHachibi {
                 double balayage = h.balayage < 0 ? 0 : Hachibi.RECHARGE_BALAYAGE / 20.0 - secondes(h.balayage);
                 double prise = h.priseDebut < 0 ? 0 : Hachibi.RECHARGE_PRISE / 20.0 - secondes(h.priseDebut);
                 if (h.prise >= 0) {
-                    lignes = new String[][]{{"Clic gauche", "Lancer"}, {"Clic droit", "Serrer fort"}, {eveil, "Rendormir"}};
+                    lignes = new String[][]{{Clavier.gauche(), "Lancer"}, {Clavier.droite(), "Serrer fort"}, {eveil, "Rendormir"}};
                 } else {
                     gris[0] = fouet > 0;
                     gris[1] = balayage > 0;
                     gris[2] = prise > 0;
                     gris[3] = h.charge >= 0 || bombeRecharge > 0;
-                    lignes = new String[][]{{"Clic gauche", "Coup de tentacule"},
-                            {"Clic droit", balayage > 0 ? String.format("Balayage (%.0f s)", Math.ceil(balayage)) : "Balayage"},
-                            {"Accroupi", prise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(prise)) : "Attraper"},
-                            {"Accroupi + clic droit", h.charge >= 0 ? "Bombe noire (charge…)" : bombeRecharge > 0 ? String.format("Bombe noire (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe noire"},
+                    lignes = new String[][]{{Clavier.gauche(), "Coup de tentacule"},
+                            {Clavier.droite(), balayage > 0 ? String.format("Balayage (%.0f s)", Math.ceil(balayage)) : "Balayage"},
+                            {Clavier.accroupi(), prise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(prise)) : "Attraper"},
+                            {Clavier.accroupi() + " + " + Clavier.droite(), h.charge >= 0 ? "Bombe noire (charge…)" : bombeRecharge > 0 ? String.format("Bombe noire (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe noire"},
                             {eveil, "Rendormir"}};
                 }
             }
@@ -939,7 +939,7 @@ public final class ClientHachibi {
             titre = String.format("HACHIBI  ·  BÊTE (%d s)", (int) Math.ceil(Math.min(Hachibi.DUREE_BETE / 20.0, Math.max(0, reste))));
             String bombe = h.charge >= 0 ? "Bombe (charge…)" : rechargeBombe > 0 ? String.format("Bombe (%.0f s)", Math.ceil(rechargeBombe)) : "Bombe de chakra";
             gris[2] = h.charge >= 0 || rechargeBombe > 0;
-            lignes = new String[][]{{"Clic gauche", "Griffe de la bête"}, {"Clic droit", "Redevenir soi"}, {"Accroupi", bombe},
+            lignes = new String[][]{{Clavier.gauche(), "Griffe de la bête"}, {Clavier.droite(), "Redevenir soi"}, {Clavier.accroupi(), bombe},
                     {ClientSusano.EVEIL.getTranslatedKeyMessage().getString(), "Rendormir"}};
         } else {
             titre = "HACHIBI  ·  MANTEAU";
@@ -948,7 +948,7 @@ public final class ClientHachibi {
             String course = h.course >= 0 ? String.format("Course (%.0f s)", Math.ceil(Hachibi.DUREE_COURSE / 20.0 - secondes(h.course)))
                     : rechargeCourse > 0 ? String.format("Course (recharge %.0f s)", Math.ceil(rechargeCourse)) : "Course";
             gris[2] = h.course < 0 && rechargeCourse > 0;
-            lignes = new String[][]{{"Clic gauche", "Griffe"}, {"Clic droit", bete}, {"Accroupi", course},
+            lignes = new String[][]{{Clavier.gauche(), "Griffe"}, {Clavier.droite(), bete}, {Clavier.accroupi(), course},
                     {ClientSusano.EVEIL.getTranslatedKeyMessage().getString(), "Rendormir"}};
         }
         Font font = mc.font;

@@ -309,12 +309,16 @@ public final class PhotoTour {
             case "vue" -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.values()[Integer.parseInt(e[2])]);
             case "recul" -> recul = Float.parseFloat(e[2]);
             case "regard" -> {
-                // tourne la tête sans bouger (un point de vue ramènerait le joueur)
+                // tourne la tête sans bouger (un point de vue ramènerait le joueur) ; « act regard lacet tangage 1 » :
+                // n'attend qu'un tick (pour voir passer un tir sous un autre angle)
                 var j = Minecraft.getInstance().player;
                 j.setYRot(Float.parseFloat(e[2]));
                 j.setXRot(Float.parseFloat(e[3]));
                 j.yRotO = j.getYRot();
                 j.xRotO = j.getXRot();
+                if (e.length > 4) {
+                    return Integer.parseInt(e[4]);
+                }
             }
             case "numero" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                     new fr.cabane.telephone.PhoneNetwork.Action(fr.cabane.telephone.PhoneNetwork.Action.CHOISIR_NUMERO, reste));

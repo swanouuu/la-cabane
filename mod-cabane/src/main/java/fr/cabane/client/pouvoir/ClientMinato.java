@@ -440,11 +440,11 @@ public final class ClientMinato {
         // Minato 2 au niveau 1 : la touche Éveil donne le mode Kurama
         boolean monte = !kurama && Minecraft.getInstance().getConnection() != null && minato2;
         String[][] lignes = kurama
-                ? new String[][] {{"Clic gauche", "Frapper (TP autour)"}, {"Clic droit", kunai},
-                        {"Accroupi + clic droit", resteEclair > 0 ? String.format("TP où tu regardes (%.0f s)", Math.ceil(resteEclair)) : "TP où tu regardes"},
-                        {"Accroupi + clic gauche", jet}, {"Accroupi ×1", "Planter un kunai"}, {"Accroupi ×2", marque}, {eveil, "Rendormir"}}
-                : new String[][] {{"Clic gauche", "Frapper au kunai"}, {"Clic droit", kunai}, {"Accroupi + clic gauche", jet},
-                        {"Accroupi + clic droit", "Poser la marque"}, {"Accroupi ×2", marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
+                ? new String[][] {{Clavier.gauche(), "Frapper (TP autour)"}, {Clavier.droite(), kunai},
+                        {Clavier.accroupi() + " + " + Clavier.droite(), resteEclair > 0 ? String.format("TP où tu regardes (%.0f s)", Math.ceil(resteEclair)) : "TP où tu regardes"},
+                        {Clavier.accroupi() + " + " + Clavier.gauche(), jet}, {Clavier.accroupi() + " ×1", "Planter un kunai"}, {Clavier.accroupi() + " ×2", marque}, {eveil, "Rendormir"}}
+                : new String[][] {{Clavier.gauche(), "Frapper au kunai"}, {Clavier.droite(), kunai}, {Clavier.accroupi() + " + " + Clavier.gauche(), jet},
+                        {Clavier.accroupi() + " + " + Clavier.droite(), "Poser la marque"}, {Clavier.accroupi() + " ×2", marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
         boolean[] gris = kurama
                 ? new boolean[] {false, reste > 0, resteEclair > 0, !envol && lance == null && resteJet > 0, false, m == null, false}
                 : new boolean[] {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, false};

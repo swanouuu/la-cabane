@@ -1,6 +1,6 @@
 // Les deux fruits eux-mêmes. L'icône est en 64×64 (le jeu l'affiche pixel pour pixel en 1080p) : le Hie Hie no Mi,
 // couvert de tourbillons blancs et bleus comme sur le dessin, et le Magu Magu no Mi, même forme, en rouge et orange de
-// lave. Shift + clic droit le pose en 3D (sur une table) ; clic droit maintenu le mange. Celui qui en mange un est mis
+// lave. Accroupi + clic droit le pose en 3D (sur une table) ; clic droit maintenu le mange. Celui qui en mange un est mis
 // tout seul sur la whitelist de la glace (ou de la lave), avec une petite animation. On ne les trouve nulle part : seul
 // l'hôte les donne.
 // node objets.mjs → hie_hie_no_mi.png, magu_magu_no_mi.png, planche-objets.png, et les fichiers du mod (icônes, fruit
@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ecrirePng, clair, mix, hache, norme, croix, scene, ecrireTexte, texels, PARTIES } from "./moteur.mjs";
 import {
-  ajoute, sous, fois, rotY, TOUR, ID, brille, pave, cube, flamme, cristal, perso, sol, legende, EPEE, fissure, magma, glace, couvert,
+  ajoute, sous, fois, rotY, TOUR, ID, brille, pave, cube, flamme, cristal, perso, sol, legende, EPEE, fissure, magma, glace, couvert, bruit,
   CROUTE, CROUTE_R, LAVE_O, LAVE_J, LAVE_R, GLACE, GLACE_C, BLANC, FUMEE, HERBE, FOND, PEAU_LAVE, PEAU_GLACE, STEVE, SKINS, LAVE, GEL,
 } from "./rendu.mjs";
 
@@ -321,8 +321,8 @@ function grandeIcone(fr) {
 function inventaire(sc) {
   paysage(sc);
   const { img, w } = sc;
-  bulle(img, w, 22, 24, [[HIE.nom, AQUA, 4], ["FRUIT DU DEMON : LA GLACE", GRIS, 3], ["CLIC DROIT : LE MANGER", GRIS, 3], ["SHIFT + CLIC DROIT : LE POSER", GRIS, 3]]);
-  bulle(img, w, 22, 196, [[MAGU.nom, OR, 4], ["FRUIT DU DEMON : LA LAVE", GRIS, 3], ["CLIC DROIT : LE MANGER", GRIS, 3], ["SHIFT + CLIC DROIT : LE POSER", GRIS, 3]]);
+  bulle(img, w, 22, 24, [[HIE.nom, AQUA, 4], ["FRUIT DU DEMON : LA GLACE", GRIS, 3], ["CLIC DROIT : LE MANGER", GRIS, 3], ["ACCROUPI + CLIC DROIT : LE POSER", GRIS, 3]]);
+  bulle(img, w, 22, 196, [[MAGU.nom, OR, 4], ["FRUIT DU DEMON : LA LAVE", GRIS, 3], ["CLIC DROIT : LE MANGER", GRIS, 3], ["ACCROUPI + CLIC DROIT : LE POSER", GRIS, 3]]);
   barre(img, w, 20, 382, 80, [EPEE_IC, HIE.icone, MAGU.icone, null, null], 1);
   legende(sc, "EN 1080P : 64X64, PIXEL POUR PIXEL");
 }
@@ -340,7 +340,7 @@ function poseProche(sc) {
   table(sc, -24, -12, 24, 12);
   fruitPose(sc, HIE, [-17, 16, -8], 0.2);
   fruitPose(sc, MAGU, [1, 16, -8], -0.25);
-  legende(sc, "SHIFT + CLIC DROIT : POSE EN 3D");
+  legende(sc, "ACCROUPI + CLIC DROIT : POSE EN 3D");
 }
 
 function devantLesGens(sc) {
@@ -453,7 +453,7 @@ function entete(img, W) {
   rect(img, W, 30, 310, W - 30, 313, [200, 200, 210]);
   [
     "INTROUVABLE : AUCUN COFFRE, AUCUNE RECETTE, AUCUN MARCHAND. SEUL L'HOTE LES DONNE",
-    "SHIFT + CLIC DROIT SUR UN BLOC : IL SE POSE EN 3D (SUR UNE TABLE). CLIC DROIT DESSUS : ON LE REPREND",
+    "ACCROUPI + CLIC DROIT SUR UN BLOC : IL SE POSE EN 3D (SUR UNE TABLE). CLIC DROIT DESSUS : ON LE REPREND",
     "CLIC DROIT MAINTENU : ON LE MANGE. 3 S : IL S'ELEVE UN PEU, LE POUVOIR MONTE, PUIS IL EST SUR LA WHITELIST",
   ].forEach((t, k) => ecrireTexte(img, W, t, 30, 332 + k * 34, 3, NOIR));
 }
@@ -550,6 +550,73 @@ function moities() {
   return sortie;
 }
 
+// ------------------------------------------------------------------ la transformation, image par image (en jeu)
+/** Combien d'images pour que la main se change (le gant), puis la moitié du corps ; la dernière est la texture entière. */
+const IMAGES_GANT = 8, IMAGES_MOITIE = 12;
+/** Le front de la transformation, juste ce qui vient d'être pris : blanc de chaleur pour la lave, givre pour la glace. */
+const FRONT = 0.1, CHAUD = [255, 244, 190];
+
+/**
+ * Quand chaque pixel du gant est pris, de 0 (le bout des doigts) à 1 (le haut des veines, vers le coude), avec un
+ * bord qui n'est pas droit. Les éclats de glace (en haut à droite) ne sont pas dedans : le mod les fait pousser.
+ */
+function arriveeGant() {
+  const N = 128, a = new Float32Array(N * N);
+  for (const fin of [0, 1]) {
+    const large = fin ? 3 : 4;
+    // en y vers le haut : le gant de -10,5 (le bout de la main) à -5,5, les veines de -5,5 à -1,5
+    for (const [boite, uv] of [[[0, -10.5, -2.5, large + 1, -5.5, 2.5], [0, fin * 10]], [[0, -5.5, -2, large, -1.5, 2], [fin * 16, 20]]]) {
+      for (const t of texels(boite, uv, 0, 4)) {
+        const [x, y, z] = t.centre;
+        a[t.ty * N + t.tx] = Math.max(0, Math.min(0.999, (y + 10.5) / 9 + 0.1 * bruit(x * 2 + z, z * 2 - y, 340)));
+      }
+    }
+  }
+  return a;
+}
+
+/**
+ * Quand chaque pixel de la moitié du corps est pris : d'abord le bras du fruit, de la main à l'épaule ; puis, de
+ * l'épaule, le buste et la tête, et enfin les jambes jusqu'aux pieds. Le bord ondule.
+ */
+function arriveeMoitie(s, cote) {
+  const N = 256, a = new Float32Array(N * N), epaule = [s * 4.5, 22.5, 0], k = s > 0 ? 0 : 50;
+  for (const [nom, boite, uv1] of PARTIES(false)) {
+    for (const t of texels(boite, uv1, 0, 4)) {
+      const [x, y, z] = t.centre, n = 0.09 * bruit(y * 1.7 + z, x * 1.7 - z, 330 + k);
+      const v = nom === "bras" + cote ? Math.max(0, (y - 14) / 10) * 0.28 : 0.28 + 0.7 * Math.min(1, Math.hypot(x - epaule[0], y - epaule[1], z - epaule[2]) / 24);
+      a[t.ty * N + t.tx] = Math.max(0, Math.min(0.999, v + n));
+    }
+  }
+  return a;
+}
+
+/**
+ * Les images 1 à n-1 de la transformation (la n-ième est la texture entière) : ce qui est arrivé avant k/n est là ; ce
+ * qui vient d'arriver passe du front (qui brille, sur la lueur aussi pour la lave) à sa vraie couleur.
+ */
+function etapes(n, base, lueur, arrivee, glace) {
+  const images = [];
+  for (let k = 1; k < n; k++) {
+    const p = k / n, px = Buffer.alloc(base.length), lu = Buffer.alloc(base.length);
+    for (let i = 0; i < base.length; i += 4) {
+      const a = arrivee[i >> 2];
+      if (a > p || base[i + 3] === 0) continue;
+      const f = (p - a) / FRONT;
+      if (f >= 1) {
+        base.copy(px, i, i, i + 4);
+        if (lueur) lueur.copy(lu, i, i, i + 4);
+        continue;
+      }
+      const vraie = [base[i], base[i + 1], base[i + 2]], c = mix(glace ? BLANC : CHAUD, vraie, f * f).map(Math.round);
+      px.set([...c, glace ? Math.round(255 + (base[i + 3] - 255) * f) : 255], i);
+      if (!glace) lu.set([...c, 255], i);
+    }
+    images.push({ px, lueur: lu });
+  }
+  return images;
+}
+
 /** Une petite texture de tige (16×16) pour la vrille du fruit posé : vert, plus clair d'un côté. */
 function tige() {
   const px = Buffer.alloc(16 * 16 * 4);
@@ -593,6 +660,19 @@ function fichiersDuMod() {
   png(path.join(ASSETS, "textures", "entity", "fruit", "moitie_lave.png"), 256, 256, m.lave.px);
   png(path.join(ASSETS, "textures", "entity", "fruit", "moitie_lave_lueur.png"), 256, 256, m.lave.lueur);
   png(path.join(ASSETS, "textures", "entity", "fruit", "moitie_glace.png"), 256, 256, m.glace.px);
+  // la transformation : textures/entity/fruit/eveil/gant_lave_1.png… (la main), moitie_lave_1.png… (la moitié du corps)
+  const EVEIL = path.join(ASSETS, "textures", "entity", "fruit", "eveil"), ag = arriveeGant();
+  for (const [sorte, glace, base, lueur, s, cote] of [["lave", false, g.lave, g.lueur, 1, "G"], ["glace", true, g.glace, null, -1, "D"]]) {
+    etapes(IMAGES_GANT, base, lueur, ag, glace).forEach((im, k) => {
+      png(path.join(EVEIL, `gant_${sorte}_${k + 1}.png`), 128, 128, im.px);
+      if (!glace) png(path.join(EVEIL, `gant_${sorte}_lueur_${k + 1}.png`), 128, 128, im.lueur);
+    });
+    const mo = m[sorte];
+    etapes(IMAGES_MOITIE, mo.px, glace ? null : mo.lueur, arriveeMoitie(s, cote), glace).forEach((im, k) => {
+      png(path.join(EVEIL, `moitie_${sorte}_${k + 1}.png`), 256, 256, im.px);
+      if (!glace) png(path.join(EVEIL, `moitie_${sorte}_lueur_${k + 1}.png`), 256, 256, im.lueur);
+    });
+  }
   for (const [id, msg] of [["magma", "cabane.magma"], ["givre", "cabane.givre"], ["eau", "cabane.eau"]]) {
     json(path.join(DATA, "damage_type", id + ".json"), { exhaustion: 0.1, message_id: msg, scaling: "never" });
   }

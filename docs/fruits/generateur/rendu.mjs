@@ -1,7 +1,7 @@
 // Maquettes des fruits du démon, éveil 1 : le fruit de la lave (Magu Magu no Mi, celui d'Akainu) et celui de la glace
 // (Hie Hie no Mi, celui d'Aokiji). Touche Éveil : la main gauche devient de la lave, ou la main droite de la glace.
 // Clic gauche : toute arme frappe un peu plus fort et enflamme (ou ralentit). Clic droit : un jet de lave (ou de glace)
-// qui ne laisse rien au sol. Shift : une éruption (ou une ère glaciaire) tout autour. Dans l'eau, les deux perdent un
+// qui ne laisse rien au sol. Accroupi : une éruption (ou une ère glaciaire) tout autour. Dans l'eau, les deux perdent un
 // demi-cœur par seconde, comme du poison.
 // node rendu.mjs → planche-fruits.png
 import path from "node:path";
@@ -142,15 +142,17 @@ function bruit(a, b, k) {
 /**
  * L'éveil 2 : ce texel de la partie nom est-il pris par la lave (ou la glace) ? Le bras du fruit, tout entier ; sa
  * jambe, presque ; le buste et la tête, avec un bord qui ondule et déborde du milieu par endroits ; quelques coulées
- * de l'autre côté. Le visage reste libre (seul le bord de la joue et le bas de la mâchoire, du côté du fruit).
+ * de l'autre côté. Le visage en prend un peu (pas trop, sinon il ne se voit plus ; rien, ça ferait un casque) : le bord,
+ * la joue et le coin du front du côté du fruit, et quelques veines ; les deux yeux, le nez et la bouche restent libres.
  * m.bras : la lave ne tient encore que le bras, et mord l'épaule.
  */
 function couvert(m, s, cote, nom, t) {
   const plein = prisDedans(m, s, cote, nom, t);
   if (plein || m.bras) return plein ? 1 : 0;
-  // des veines fines (des fissures de lave, du givre) qui dépassent le bord et rampent sur la peau
+  // des veines fines (des fissures de lave, du givre) qui dépassent le bord et rampent sur la peau ; sur le visage,
+  // seulement du côté du fruit, et jamais sur les yeux
   const [x, y, z] = t.centre, k = s > 0 ? 0 : 50;
-  if (nom === "tete" && t.face === "devant") return 0;
+  if (nom === "tete" && t.face === "devant" && (s * x < 0.4 || Math.abs(y - 27.5) < 0.9)) return 0;
   return Math.abs(bruit(y * 1.3 + z, x * 1.3 - z, 320 + k)) < 0.035 && s * x > -2.2 ? 2 : 0;
 }
 
@@ -167,7 +169,12 @@ function prisDedans(m, s, cote, nom, t) {
       return (sx + bord > 0 && ile > -0.5) || ile > 0.6;
     }
     case "tete":
-      if (t.face === "devant") return (sx > 3 && bruit(y, x, 302) > -0.3) || (y < 25.6 && sx > 1.2 + 1.5 * bruit(y, x, 303));
+      if (t.face === "devant") {
+        // la rangée des yeux (y de 27 à 28) ne se prend qu'au tout bord
+        if (sx > 2.9 + 0.6 * bruit(y * 1.3, x * 1.3, 302)) return true;
+        if (y < 26.9 && sx > 1.3 + 1.3 * bruit(y, x, 303)) return true;
+        return y > 29.2 && sx > 1.5 + 1.6 * bruit(y + 2, x, 315);
+      }
       return sx + 1.6 * Math.sin(y * 1.1 + z * 0.7 + (s > 0 ? 0 : 1.7)) + 3 * bruit(y + z, z - x, 304 + (s > 0 ? 0 : 50)) > -0.4;
     case "jambe" + cote: return y + 7 * bruit(z + x * 0.7, y * 0.7, 305) > 3 && bruit(y, z - x, 314) > -0.55;
     case "jambe" + autre: return y > 6 + 4 * bruit(z, y, 306) && sx + 4.5 * bruit(z + x, y, 307) > 0.6;
@@ -562,7 +569,7 @@ function tirGlace(sc) {
   legende(sc, "12 BLOCS, 6 DEGATS, TRES LENT 4 S. RIEN AU SOL");
 }
 
-/** La pose du shift : un grand pas, le buste en avant, la main du fruit plaquée au sol. */
+/** La pose de l'accroupi : un grand pas, le buste en avant, la main du fruit plaquée au sol. */
 const POSE_SOL = { decale: [0, -5, 0], buste: 0.9, jambeD: -0.85, jambeG: 0.85, tete: [-0.75] };
 
 function eruption(sc) {
@@ -717,7 +724,7 @@ function haut(img, W) {
       "CLIC GAUCHE : TOUTE ARME +2 DEGATS, ENFLAMME 4 S",
       "CLIC DROIT : JET DE LAVE, 12 BLOCS, 6 DEGATS",
       "    LA CIBLE BRULE 5 S. RECHARGE 6 S",
-      "SHIFT : ERUPTION, 5 BLOCS AUTOUR, 8 DEGATS",
+      "ACCROUPI : ERUPTION, 5 BLOCS AUTOUR, 8 DEGATS",
       "    PROJETTE EN L'AIR ET BRULE. RECHARGE 20 S",
       "TOUJOURS : LE FEU ET LA LAVE NE LUI FONT RIEN",
     ]],
@@ -726,7 +733,7 @@ function haut(img, W) {
       "CLIC GAUCHE : TOUTE ARME +2 DEGATS, RALENTIT 3 S",
       "CLIC DROIT : JET DE GLACE, 12 BLOCS, 6 DEGATS",
       "    LA CIBLE EST TRES LENTE 4 S. RECHARGE 6 S",
-      "SHIFT : ERE GLACIAIRE, 5 BLOCS AUTOUR, 6 DEGATS",
+      "ACCROUPI : ERE GLACIAIRE, 5 BLOCS AUTOUR, 6 DEGATS",
       "    GELE SUR PLACE 2 S. RECHARGE 20 S",
       "EVEILLE : MARCHE SUR L'EAU (ELLE GELE, PUIS FOND)",
     ]],
@@ -753,15 +760,15 @@ const vues = [
   ["CLIC GAUCHE : RALENTIT", coupGlace, { ...ACTION, echelle: 6.6, lacet: 64, centre: [0, 13, 18] }],
   ["CLIC DROIT : JET DE LAVE", tirLave, { ...ACTION, echelle: 4.4, lacet: -64, centre: [0, 12, 34] }],
   ["CLIC DROIT : JET DE GLACE", tirGlace, { ...ACTION, echelle: 4.4, lacet: 64, centre: [0, 12, 34] }],
-  ["SHIFT : ERUPTION", eruption, { lacet: -30, tangage: 30, echelle: 2.9, pied: 290, centre: [0, 10, 0] }],
-  ["SHIFT : ERE GLACIAIRE", ereGlaciaire, { lacet: 30, tangage: 30, echelle: 2.9, pied: 290, centre: [0, 10, 0] }],
+  ["ACCROUPI : ERUPTION", eruption, { lacet: -30, tangage: 30, echelle: 2.9, pied: 290, centre: [0, 10, 0] }],
+  ["ACCROUPI : ERE GLACIAIRE", ereGlaciaire, { lacet: 30, tangage: 30, echelle: 2.9, pied: 290, centre: [0, 10, 0] }],
   ["DANS L'EAU : POISON", dansLEau, { lacet: -16, tangage: 14, echelle: 4.6, pied: 330, centre: [0, -4, 0] }],
   ["PASSIFS", passifs, { lacet: -10, tangage: 22, echelle: 3.2, pied: 320, centre: [0, 4, 0] }],
 ];
 
 // les briques servent aussi à la planche des fruits eux-mêmes (objets.mjs)
 export { ajoute, sous, fois, rotX, rotY, TOUR, ID, brille, pave, cube, pointe, flamme, cristal, perso, brule, givre, sol, legende, regarde, epee, EPEE, fissure,
-  magma, glace, jetLave, jetGlace, croissant, aretes, bain, FACES, couvert, matiere,
+  magma, glace, jetLave, jetGlace, croissant, aretes, bain, FACES, couvert, matiere, bruit,
   CROUTE, CROUTE_R, LAVE_R, LAVE_O, LAVE_J, GLACE, GLACE_C, BLANC, FUMEE, HERBE, TERRE, FOND, SKINS, PEAU_LAVE, PEAU_GLACE, STEVE, LAVE, GEL };
 
 const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

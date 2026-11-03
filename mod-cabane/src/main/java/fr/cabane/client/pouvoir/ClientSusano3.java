@@ -686,8 +686,11 @@ public final class ClientSusano3 {
 
     // ================================================================ la flèche qui vole, et les flammes noires
 
-    /** Une flèche en vol : d'où elle part (dans le monde), vers quoi (une entité, ou un point), et quand elle est partie. */
-    private record Fleche(Vec3 depart, int cible, Vec3 point, long debut) {
+    /**
+     * Une flèche en vol : d'où elle part (dans le monde), vers quoi (une entité, ou un point), quand elle est partie, sa
+     * taille (celle du chevalier) et ses couleurs (la grande flèche en flammes noires, bordée de la couleur du Susano).
+     */
+    private record Fleche(Vec3 depart, int cible, Vec3 point, long debut, double taille, GrandeFleche.Teintes teintes) {
     }
 
     private static final List<Fleche> FLECHES = new ArrayList<>();
@@ -705,7 +708,8 @@ public final class ClientSusano3 {
     }
     /** Ce qui brûle de flammes noires : l'entité → jusqu'à quand (temps réel). */
     private static final Map<Integer, Long> FEUX = new HashMap<>();
-    private static final double VOL = 0.22;
+    /** La flèche met 0,32 s à arriver (assez pour qu'on la voie filer). */
+    private static final double VOL = 0.32;
 
     /** Le serveur dit qu'une entité brûle (ou ne brûle plus). */
     public static void flammes(Susano3.Flammes p) {
@@ -717,14 +721,14 @@ public final class ClientSusano3 {
     }
 
     /** La flèche part de l'arc du chevalier de ce joueur, vers sa cible (ou droit devant). */
-    static void lancer(Player joueur, int cible, float corpsLacet, float taille) {
+    static void lancer(Player joueur, int cible, float corpsLacet, float taille, Couleur couleur) {
         float k = 0.72F + 0.28F * taille;
         double[] avant = norm(sub(ARC_G.w(), ARC_D.w()));
         double[] local = mul(add(ARC_G.w(), mul(avant, 2.4)), k);
         double a = -corpsLacet * Mth.DEG_TO_RAD;
         Vec3 depart = joueur.position().add(local[0] * Math.cos(a) + local[2] * Math.sin(a), local[1], -local[0] * Math.sin(a) + local[2] * Math.cos(a));
         Vec3 point = joueur.getEyePosition().add(joueur.getLookAngle().scale(48));
-        FLECHES.add(new Fleche(depart, cible, point, System.nanoTime()));
+        FLECHES.add(new Fleche(depart, cible, point, System.nanoTime(), 1.3 * k, GrandeFleche.feuNoir(melange(couleur, 0.35F))));
     }
 
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
@@ -745,7 +749,8 @@ public final class ClientSusano3 {
             double temps = System.nanoTime() / 1e9;
             Vector3f droite = new Vector3f(1, 0, 0).rotate(camera.rotation()), haut = new Vector3f(0, 1, 0);
             long maintenant = System.nanoTime();
-            // les flèches en vol : une hampe claire, et des flammes noires à la pointe
+            // les flèches en vol : la grande flèche (docs/fruits/planche-attaques2.png), en flammes noires bordées de la
+            // couleur du Susano, et des langues de feu noir qui lèchent sa hampe vers l'arrière
             for (Iterator<Fleche> it = FLECHES.iterator(); it.hasNext(); ) {
                 Fleche f = it.next();
                 double k = (maintenant - f.debut()) / 1e9 / VOL;
@@ -755,11 +760,17 @@ public final class ClientSusano3 {
                     it.remove();
                     continue;
                 }
-                Vec3 tete = f.depart().lerp(fin, k), queue = f.depart().lerp(fin, Math.max(0, k - 0.12));
-                tige(c, m, queue.subtract(cam), tete.subtract(cam), droite, new float[] {0.85F, 0.8F, 1F}, 0.9F);
-                for (int i = 0; i < 6; i++) {
-                    Vec3 p = tete.subtract(fin.subtract(f.depart()).normalize().scale(i * 0.25)).subtract(cam);
-                    langue(c, m, p, droite, haut, 0.45 - i * 0.05, temps * 9 + i);
+                Vec3 tete = f.depart().lerp(fin, k), dir = fin.subtract(f.depart()).normalize();
+                double visible = 1 + tete.distanceTo(f.depart());
+                GrandeFleche.dessiner(c, m, tete.subtract(cam), dir, visible, f.taille(), temps, f.teintes());
+                double l = Math.min(visible, GrandeFleche.LONGUEUR * f.taille());
+                for (int i = 0; i < 9; i++) {
+                    double z = (0.3 + i * 0.55) * f.taille();
+                    if (z > l) {
+                        break;
+                    }
+                    Vec3 p = tete.subtract(dir.scale(z)).subtract(cam);
+                    langue(c, m, p, droite, haut, (0.5 - i * 0.035) * f.taille(), temps * 9 + i);
                 }
             }
             // les vagues du grand coup : un anneau de flammes noires qui s'élargit autour de lui, puis un champ de feu noir

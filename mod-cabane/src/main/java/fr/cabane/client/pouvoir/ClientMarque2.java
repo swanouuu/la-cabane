@@ -540,10 +540,10 @@ public final class ClientMarque2 {
         if (e.niveau() >= 2) {
             double chidori = ClientChidori.recharge(), envol = rechargeEnvol();
             lignes = new String[][]{
-                    {"Clic droit", chidori > 0 ? String.format("Chidori (%.0f s)", Math.ceil(chidori)) : "Chidori"},
-                    {"Accroupi au sol", envol > 0 ? String.format("Envol (%.0f s)", Math.ceil(envol)) : "Envol"},
+                    {Clavier.droite(), chidori > 0 ? String.format("Chidori (%.0f s)", Math.ceil(chidori)) : "Chidori"},
+                    {Clavier.accroupi() + " au sol", envol > 0 ? String.format("Envol (%.0f s)", Math.ceil(envol)) : "Envol"},
                     {"En l'air", "Planer"},
-                    {"Accroupi en l'air", "Piquer"},
+                    {Clavier.accroupi() + " en l'air", "Piquer"},
                     {eveil, "Rendormir"}};
             grises = new boolean[]{chidori > 0, envol > 0, false, false, false};
         } else {

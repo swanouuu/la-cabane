@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
-            Espionne.NOM, Fruit.LAVE, Fruit.GLACE, Ichibi.NOM);
+            Espionne.NOM, Fruit.LAVE, Fruit.LAVE2, Fruit.GLACE, Fruit.GLACE2, Ichibi.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -164,7 +164,7 @@ public final class Pouvoirs {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
                 return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3
-                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.est(pouvoir) ? 2 : 1;
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) ? 2 : 1;
             }
         }
 
@@ -845,7 +845,7 @@ public final class Pouvoirs {
             var joueur = Commands.argument("joueur", EntityArgument.player());
             if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || Minato.est(pouvoir) || Fruit.est(pouvoir) || Ichibi.est(pouvoir)) {
                 Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Minato.est(pouvoir) ? Couleur.JAUNE
-                        : pouvoir.equals(Fruit.LAVE) || Ichibi.est(pouvoir) ? Couleur.ORANGE : pouvoir.equals(Fruit.GLACE) ? Couleur.CYAN : Couleur.VIOLET;
+                        : Fruit.lave(pouvoir) || Ichibi.est(pouvoir) ? Couleur.ORANGE : Fruit.glace(pouvoir) ? Couleur.CYAN : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else if (Espionne.est(pouvoir)) {
                 // les espionnes : vert (Sam), rouge (Clover) ou jaune (Alex), rouge par défaut

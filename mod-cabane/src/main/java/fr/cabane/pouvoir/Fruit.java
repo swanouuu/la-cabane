@@ -95,24 +95,26 @@ import org.joml.Vector3f;
 /**
  * Les fruits du démon, d'après les maquettes de docs/fruits : le Magu Magu no Mi (celui d'Akainu, liste blanche
  * « lave ») et le Hie Hie no Mi (celui d'Aokiji, « glace »). On ne les trouve nulle part (ni coffre, ni recette, ni
- * marchand) : seul l'hôte les donne. Shift + clic droit sur un bloc le pose, un fruit en 3D pour le montrer ; clic droit
- * dessus le reprend ; clic droit maintenu le mange : le pouvoir monte en lui pendant 3 s, et il est mis tout seul sur
- * la liste blanche du fruit. Ensuite, toujours : l'eau lui fait perdre un demi-cœur par seconde, comme du poison ; et
- * le feu et la lave ne font rien à celui de la lave. Éveillé (touche Éveil, 2 minutes puis 1 minute de repos comme les
- * autres), sa main gauche devient de la lave (ou la droite, de la glace ; voir {@link ClientFruit}) :
+ * marchand) : seul l'hôte les donne. Accroupi + clic droit sur un bloc le pose, un fruit en 3D pour le montrer ; clic
+ * droit dessus le reprend ; clic droit maintenu le mange : le pouvoir monte en lui pendant 3 s, et il est mis tout seul
+ * sur la liste blanche du fruit (niveau 1 ; « lave2 » et « glace2 », avec le niveau 2, seul l'hôte les donne). Ensuite,
+ * toujours : l'eau lui fait perdre un demi-cœur par seconde, comme du poison ; et le feu et la lave ne font rien à celui
+ * de la lave. Éveillé (touche Éveil, 2 minutes puis 2 minutes de repos), sa main gauche se change en lave sous nos yeux
+ * (ou la droite, en glace ; voir {@link ClientFruit}) :
  * <ul>
  * <li>celui de la glace marche sur l'eau : elle gèle sous ses pas, et refond 5 s après (endormi, il coule comme
  * l'autre) ;</li>
  * <li>clic gauche : toute arme frappe 1 cœur de plus, et enflamme 4 s (ou ralentit 3 s) ;</li>
  * <li>clic droit : un jet de lave (ou de glace) sur 12 blocs, 3 cœurs, la cible brûle 5 s (ou est très lente 4 s) ;</li>
- * <li>shift : l'éruption, 5 blocs autour, 4 cœurs, on vole en l'air et on brûle ; ou l'ère glaciaire, 3 cœurs, et on
- * reste gelé sur place 2 s.</li>
+ * <li>s'accroupir : l'éruption, 5 blocs autour, 4 cœurs, on vole en l'air et on brûle ; ou l'ère glaciaire, 3 cœurs,
+ * et on reste gelé sur place 2 s.</li>
  * </ul>
- * Encore la touche Éveil : le niveau 2 (docs/fruits/planche-niveau2.png). La moitié de son corps devient de la lave
- * (ou de la glace), armure comprise ; le clic gauche frappe 2 cœurs de plus et éclabousse (ou le givre s'étend) à 2
- * blocs ; le clic droit lance un grand poing de magma (ou cinq lances de glace en éventail) ; le shift fait pleuvoir des
- * météores là où il vise (ou lance un faisan de glace géant) ; qui le frappe prend feu (ou gèle). Ces tirs volent pour
- * de vrai, tick après tick ({@link Tir}).
+ * Sur « lave2 » ou « glace2 », encore la touche Éveil : le niveau 2 (docs/fruits/planche-niveau2.png), 1 minute de
+ * repos ensuite. La lave (ou la glace) remonte le bras et gagne la moitié de son corps, armure comprise ; le clic gauche
+ * frappe 2 cœurs de plus et éclabousse (ou le givre s'étend) à 2 blocs ; le clic droit lance un grand poing de magma
+ * en flammes, trois blocs de large (ou une grande flèche de glace qui traverse ; docs/fruits/planche-attaques2.png) ;
+ * accroupi, il fait pleuvoir des météores là où il vise (ou lance un faisan de glace géant) ; qui le frappe prend feu
+ * (ou gèle). Ces tirs volent pour de vrai, tick après tick ({@link Tir}).
  * <p>
  * Rien ne reste au sol : les jets, les geysers et les pics de glace ne sont que dessinés.
  */
@@ -120,6 +122,9 @@ import org.joml.Vector3f;
 public final class Fruit {
     public static final String LAVE = "lave";
     public static final String GLACE = "glace";
+    /** Les mêmes avec le niveau 2 : seul l'hôte les donne (/pouvoir) ; manger le fruit ne met que sur « lave » ou « glace ». */
+    public static final String LAVE2 = "lave2";
+    public static final String GLACE2 = "glace2";
 
     public static final ResourceLocation MAGU = Cabane.id("magu_magu_no_mi");
     public static final ResourceLocation HIE = Cabane.id("hie_hie_no_mi");
@@ -136,22 +141,27 @@ public final class Fruit {
     /** Le pouvoir monte en lui pendant 3 s quand il mange le fruit. */
     public static final int DUREE_REPAS = 60;
 
-    /** L'éveil 2 : le grand poing (ou les lances) et la pluie de météores (ou le faisan), et ce qu'ils font. */
+    /** L'éveil 2 : le grand poing (ou la grande flèche) et la pluie de météores (ou le faisan), et ce qu'ils font. */
     public static final int RECHARGE_JET_2 = 8 * 20;
     public static final int RECHARGE_CHOC_2 = 25 * 20;
     private static final float BONUS_ARME_2 = 4;
     private static final float ECLABOUSSURE = 3;
     private static final float DEGATS_POING = 14;
     private static final float DEGATS_EXPLOSION = 4;
-    private static final float DEGATS_LANCE = 6;
+    private static final double RAYON_EXPLOSION = 3.5;
+    /** La grande flèche : 14 au premier, gelé sur place 1,5 s ; elle le traverse, 6 aux suivants. */
+    private static final float DEGATS_FLECHE = 14;
+    private static final float DEGATS_FLECHE_SUITE = 6;
+    private static final int GEL_FLECHE = 30;
+    private static final double PORTEE_FLECHE = 30;
     private static final float DEGATS_METEORE = 5;
     private static final float DEGATS_FAISAN = 14;
     private static final double PORTEE_2 = 24;
     private static final double PORTEE_PLUIE = 30;
     public static final int GEL_FAISAN = 60;
-    /** Les sortes de tirs de l'éveil 2 : le grand poing, une lance, une météore, le faisan. */
+    /** Les sortes de tirs de l'éveil 2 : le grand poing, la grande flèche, une météore, le faisan. */
     public static final int POING = 0;
-    public static final int LANCE = 1;
+    public static final int FLECHE = 1;
     public static final int METEORE = 2;
     public static final int FAISAN = 3;
     /** La sorte d'onde de la pluie de météores (la zone et le nuage, côté client). */
@@ -162,10 +172,24 @@ public final class Fruit {
     private static final ResourceKey<DamageType> EAU = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("eau"));
 
     public static boolean est(String pouvoir) {
-        return LAVE.equals(pouvoir) || GLACE.equals(pouvoir);
+        return lave(pouvoir) || glace(pouvoir);
     }
 
-    /** Qui a son fruit éveillé en ce moment (et à quel niveau), et quand son jet et son shift seront prêts (ticks du serveur). */
+    /** La glace, au niveau 1 ou 2 (sinon, c'est la lave). */
+    public static boolean glace(String pouvoir) {
+        return GLACE.equals(pouvoir) || GLACE2.equals(pouvoir);
+    }
+
+    public static boolean lave(String pouvoir) {
+        return LAVE.equals(pouvoir) || LAVE2.equals(pouvoir);
+    }
+
+    /** Les listes qui vont jusqu'au niveau 2 ; « lave » et « glace » (ce que donne le fruit) restent au niveau 1. */
+    public static boolean deuxieme(String pouvoir) {
+        return LAVE2.equals(pouvoir) || GLACE2.equals(pouvoir);
+    }
+
+    /** Qui a son fruit éveillé en ce moment (et à quel niveau), et quand son jet et son coup accroupi seront prêts (ticks du serveur). */
     private static final Map<UUID, Integer> EVEILLES = new HashMap<>();
     private static final Map<UUID, Integer> PRET_JET = new HashMap<>();
     private static final Map<UUID, Integer> PRET_CHOC = new HashMap<>();
@@ -246,7 +270,9 @@ public final class Fruit {
         public void appendHoverText(ItemStack objet, Item.TooltipContext contexte, List<Component> lignes, TooltipFlag options) {
             lignes.add(Component.literal(GLACE.equals(sorte) ? "Fruit du démon : la glace" : "Fruit du démon : la lave").withStyle(ChatFormatting.GRAY));
             lignes.add(Component.literal("Clic droit maintenu : le manger").withStyle(ChatFormatting.DARK_GRAY));
-            lignes.add(Component.literal("Shift + clic droit : le poser").withStyle(ChatFormatting.DARK_GRAY));
+            // les touches de chacun (s'accroupir n'est pas forcément Maj)
+            lignes.add(Component.empty().append(Component.keybind("key.sneak")).append(" + ").append(Component.keybind("key.use"))
+                    .append(" : le poser").withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 
@@ -483,40 +509,43 @@ public final class Fruit {
 
     // ================================================================ s'éveiller, s'endormir
 
+    /**
+     * Il s'éveille (1 : la main, 2 : la moitié du corps). La matière le gagne sous les yeux de tous, à chaque fois :
+     * ClientFruit la dessine, avec l'éclat et le son de la fin ; ici, le son du début.
+     */
     static void eveiller(ServerPlayer joueur, int niveau) {
         EVEILLES.put(joueur.getUUID(), niveau);
-        boolean glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
-        ServerLevel monde = joueur.serverLevel();
-        Vec3 main = main(joueur, glace);
+        boolean glace = glace(Pouvoirs.pouvoir(joueur));
         if (niveau >= 2) {
-            // la moitié du corps change d'un coup : une gerbe tout autour de lui
-            monde.sendParticles(glace ? ParticleTypes.SNOWFLAKE : ParticleTypes.FLAME, joueur.getX(), joueur.getY(0.6), joueur.getZ(), 70, 0.5, 0.8, 0.5, 0.08);
             if (glace) {
-                son(joueur, SoundEvents.GLASS_BREAK, 1.2F, 0.5F);
                 son(joueur, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.4F, 0.5F);
                 son(joueur, SoundEvents.POWDER_SNOW_BREAK, 1.2F, 0.5F);
             } else {
-                monde.sendParticles(ParticleTypes.LAVA, joueur.getX(), joueur.getY(0.6), joueur.getZ(), 16, 0.4, 0.6, 0.4, 0);
-                son(joueur, SoundEvents.LAVA_EXTINGUISH, 1.2F, 0.5F);
+                son(joueur, SoundEvents.LAVA_AMBIENT, 1.4F, 0.6F);
                 son(joueur, SoundEvents.BLAZE_SHOOT, 1F, 0.4F);
-                son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.4F, 1.3F);
             }
             return;
         }
         if (glace) {
-            monde.sendParticles(ParticleTypes.SNOWFLAKE, main.x, main.y, main.z, 24, 0.25, 0.25, 0.25, 0.04);
-            son(joueur, SoundEvents.GLASS_BREAK, 0.8F, 1.5F);
             son(joueur, SoundEvents.POWDER_SNOW_PLACE, 1F, 0.7F);
+            son(joueur, SoundEvents.AMETHYST_BLOCK_CHIME, 1.2F, 0.8F);
         } else {
-            monde.sendParticles(ParticleTypes.FLAME, main.x, main.y, main.z, 20, 0.2, 0.25, 0.2, 0.03);
-            monde.sendParticles(ParticleTypes.LAVA, main.x, main.y, main.z, 6, 0.15, 0.15, 0.15, 0);
             son(joueur, SoundEvents.FIRECHARGE_USE, 0.9F, 0.7F);
             son(joueur, SoundEvents.LAVA_AMBIENT, 1F, 1F);
         }
     }
 
     static void endormir(ServerPlayer joueur) {
-        EVEILLES.remove(joueur.getUUID());
+        if (EVEILLES.remove(joueur.getUUID()) != null && joueur.isAlive()) {
+            // la lave refroidit en sifflant, la glace se fend et fond (ClientFruit la montre se retirer jusqu'à la main)
+            if (glace(Pouvoirs.pouvoir(joueur))) {
+                son(joueur, SoundEvents.GLASS_BREAK, 0.7F, 1.4F);
+                son(joueur, SoundEvents.POINTED_DRIPSTONE_DRIP_WATER, 1.2F, 0.8F);
+            } else {
+                son(joueur, SoundEvents.FIRE_EXTINGUISH, 0.8F, 0.8F);
+                son(joueur, SoundEvents.LAVA_EXTINGUISH, 1F, 0.7F);
+            }
+        }
         // le repos (1 ou 2 minutes) dure plus que les recharges : au réveil, tout est prêt
         PRET_JET.remove(joueur.getUUID());
         PRET_CHOC.remove(joueur.getUUID());
@@ -570,7 +599,7 @@ public final class Fruit {
         if (maintenant < PRET_JET.getOrDefault(joueur.getUUID(), 0)) {
             return;
         }
-        boolean glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
+        boolean glace = glace(Pouvoirs.pouvoir(joueur));
         if (niveau(joueur) >= 2) {
             PRET_JET.put(joueur.getUUID(), maintenant + RECHARGE_JET_2);
             jet2(joueur, glace);
@@ -606,7 +635,7 @@ public final class Fruit {
         }
     }
 
-    // ================================================================ shift : l'éruption, l'ère glaciaire
+    // ================================================================ accroupi : l'éruption, l'ère glaciaire
 
     private static void choc(ServerPlayer joueur) {
         if (!eveille(joueur)) {
@@ -616,7 +645,7 @@ public final class Fruit {
         if (maintenant < PRET_CHOC.getOrDefault(joueur.getUUID(), 0)) {
             return;
         }
-        boolean glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
+        boolean glace = glace(Pouvoirs.pouvoir(joueur));
         if (niveau(joueur) >= 2) {
             PRET_CHOC.put(joueur.getUUID(), maintenant + RECHARGE_CHOC_2);
             choc2(joueur, glace);
@@ -694,8 +723,8 @@ public final class Fruit {
 
     private static final List<Tir> TIRS = new ArrayList<>();
     private static int prochainTir;
-    /** La largeur de chaque sorte de tir : ce qui passe à moins de ça est touché. */
-    private static final double[] LARGEURS = {1.3, 0.6, 0.5, 1.8};
+    /** La largeur de chaque sorte de tir : ce qui passe à moins de ça est touché (le poing fait trois blocs de large). */
+    private static final double[] LARGEURS = {1.9, 0.8, 0.5, 1.8};
 
     /** Une pluie de météores : autour de quel point, depuis quand, et combien de fois chaque cible a été touchée. */
     private record Pluie(UUID tireur, ServerLevel monde, Vec3 centre, int debut, Map<Integer, Integer> coups) {
@@ -709,25 +738,24 @@ public final class Fruit {
         envoyer(t.monde, pos, new Vol(t.id, sorte, v(pos), v(t.dir), (float) vitesse, (float) portee));
     }
 
-    /** Clic droit, au niveau 2 : le grand poing de magma, ou cinq lances de glace en éventail. */
+    /** Clic droit, au niveau 2 : le grand poing de magma en flammes, ou la grande flèche de glace. */
     private static void jet2(ServerPlayer joueur, boolean glace) {
         Vec3 regard = joueur.getLookAngle();
         if (glace) {
-            for (int k = -2; k <= 2; k++) {
-                float a = k * 12 * Mth.DEG_TO_RAD;
-                Vec3 dir = new Vec3(regard.x * Mth.cos(a) - regard.z * Mth.sin(a), regard.y, regard.x * Mth.sin(a) + regard.z * Mth.cos(a));
-                lancer(joueur, LANCE, main(joueur, true), dir, 2, PORTEE_2, null);
-            }
+            lancer(joueur, FLECHE, main(joueur, true).add(regard), regard, 2.2, PORTEE_FLECHE, null);
+            son(joueur, SoundEvents.CROSSBOW_SHOOT, 1.4F, 0.5F);
             son(joueur, SoundEvents.GLASS_BREAK, 1F, 1.3F);
             son(joueur, SoundEvents.SNOW_GOLEM_SHOOT, 1.2F, 0.6F);
+            son(joueur, SoundEvents.TRIDENT_THROW.value(), 1.2F, 0.7F);
         } else {
-            lancer(joueur, POING, main(joueur, false).add(regard), regard, 1.6, PORTEE_2, null);
-            son(joueur, SoundEvents.BLAZE_SHOOT, 1.2F, 0.5F);
-            son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.5F, 1.4F);
+            lancer(joueur, POING, main(joueur, false).add(regard.scale(1.5)), regard, 1.6, PORTEE_2, null);
+            son(joueur, SoundEvents.BLAZE_SHOOT, 1.4F, 0.4F);
+            son(joueur, SoundEvents.FIRECHARGE_USE, 1.2F, 0.5F);
+            son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.6F, 1.4F);
         }
     }
 
-    /** Shift, au niveau 2 : la pluie de météores là où il vise, ou le faisan de glace droit devant. */
+    /** Accroupi, au niveau 2 : la pluie de météores là où il vise, ou le faisan de glace droit devant. */
     private static void choc2(ServerPlayer joueur, boolean glace) {
         ServerLevel monde = joueur.serverLevel();
         Vec3 regard = joueur.getLookAngle();
@@ -815,14 +843,21 @@ public final class Fruit {
         }
     }
 
-    /** Ce que fait un tir à ce qu'il touche ; vrai s'il s'arrête là (le faisan, lui, traverse tout). */
+    /** Ce que fait un tir à ce qu'il touche ; vrai s'il s'arrête là (la flèche et le faisan traversent tout). */
     private static boolean toucher(ServerPlayer tireur, Tir t, LivingEntity cible) {
         switch (t.sorte) {
-            case LANCE -> {
-                blesser(cible, source(tireur, GIVRE), DEGATS_LANCE);
-                cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
+            case FLECHE -> {
+                // le premier est pris dans la glace ; les suivants, givrés et très lents
+                boolean premier = t.touches.size() == 1;
+                blesser(cible, source(tireur, GIVRE), premier ? DEGATS_FLECHE : DEGATS_FLECHE_SUITE);
+                if (premier) {
+                    geler(cible, GEL_FLECHE);
+                } else {
+                    cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
+                }
                 givrer(cible);
-                return true;
+                t.monde.playSound(null, cible.getX(), cible.getY(), cible.getZ(), SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.2F, premier ? 0.7F : 1.1F);
+                return false;
             }
             case FAISAN -> {
                 blesser(cible, source(tireur, GIVRE), DEGATS_FAISAN);
@@ -848,7 +883,8 @@ public final class Fruit {
         if (t.sorte == POING) {
             t.monde.playSound(null, p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.4F, 0.8F);
             t.monde.playSound(null, p.x, p.y, p.z, SoundEvents.LAVA_EXTINGUISH, SoundSource.PLAYERS, 1.2F, 0.6F);
-            for (LivingEntity e : t.monde.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(2.5), e -> Pouvoirs.cible(tireur, e) && !e.isSpectator())) {
+            for (LivingEntity e : t.monde.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(RAYON_EXPLOSION),
+                    e -> Pouvoirs.cible(tireur, e) && !e.isSpectator() && e.getBoundingBox().getCenter().distanceTo(p) < RAYON_EXPLOSION + 0.5)) {
                 boolean directe = t.touches.contains(e.getId());
                 blesser(e, source(tireur, MAGMA), directe ? DEGATS_POING : DEGATS_EXPLOSION);
                 e.igniteForSeconds(directe ? 6 : 3);
@@ -889,7 +925,7 @@ public final class Fruit {
             if (joueur.isInWater() && !joueur.isCreative() && maintenant % 20 == 0) {
                 joueur.hurt(new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(EAU)), 1);
             }
-            if (LAVE.equals(pouvoir)) {
+            if (lave(pouvoir)) {
                 // hors de la lave, il ne reste pas en feu (ça ne lui fait rien, mais on ne le montre pas)
                 if (joueur.isOnFire() && !joueur.isInLava()) {
                     joueur.clearFire();
@@ -976,14 +1012,14 @@ public final class Fruit {
         DamageSource source = event.getSource();
         if (event.getEntity() instanceof ServerPlayer victime) {
             String pouvoir = Pouvoirs.pouvoir(victime);
-            if (LAVE.equals(pouvoir) && source.is(DamageTypeTags.IS_FIRE) || GLACE.equals(pouvoir) && source.is(DamageTypeTags.IS_FREEZING)) {
+            if (lave(pouvoir) && source.is(DamageTypeTags.IS_FIRE) || glace(pouvoir) && source.is(DamageTypeTags.IS_FREEZING)) {
                 event.setCanceled(true);
                 return;
             }
             // l'éveil 2 : qui le frappe de près prend feu (ou gèle)
             if (!dansPouvoir && niveau(victime) >= 2 && source.getEntity() instanceof LivingEntity agresseur && source.getDirectEntity() == agresseur
                     && agresseur != victime && agresseur.distanceTo(victime) < 6) {
-                if (LAVE.equals(pouvoir)) {
+                if (lave(pouvoir)) {
                     agresseur.igniteForSeconds(3);
                 } else {
                     agresseur.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1));
@@ -996,7 +1032,7 @@ public final class Fruit {
             return;
         }
         LivingEntity cible = event.getEntity();
-        boolean fort = niveau(joueur) >= 2, glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
+        boolean fort = niveau(joueur) >= 2, glace = glace(Pouvoirs.pouvoir(joueur));
         event.setAmount(event.getAmount() + (fort ? BONUS_ARME_2 : BONUS_ARME));
         ServerLevel monde = joueur.serverLevel();
         if (glace) {

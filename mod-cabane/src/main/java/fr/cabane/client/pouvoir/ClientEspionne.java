@@ -434,8 +434,8 @@ public final class ClientEspionne {
         if (reste(c) > 0) {
             gadget += String.format(" (%.1f s)", reste(c));
         }
-        String[][] lignes = {{"Clic gauche", "Laser (rouge à lèvres)"}, {"Clic droit", gadget}, {"Accroupi + clic droit", "Gadget suivant"},
-                {"Accroupi (appui court)", "Grappin"}, {"Saut en l'air", "Double saut (talons)"},
+        String[][] lignes = {{Clavier.gauche(), "Laser (rouge à lèvres)"}, {Clavier.droite(), gadget}, {Clavier.accroupi() + " + " + Clavier.droite(), "Gadget suivant"},
+                {Clavier.accroupi() + " (appui court)", "Grappin"}, {Clavier.saut() + " en l'air", "Double saut (talons)"},
                 {ClientSusano.EVEIL.getTranslatedKeyMessage().getString(), "Rendormir"}};
         boolean[] gris = {reste(LASER) > 0, reste(c) > 0, false, reste(GRAPPIN) > 0, sautFait, false};
         String titre = "WOOHP  ·  " + prenom(couleur);

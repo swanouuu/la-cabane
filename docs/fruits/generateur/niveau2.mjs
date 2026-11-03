@@ -1,6 +1,6 @@
 // Maquettes de l'éveil 2 des fruits du démon : la touche Éveil, encore une fois, et la moitié du corps devient de la
 // lave (la gauche) ou de la glace (la droite). De nouvelles attaques, plus fortes : le clic gauche éclabousse (ou le
-// givre s'étend), le clic droit lance un grand poing de magma (ou cinq lances de glace), le shift fait pleuvoir des
+// givre s'étend), le clic droit lance un grand poing de magma (ou cinq lances de glace), accroupi, il fait pleuvoir des
 // météores (ou lance un faisan de glace géant) ; et qui les frappe prend feu (ou gèle). Équilibré sur les niveaux 2 des
 // autres pouvoirs, les espionnes comptant comme un niveau 3.
 // node niveau2.mjs → planche-niveau2.png
@@ -320,22 +320,22 @@ function entete(img, W) {
   ecrireTexte(img, W, "FRUITS DU DEMON : EVEIL 2", 30, 22, 5, NOIR);
   const colonnes = [
     [30, ORANGE, "MAGU MAGU NO MI : NIVEAU 2", [
-      "TOUCHE EVEIL ENCORE : LA MOITIE GAUCHE DEVIENT DE LA LAVE",
+      "LISTE LAVE2, TOUCHE EVEIL ENCORE : LA MOITIE GAUCHE EN LAVE",
       "CLIC GAUCHE : TOUTE ARME +4 DEGATS, ENFLAMME 6 S,",
       "    ECLABOUSSE 3 DEGATS A 2 BLOCS AUTOUR DE LA CIBLE",
       "CLIC DROIT : GRAND POING DE MAGMA, 24 BLOCS, 12 DEGATS,",
       "    BRULE 6 S, EXPLOSE (4 AUTOUR). RECHARGE 8 S",
-      "SHIFT : PLUIE DE METEORES LA OU IL VISE (30 BLOCS),",
+      "ACCROUPI : PLUIE DE METEORES LA OU IL VISE (30 BLOCS),",
       "    3 S, 5 DEGATS PAR IMPACT, 15 AU PLUS. RECHARGE 25 S",
       "PASSIF : QUI LE FRAPPE PREND FEU 3 S",
     ]],
     [900, BLEU, "HIE HIE NO MI : NIVEAU 2", [
-      "TOUCHE EVEIL ENCORE : LA MOITIE DROITE DEVIENT DE LA GLACE",
+      "LISTE GLACE2, TOUCHE EVEIL ENCORE : LA MOITIE DROITE EN GLACE",
       "CLIC GAUCHE : TOUTE ARME +4 DEGATS, TRES LENT 4 S,",
       "    LE GIVRE PREND 3 DEGATS A 2 BLOCS AUTOUR DE LA CIBLE",
       "CLIC DROIT : 5 LANCES DE GLACE EN EVENTAIL, 24 BLOCS,",
       "    6 DEGATS CHACUNE (12 AU PLUS), TRES LENT. RECHARGE 8 S",
-      "SHIFT : UN FAISAN DE GLACE GEANT FONCE TOUT DROIT,",
+      "ACCROUPI : UN FAISAN DE GLACE GEANT FONCE TOUT DROIT,",
       "    24 BLOCS, 12 DEGATS, GELE SUR PLACE 3 S. RECHARGE 25 S",
       "PASSIF : QUI LE FRAPPE GELE, RALENTI 2 S",
     ]],
@@ -359,28 +359,34 @@ const vues = [
   ["NIVEAU 2 : GLACE", enPied("glace"), { lacet: 28, echelle: 10.5, pied: 490 }],
   ["AVEC UNE ARMURE : LAVE", enArmure("lave"), { lacet: -28, echelle: 10.5, pied: 490 }],
   ["AVEC UNE ARMURE : GLACE", enArmure("glace"), { lacet: 28, echelle: 10.5, pied: 490 }],
-  ["TOUCHE EVEIL : 1 PUIS 2 (LAVE)", montee("lave"), { lacet: -18, tangage: 8, echelle: 5.6, pied: 400, centre: [0, 14, 0] }],
-  ["TOUCHE EVEIL : 1 PUIS 2 (GLACE)", montee("glace"), { lacet: 18, tangage: 8, echelle: 5.6, pied: 400, centre: [0, 14, 0] }],
+  ["LAVE2 : EVEIL 1 PUIS 2", montee("lave"), { lacet: -18, tangage: 8, echelle: 5.6, pied: 400, centre: [0, 14, 0] }],
+  ["GLACE2 : EVEIL 1 PUIS 2", montee("glace"), { lacet: 18, tangage: 8, echelle: 5.6, pied: 400, centre: [0, 14, 0] }],
   ["CLIC GAUCHE : ECLABOUSSE", coup("lave"), { ...ACTION, lacet: 60, centre: [0, 13, 24] }],
   ["CLIC GAUCHE : LE GIVRE S'ETEND", coup("glace"), { ...ACTION, lacet: 60, centre: [0, 13, 24] }],
   ["CLIC DROIT : GRAND POING DE MAGMA", grandPoing, { ...ACTION, echelle: 3.3, lacet: -62, centre: [0, 14, 52] }],
   ["CLIC DROIT : LANCES DE GLACE", lances, { ...ACTION, echelle: 3.3, lacet: 62, centre: [0, 14, 48] }],
-  ["SHIFT : PLUIE DE METEORES", pluie, { lacet: -38, tangage: 20, echelle: 2.5, pied: 330, centre: [0, 30, 50] }],
-  ["SHIFT : FAISAN DE GLACE", oiseau, { lacet: 48, tangage: 18, echelle: 2.6, pied: 340, centre: [0, 24, 72] }],
+  ["ACCROUPI : PLUIE DE METEORES", pluie, { lacet: -38, tangage: 20, echelle: 2.5, pied: 330, centre: [0, 30, 50] }],
+  ["ACCROUPI : FAISAN DE GLACE", oiseau, { lacet: 48, tangage: 18, echelle: 2.6, pied: 340, centre: [0, 24, 72] }],
   ["PASSIF : CORPS DE MAGMA", riposte("lave"), { lacet: -80, tangage: 10, echelle: 6.6, pied: 450, centre: [0, 0, 9] }],
   ["PASSIF : CORPS DE GLACE", riposte("glace"), { lacet: 80, tangage: 10, echelle: 6.6, pied: 450, centre: [0, 0, 9] }],
 ];
 
-const COLONNES = 4, lignes = Math.ceil(vues.length / COLONNES);
-const W = CW * COLONNES, H = HAUT + (M + CH) * lignes;
-const img = Buffer.alloc(W * H * 4, 255);
-entete(img, W);
-vues.forEach(([titre, dessin, o], k) => {
-  const c = k % COLONNES, l = Math.floor(k / COLONNES);
-  const sc = scene({ w: CW, h: CH, fond: FOND, ...o });
-  dessin(sc);
-  for (let y = 0; y < CH; y++) sc.img.copy(img, ((HAUT + l * (M + CH) + M + y) * W + c * CW) * 4, y * CW * 4, (y + 1) * CW * 4);
-  ecrireTexte(img, W, titre, c * CW + 12, HAUT + l * (M + CH) + 10, 3, titre.includes("GLACE") || titre.includes("GIVRE") ? BLEU : ORANGE);
-});
-ecrirePng(path.join(DOC, "planche-niveau2.png"), W, H, img);
-console.log("ok", W, H);
+// les briques servent aussi à la planche des nouvelles attaques (attaques2.mjs)
+export { niveau2, repere, roche, poingMagma, impact, lance, blocDeGlace };
+
+const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (PRINCIPAL) {
+  const COLONNES = 4, lignes = Math.ceil(vues.length / COLONNES);
+  const W = CW * COLONNES, H = HAUT + (M + CH) * lignes;
+  const img = Buffer.alloc(W * H * 4, 255);
+  entete(img, W);
+  vues.forEach(([titre, dessin, o], k) => {
+    const c = k % COLONNES, l = Math.floor(k / COLONNES);
+    const sc = scene({ w: CW, h: CH, fond: FOND, ...o });
+    dessin(sc);
+    for (let y = 0; y < CH; y++) sc.img.copy(img, ((HAUT + l * (M + CH) + M + y) * W + c * CW) * 4, y * CW * 4, (y + 1) * CW * 4);
+    ecrireTexte(img, W, titre, c * CW + 12, HAUT + l * (M + CH) + 10, 3, titre.includes("GLACE") || titre.includes("GIVRE") ? BLEU : ORANGE);
+  });
+  ecrirePng(path.join(DOC, "planche-niveau2.png"), W, H, img);
+  console.log("ok", W, H);
+}

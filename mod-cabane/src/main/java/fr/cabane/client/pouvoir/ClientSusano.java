@@ -322,7 +322,7 @@ public final class ClientSusano {
         }
         if (p.geste() == Pouvoirs.FLECHE) {
             if (joueur != null) {
-                ClientSusano3.lancer(joueur, p.cible(), joueur.yBodyRot, ClientSusano3.forme(t3(s)).taille());
+                ClientSusano3.lancer(joueur, p.cible(), joueur.yBodyRot, ClientSusano3.forme(t3(s)).taille(), s.couleur);
                 son(joueur, SoundEvents.CROSSBOW_SHOOT, 1F, 0.5F);
             }
             return;
@@ -1161,10 +1161,10 @@ public final class ClientSusano {
             recharge = rechargeGrand;
         }
         String[][] lignes = {
-                {"Clic gauche", chevalier ? "Épée (gauche, droite)" : s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
-                {"Clic droit", chevalier ? (rechargeArc > 0 ? String.format("Arc, flammes noires (%.0f s)", Math.ceil(rechargeArc)) : "Arc, flammes noires")
+                {Clavier.gauche(), chevalier ? "Épée (gauche, droite)" : s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
+                {Clavier.droite(), chevalier ? (rechargeArc > 0 ? String.format("Arc, flammes noires (%.0f s)", Math.ceil(rechargeArc)) : "Arc, flammes noires")
                         : s.tient ? (grand ? "Écraser au sol" : "Lâcher") : rechargePrise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(rechargePrise)) : "Attraper"},
-                {"Accroupi", chevalier ? (recharge > 0 ? String.format("Grand coup, flammes noires (%.0f s)", Math.ceil(recharge)) : "Grand coup, flammes noires")
+                {Clavier.accroupi(), chevalier ? (recharge > 0 ? String.format("Grand coup, flammes noires (%.0f s)", Math.ceil(recharge)) : "Grand coup, flammes noires")
                         : recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
                 {EVEIL.getTranslatedKeyMessage().getString(), plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
         Font font = mc.font;
