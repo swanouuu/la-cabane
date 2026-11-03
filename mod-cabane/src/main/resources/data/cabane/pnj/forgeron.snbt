@@ -1,7 +1,6 @@
 {
   id:"easy_npc:orc_warrior",
   UUID:[I;572230892,-2072290118,739222969,-734221735],
-  Rotation:[90f,0f],
   CustomName:'{"text":"Brokk le Forgeron","color":"red"}',
   CustomNameVisible:1b,
   PersistenceRequired:1b,
