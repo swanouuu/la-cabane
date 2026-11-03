@@ -52,7 +52,7 @@ public final class HubEvents {
             new Pnj("gardien", 3.5, -31.5, 0F),        // sur le porche de la Grande Cabane
             new Pnj("cartographe", -9.5, 4.5, 0F),     // à côté du grand panneau de la carte
             new Pnj("marchand", -54.5, 0.5, -90F),     // derrière son comptoir, au Grand Bazar
-            new Pnj("forgeron", 60.5, 0.5, 90F),       // derrière l'enclume monumentale de sa forge, au bout de la rue
+            new Pnj("forgeron", 61.5, 0.5, 90F),       // derrière l'enclume monumentale de sa forge, au bout de la rue (assez loin du socle pour sa grande taille)
             new Pnj("fee", -27.5, 4.5, 0F),            // devant le Grand Bazar
             new Pnj("pole_emploi", -37.5, -7.5, 0F),   // au tableau des contrats, dans le bazar
             new Pnj("cousin", -27.5, -4.5, -90F),      // l'autre côté de l'entrée du bazar
@@ -122,7 +122,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 14;
+    public static final int VERSION_PNJ = 15;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {

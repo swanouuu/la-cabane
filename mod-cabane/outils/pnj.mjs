@@ -42,11 +42,13 @@ const RETOUR = { texte: "Retour", vers: "default" };
 
 export function genererPnj(ecrire) {
   /**
-   * fichier, nom, couleur, peau (textures/entity/pnj/<peau>.png), voix (cabane:voix.<voix>), echelle, objectifs, tags,
+   * fichier, nom, couleur, peau (textures/entity/pnj/<peau>.png ; null : celle d'Easy NPC), voix (cabane:voix.<voix>), echelle,
+   * taille (l'attribut de taille : le dessin et la boîte de clic), regard (le même lacet que dans HubEvents : sans lui, le
+   * corps reste tourné vers le sud et la tête y revient après avoir regardé un joueur), objectifs, tags,
    * mains ([main droite, main gauche]), qui (le nom pour les missions, le même pour toutes ses versions),
    * dialogues [{label, titre, texte (ou tableau = au hasard), boutons, ftb (quête du livre cochée en arrivant ici)}].
    */
-  function pnj({ fichier, id = fichier, qui = id, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
+  function pnj({ fichier, id = fichier, qui = id, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, taille, regard, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
     ecrire(`data/cabane/dialogues/${fichier}.json`, {
       nom, couleur, voix: VOIX.has(voix) ? voix : "", qui,
       pages: Object.fromEntries(dialogues.map((d) => [d.label, {
@@ -62,16 +64,18 @@ export function genererPnj(ecrire) {
   HandItems:[${mains.map((m) => (m ? `{id:${snbt(m)},count:1}` : "{}")).join(",")}],` : "";
     ecrire(`data/cabane/pnj/${fichier}.snbt`, `{
   id:${snbt("easy_npc:" + type)},
-  UUID:${uuid(id)},
+  UUID:${uuid(id)},${regard !== undefined ? `
+  Rotation:[${regard}f,0f],` : ""}
   CustomName:${nomJson(nom, couleur)},
   CustomNameVisible:1b,
   PersistenceRequired:1b,
   Tags:[${["cabane_pnj", "pnj." + fichier, ...tags].map(snbt).join(",")}],
   EasyNPCVersion:3,
   VariantType:${snbt(variante)},
-  SkinData:${rendu ? `{Type:"DEFAULT"}` : `{Type:"RESOURCE_LOCATION",Texture:${snbt(`cabane:textures/entity/pnj/${peau}.png`)}}`},${rendu ? `
+  SkinData:${rendu || peau === null ? `{Type:"DEFAULT"}` : `{Type:"RESOURCE_LOCATION",Texture:${snbt(`cabane:textures/entity/pnj/${peau}.png`)}}`},${rendu ? `
   RenderData:{Type:"CUSTOM_ENTITY",EntityType:${snbt(rendu)}},` : ""}${echelle ? `
-  ModelData:{Scale:{Root:[${echelle}f,${echelle}f,${echelle}f]}},` : ""}
+  ModelData:{Scale:{Root:[${echelle}f,${echelle}f,${echelle}f]}},` : ""}${taille ? `
+  attributes:[{id:"minecraft:generic.scale",base:${taille}d}],` : ""}
   ObjectiveData:{ObjectiveDataSet:[${objectifs}]},${objets}
   Status:{finalized:1b}
 }
@@ -170,7 +174,8 @@ export function genererPnj(ecrire) {
   ] });
 
   // ------------------------------------------------------------ Brokk l'ogre et ses orques
-  pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", rendu: "mowziesmobs:ferrous_wroughtnaut", dialogues: [
+  // Brokk est dessiné en orque de guerre par client/ClientBrokk (outils/brokk.mjs), 2,2 fois plus grand qu'un orque
+  pnj({ fichier: "forgeron", nom: "Brokk le Forgeron", couleur: "red", type: "orc_warrior", variante: "ORC_WARRIOR", peau: null, taille: 2.2, regard: 90, dialogues: [
     { label: "default", titre: "Brokk", texte: [
       "CLANG. Brokk forge. Toi regarde. Toi touche pas l'enclume.",
       "Je sais faire ce que personne d'autre ne sait faire : les armes des grands monstres, les reliques de feu. Rapporte les matériaux, paie le travail.",
