@@ -439,7 +439,7 @@ public final class ClientFruit {
         }
         // le coup sur le sol : un anneau qui part tout autour
         for (int i = 0; i < 70; i++) {
-            double a = HASARD.nextDouble() * Math.PI * 2, r = 0.5 + HASARD.nextDouble() * 4.5;
+            double a = HASARD.nextDouble() * Math.PI * 2, r = 0.5 + HASARD.nextDouble() * (o.glace() ? Fruit.RAYON_GLACIAIRE - 0.5 : 4.5);
             double x = o.centre().x + Math.cos(a) * r, y = o.centre().y + 0.1, z = o.centre().z + Math.sin(a) * r;
             if (o.glace()) {
                 mc.level.addParticle(i % 3 == 0 ? new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState()) : ParticleTypes.SNOWFLAKE,
@@ -1109,7 +1109,7 @@ public final class ClientFruit {
             }
             double t = secondes(o.debut());
             float fondu = (float) Math.max(0, Math.min(1, (DUREE_ONDE - t) / 0.5));
-            double rayon = 5.2 * Math.min(1, t / 0.2);
+            double rayon = (Fruit.RAYON_GLACIAIRE + 0.2) * Math.min(1, t / 0.2), k8 = Fruit.RAYON_GLACIAIRE / 5;
             Vec3 c0 = o.centre().add(0, 0.03, 0).subtract(cam);
             for (int i = 0; i < 32; i++) {
                 double a0 = i * Math.PI * 2 / 32, a1 = (i + 1) * Math.PI * 2 / 32;
@@ -1118,9 +1118,9 @@ public final class ClientFruit {
             }
             RandomSource graine = RandomSource.create(o.graine());
             double monte = Math.min(1, t / 0.15) * fondu;
-            for (int k = 0; k < 20; k++) {
-                double angle = k * Math.PI * 2 / 20 + graine.nextDouble() * 0.3, r = 1.3 + graine.nextDouble() * 3.8;
-                double h = (0.8 + graine.nextDouble() * 1.8) * (1 - Math.abs(r - 3.5) / 5) * monte;
+            for (int k = 0; k < 32; k++) {
+                double angle = k * Math.PI * 2 / 32 + graine.nextDouble() * 0.3, r = (1.3 + graine.nextDouble() * 3.8) * k8;
+                double h = (0.8 + graine.nextDouble() * 1.8) * (1 - Math.abs(r / k8 - 3.5) / 5) * monte;
                 Vec3 base = o.centre().add(Math.cos(angle) * r, -0.1, Math.sin(angle) * r).subtract(cam);
                 pointe(voile, m, base, new Vec3(Math.cos(angle) * 0.4, 1, Math.sin(angle) * 0.4), h, 0.35 + 0.3 * graine.nextDouble(), 0.8F);
             }
@@ -1595,7 +1595,7 @@ public final class ClientFruit {
         for (int k = 0; k < 7; k++) {
             if (o.glace()) {
                 if (HASARD.nextInt(3) == 0) {
-                    double a = HASARD.nextDouble() * Math.PI * 2, r = 1 + HASARD.nextDouble() * 4;
+                    double a = HASARD.nextDouble() * Math.PI * 2, r = 1 + HASARD.nextDouble() * (Fruit.RAYON_GLACIAIRE - 1);
                     mc.level.addParticle(ParticleTypes.SNOWFLAKE, o.centre().x + Math.cos(a) * r, o.centre().y + 0.3 + HASARD.nextDouble() * 1.5,
                             o.centre().z + Math.sin(a) * r, 0, 0.02, 0);
                 }

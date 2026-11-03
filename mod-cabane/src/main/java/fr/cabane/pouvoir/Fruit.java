@@ -132,8 +132,12 @@ public final class Fruit {
     public static final int RECHARGE_JET = 6 * 20;
     public static final int RECHARGE_CHOC = 20 * 20;
     private static final double PORTEE_JET = 12;
+    /** La glace porte plus loin que la lave (l'hôte trouvait qu'elle n'allait pas assez loin). */
+    private static final double PORTEE_JET_GLACE = 20;
     private static final float DEGATS_JET = 6;
     private static final double RAYON_CHOC = 5;
+    /** L'ère glaciaire gèle plus large que l'éruption (le client dessine le même cercle). */
+    public static final double RAYON_GLACIAIRE = 8;
     private static final float DEGATS_ERUPTION = 8;
     private static final float DEGATS_GLACIAIRE = 6;
     public static final int DUREE_GEL = 40;
@@ -153,11 +157,11 @@ public final class Fruit {
     private static final float DEGATS_FLECHE = 14;
     private static final float DEGATS_FLECHE_SUITE = 6;
     private static final int GEL_FLECHE = 30;
-    private static final double PORTEE_FLECHE = 30;
+    private static final double PORTEE_FLECHE = 45;
     private static final float DEGATS_METEORE = 5;
     private static final float DEGATS_FAISAN = 14;
-    private static final double PORTEE_2 = 24;
-    private static final double PORTEE_PLUIE = 30;
+    private static final double PORTEE_2 = 36;
+    private static final double PORTEE_PLUIE = 45;
     public static final int GEL_FAISAN = 60;
     /** Les sortes de tirs de l'éveil 2 : le grand poing, la grande flèche, une météore, le faisan. */
     public static final int POING = 0;
@@ -608,7 +612,7 @@ public final class Fruit {
         PRET_JET.put(joueur.getUUID(), maintenant + RECHARGE_JET);
         ServerLevel monde = joueur.serverLevel();
         Vec3 oeil = joueur.getEyePosition();
-        Vec3 loin = oeil.add(joueur.getLookAngle().scale(PORTEE_JET));
+        Vec3 loin = oeil.add(joueur.getLookAngle().scale(glace ? PORTEE_JET_GLACE : PORTEE_JET));
         HitResult bloc = monde.clip(new ClipContext(oeil, loin, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
         Vec3 fin = bloc.getType() == HitResult.Type.MISS ? loin : bloc.getLocation();
         EntityHitResult touche = ProjectileUtil.getEntityHitResult(monde, joueur, oeil, fin, new AABB(oeil, fin).inflate(1),
@@ -664,10 +668,11 @@ public final class Fruit {
             monde.playSound(null, joueur.blockPosition(), SoundEvents.LAVA_EXTINGUISH, SoundSource.PLAYERS, 1.4F, 0.6F);
             monde.playSound(null, joueur.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1F, 0.5F);
         }
-        for (LivingEntity cible : monde.getEntitiesOfClass(LivingEntity.class, joueur.getBoundingBox().inflate(RAYON_CHOC, 3, RAYON_CHOC),
+        double rayon = glace ? RAYON_GLACIAIRE : RAYON_CHOC;
+        for (LivingEntity cible : monde.getEntitiesOfClass(LivingEntity.class, joueur.getBoundingBox().inflate(rayon, 3, rayon),
                 e -> Pouvoirs.cible(joueur, e) && !e.isSpectator())) {
             Vec3 loin = cible.position().subtract(centre);
-            if (loin.horizontalDistance() > RAYON_CHOC) {
+            if (loin.horizontalDistance() > rayon) {
                 continue;
             }
             if (glace) {
