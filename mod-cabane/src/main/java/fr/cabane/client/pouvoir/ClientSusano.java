@@ -10,8 +10,10 @@ import fr.cabane.pouvoir.Pouvoirs;
 import fr.cabane.pouvoir.Pouvoirs.Couleur;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -101,6 +103,8 @@ public final class ClientSusano {
     }
 
     private static final Map<UUID, Susano> SUSANOS = new HashMap<>();
+    /** Ceux dont le pouvoir est éveillé en ce moment, quel qu'il soit (tous les états passent par ici). */
+    private static final Set<UUID> TRANSFORMES = new HashSet<>();
     private static long dernierClic;
     private static long derniereCharge;
     private static boolean accroupiAvant;
@@ -153,10 +157,20 @@ public final class ClientSusano {
 
     // ================================================================ ce que dit le serveur
 
+    /** Ce joueur a-t-il un pouvoir éveillé (Susano, Hachibi, la marque, Minato, espionne, fruit…) ? Sa cape s'efface alors. */
+    public static boolean transforme(Player joueur) {
+        return TRANSFORMES.contains(joueur.getUUID());
+    }
+
     public static void recevoir(Pouvoirs.Etat p) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
             return;
+        }
+        if (p.eveille()) {
+            TRANSFORMES.add(p.joueur());
+        } else {
+            TRANSFORMES.remove(p.joueur());
         }
         // Hachibi, la marque maudite, Minato, les espionnes et les fruits du démon ont leur propre dessin
         if (fr.cabane.pouvoir.Fruit.est(p.pouvoir())) {
@@ -1189,6 +1203,7 @@ public final class ClientSusano {
             Minecraft mc = Minecraft.getInstance();
             if (mc.level == null || mc.player == null) {
                 SUSANOS.clear();
+                TRANSFORMES.clear();
                 return;
             }
             while (EVEIL.consumeClick()) {
