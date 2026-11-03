@@ -11,6 +11,22 @@ import { RACINE } from "./commun.mjs";
 
 export const NOM_PACK_VOIX = "Beauvais - voix";
 
+/**
+ * Un son du pack, s'il est en Ogg Vorbis tout seul ; sinon null, avec un avertissement : Minecraft reste muet sur un .ogg
+ * sorti d'une vidéo (une piste Theora avant le son), et c'est alors le bruitage du mod qui se joue.
+ */
+function son(chemin) {
+  const contenu = fs.readFileSync(chemin);
+  const debut = 27 + (contenu[26] ?? 0);
+  if (contenu.subarray(0, 4).toString("latin1") === "OggS" && contenu.subarray(debut, debut + 7).toString("latin1") === "\x01vorbis"
+      && !contenu.subarray(0, 16384).includes("theora")) {
+    return contenu;
+  }
+  console.warn(`⚠ ${path.basename(chemin)} n'est pas un son Ogg Vorbis seul (une vidéo dedans ?) : Minecraft ne le jouerait pas.`);
+  console.warn("  Reconvertis-le : ffmpeg -i ancien.ogg -vn -c:a libvorbis nouveau.ogg");
+  return null;
+}
+
 /** Les fichiers du pack, en chemins relatifs à son dossier ; vide s'il n'y a aucune réplique. */
 export function packVoix() {
   const dossier = path.join(RACINE, "voix", "ambiance");
@@ -20,7 +36,9 @@ export function packVoix() {
     const m = fichier.toLowerCase().match(/^([a-z_]+?)(?:[-_ ]?\d+|-.+)?\.ogg$/);
     if (!m) continue;
     const nom = fichier.toLowerCase().replace(/\.ogg$/, "").replace(/[^a-z0-9_-]/g, "_");
-    fichiers.push([`assets/cabane/sounds/ambiance/${nom}.ogg`, fs.readFileSync(path.join(dossier, fichier))]);
+    const contenu = son(path.join(dossier, fichier));
+    if (!contenu) continue;
+    fichiers.push([`assets/cabane/sounds/ambiance/${nom}.ogg`, contenu]);
     (sons[`ambiance.${m[1]}`] ??= { subtitle: "subtitles.cabane.voix", sounds: [] }).sounds.push({ name: `cabane:ambiance/${nom}`, stream: true });
   }
   // la bande-son de la cinématique (voix/cinematique/extrait.ogg → cabane:cine.extrait)
@@ -29,7 +47,9 @@ export function packVoix() {
     for (const fichier of fs.readdirSync(cine).sort()) {
       if (!/\.ogg$/i.test(fichier)) continue;
       const nom = fichier.toLowerCase().replace(/\.ogg$/, "").replace(/[^a-z0-9_]/g, "_");
-      fichiers.push([`assets/cabane/sounds/cinematique/${nom}.ogg`, fs.readFileSync(path.join(cine, fichier))]);
+      const contenu = son(path.join(cine, fichier));
+      if (!contenu) continue;
+      fichiers.push([`assets/cabane/sounds/cinematique/${nom}.ogg`, contenu]);
       sons[`cine.${nom}`] = { sounds: [{ name: `cabane:cinematique/${nom}`, stream: true }] };
     }
   }
@@ -38,10 +58,12 @@ export function packVoix() {
   if (fs.existsSync(effets)) {
     for (const fichier of fs.readdirSync(effets).sort()) {
       if (!/\.ogg$/i.test(fichier)) continue;
-      const son = fichier.toLowerCase().replace(/\.ogg$/, "");
-      const nom = son.replace(/[^a-z0-9_]/g, "_");
-      fichiers.push([`assets/cabane/sounds/effets/${nom}.ogg`, fs.readFileSync(path.join(effets, fichier))]);
-      sons[son] = { replace: true, subtitle: `subtitles.cabane.${son}`, sounds: [{ name: `cabane:effets/${nom}` }] };
+      const evenement = fichier.toLowerCase().replace(/\.ogg$/, "");
+      const nom = evenement.replace(/[^a-z0-9_]/g, "_");
+      const contenu = son(path.join(effets, fichier));
+      if (!contenu) continue;
+      fichiers.push([`assets/cabane/sounds/effets/${nom}.ogg`, contenu]);
+      sons[evenement] = { replace: true, subtitle: `subtitles.cabane.${evenement}`, sounds: [{ name: `cabane:effets/${nom}` }] };
     }
   }
   // Kurama (ModeleKurama : assets/cabane/kurama/modele.json et textures/entity/kurama/kurama.png)
