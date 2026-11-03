@@ -12,6 +12,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -91,6 +92,11 @@ public final class Masques {
     /** A-t-il un masque sur la tête ? (sa voix devient grave) */
     public static boolean surLaTete(UUID joueur) {
         return SUR_LA_TETE.contains(joueur);
+    }
+
+    /** Le même, lu dans Curios : marche aussi chez un client, pour les autres joueurs (client/ClientPseudos). */
+    public static boolean surLaTete(LivingEntity e) {
+        return CURIOS && MasquesCurios.surLaTete(e);
     }
 
     private Masques() {
