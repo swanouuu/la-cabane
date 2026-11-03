@@ -11,6 +11,7 @@ import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
 import { genererCartel, sonsCartel } from "./cartel.mjs";
 import { genererCatch, sonsCatch } from "./catch.mjs";
+import { sonsFoudre } from "./foudre.mjs";
 import { genererSaiyan } from "./saiyan.mjs";
 import { genererCurios } from "./curios.mjs";
 import { genererEspionnes, sonsEspionnes } from "./espionnes.mjs";
@@ -497,6 +498,15 @@ Object.assign(lang, {
   "death.attack.cabane.eau.player": "%1$s a coulé en fuyant %2$s",
   // le mode Ichibi (voir pouvoir/Ichibi.java et docs/ichibi)
   "subtitles.cabane.ichibi.eveil": "Le sable d'Ichibi se réveille",
+  // la foudre (voir pouvoir/Foudre.java et docs/foudre)
+  "subtitles.cabane.foudre.statique": "Électricité statique", "subtitles.cabane.foudre.zap": "Choc électrique",
+  "subtitles.cabane.foudre.charge": "L'orage se charge", "subtitles.cabane.foudre.kirin": "« Kirin ! »",
+  "death.attack.cabane.foudre": "%1$s a été foudroyé par %2$s",
+  "death.attack.cabane.foudre.item": "%1$s a été foudroyé par %2$s",
+  "death.attack.cabane.foudre.player": "%1$s a été foudroyé",
+  "death.attack.cabane.kirin": "%1$s a été écrasé par le Kirin de %2$s",
+  "death.attack.cabane.kirin.item": "%1$s a été écrasé par le Kirin de %2$s",
+  "death.attack.cabane.kirin.player": "%1$s a été écrasé par un Kirin",
 });
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
@@ -645,6 +655,8 @@ console.log("Ressources générées dans", RES);
   Object.assign(sons, sonsCatch(RES));
   // la fermeture éclair des tenues d'espionnes : synthétisée par outils/espionnes.mjs
   Object.assign(sons, sonsEspionnes(RES));
+  // la foudre : l'électricité statique, le choc, la charge du Kirin ; synthétisés par outils/foudre.mjs
+  Object.assign(sons, sonsFoudre(RES));
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");
   const cible = path.join(RES, "assets", "cabane", "sounds", "voix");
   fs.rmSync(cible, { recursive: true, force: true });

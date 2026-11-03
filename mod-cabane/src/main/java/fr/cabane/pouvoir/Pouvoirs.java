@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
-            Fruit.LAVE, Fruit.LAVE2, Fruit.GLACE, Fruit.GLACE2, Ichibi.NOM);
+            Fruit.LAVE, Fruit.LAVE2, Fruit.GLACE, Fruit.GLACE2, Ichibi.NOM, Foudre.NOM, Foudre.NOM2);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -164,7 +164,7 @@ public final class Pouvoirs {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
                 return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3
-                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) ? 2 : 1;
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) ? 2 : 1;
             }
         }
 
@@ -370,6 +370,9 @@ public final class Pouvoirs {
         if (Ichibi.est(elu.pouvoir())) {
             Ichibi.eveiller(joueur);
         }
+        if (Foudre.est(elu.pouvoir())) {
+            Foudre.eveiller(joueur, suivant);
+        }
         envoyerEtat(joueur, elu, suivant, true);
     }
 
@@ -401,8 +404,8 @@ public final class Pouvoirs {
      * Endormi (niveau 0), plus rien.
      */
     private static void armure(ServerPlayer joueur, int niveau) {
-        // la marque maudite et les fruits du démon : comme du fer
-        boolean fer = Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur));
+        // la marque maudite, les fruits du démon et la foudre : comme du fer
+        boolean fer = Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur));
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
@@ -439,6 +442,7 @@ public final class Pouvoirs {
         Susano3.endormir(joueur);
         Fruit.endormir(joueur);
         Ichibi.endormir(joueur);
+        Foudre.endormir(joueur);
         armure(joueur, 0);
         Integer etait = EVEILLES.remove(joueur.getUUID());
         if (etait != null) {
@@ -461,7 +465,7 @@ public final class Pouvoirs {
         if (elu == null || Minato.est(elu.pouvoir())) {
             return REPOS_EVEIL;
         }
-        if (Fruit.est(elu.pouvoir())) {
+        if (Fruit.est(elu.pouvoir()) || Foudre.est(elu.pouvoir())) {
             return niveau >= 2 ? REPOS_EVEIL : REPOS_NIVEAU_1;
         }
         return elu.niveauMax() == 1 ? REPOS_NIVEAU_1 : REPOS_EVEIL;
@@ -495,7 +499,7 @@ public final class Pouvoirs {
      */
     private static void frapper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -570,7 +574,7 @@ public final class Pouvoirs {
      */
     private static void attraper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -712,7 +716,7 @@ public final class Pouvoirs {
     /** Le Susano pique droit devant : le joueur file, et tout ce qu'il traverse est fauché. */
     private static void charger(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -842,9 +846,9 @@ public final class Pouvoirs {
         for (String pouvoir : LISTE) {
             // Hachibi, la marque maudite et Minato ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || Minato.est(pouvoir) || Fruit.est(pouvoir) || Ichibi.est(pouvoir)) {
+            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || Minato.est(pouvoir) || Fruit.est(pouvoir) || Ichibi.est(pouvoir) || Foudre.est(pouvoir)) {
                 Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Minato.est(pouvoir) ? Couleur.JAUNE
-                        : Fruit.lave(pouvoir) || Ichibi.est(pouvoir) ? Couleur.ORANGE : Fruit.glace(pouvoir) ? Couleur.CYAN : Couleur.VIOLET;
+                        : Fruit.lave(pouvoir) || Ichibi.est(pouvoir) ? Couleur.ORANGE : Fruit.glace(pouvoir) || Foudre.est(pouvoir) ? Couleur.CYAN : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))

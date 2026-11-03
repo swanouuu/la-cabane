@@ -19,6 +19,12 @@ public final class CabaneSons {
     public static final DeferredHolder<SoundEvent, SoundEvent> MINATO_FLASH = son("minato.flash");
     /** L'éveil d'Ichibi : un rugissement par défaut, le son de la vidéo de l'hôte dans le pack privé (voix/effets/ichibi.eveil.ogg). */
     public static final DeferredHolder<SoundEvent, SoundEvent> ICHIBI_EVEIL = son("ichibi.eveil");
+    /** La foudre : l'électricité statique qui crépite sur lui tant qu'il est éveillé, le choc d'un coup, la charge du Kirin. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> FOUDRE_STATIQUE = son("foudre.statique");
+    public static final DeferredHolder<SoundEvent, SoundEvent> FOUDRE_ZAP = son("foudre.zap");
+    public static final DeferredHolder<SoundEvent, SoundEvent> FOUDRE_CHARGE = son("foudre.charge");
+    /** Il crie « Kirin » : un tonnerre par défaut, la voix de l'hôte dans le pack privé (voix/effets/foudre.kirin.ogg). */
+    public static final DeferredHolder<SoundEvent, SoundEvent> FOUDRE_KIRIN = son("foudre.kirin");
 
     /** Une voix par PNJ : quand on ouvre son dialogue, il dit une de ses répliques enregistrées (s'il en a). */
     public static final List<String> VOIX = List.of("gardien", "cartographe", "marchand", "forgeron", "fee", "pole_emploi", "cousin",

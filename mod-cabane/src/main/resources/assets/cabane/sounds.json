@@ -211,5 +211,41 @@
         "volume": 0.7
       }
     ]
+  },
+  "foudre.statique": {
+    "subtitle": "subtitles.cabane.foudre.statique",
+    "sounds": [
+      {
+        "name": "cabane:foudre/statique",
+        "volume": 0.8
+      }
+    ]
+  },
+  "foudre.zap": {
+    "subtitle": "subtitles.cabane.foudre.zap",
+    "sounds": [
+      {
+        "name": "cabane:foudre/zap",
+        "volume": 0.8
+      }
+    ]
+  },
+  "foudre.charge": {
+    "subtitle": "subtitles.cabane.foudre.charge",
+    "sounds": [
+      {
+        "name": "cabane:foudre/charge",
+        "volume": 0.7
+      }
+    ]
+  },
+  "foudre.kirin": {
+    "subtitle": "subtitles.cabane.foudre.kirin",
+    "sounds": [
+      {
+        "name": "minecraft:item/trident/thunder1",
+        "volume": 0.8
+      }
+    ]
   }
 }

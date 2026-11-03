@@ -236,5 +236,15 @@
   "death.attack.cabane.eau": "%1$s a coulé : un fruit du démon ne sait pas nager",
   "death.attack.cabane.eau.item": "%1$s a coulé en fuyant %2$s",
   "death.attack.cabane.eau.player": "%1$s a coulé en fuyant %2$s",
-  "subtitles.cabane.ichibi.eveil": "Le sable d'Ichibi se réveille"
+  "subtitles.cabane.ichibi.eveil": "Le sable d'Ichibi se réveille",
+  "subtitles.cabane.foudre.statique": "Électricité statique",
+  "subtitles.cabane.foudre.zap": "Choc électrique",
+  "subtitles.cabane.foudre.charge": "L'orage se charge",
+  "subtitles.cabane.foudre.kirin": "« Kirin ! »",
+  "death.attack.cabane.foudre": "%1$s a été foudroyé par %2$s",
+  "death.attack.cabane.foudre.item": "%1$s a été foudroyé par %2$s",
+  "death.attack.cabane.foudre.player": "%1$s a été foudroyé",
+  "death.attack.cabane.kirin": "%1$s a été écrasé par le Kirin de %2$s",
+  "death.attack.cabane.kirin.item": "%1$s a été écrasé par le Kirin de %2$s",
+  "death.attack.cabane.kirin.player": "%1$s a été écrasé par un Kirin"
 }
