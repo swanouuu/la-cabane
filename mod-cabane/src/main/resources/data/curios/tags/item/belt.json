@@ -4,6 +4,30 @@
     {
       "id": "cabane:espionne_grappin",
       "required": false
+    },
+    {
+      "id": "cabane:masque_hannya",
+      "required": false
+    },
+    {
+      "id": "cabane:masque_kitsune",
+      "required": false
+    },
+    {
+      "id": "cabane:masque_tobi",
+      "required": false
+    },
+    {
+      "id": "cabane:masque_spirale",
+      "required": false
+    },
+    {
+      "id": "cabane:masque_obito",
+      "required": false
+    },
+    {
+      "id": "cabane:masque_chasseur",
+      "required": false
     }
   ]
 }

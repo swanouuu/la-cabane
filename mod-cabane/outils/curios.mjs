@@ -5,14 +5,18 @@
 // espionnes.mjs pour les pieds et la ceinture).
 // Appelé par generer.mjs.
 import { DETECTEURS } from "./saiyan.mjs";
+import { NOMS_MASQUES } from "./masques.mjs";
+
+const MASQUES = Object.keys(NOMS_MASQUES).map((nom) => "masque_" + nom);
 
 /** slot Curios → objets du mod qui y vont. */
 export const SLOTS_CURIOS = {
-  head: [...DETECTEURS, "espionne_lunettes"],
+  // les masques ninja (accessoire/Masques.java) : sur la tête, ou à la ceinture, sur le côté
+  head: [...DETECTEURS, "espionne_lunettes", ...MASQUES],
   queue: ["queue_saiyan"],
   // les gadgets des espionnes (pouvoir/EspionneCurios.java)
   feet: ["espionne_bottes"],
-  belt: ["espionne_grappin"],
+  belt: ["espionne_grappin", ...MASQUES],
 };
 
 export function genererCurios({ ecrire }) {

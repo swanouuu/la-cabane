@@ -43,6 +43,15 @@ public class CabaneVoicePlugin implements VoicechatPlugin {
                 event.getPacket().setOpusEncodedData(deformee);
             }
         }
+        // un masque ninja sur la tête : la voix devient grave (à la ceinture, rien ne change)
+        if (fr.cabane.accessoire.Masques.surLaTete(id)) {
+            byte[] grave = VoixMasque.grave(event.getVoicechat(), id, event.getPacket().getOpusEncodedData());
+            if (grave != null) {
+                event.getPacket().setOpusEncodedData(grave);
+            }
+        } else {
+            VoixMasque.oublier(id);
+        }
         UUID partner = PhoneCalls.activePartner(id);
         if (partner == null) {
             return;
