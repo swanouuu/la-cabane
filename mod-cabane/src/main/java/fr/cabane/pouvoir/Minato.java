@@ -53,6 +53,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
@@ -581,7 +582,7 @@ public final class Minato {
      * Chaque Minato en a deux, indépendantes : celle posée (accroupi + clic droit, on y va en s'accroupissant deux fois)
      * et le kunai lancé à la main une fois planté (accroupi + clic gauche pour y aller). Chacune est un kunai planté
      * quelque part (dimension, position, et d'où il est arrivé s'il a été lancé), ou sur quelqu'un (son UUID et son nom),
-     * et ne sert qu'une fois.
+     * et ne sert qu'une fois. Sur quelqu'un, il tombe quand il meurt, ou quand il reste introuvable 30 secondes.
      */
     public static final class Marques extends SavedData {
         private static final String NOM = "cabane_minato";
@@ -685,7 +686,53 @@ public final class Minato {
             d.de(lance).put(joueur, m);
         }
         d.setDirty();
+        (lance ? INTROUVABLES_LANCE : INTROUVABLES).remove(joueur);
         PacketDistributor.sendToAllPlayers(etat(server, joueur, lance, m));
+    }
+
+    /** Une marque sur quelqu'un d'introuvable (parti, ou trop loin pour être chargé) s'efface au bout de 30 secondes. */
+    private static final int MARQUE_PERDUE = 30 * 20;
+    /** Depuis quel tick la cible de la marque posée (ou du kunai lancé) de chaque joueur est introuvable. */
+    private static final Map<UUID, Integer> INTROUVABLES = new HashMap<>();
+    private static final Map<UUID, Integer> INTROUVABLES_LANCE = new HashMap<>();
+
+    private static void prevenir(MinecraftServer server, UUID joueur, String texte) {
+        ServerPlayer p = server.getPlayerList().getPlayer(joueur);
+        if (p != null) {
+            p.displayClientMessage(Component.literal(texte), true);
+        }
+    }
+
+    /** Cette créature (ou ce joueur) est morte ou a disparu pour de bon : les kunais plantés sur elle tombent avec. */
+    private static void perdreCible(MinecraftServer server, Entity cible, String pourquoi) {
+        Marques d = Marques.get(server);
+        for (boolean lance : new boolean[] {false, true}) {
+            for (Map.Entry<UUID, Marques.Marque> e : new ArrayList<>(d.de(lance).entrySet())) {
+                if (cible.getUUID().equals(e.getValue().cible())) {
+                    marquer(server, e.getKey(), lance, null);
+                    prevenir(server, e.getKey(), e.getValue().nom() + pourquoi + " : ton kunai est tombé avec.");
+                }
+            }
+        }
+    }
+
+    /** Chaque seconde : une marque dont la cible reste introuvable 30 secondes s'efface (on ne croit plus pouvoir la rejoindre). */
+    private static void verifierMarques(MinecraftServer server, int maintenant) {
+        Marques d = Marques.get(server);
+        for (boolean lance : new boolean[] {false, true}) {
+            Map<UUID, Integer> depuis = lance ? INTROUVABLES_LANCE : INTROUVABLES;
+            depuis.keySet().retainAll(d.de(lance).keySet());
+            for (Map.Entry<UUID, Marques.Marque> e : new ArrayList<>(d.de(lance).entrySet())) {
+                UUID cible = e.getValue().cible();
+                Entity x = cible == null ? null : trouver(server, cible);
+                if (cible == null || x != null && x.isAlive()) {
+                    depuis.remove(e.getKey());
+                } else if (maintenant - depuis.computeIfAbsent(e.getKey(), k -> maintenant) >= MARQUE_PERDUE) {
+                    marquer(server, e.getKey(), lance, null);
+                    prevenir(server, e.getKey(), "Ton kunai sur " + e.getValue().nom() + " s'est perdu.");
+                }
+            }
+        }
     }
 
     /** La téléportation, avec ses éclairs et son flash au départ et à l'arrivée. */
@@ -802,6 +849,11 @@ public final class Minato {
                 cible.hurt(joueur.damageSources().thrown(joueur, joueur), niveau(id) >= 2 ? JET_DEGATS_2 : JET_DEGATS);
             }
             monde.playSound(null, cible.blockPosition(), SoundEvents.TRIDENT_HIT, SoundSource.PLAYERS, 0.8F, 1.6F);
+            if (!cible.isAlive()) {
+                // il l'a tué : le kunai tombe avec, il n'y a plus personne à rejoindre
+                joueur.displayClientMessage(Component.literal("Ton kunai a eu " + cible.getName().getString() + "."), true);
+                return;
+            }
             joueur.displayClientMessage(Component.literal("Kunai planté dans " + cible.getName().getString() + ". Accroupi + clic gauche pour le rejoindre."), true);
             marquer(joueur.server, id, true, new Marques.Marque(dim, cible.position(), cible.getUUID(), cible.getName().getString(), null));
             return;
@@ -1235,6 +1287,9 @@ public final class Minato {
                 envoler(joueur, e.getValue());
             }
         }
+        if (maintenant % 20 == 0) {
+            verifierMarques(server, maintenant);
+        }
         // le kunai en main suit ce qu'on tient (changer d'objet change ses modificateurs de main)
         for (UUID id : ELUS) {
             ServerPlayer joueur = server.getPlayerList().getPlayer(id);
@@ -1362,6 +1417,9 @@ public final class Minato {
 
     @SubscribeEvent
     public static void mort(LivingDeathEvent event) {
+        if (event.getEntity().getServer() != null && !event.getEntity().level().isClientSide()) {
+            perdreCible(event.getEntity().getServer(), event.getEntity(), " est mort");
+        }
         if (event.getEntity() instanceof ServerPlayer joueur && COMBOS.containsKey(joueur.getUUID())) {
             finir(joueur.server, joueur.getUUID(), COMBOS.get(joueur.getUUID()), true);
         }
@@ -1370,6 +1428,16 @@ public final class Minato {
         }
         if (event.getEntity() instanceof ServerPlayer joueur) {
             liberer(joueur);
+        }
+    }
+
+    /** Une créature marquée qui disparaît pour de bon sans mourir (elle despawn, par exemple) : le kunai tombe aussi. */
+    @SubscribeEvent
+    public static void depart(EntityLeaveLevelEvent event) {
+        Entity e = event.getEntity();
+        if (!event.getLevel().isClientSide() && !(e instanceof Player) && e.getRemovalReason() != null && e.getRemovalReason().shouldDestroy()
+                && e.getServer() != null) {
+            perdreCible(e.getServer(), e, " a disparu");
         }
     }
 
