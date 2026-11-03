@@ -40,5 +40,131 @@
         "volume": 0.45
       }
     ]
+  },
+  "arme.ak47": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/ak47",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.ak47_or": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/ak47_or",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.uzi": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/uzi",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.mac10": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/mac10",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.thompson": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/thompson",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.desert_eagle_or": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/desert_eagle_or",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.canon_scie": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/canon_scie",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.barrett": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/barrett",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.m60": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/m60",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.minigun": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/minigun",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.rpg7": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/rpg7",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.m79": {
+    "subtitle": "subtitles.cabane.arme.tir",
+    "sounds": [
+      {
+        "name": "cabane:arme/m79",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "arme.explosion": {
+    "subtitle": "subtitles.cabane.arme.explosion",
+    "sounds": [
+      {
+        "name": "cabane:arme/explosion",
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "arme.lointain": {
+    "subtitle": "subtitles.cabane.arme.lointain",
+    "sounds": [
+      {
+        "name": "cabane:arme/lointain",
+        "attenuation_distance": 16
+      }
+    ]
   }
 }

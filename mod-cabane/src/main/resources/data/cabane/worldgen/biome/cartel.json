@@ -1,0 +1,27 @@
+{
+  "has_precipitation": false,
+  "temperature": 2,
+  "downfall": 0,
+  "effects": {
+    "sky_color": 8826587,
+    "fog_color": 15779984,
+    "water_color": 3983570,
+    "water_fog_color": 1927802,
+    "grass_color": 10464844,
+    "foliage_color": 8101692,
+    "additions_sound": {
+      "sound": "cabane:arme.lointain",
+      "tick_chance": 0.0035
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.desert",
+      "min_delay": 3000,
+      "max_delay": 9000,
+      "replace_current_music": true
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {},
+  "features": []
+}

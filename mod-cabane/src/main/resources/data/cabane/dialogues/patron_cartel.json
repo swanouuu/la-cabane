@@ -1,0 +1,46 @@
+{
+  "nom": "El Patrón",
+  "couleur": "gold",
+  "voix": "",
+  "qui": "patron_cartel",
+  "pages": {
+    "default": {
+      "titre": "El Patrón",
+      "textes": [
+        "Bienvenido, amigo. Ici, pas de police, pas de questions. Juste des affaires.",
+        "Tout ce que tu as vu sur les stands, c'est ma marchandise. Mais c'est ici, chez moi, qu'on paye.",
+        "La Kalach ? Cinq cents dollars. Pour toi, c'est un prix d'ami. Tu es mon ami, non ?",
+        "Le bazooka, c'est pour les grandes occasions. Les mariages, les anniversaires…",
+        "Mes gars ne te feront rien. Tant que tu payes, tout le monde t'aime ici."
+      ],
+      "boutons": [
+        {
+          "texte": "Montre-moi tes armes",
+          "action": "boutique:patron_cartel"
+        },
+        {
+          "texte": "Comment ça marche ?",
+          "vers": "aide"
+        },
+        {
+          "texte": "Adiós"
+        }
+      ]
+    },
+    "aide": {
+      "titre": "El Patrón",
+      "textes": [
+        "Clic droit pour tirer. Les mitraillettes, tu gardes le doigt dessus et ça arrose. Quand c'est vide, R pour recharger : les balles, c'est la maison qui offre. Les fusils et le bazooka se tiennent à deux mains. Le Barrett, accroupis-toi pour viser dans la lunette. La grenade, tu la lances : trois secondes, boum. Le cocktail : tout brûle autour, mais rien ne casse."
+      ],
+      "boutons": [
+        {
+          "texte": "Montre-moi tes armes",
+          "action": "boutique:patron_cartel"
+        },
+        {
+          "texte": "Gracias"
+        }
+      ]
+    }
+  }
+}

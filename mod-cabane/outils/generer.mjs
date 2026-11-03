@@ -9,6 +9,7 @@ import { genererFastFood } from "./fastfood.mjs";
 import { genererMissions } from "./missions.mjs";
 import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
+import { genererCartel, sonsCartel } from "./cartel.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -447,6 +448,7 @@ console.log(`Missions des habitants : ${genererMissions({ ecrire })}`);
 genererMarcheNoir({ ecrire, png, lang });
 genererAccessoires({ ecrire, png, lang });
 genererLabo({ ecrire, png, lang });
+console.log(`Cartel : ${genererCartel({ ecrire, lang })} gars du cartel`);
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
@@ -623,6 +625,8 @@ console.log("Ressources générées dans", RES);
   sons["woohp.aspiration"] = { subtitle: "subtitles.cabane.woohp.aspiration", sounds: [{ name: "minecraft:item/trident/riptide3" }] };
   // la musique d'ascenseur du QG du WOOHP : « Mall », un disque de Minecraft (pris dans le jeu), pas trop fort
   sons["musique.woohp"] = { sounds: [{ name: "minecraft:records/mall", stream: true, volume: 0.45 }] };
+  // les armes du cartel : leurs bruits sont synthétisés par outils/cartel.mjs
+  Object.assign(sons, sonsCartel(RES));
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");
   const cible = path.join(RES, "assets", "cabane", "sounds", "voix");
   fs.rmSync(cible, { recursive: true, force: true });

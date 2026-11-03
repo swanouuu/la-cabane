@@ -34,6 +34,7 @@ public class Cabane {
         fr.cabane.accessoire.Accessoires.register(modBus);
         fr.cabane.monde.CabaneMonde.register(modBus);
         fr.cabane.labo.Labo.register(modBus);
+        fr.cabane.cartel.Cartel.register(modBus);
         modBus.addListener(PhoneNetwork::register);
         modBus.addListener(Economie::register);
         modBus.addListener(Boutique::register);

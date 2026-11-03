@@ -1,0 +1,34 @@
+{
+  "type": "cabane:cartel",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:cartel",
+      "layers": [
+        {
+          "block": "minecraft:bedrock",
+          "height": 1
+        },
+        {
+          "block": "minecraft:stone",
+          "height": 56
+        },
+        {
+          "block": "minecraft:red_sandstone",
+          "height": 4
+        },
+        {
+          "block": "minecraft:coarse_dirt",
+          "height": 2
+        },
+        {
+          "block": "minecraft:red_sand",
+          "height": 1
+        }
+      ],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}
