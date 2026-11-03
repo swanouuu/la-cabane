@@ -132,5 +132,16 @@
   "item.cabane.kunai_minato": "Kunai de Minato",
   "death.attack.cabane.eclair_jaune": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
   "death.attack.cabane.eclair_jaune.item": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
-  "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune"
+  "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune",
+  "block.cabane.hie_hie_no_mi": "Hie Hie no Mi",
+  "block.cabane.magu_magu_no_mi": "Magu Magu no Mi",
+  "death.attack.cabane.magma": "%1$s a fondu dans la lave de %2$s",
+  "death.attack.cabane.magma.item": "%1$s a fondu dans la lave de %2$s",
+  "death.attack.cabane.magma.player": "%1$s a fondu dans la lave",
+  "death.attack.cabane.givre": "%1$s a été gelé par %2$s",
+  "death.attack.cabane.givre.item": "%1$s a été gelé par %2$s",
+  "death.attack.cabane.givre.player": "%1$s a été gelé",
+  "death.attack.cabane.eau": "%1$s a coulé : un fruit du démon ne sait pas nager",
+  "death.attack.cabane.eau.item": "%1$s a coulé en fuyant %2$s",
+  "death.attack.cabane.eau.player": "%1$s a coulé en fuyant %2$s"
 }

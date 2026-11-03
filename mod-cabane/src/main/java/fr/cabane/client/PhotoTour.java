@@ -233,6 +233,11 @@ public final class PhotoTour {
                 Minecraft.getInstance().options.keyJump.setDown(e[2].equals("1"));
                 return 2;
             }
+            // « act clic-droit-tenu 1|0 » : garder le clic droit enfoncé (pour manger), ou le lâcher
+            case "clic-droit-tenu" -> {
+                Minecraft.getInstance().options.keyUse.setDown(e[2].equals("1"));
+                return 2;
+            }
             case "eveil" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Pouvoirs.Eveil());
                 return 2;

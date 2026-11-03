@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/magu_magu_no_mi"
+    },
+    "facing=east": {
+      "model": "cabane:block/magu_magu_no_mi",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/magu_magu_no_mi",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/magu_magu_no_mi",
+      "y": 270
+    }
+  }
+}
