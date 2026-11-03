@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
-            Espionne.NOM, Fruit.LAVE, Fruit.LAVE2, Fruit.GLACE, Fruit.GLACE2, Ichibi.NOM);
+            Fruit.LAVE, Fruit.LAVE2, Fruit.GLACE, Fruit.GLACE2, Ichibi.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -139,7 +139,7 @@ public final class Pouvoirs {
     /**
      * Un éveil dure au plus 2 minutes ; ensuite (ou si on s'endort avant), le pouvoir se repose : 2 minutes pour les
      * pouvoirs de niveau 1 (Susano, Hachibi, la marque, Ichibi, et les fruits du démon restés au niveau 1), 1 minute pour
-     * Minato, les espionnes et les pouvoirs qui montent plus haut (les fruits passés au niveau 2).
+     * Minato et les pouvoirs qui montent plus haut (les fruits passés au niveau 2).
      */
     public static final int DUREE_EVEIL = 2 * 60 * 20;
     public static final int REPOS_EVEIL = 60 * 20;
@@ -178,6 +178,10 @@ public final class Pouvoirs {
             Donnees d = new Donnees();
             for (Tag t : tag.getList("elus", Tag.TAG_COMPOUND)) {
                 CompoundTag e = (CompoundTag) t;
+                // un pouvoir qui n'existe plus (les espionnes, devenues des gadgets à porter) : on l'oublie
+                if (!LISTE.contains(e.getString("pouvoir"))) {
+                    continue;
+                }
                 Couleur c = Couleur.lire(e.getString("couleur"));
                 d.elus.put(e.getUUID("uuid"), new Elu(e.getString("pouvoir"), c == null ? Couleur.VIOLET : c, e.getString("nom")));
             }
@@ -360,9 +364,6 @@ public final class Pouvoirs {
         if (Minato.est(elu.pouvoir())) {
             Minato.eveiller(joueur, suivant);
         }
-        if (Espionne.est(elu.pouvoir())) {
-            Espionne.eveiller(joueur);
-        }
         if (Fruit.est(elu.pouvoir())) {
             Fruit.eveiller(joueur, suivant);
         }
@@ -396,7 +397,7 @@ public final class Pouvoirs {
     /**
      * Un pouvoir éveillé protège comme une armure de diamant complète (sans enchantement) ; le Susano niveau 2 et Minato,
      * comme de la netherite ; la marque maudite, comme une armure de fer, deux fois plus au niveau 2 (sa Protection est
-     * dans {@link Maudit}) ; le chevalier, le mode Kurama de Minato 2 et les espionnes, un peu plus que la netherite.
+     * dans {@link Maudit}) ; le chevalier et le mode Kurama de Minato 2, un peu plus que la netherite.
      * Endormi (niveau 0), plus rien.
      */
     private static void armure(ServerPlayer joueur, int niveau) {
@@ -405,9 +406,8 @@ public final class Pouvoirs {
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
-        // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2 et la combinaison des espionnes, toujours au plus haut)
-        boolean chevalier = Susano3.est(pouvoir(joueur)) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2
-                || Espionne.est(pouvoir(joueur)) && niveau > 0;
+        // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2, toujours au plus haut)
+        boolean chevalier = Susano3.est(pouvoir(joueur)) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
         // Minato (niveau 1) compte comme un niveau 2 : de la netherite
         boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : chevalier ? 24 : 20);
@@ -437,7 +437,6 @@ public final class Pouvoirs {
         Maudit.endormir(joueur);
         Minato.endormir(joueur);
         Susano3.endormir(joueur);
-        Espionne.endormir(joueur);
         Fruit.endormir(joueur);
         Ichibi.endormir(joueur);
         armure(joueur, 0);
@@ -459,7 +458,7 @@ public final class Pouvoirs {
      */
     private static int repos(ServerPlayer joueur, int niveau) {
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
-        if (elu == null || Minato.est(elu.pouvoir()) || Espionne.est(elu.pouvoir())) {
+        if (elu == null || Minato.est(elu.pouvoir())) {
             return REPOS_EVEIL;
         }
         if (Fruit.est(elu.pouvoir())) {
@@ -496,7 +495,7 @@ public final class Pouvoirs {
      */
     private static void frapper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -571,7 +570,7 @@ public final class Pouvoirs {
      */
     private static void attraper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -713,7 +712,7 @@ public final class Pouvoirs {
     /** Le Susano pique droit devant : le joueur file, et tout ce qu'il traverse est fauché. */
     private static void charger(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -755,7 +754,7 @@ public final class Pouvoirs {
                 DEBUT_EVEIL.remove(entree.getKey());
                 continue;
             }
-            int reste = entree.getValue() + (Espionne.est(pouvoir(joueur)) ? Espionne.DUREE_EVEIL : DUREE_EVEIL) - maintenant;
+            int reste = entree.getValue() + DUREE_EVEIL - maintenant;
             if (reste <= 0) {
                 int repos = repos(joueur, niveau(joueur));
                 endormir(joueur);
@@ -847,12 +846,6 @@ public final class Pouvoirs {
                 Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Minato.est(pouvoir) ? Couleur.JAUNE
                         : Fruit.lave(pouvoir) || Ichibi.est(pouvoir) ? Couleur.ORANGE : Fruit.glace(pouvoir) ? Couleur.CYAN : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
-            } else if (Espionne.est(pouvoir)) {
-                // les espionnes : vert (Sam), rouge (Clover) ou jaune (Alex), rouge par défaut
-                joueur.executes(c -> ajouter(c, pouvoir, Couleur.ROUGE))
-                        .then(Commands.argument("couleur", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("vert", "rouge", "jaune"), b))
-                                .executes(c -> ajouter(c, pouvoir, Couleur.lire(StringArgumentType.getString(c, "couleur")))));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))
                         .then(Commands.argument("couleur", StringArgumentType.word())
@@ -878,10 +871,6 @@ public final class Pouvoirs {
         ServerPlayer joueur = EntityArgument.getPlayer(c, "joueur");
         if (couleur == null) {
             c.getSource().sendFailure(Component.literal("Couleur inconnue. Possibles : " + String.join(", ", Couleur.noms())));
-            return 0;
-        }
-        if (Espionne.est(pouvoir) && !Espionne.couleurPermise(couleur)) {
-            c.getSource().sendFailure(Component.literal("Les espionnes sont en vert (Sam), rouge (Clover) ou jaune (Alex)."));
             return 0;
         }
         donner(joueur, pouvoir, couleur);

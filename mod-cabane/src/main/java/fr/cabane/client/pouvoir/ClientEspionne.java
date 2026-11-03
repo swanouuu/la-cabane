@@ -5,20 +5,14 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.math.Axis;
 import fr.cabane.Cabane;
 import fr.cabane.pouvoir.Espionne;
-import fr.cabane.pouvoir.Pouvoirs;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -34,46 +28,30 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.PlayerSkin;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RenderArmEvent;
-import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
- * Les espionnes chez chaque joueur (voir {@link Espionne}) : la combinaison (leur propre tête sur une peau de
- * combinaison verte, rouge ou jaune), le modèle tout fin perché sur des talons, les lunettes sur le nez, les gadgets en
- * main, les rayons, bulles et câbles, la vue infrarouge, les touches et le panneau.
+ * Les espionnes chez chaque joueur (voir {@link Espionne}) : celle qui porte une tenue garde sa tête sur une peau de
+ * combinaison verte, rouge ou jaune, avec un modèle plus fin ; les bottes la perchent sur des talons d'argent, les
+ * lunettes se voient sur son nez (et lui montrent tout ce qui vit, en orange, à travers les murs). Ici aussi : les
+ * rayons, les bulles et les câbles, le double saut des bottes et l'appui court du grappin.
  */
 public final class ClientEspionne {
-    /** Les espionnes éveillées, et leur couleur (son rang dans Pouvoirs.Couleur). */
-    private static final Map<UUID, Integer> ELUES = new HashMap<>();
-    private static final Map<UUID, Integer> CHOIX = new HashMap<>();
-    private static final Set<UUID> LUNETTES = new HashSet<>();
-
     /** Un rayon de rouge à lèvres en train de s'éteindre. */
     private record Rayon(Vec3 de, Vec3 a, long debut) {
     }
@@ -88,29 +66,6 @@ public final class ClientEspionne {
     private static final float RAYON_VIE = 0.35F;
 
     // ================================================================ ce que dit le serveur
-
-    public static void recevoir(Pouvoirs.Etat p) {
-        if (!p.eveille()) {
-            oublier(p.joueur());
-            return;
-        }
-        ELUES.put(p.joueur(), p.couleur());
-    }
-
-    public static void oublier(UUID joueur) {
-        ELUES.remove(joueur);
-        LUNETTES.remove(joueur);
-        CABLES.remove(joueur);
-    }
-
-    public static void choix(Espionne.Choix p) {
-        CHOIX.put(p.joueur(), p.gadget());
-        if (p.lunettes()) {
-            LUNETTES.add(p.joueur());
-        } else {
-            LUNETTES.remove(p.joueur());
-        }
-    }
 
     public static void rayon(Espionne.Rayon p) {
         RAYONS.add(new Rayon(vec(p.de()), vec(p.a()), System.nanoTime()));
@@ -136,31 +91,9 @@ public final class ClientEspionne {
         return (System.nanoTime() - depuis) / 1e9;
     }
 
-    private static boolean moiEveillee() {
-        Minecraft mc = Minecraft.getInstance();
-        return mc.player != null && ELUES.containsKey(mc.player.getUUID());
-    }
-
-    /** Ce joueur est-il une espionne éveillée (en combinaison) ? */
-    public static boolean eveillee(Player joueur) {
-        return ELUES.containsKey(joueur.getUUID());
-    }
-
-    private static int choix(UUID joueur) {
-        return Mth.clamp(CHOIX.getOrDefault(joueur, 0), 0, Espionne.GADGETS.length - 1);
-    }
-
-    /** Le prénom et la teinte de chaque couleur de combinaison. */
-    private static String prenom(int couleur) {
-        return couleur == Pouvoirs.Couleur.VERT.ordinal() ? "SAM" : couleur == Pouvoirs.Couleur.JAUNE.ordinal() ? "ALEX" : "CLOVER";
-    }
-
-    private static String tenue(int couleur) {
-        return couleur == Pouvoirs.Couleur.VERT.ordinal() ? "verte" : couleur == Pouvoirs.Couleur.JAUNE.ordinal() ? "jaune" : "rouge";
-    }
-
-    private static int teinte(int couleur) {
-        return couleur == Pouvoirs.Couleur.VERT.ordinal() ? 0xFF3AA846 : couleur == Pouvoirs.Couleur.JAUNE.ordinal() ? 0xFFF0C41C : 0xFFD4222A;
+    /** Ce joueur porte-t-il une tenue d'espionne ? (sa cape s'efface alors, voir CapeLayerMixin) */
+    public static boolean enTenue(Player joueur) {
+        return Espionne.tenue(joueur) >= 0;
     }
 
     // ================================================================ la combinaison (la peau)
@@ -175,13 +108,10 @@ public final class ClientEspionne {
     /** Les combinaisons, lues une fois (64 × 64, en ABGR, sans tête). */
     private static final Map<String, int[]> TENUES = new HashMap<>();
 
-    /** Appelé à chaque {@code getSkin()} : une espionne éveillée porte sa combinaison (corps et bras). */
+    /** Appelé à chaque {@code getSkin()} : celle qui porte une tenue a sa combinaison (corps et bras). */
     public static PlayerSkin peau(AbstractClientPlayer joueur, PlayerSkin skin) {
-        if (brut || ELUES.isEmpty()) {
-            return skin;
-        }
-        Integer couleur = ELUES.get(joueur.getUUID());
-        ResourceLocation id = couleur == null ? null : PEAUX.get(skin.texture() + "|" + couleur);
+        int couleur = brut || PEAUX.isEmpty() ? -1 : Espionne.tenue(joueur);
+        ResourceLocation id = couleur < 0 ? null : PEAUX.get(skin.texture() + "|" + couleur);
         if (id == null) {
             return skin;
         }
@@ -226,7 +156,7 @@ public final class ClientEspionne {
         if (PEAUX.containsKey(cle) || System.nanoTime() < RATEES.getOrDefault(cle, 0L)) {
             return;
         }
-        int[] tenue = combinaison(tenue(couleur));
+        int[] tenue = combinaison(Espionne.TENUES[couleur]);
         int[] base = ClientMaudit.lire(vraie.texture());
         if (tenue == null || base == null) {
             RATEES.put(cle, System.nanoTime() + 2_000_000_000L);
@@ -245,10 +175,13 @@ public final class ClientEspionne {
         RATEES.remove(cle);
     }
 
-    // ================================================================ le modèle tout fin, sur ses talons
+    // ================================================================ le modèle en tenue, sur ses talons
 
-    /** Ce qu'on garde de la largeur (x) et de la profondeur (z) du corps, des bras et des jambes (un peu plus épais que les maquettes). */
-    private static final float CORPS_X = 0.7F, CORPS_Z = 0.75F, BRAS_X = 0.55F, BRAS_Z = 0.6F, JAMBE_X = 0.6F, JAMBE_Z = 0.7F;
+    /**
+     * Ce qu'on garde de la largeur (x) et de la profondeur (z) du corps, des bras et des jambes en tenue (plus épais que les
+     * maquettes, et encore un peu plus depuis que la tenue s'enfile).
+     */
+    private static final float CORPS_X = 0.8F, CORPS_Z = 0.85F, BRAS_X = 0.68F, BRAS_Z = 0.72F, JAMBE_X = 0.72F, JAMBE_Z = 0.8F;
     /** Le milieu des bras et des jambes, en pixels du modèle (au lieu de 6 et 1,9) : contre le corps aminci. */
     private static final float MILIEU_BRAS = 4 * CORPS_X + 2 * BRAS_X, MILIEU_JAMBE = 2 * JAMBE_X + 0.1F;
     /** Les talons soulèvent tout le corps de 2 pixels. */
@@ -256,41 +189,44 @@ public final class ClientEspionne {
     /** Le bras qu'on va dessiner est celui de la première personne (on l'amincit, sans le déplacer). */
     private static boolean premierePersonne;
 
-    /** Après la pose habituelle (PlayerModelMixin) : une espionne éveillée devient toute fine, et les autres redeviennent normaux. */
+    /** Après la pose habituelle (PlayerModelMixin) : en tenue, le corps s'affine ; avec les bottes, il monte sur ses talons. */
     public static void poser(PlayerModel<?> m, Player joueur) {
         boolean bras = premierePersonne;
         premierePersonne = false;
         ModelPart[] parties = {m.body, m.jacket, m.rightArm, m.rightSleeve, m.leftArm, m.leftSleeve, m.rightLeg, m.rightPants, m.leftLeg, m.leftPants};
-        if (!ELUES.containsKey(joueur.getUUID())) {
-            // le même modèle sert à tous les joueurs : on défait ce qu'une espionne y a changé
-            for (ModelPart p : parties) {
-                p.xScale = p.yScale = p.zScale = 1;
+        // le même modèle sert à tous les joueurs : on défait d'abord ce qu'une espionne y a changé
+        for (ModelPart p : parties) {
+            p.xScale = p.yScale = p.zScale = 1;
+        }
+        boolean tenue = enTenue(joueur);
+        if (tenue) {
+            boolean fin = joueur instanceof AbstractClientPlayer c && c.getSkin().model() == PlayerSkin.Model.SLIM;
+            // le bras (4 pixels de large, ou 3 en modèle fin) n'est pas centré sur son pivot
+            float decale = fin ? 0.5F : 1F;
+            float bx = fin ? BRAS_X * 4 / 3 : BRAS_X;
+            m.body.xScale = CORPS_X;
+            m.body.zScale = CORPS_Z;
+            for (ModelPart b : new ModelPart[] {m.rightArm, m.leftArm}) {
+                b.xScale = bx;
+                b.zScale = BRAS_Z;
             }
-            m.rightLeg.x = m.rightPants.x = -1.9F;
-            m.leftLeg.x = m.leftPants.x = 1.9F;
-            return;
+            for (ModelPart j : new ModelPart[] {m.rightLeg, m.leftLeg}) {
+                j.xScale = JAMBE_X;
+                j.zScale = JAMBE_Z;
+            }
+            if (!bras) {
+                m.rightArm.x = m.rightArm.x * MILIEU_BRAS / 5 + decale * bx;
+                m.leftArm.x = m.leftArm.x * MILIEU_BRAS / 5 - decale * bx;
+                m.rightArm.z *= MILIEU_BRAS / 5;
+                m.leftArm.z *= MILIEU_BRAS / 5;
+                m.rightLeg.x = -MILIEU_JAMBE;
+                m.leftLeg.x = MILIEU_JAMBE;
+            }
+        } else {
+            m.rightLeg.x = -1.9F;
+            m.leftLeg.x = 1.9F;
         }
-        boolean fin = joueur instanceof AbstractClientPlayer c && c.getSkin().model() == PlayerSkin.Model.SLIM;
-        // le bras (4 pixels de large, ou 3 en modèle fin) n'est pas centré sur son pivot : on garde 1,6 pixel de large
-        float decale = fin ? 0.5F : 1F;
-        float bx = fin ? BRAS_X * 4 / 3 : BRAS_X;
-        m.body.xScale = CORPS_X;
-        m.body.zScale = CORPS_Z;
-        for (ModelPart b : new ModelPart[] {m.rightArm, m.leftArm}) {
-            b.xScale = bx;
-            b.zScale = BRAS_Z;
-        }
-        for (ModelPart j : new ModelPart[] {m.rightLeg, m.leftLeg}) {
-            j.xScale = JAMBE_X;
-            j.zScale = JAMBE_Z;
-        }
-        if (!bras) {
-            m.rightArm.x = m.rightArm.x * MILIEU_BRAS / 5 + decale * bx;
-            m.leftArm.x = m.leftArm.x * MILIEU_BRAS / 5 - decale * bx;
-            m.rightArm.z *= MILIEU_BRAS / 5;
-            m.leftArm.z *= MILIEU_BRAS / 5;
-            m.rightLeg.x = -MILIEU_JAMBE;
-            m.leftLeg.x = MILIEU_JAMBE;
+        if (!bras && Espionne.porte(joueur, Espionne.BOTTES)) {
             for (ModelPart p : new ModelPart[] {m.head, m.hat, m.body, m.rightArm, m.leftArm, m.rightLeg, m.leftLeg}) {
                 p.y -= TALON;
             }
@@ -336,20 +272,27 @@ public final class ClientEspionne {
         @Override
         public void render(PoseStack ps, MultiBufferSource buffers, int lumiere, AbstractClientPlayer joueur, float marche, float vitesse,
                 float partiel, float age, float tete, float tangage) {
-            if (!ELUES.containsKey(joueur.getUUID()) || joueur.isInvisible()) {
+            if (joueur.isInvisible()) {
+                return;
+            }
+            boolean bottes = Espionne.porte(joueur, Espionne.BOTTES);
+            boolean surLeNez = Espionne.porte(joueur, Espionne.LUNETTES);
+            if (!bottes && !surLeNez) {
                 return;
             }
             modeles();
             PlayerModel<AbstractClientPlayer> m = getParentModel();
             VertexConsumer c = buffers.getBuffer(RenderType.entityCutoutNoCull(ACCESSOIRES));
             int dessous = LivingEntityRenderer.getOverlayCoords(joueur, 0);
-            for (ModelPart jambe : new ModelPart[] {m.rightLeg, m.leftLeg}) {
-                ps.pushPose();
-                jambe.translateAndRotate(ps);
-                talon.render(ps, c, lumiere, dessous);
-                ps.popPose();
+            if (bottes) {
+                for (ModelPart jambe : new ModelPart[] {m.rightLeg, m.leftLeg}) {
+                    ps.pushPose();
+                    jambe.translateAndRotate(ps);
+                    talon.render(ps, c, lumiere, dessous);
+                    ps.popPose();
+                }
             }
-            if (LUNETTES.contains(joueur.getUUID())) {
+            if (surLeNez) {
                 ps.pushPose();
                 m.head.translateAndRotate(ps);
                 lunettes.render(ps, c, lumiere, dessous);
@@ -360,124 +303,25 @@ public final class ClientEspionne {
 
     // ================================================================ la vue infrarouge
 
+    /** Ai-je mes lunettes sur le nez ? (relu à chaque tick : les mixins le demandent pour chaque entité, à chaque image) */
+    private static boolean lunettesMises;
+
     /** Avec ses lunettes, une espionne voit briller (en orange, à travers les murs) ce qui vit à moins de 48 blocs. */
     public static boolean infrarouge(Entity e) {
-        if (LUNETTES.isEmpty()) {
+        if (!lunettesMises) {
             return false;
         }
         Player moi = Minecraft.getInstance().player;
-        return moi != null && e != moi && e instanceof LivingEntity && !e.isSpectator() && LUNETTES.contains(moi.getUUID())
-                && ELUES.containsKey(moi.getUUID()) && e.level() == moi.level() && e.distanceToSqr(moi) < 48 * 48;
+        return moi != null && e != moi && e instanceof LivingEntity && !e.isSpectator() && e.level() == moi.level() && e.distanceToSqr(moi) < 48 * 48;
     }
 
-    // ================================================================ les gadgets en main
+    // ================================================================ les touches (le grappin, le double saut)
 
-    private static final Map<Player, ItemStack[]> TENUS = new HashMap<>();
-
-    private static ItemStack gadgetEnMain(UUID joueur) {
-        return new ItemStack(Espionne.gadget(choix(joueur)));
-    }
-
-    private static void rendre(Player p) {
-        ItemStack[] avant = TENUS.remove(p);
-        if (avant != null) {
-            p.getInventory().items.set(p.getInventory().selected, avant[0]);
-            p.getInventory().offhand.set(0, avant[1]);
-        }
-    }
-
-    private static void rendre() {
-        for (Player p : TENUS.keySet().toArray(new Player[0])) {
-            rendre(p);
-        }
-    }
-
-    // ================================================================ les touches
-
-    /** Quand chaque gadget sera de nouveau prêt chez moi (System.nanoTime) : les 4 du clic droit, le laser, le grappin. */
-    private static final long[] PRETS = new long[6];
-    private static final int LASER = 4, GRAPPIN = 5;
     /** Un appui sur accroupi plus court que ça (et sans clic pendant) lance le grappin. */
     private static final long APPUI_COURT = 350_000_000L;
-    private static boolean gaucheTenu, droitTenu, accroupiAvant, clicAccroupi, sautAvant, sautFait;
-    private static long debutAccroupi;
+    private static boolean accroupiAvant, clicAccroupi, sautAvant, sautFait;
+    private static long debutAccroupi, grappinPret;
     private static int enLair;
-
-    private static boolean pret(int gadget) {
-        return System.nanoTime() >= PRETS[gadget];
-    }
-
-    private static void armer(int gadget, int ticks) {
-        PRETS[gadget] = System.nanoTime() + ticks * 50_000_000L;
-    }
-
-    private static double reste(int gadget) {
-        return Math.max(0, (PRETS[gadget] - System.nanoTime()) / 1e9);
-    }
-
-    // ================================================================ le panneau et la barre des gadgets
-
-    private static void ecran(GuiGraphics g) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui || !ELUES.containsKey(mc.player.getUUID())) {
-            return;
-        }
-        UUID moi = mc.player.getUUID();
-        int couleur = ELUES.get(moi);
-        int c = choix(moi);
-        boolean lunettesMises = LUNETTES.contains(moi);
-        // les lunettes teintent un peu tout en orange
-        if (lunettesMises) {
-            g.fill(0, 0, g.guiWidth(), g.guiHeight(), 0x22FF5A14);
-        }
-        String gadget = Espionne.NOMS[c] + (c == Espionne.LUNETTES ? lunettesMises ? " (enlever)" : " (mettre)" : "");
-        if (reste(c) > 0) {
-            gadget += String.format(" (%.1f s)", reste(c));
-        }
-        String[][] lignes = {{Clavier.gauche(), "Laser (rouge à lèvres)"}, {Clavier.droite(), gadget}, {Clavier.accroupi() + " + " + Clavier.droite(), "Gadget suivant"},
-                {Clavier.accroupi() + " (appui court)", "Grappin"}, {Clavier.saut() + " en l'air", "Double saut (talons)"},
-                {ClientSusano.EVEIL.getTranslatedKeyMessage().getString(), "Rendormir"}};
-        boolean[] gris = {reste(LASER) > 0, reste(c) > 0, false, reste(GRAPPIN) > 0, sautFait, false};
-        String titre = "WOOHP  ·  " + prenom(couleur);
-        Font font = mc.font;
-        int largeurTouche = 0;
-        int largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26;
-        int ph = 22 + lignes.length * 13;
-        int x = 6;
-        int y = g.guiHeight() / 2 - ph / 2;
-        int teinte = teinte(couleur);
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
-        // à droite de la barre d'objets : le rouge à lèvres, puis les quatre gadgets du clic droit (celui choisi entouré)
-        int bx = g.guiWidth() / 2 + 98;
-        int by = g.guiHeight() - 22;
-        caseGadget(g, bx, by, new ItemStack(Espionne.rougeALevres()), false, reste(LASER) / (Espionne.RECHARGE_LASER / 20.0));
-        for (int i = 0; i < Espionne.GADGETS.length; i++) {
-            caseGadget(g, bx + 26 + i * 21, by, new ItemStack(Espionne.gadget(i)), i == c, reste(i) / (Espionne.RECHARGES[i] / 20.0));
-        }
-    }
-
-    private static void caseGadget(GuiGraphics g, int x, int y, ItemStack objet, boolean choisi, double recharge) {
-        g.fill(x, y, x + 20, y + 20, choisi ? 0xFFFFFFFF : 0xFF5A5866);
-        g.fill(x + 1, y + 1, x + 19, y + 19, 0xC0202028);
-        g.renderItem(objet, x + 2, y + 2);
-        if (recharge > 0) {
-            int h = (int) Math.ceil(18 * Math.min(1, recharge));
-            g.fill(x + 1, y + 19 - h, x + 19, y + 19, 0x90000000);
-        }
-    }
 
     // ================================================================ dessins dans le monde
 
@@ -540,9 +384,14 @@ public final class ClientEspionne {
 
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
     public static final class Couches {
+        /** Les lunettes teintent un peu tout en orange. */
         @SubscribeEvent
         public static void enregistrer(RegisterGuiLayersEvent event) {
-            event.registerAboveAll(Cabane.id("espionne"), (g, delta) -> ecran(g));
+            event.registerAboveAll(Cabane.id("espionne"), (g, delta) -> {
+                if (lunettesMises && !Minecraft.getInstance().options.hideGui) {
+                    g.fill(0, 0, g.guiWidth(), g.guiHeight(), 0x22FF5A14);
+                }
+            });
         }
 
         /** Les talons et les lunettes se posent sur tous les joueurs (bras larges comme fins). */
@@ -564,38 +413,31 @@ public final class ClientEspionne {
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
-            rendre();
             if (mc.level == null || mc.player == null) {
-                ELUES.clear();
-                CHOIX.clear();
-                LUNETTES.clear();
                 RAYONS.clear();
                 BULLES.clear();
                 CABLES.clear();
+                lunettesMises = false;
                 return;
             }
-            UUID moi = mc.player.getUUID();
-            boolean eveillee = ELUES.containsKey(moi);
-            if (!mc.options.keyAttack.isDown()) {
-                gaucheTenu = false;
-            }
-            if (!mc.options.keyUse.isDown()) {
-                droitTenu = false;
-            }
-            // le grappin : un appui court sur accroupi, sans clic pendant
+            lunettesMises = Espionne.porte(mc.player, Espionne.LUNETTES);
+            // le grappin (à la ceinture) : un appui court sur accroupi, sans clic pendant
             boolean accroupi = mc.options.keyShift.isDown();
             long maintenant = System.nanoTime();
             if (accroupi && !accroupiAvant) {
                 debutAccroupi = maintenant;
                 clicAccroupi = false;
             }
-            if (!accroupi && accroupiAvant && eveillee && mc.screen == null && !clicAccroupi && maintenant - debutAccroupi < APPUI_COURT
-                    && pret(GRAPPIN)) {
-                armer(GRAPPIN, Espionne.RECHARGE_GRAPPIN);
+            if (accroupi && (mc.options.keyUse.isDown() || mc.options.keyAttack.isDown())) {
+                clicAccroupi = true;
+            }
+            if (!accroupi && accroupiAvant && mc.screen == null && !clicAccroupi && maintenant - debutAccroupi < APPUI_COURT
+                    && maintenant >= grappinPret && Espionne.porte(mc.player, Espionne.GRAPPIN)) {
+                grappinPret = maintenant + Espionne.RECHARGE_GRAPPIN * 50_000_000L;
                 PacketDistributor.sendToServer(new Espionne.Grappin());
             }
             accroupiAvant = accroupi;
-            // les talons : sauter une deuxième fois, en l'air (pas au moment même où l'on quitte le sol)
+            // les bottes : sauter une deuxième fois, en l'air (pas au moment même où l'on quitte le sol)
             boolean saut = mc.options.keyJump.isDown();
             if (mc.player.onGround() || mc.player.isInWater() || mc.player.onClimbable()) {
                 enLair = 0;
@@ -603,114 +445,27 @@ public final class ClientEspionne {
             } else {
                 enLair++;
             }
-            if (saut && !sautAvant && eveillee && mc.screen == null && enLair > 1 && !sautFait && !mc.player.getAbilities().flying
-                    && !mc.player.isPassenger()) {
+            if (saut && !sautAvant && mc.screen == null && enLair > 1 && !sautFait && !mc.player.getAbilities().flying
+                    && !mc.player.isPassenger() && Espionne.porte(mc.player, Espionne.BOTTES)) {
                 sautFait = true;
                 PacketDistributor.sendToServer(new Espionne.Saut());
             }
             sautAvant = saut;
-            // la combinaison de chaque espionne qu'on voit
-            for (Map.Entry<UUID, Integer> e : ELUES.entrySet()) {
-                if (mc.level.getPlayerByUUID(e.getKey()) instanceof AbstractClientPlayer joueur) {
-                    preparer(joueur, e.getValue());
+            // la combinaison de chaque espionne en tenue qu'on voit
+            for (Player p : mc.level.players()) {
+                int couleur = Espionne.tenue(p);
+                if (couleur >= 0 && p instanceof AbstractClientPlayer joueur) {
+                    preparer(joueur, couleur);
                 }
             }
             RAYONS.removeIf(r -> secondes(r.debut()) > RAYON_VIE);
             BULLES.values().removeIf(fin -> fin < maintenant);
         }
 
-        /**
-         * Éveillée : le clic gauche tire au rouge à lèvres (toujours) ; le clic droit sert le gadget choisi, et accroupi
-         * il passe au suivant. Rien d'autre ne passe (ni coup de poing, ni objet utilisé).
-         */
-        @SubscribeEvent
-        public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
-            Minecraft mc = Minecraft.getInstance();
-            if (!moiEveillee() || !(event.isAttack() || event.isUseItem())) {
-                return;
-            }
-            event.setCanceled(true);
-            event.setSwingHand(false);
-            boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi) {
-                clicAccroupi = true;
-            }
-            if (event.isAttack()) {
-                if (!gaucheTenu && pret(LASER)) {
-                    armer(LASER, Espionne.RECHARGE_LASER);
-                    event.setSwingHand(true);
-                    PacketDistributor.sendToServer(new Espionne.Laser());
-                }
-                gaucheTenu = true;
-                return;
-            }
-            if (droitTenu) {
-                return;
-            }
-            droitTenu = true;
-            UUID moi = mc.player.getUUID();
-            if (accroupi) {
-                CHOIX.put(moi, (choix(moi) + 1) % Espionne.GADGETS.length);
-                mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.8F, 0.35F));
-                PacketDistributor.sendToServer(new Espionne.Suivant());
-                return;
-            }
-            int c = choix(moi);
-            if (pret(c)) {
-                armer(c, Espionne.RECHARGES[c]);
-                event.setSwingHand(true);
-                PacketDistributor.sendToServer(new Espionne.Gadget());
-            }
-        }
-
-        /** Le bras à la première personne : aminci, mais pas déplacé ni soulevé (voir poser). */
+        /** Le bras à la première personne : aminci en tenue, mais pas déplacé ni soulevé (voir poser). */
         @SubscribeEvent
         public static void bras(RenderArmEvent event) {
-            premierePersonne = ELUES.containsKey(event.getPlayer().getUUID());
-        }
-
-        /** À la première personne, on tient le gadget choisi, quoi qu'on ait vraiment en main. */
-        @SubscribeEvent(priority = EventPriority.LOWEST)
-        public static void main(RenderHandEvent event) {
-            Minecraft mc = Minecraft.getInstance();
-            if (event.getHand() != InteractionHand.MAIN_HAND || mc.player == null || !ELUES.containsKey(mc.player.getUUID())) {
-                return;
-            }
-            event.setCanceled(true);
-            // tenu comme n'importe quel objet (ItemInHandRenderer.renderArmWithItem)
-            HumanoidArm bras = mc.player.getMainArm();
-            int i = bras == HumanoidArm.RIGHT ? 1 : -1;
-            float coup = event.getSwingProgress();
-            float racine = Mth.sqrt(coup);
-            float s = Mth.sin(racine * Mth.PI);
-            PoseStack pose = event.getPoseStack();
-            pose.pushPose();
-            pose.translate(i * -0.4F * s, 0.2F * Mth.sin(racine * Mth.TWO_PI), -0.2F * Mth.sin(coup * Mth.PI));
-            pose.translate(i * 0.56F, -0.52F + event.getEquipProgress() * -0.6F, -0.72F);
-            pose.mulPose(Axis.YP.rotationDegrees(i * (45F - 20F * Mth.sin(coup * coup * Mth.PI))));
-            pose.mulPose(Axis.ZP.rotationDegrees(i * s * -20F));
-            pose.mulPose(Axis.XP.rotationDegrees(s * -80F));
-            pose.mulPose(Axis.YP.rotationDegrees(i * -45F));
-            mc.getEntityRenderDispatcher().getItemInHandRenderer().renderItem(mc.player, gadgetEnMain(mc.player.getUUID()),
-                    bras == HumanoidArm.RIGHT ? ItemDisplayContext.FIRST_PERSON_RIGHT_HAND : ItemDisplayContext.FIRST_PERSON_LEFT_HAND,
-                    bras == HumanoidArm.LEFT, pose, event.getMultiBufferSource(), event.getPackedLight());
-            pose.popPose();
-        }
-
-        /** Vue de l'extérieur : le temps de la dessiner, une espionne tient son gadget (main) et son rouge à lèvres (l'autre main). */
-        @SubscribeEvent(priority = EventPriority.LOWEST)
-        public static void prendre(RenderPlayerEvent.Pre event) {
-            Player p = event.getEntity();
-            Inventory inv = p.getInventory();
-            if (ELUES.containsKey(p.getUUID()) && !TENUS.containsKey(p) && inv.selected >= 0 && inv.selected < inv.items.size()) {
-                TENUS.put(p, new ItemStack[] {inv.items.set(inv.selected, gadgetEnMain(p.getUUID())),
-                        inv.offhand.set(0, new ItemStack(Espionne.rougeALevres()))});
-            }
-        }
-
-        @SubscribeEvent
-        public static void reposer(RenderPlayerEvent.Post event) {
-            rendre(event.getEntity());
+            premierePersonne = enTenue(event.getPlayer());
         }
 
         @SubscribeEvent

@@ -28,6 +28,8 @@ sourceSets.main.resources {
 
 repositories {
     maven { url = "https://maven.maxhenkel.de/repository/public" }
+    // Curios (les slots accessoires), fourni par le pack
+    maven { url = "https://maven.theillusivec4.top/" }
     // Add here additional repositories if required by some of the dependencies below.
 }
 
@@ -126,6 +128,8 @@ configurations {
 dependencies {
     // API de Simple Voice Chat (le mod lui-même est fourni par le pack)
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
+    // API de Curios : les accessoires (queue de Saiyan, détecteurs…) ; le mod est dans le pack et dans run/mods
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

@@ -22,7 +22,7 @@ public abstract class CapeLayerMixin {
             at = @At("HEAD"), cancellable = true)
     private void cabane$transforme(PoseStack ps, MultiBufferSource buffers, int lumiere, AbstractClientPlayer joueur, float a, float b, float c,
             float d, float e, float f, CallbackInfo ci) {
-        if (ClientEspionne.eveillee(joueur) || ClientSusano.transforme(joueur)) {
+        if (ClientEspionne.enTenue(joueur) || ClientSusano.transforme(joueur)) {
             ci.cancel();
         }
     }

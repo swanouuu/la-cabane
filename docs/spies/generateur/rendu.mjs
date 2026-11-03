@@ -386,6 +386,25 @@ const GADGETS = {
   }),
 };
 
+/** La tenue pliée, prête à enfiler : la combinaison de sa couleur, le col, la fermeture éclair d'argent et la ceinture rose. */
+function iconeTenue(base) {
+  return icone((p) => {
+    const fonce = base.map((v) => v * 0.7), clair = base.map((v) => Math.min(255, v * 1.25 + 20));
+    p.rect(5, 2, 10, 8, base);
+    p.rect(3, 3, 4, 9, base); p.rect(11, 3, 12, 9, base);
+    p.rect(5, 9, 7, 14, base); p.rect(8, 9, 10, 14, base);
+    p.efface(3, 3); p.efface(12, 3);
+    p.rect(5, 15, 7, 15, SEMELLE); p.rect(8, 15, 10, 15, SEMELLE);
+    p.rect(3, 10, 4, 10, [236, 236, 244]); p.rect(11, 10, 12, 10, [236, 236, 244]);
+    p.bord();
+    p.rect(6, 2, 9, 2, fonce);
+    p.rect(4, 4, 4, 8, clair); p.rect(5, 3, 5, 7, clair);
+    p.rect(5, 8, 10, 8, ROSE); p.pt(7, 8, OR_CLAIR); p.pt(8, 8, OR_CLAIR);
+    p.rect(7, 2, 7, 7, ARGENT); p.rect(8, 3, 8, 4, [240, 244, 252]);
+    p.pt(7, 9, fonce); p.pt(8, 9, fonce);
+  });
+}
+
 // ------------------------------------------------------------------ ce que fait chaque gadget
 const DROIT = [-1.5, -0.05];
 const posePas = { jambeD: -0.25, jambeG: 0.2 };
@@ -564,9 +583,14 @@ for (const e of Object.values(ESPIONNES)) ecrirePng(path.join(DOC, "textures", "
 // ------------------------------------------------------------------ les textures du mod (mod-cabane, assets/cabane)
 const MOD = path.join(DOC, "..", "..", "mod-cabane", "src", "main", "resources", "assets", "cabane");
 fs.mkdirSync(path.join(MOD, "textures", "espionnes"), { recursive: true });
-// les gadgets tenus en main (les talons et le grappin ne se tiennent pas)
-for (const cle of ["rouge_a_levres", "seche_cheveux", "lunettes", "parfum", "chewing_gum"]) {
-  ecrirePng(path.join(MOD, "textures", "item", "espionne_" + cle + ".png"), 16, 16, GADGETS[cle].px);
+// les objets : les gadgets en main, les accessoires (les talons sont les bottes) et les trois tenues à enfiler
+const OBJETS = {
+  rouge_a_levres: GADGETS.rouge_a_levres, seche_cheveux: GADGETS.seche_cheveux, lunettes: GADGETS.lunettes, parfum: GADGETS.parfum,
+  chewing_gum: GADGETS.chewing_gum, bottes: GADGETS.talons, grappin: GADGETS.grappin,
+  ...Object.fromEntries(Object.values(ESPIONNES).map((e) => ["tenue_" + e.couleur, iconeTenue(e.base)])),
+};
+for (const [cle, ic] of Object.entries(OBJETS)) {
+  ecrirePng(path.join(MOD, "textures", "item", "espionne_" + cle + ".png"), 16, 16, ic.px);
   fs.writeFileSync(path.join(MOD, "models", "item", "espionne_" + cle + ".json"),
     JSON.stringify({ parent: "minecraft:item/generated", textures: { layer0: "cabane:item/espionne_" + cle } }, null, 2) + "\n");
 }

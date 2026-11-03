@@ -176,5 +176,13 @@
         "attenuation_distance": 16
       }
     ]
+  },
+  "espionne.zip": {
+    "subtitle": "subtitles.cabane.espionne.zip",
+    "sounds": [
+      {
+        "name": "cabane:espionne/zip"
+      }
+    ]
   }
 }

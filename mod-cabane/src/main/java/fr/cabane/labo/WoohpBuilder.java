@@ -23,11 +23,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -41,7 +43,7 @@ import net.minecraft.world.phys.Vec3;
  */
 final class WoohpBuilder {
     /** À augmenter quand on change le QG : il se reconstruit à la prochaine utilisation de /whoop. */
-    static final int VERSION = 3;
+    static final int VERSION = 4;
     static final String TAG = "cabane_woohp";
     /** La salle : murs à ±X et ±Z, plafond à HAUT. */
     static final int X = 20;
@@ -54,6 +56,8 @@ final class WoohpBuilder {
     /** Le coffre caché de Jerry, glissé dans le bureau côté Jerry, et la place de Jerry. */
     static final BlockPos COFFRE = new BlockPos(-3, 1, 9);
     static final BlockPos JERRY = new BlockPos(0, 1, 10);
+    /** Le bouton des gadgets, contre la butée au bout du tapis roulant, côté espionnes (voir WoohpGadgets). */
+    static final BlockPos BOUTON_GADGETS = new BlockPos(TAPIS_X1 + 1, 2, TAPIS_Z - 1);
     /** Jusqu'où va le chantier (les toboggans compris). */
     static final int BORD_X = 26;
     static final int BORD_Z0 = -20;
@@ -344,6 +348,11 @@ final class WoohpBuilder {
         pose(TAPIS_X1 + 1, 1, TAPIS_Z, Blocks.SMOOTH_QUARTZ.defaultBlockState());
         pose(TAPIS_X1 + 1, 2, TAPIS_Z, Blocks.SMOOTH_QUARTZ.defaultBlockState());
         texte(0.5, 2.6, TAPIS_Z - 0.05, 180F, "{\"text\":\"GADGETS\",\"color\":\"light_purple\",\"bold\":true}", 0.6F, 0, "fixed");
+        // le bouton des gadgets : tous les gadgets, les accessoires et les trois tenues sortent sur le tapis
+        pose(BOUTON_GADGETS.getX(), BOUTON_GADGETS.getY(), BOUTON_GADGETS.getZ(), Blocks.CRIMSON_BUTTON.defaultBlockState()
+                .setValue(ButtonBlock.FACE, AttachFace.WALL).setValue(ButtonBlock.FACING, Direction.NORTH));
+        texte(BOUTON_GADGETS.getX() + 0.5, 3.05, TAPIS_Z - 0.05, 180F,
+                "[{\"text\":\"GADGETS\n\",\"color\":\"light_purple\",\"bold\":true},{\"text\":\"appuie !\",\"color\":\"gray\",\"bold\":false}]", 0.4F, 0, "fixed");
         // le bureau : deux rangées d'un blanc métallisé, en couches
         for (int x = -7; x <= 7; x++) {
             pose(x, 1, TAPIS_Z + 1, Blocks.SMOOTH_QUARTZ.defaultBlockState());

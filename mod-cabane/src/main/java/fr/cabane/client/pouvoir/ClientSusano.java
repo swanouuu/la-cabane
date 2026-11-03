@@ -157,7 +157,7 @@ public final class ClientSusano {
 
     // ================================================================ ce que dit le serveur
 
-    /** Ce joueur a-t-il un pouvoir éveillé (Susano, Hachibi, la marque, Minato, espionne, fruit…) ? Sa cape s'efface alors. */
+    /** Ce joueur a-t-il un pouvoir éveillé (Susano, Hachibi, la marque, Minato, fruit…) ? Sa cape s'efface alors. */
     public static boolean transforme(Player joueur) {
         return TRANSFORMES.contains(joueur.getUUID());
     }
@@ -172,13 +172,12 @@ public final class ClientSusano {
         } else {
             TRANSFORMES.remove(p.joueur());
         }
-        // Hachibi, la marque maudite, Minato, les espionnes, les fruits du démon et Ichibi ont leur propre dessin
+        // Hachibi, la marque maudite, Minato, les fruits du démon et Ichibi ont leur propre dessin
         if (fr.cabane.pouvoir.Ichibi.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());
             ClientMaudit.oublier(p.joueur());
             ClientMinato.oublier(p.joueur());
-            ClientEspionne.oublier(p.joueur());
             ClientFruit.oublier(p.joueur());
             ClientIchibi.recevoir(p);
             return;
@@ -189,20 +188,10 @@ public final class ClientSusano {
             ClientHachibi.oublier(p.joueur());
             ClientMaudit.oublier(p.joueur());
             ClientMinato.oublier(p.joueur());
-            ClientEspionne.oublier(p.joueur());
             ClientFruit.recevoir(p);
             return;
         }
         ClientFruit.oublier(p.joueur());
-        if (fr.cabane.pouvoir.Espionne.est(p.pouvoir())) {
-            SUSANOS.remove(p.joueur());
-            ClientHachibi.oublier(p.joueur());
-            ClientMaudit.oublier(p.joueur());
-            ClientMinato.oublier(p.joueur());
-            ClientEspionne.recevoir(p);
-            return;
-        }
-        ClientEspionne.oublier(p.joueur());
         if (fr.cabane.pouvoir.Minato.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());
