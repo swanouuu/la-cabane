@@ -340,7 +340,7 @@ public final class Labo {
     /** Les sujets du labo ne disparaissent jamais, même en paisible (sinon les monstres des cuves s'évaporent). */
     @SubscribeEvent
     public static void onDisparition(MobDespawnEvent event) {
-        if (event.getEntity().getTags().contains(LaboBuilder.TAG)) {
+        if (event.getEntity().getTags().contains(LaboBuilder.TAG) || event.getEntity().getTags().contains(WoohpEntrainement.TAG)) {
             event.setResult(MobDespawnEvent.Result.DENY);
         }
     }

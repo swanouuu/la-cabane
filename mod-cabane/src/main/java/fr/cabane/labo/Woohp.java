@@ -22,6 +22,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -119,8 +120,9 @@ public final class Woohp {
     /** Le joueur est-il au QG (ou dans ses toboggans) ? */
     static boolean pres(ServerPlayer joueur) {
         BlockPos o = WoohpTrajet.ORIGINE;
-        return Labo.dedans(joueur) && Math.abs(joueur.getX() - o.getX()) < WoohpBuilder.BORD_X + 30
-                && joueur.getZ() > o.getZ() + WoohpBuilder.BORD_Z0 - 30 && joueur.getZ() < o.getZ() + WoohpBuilder.BORD_Z1 + 30;
+        // le QG, ses toboggans et l'aile des salles d'entraînement (à l'ouest)
+        return Labo.dedans(joueur) && joueur.getX() > o.getX() + WoohpBuilder.COULOIR_FIN - 30 && joueur.getX() < o.getX() + WoohpBuilder.BORD_X + 30
+                && joueur.getZ() > o.getZ() - WoohpBuilder.AILE_Z - 30 && joueur.getZ() < o.getZ() + WoohpBuilder.BORD_Z1 + 30;
     }
 
     /** Construit le QG s'il n'existe pas encore (ou si on l'a changé depuis). Faux si la dimension manque. */
@@ -149,8 +151,8 @@ public final class Woohp {
             return;
         }
         BlockPos o = WoohpTrajet.ORIGINE;
-        for (int cx = (o.getX() - WoohpBuilder.BORD_X - 8) >> 4; cx <= (o.getX() + WoohpBuilder.BORD_X + 8) >> 4; cx++) {
-            for (int cz = (o.getZ() + WoohpBuilder.BORD_Z0 - 8) >> 4; cz <= (o.getZ() + WoohpBuilder.BORD_Z1 + 8) >> 4; cz++) {
+        for (int cx = (o.getX() + WoohpBuilder.COULOIR_FIN - 8) >> 4; cx <= (o.getX() + WoohpBuilder.BORD_X + 8) >> 4; cx++) {
+            for (int cz = (o.getZ() - WoohpBuilder.AILE_Z - 8) >> 4; cz <= (o.getZ() + WoohpBuilder.BORD_Z1 + 8) >> 4; cz++) {
                 labo.getChunk(cx, cz);
                 FillBiomeCommand.fill(labo, new BlockPos(cx << 4, o.getY() - 24, cz << 4), new BlockPos((cx << 4) + 15, o.getY() + 56, (cz << 4) + 15), biome);
             }
@@ -288,6 +290,10 @@ public final class Woohp {
                 retrecir(j, -1);
                 monterDansLeChariot(j, t);
             } else if (ecoule > TOBOGGAN && ecoule <= TOBOGGAN + glissade) {
+                if (ecoule == TOBOGGAN + 3) {
+                    // une deuxième fois, au cas où son jeu chargeait encore le monde du QG
+                    envoyerTaille(j);
+                }
                 deplacerChariot(t, (ecoule - TOBOGGAN) / 20.0);
             } else if (ecoule > TOBOGGAN + glissade + 3) {
                 it.remove();
@@ -346,8 +352,20 @@ public final class Woohp {
             j.startRiding(chariot, true);
             t.chariot = chariot;
         }
+        envoyerTaille(j);
         PacketDistributor.sendToPlayer(j, new Etape(1, t.tube));
         labo.playSound(null, p.x, p.y, p.z, SoundEvents.TRIDENT_RIPTIDE_3.value(), SoundSource.PLAYERS, 1F, 1.1F);
+    }
+
+    /**
+     * Sa taille normale, envoyée tout de suite à son jeu : après le changement de monde, il gardait sinon la toute petite
+     * taille du trou, et la caméra restait au fond du chariot pendant tout le toboggan.
+     */
+    private static void envoyerTaille(ServerPlayer j) {
+        AttributeInstance taille = j.getAttribute(Attributes.SCALE);
+        if (taille != null) {
+            j.connection.send(new ClientboundUpdateAttributesPacket(j.getId(), List.of(taille)));
+        }
     }
 
     private static void deplacerChariot(Trajet t, double secondes) {

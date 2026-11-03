@@ -247,10 +247,10 @@ public final class ClientEspionne {
 
     // ================================================================ le modèle tout fin, sur ses talons
 
-    /** Ce qu'on garde de la largeur (x) et de la profondeur (z) du corps, des bras et des jambes (comme les maquettes). */
-    private static final float CORPS_X = 0.5F, CORPS_Z = 0.6F, BRAS_X = 0.4F, BRAS_Z = 0.45F, JAMBE_X = 0.45F, JAMBE_Z = 0.55F;
+    /** Ce qu'on garde de la largeur (x) et de la profondeur (z) du corps, des bras et des jambes (un peu plus épais que les maquettes). */
+    private static final float CORPS_X = 0.7F, CORPS_Z = 0.75F, BRAS_X = 0.55F, BRAS_Z = 0.6F, JAMBE_X = 0.6F, JAMBE_Z = 0.7F;
     /** Le milieu des bras et des jambes, en pixels du modèle (au lieu de 6 et 1,9) : contre le corps aminci. */
-    private static final float MILIEU_BRAS = 2.8F, MILIEU_JAMBE = 1F;
+    private static final float MILIEU_BRAS = 4 * CORPS_X + 2 * BRAS_X, MILIEU_JAMBE = 2 * JAMBE_X + 0.1F;
     /** Les talons soulèvent tout le corps de 2 pixels. */
     private static final float TALON = 2;
     /** Le bras qu'on va dessiner est celui de la première personne (on l'amincit, sans le déplacer). */
