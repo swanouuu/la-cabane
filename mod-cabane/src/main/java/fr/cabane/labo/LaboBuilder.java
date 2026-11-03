@@ -1169,14 +1169,11 @@ final class LaboBuilder {
      * et, au milieu, un autel de pierre sur une estrade ronde, où l'on peut s'allonger.
      */
     private void rituels() {
-        double ex = 15.5, ez = 13.5;
         int x0 = RX - 17, x1 = RX + 16, z0 = RZ - 15, z1 = RZ + 15;
         int[][] voutes = new int[x1 - x0 + 1][z1 - z0 + 1];
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
-                double dx = (x - RX) / ex, dz = (z - RZ) / ez;
-                double e = dx * dx + dz * dz + (bruit(x, z) - 0.5) * 0.18;
-                int voute = e < 1 ? (int) Math.round(9 + 6 * Math.sqrt(1 - e) + bruit(x * 7, z * 7) * 2) : 0;
+                int voute = voute(x, z);
                 voutes[x - x0][z - z0] = voute;
                 pose(x, -1, z, roche());
                 if (voute > 0) {
@@ -1322,7 +1319,19 @@ final class LaboBuilder {
         }
     }
 
+    /** La hauteur de la voûte de la grotte des rituels en (x, z) : la roche commence là ; 0 hors de la grotte. */
+    static int voute(int x, int z) {
+        double dx = (x - RX) / 15.5, dz = (z - RZ) / 13.5;
+        double e = dx * dx + dz * dz + (bruit(x, z) - 0.5) * 0.18;
+        return e < 1 ? (int) Math.round(9 + 6 * Math.sqrt(1 - e) + bruit(x * 7, z * 7) * 2) : 0;
+    }
+
     private BlockState roche() {
+        return roche(rnd);
+    }
+
+    /** Un bloc de la roche de la grotte des rituels. */
+    static BlockState roche(RandomSource rnd) {
         float r = rnd.nextFloat();
         if (r < 0.3F) {
             return Blocks.DEEPSLATE.defaultBlockState();

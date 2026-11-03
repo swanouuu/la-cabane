@@ -31,6 +31,8 @@ public class LaboData extends SavedData {
     /** Pareil pour le QG du WOOHP, construit dans la même dimension. */
     private int versionWoohp;
     private int constructionWoohp;
+    /** Le mur de la salle des rituels juste avant qu'il explose (voir Scellement), pour le remettre ; null sinon. */
+    private CompoundTag murIntact;
 
     public static LaboData get(MinecraftServer server) {
         return server.overworld().getDataStorage()
@@ -61,6 +63,9 @@ public class LaboData extends SavedData {
         data.experiences = tag.getInt("experiences");
         data.versionWoohp = tag.getInt("versionWoohp");
         data.constructionWoohp = tag.getInt("constructionWoohp");
+        if (tag.contains("murIntact")) {
+            data.murIntact = tag.getCompound("murIntact");
+        }
         return data;
     }
 
@@ -89,6 +94,9 @@ public class LaboData extends SavedData {
         tag.putInt("experiences", experiences);
         tag.putInt("versionWoohp", versionWoohp);
         tag.putInt("constructionWoohp", constructionWoohp);
+        if (murIntact != null) {
+            tag.put("murIntact", murIntact);
+        }
         return tag;
     }
 
@@ -163,6 +171,15 @@ public class LaboData extends SavedData {
         constructionWoohp++;
         setDirty();
         return constructionWoohp;
+    }
+
+    public CompoundTag murIntact() {
+        return murIntact;
+    }
+
+    public void setMurIntact(CompoundTag photo) {
+        murIntact = photo;
+        setDirty();
     }
 
     /** Le numéro de la prochaine expérience sur la table. */

@@ -60,7 +60,6 @@ final class LaboVie {
         }
         if (t % 20 == 0) {
             sons(level, r);
-            penombre(level);
         }
         if (t % 10 == 0) {
             ecrans(level, t);
@@ -165,24 +164,6 @@ final class LaboVie {
         if (!Experiences.enCours() && r.nextInt(3) == 0) {
             BlockPos e = LaboBuilder.abs(r.nextBoolean() ? -1 : 2, 3, 0);
             level.sendParticles(ParticleTypes.ELECTRIC_SPARK, e.getX() + 0.5, e.getY() + 0.5, e.getZ() + 0.5, 2, 0.1, 0.1, 0.1, 0.1);
-        }
-    }
-
-    /** Dans la salle des rituels, l'obscurité respire : on n'y voit presque que le sceau. */
-    private static void penombre(ServerLevel level) {
-        if (Scellement.ouvert(level)) {
-            // le mur est cassé : il faut qu'on voie le Hachibi derrière
-            return;
-        }
-        for (ServerPlayer joueur : level.players()) {
-            double dx = (joueur.getX() - LaboBuilder.RX - 0.5) / 15.5, dz = (joueur.getZ() - LaboBuilder.RZ - 0.5) / 13.5;
-            if (dx * dx + dz * dz > 1.1) {
-                continue;
-            }
-            var effet = joueur.getEffect(net.minecraft.world.effect.MobEffects.DARKNESS);
-            if (effet == null || effet.getDuration() < 40) {
-                joueur.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DARKNESS, 100, 0, false, false, false));
-            }
         }
     }
 
