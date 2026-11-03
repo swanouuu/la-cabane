@@ -184,5 +184,32 @@
         "name": "cabane:espionne/zip"
       }
     ]
+  },
+  "catch.cloche": {
+    "subtitle": "subtitles.cabane.catch.cloche",
+    "sounds": [
+      {
+        "name": "cabane:catch/cloche",
+        "volume": 0.8
+      }
+    ]
+  },
+  "catch.cloche3": {
+    "subtitle": "subtitles.cabane.catch.cloche",
+    "sounds": [
+      {
+        "name": "cabane:catch/cloche3",
+        "volume": 0.8
+      }
+    ]
+  },
+  "catch.impact": {
+    "subtitle": "subtitles.cabane.catch.impact",
+    "sounds": [
+      {
+        "name": "cabane:catch/impact",
+        "volume": 0.7
+      }
+    ]
   }
 }

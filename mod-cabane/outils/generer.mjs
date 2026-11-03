@@ -10,6 +10,7 @@ import { genererMissions } from "./missions.mjs";
 import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
 import { genererCartel, sonsCartel } from "./cartel.mjs";
+import { genererCatch, sonsCatch } from "./catch.mjs";
 import { genererSaiyan } from "./saiyan.mjs";
 import { genererCurios } from "./curios.mjs";
 import { genererEspionnes, sonsEspionnes } from "./espionnes.mjs";
@@ -455,6 +456,7 @@ genererCurios({ ecrire });
 genererEspionnes({ ecrire, lang });
 genererLabo({ ecrire, png, lang });
 console.log(`Cartel : ${genererCartel({ ecrire, lang })} gars du cartel`);
+console.log(`Catch : ${genererCatch({ ecrire, lang })} tenues et masques`);
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
@@ -637,6 +639,8 @@ console.log("Ressources générées dans", RES);
   sons["musique.woohp"] = { sounds: [{ name: "minecraft:records/mall", stream: true, volume: 0.45 }] };
   // les armes du cartel : leurs bruits sont synthétisés par outils/cartel.mjs
   Object.assign(sons, sonsCartel(RES));
+  // le catch : la cloche, le choc sur le tapis ; synthétisés par outils/catch.mjs
+  Object.assign(sons, sonsCatch(RES));
   // la fermeture éclair des tenues d'espionnes : synthétisée par outils/espionnes.mjs
   Object.assign(sons, sonsEspionnes(RES));
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");

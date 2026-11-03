@@ -1,0 +1,13 @@
+{
+  "type": "cabane:catch",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:catch",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

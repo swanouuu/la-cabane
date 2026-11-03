@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/public_catch"
+    },
+    "facing=east": {
+      "model": "cabane:block/public_catch",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/public_catch",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/public_catch",
+      "y": 270
+    }
+  }
+}

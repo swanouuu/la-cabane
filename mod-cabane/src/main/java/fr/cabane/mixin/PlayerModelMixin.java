@@ -12,7 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Après la pose habituelle du joueur : le Susano peut lui faire porter la main à l'œil (pendant l'éveil), et Hachibi
  * le fait rugir, puis marcher à quatre pattes ; une espionne éveillée devient toute fine, perchée sur ses talons ;
- * une arme du cartel se tient à deux mains (ou bras tendu, pour un pistolet).
+ * une arme du cartel se tient à deux mains (ou bras tendu, pour un pistolet) ; un catcheur prend la pose de sa prise, et
+ * en tenue son corps normal se cache sous le corps gonflé.
  */
 @Mixin(PlayerModel.class)
 public abstract class PlayerModelMixin {
@@ -23,6 +24,7 @@ public abstract class PlayerModelMixin {
             fr.cabane.client.pouvoir.ClientHachibi.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.pouvoir.ClientEspionne.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.cartel.ClientCartel.poser((PlayerModel<?>) (Object) this, joueur);
+            fr.cabane.client.lutte.CorpsCatcheur.poser((PlayerModel<?>) (Object) this, joueur);
         }
     }
 }
