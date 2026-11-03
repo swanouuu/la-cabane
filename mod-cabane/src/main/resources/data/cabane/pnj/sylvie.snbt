@@ -8,6 +8,6 @@
   EasyNPCVersion:3,
   VariantType:"STEVE",
   SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/sylvie.png"},
-  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"RANDOM_STROLL_AROUND_HOME",Prio:5,SpeedModifier:0.45},{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"OPEN_DOOR",Prio:6},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}]},
   Status:{finalized:1b}
 }

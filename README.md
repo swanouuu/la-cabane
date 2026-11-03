@@ -92,7 +92,7 @@ Les PNJ (Easy NPC) :
 - **Vegeta**, qui s'entraîne près de la tour de guet (« ma stupide fierté… ») ;
 - les **orques de Brokk** (Grosh, Mog et Urga), qui travaillent dans sa forge ;
 - **Macron, Président de Beauvais**, sur la place, et ses **quatre gardes présidentiels**. Ils sont invincibles : qui frappe le Président (ou un garde) est pris en chasse pendant deux minutes. Ils finissent par se calmer ;
-- **Sylvie**, la femme de Pierre, et leur fils **Lucas**, qui attendent tous les soirs devant la Mairie (voir « Où est Pierre ? ») ;
+- **Sylvie**, la femme de Pierre, qui se balade sur la place avec leur fils **Lucas**, un gamin qui la suit partout (voir « Où est Pierre ? ») ;
 
 Chaque PNJ a plusieurs répliques, tirées au hasard à chaque fois qu'on lui parle. On peut les frapper (ils rougissent et reculent), mais ils ne meurent jamais. Quand le mod est mis à jour, les PNJ du village sont remplacés tout seuls au démarrage suivant.
 
@@ -106,7 +106,7 @@ Un clic droit sur un habitant ouvre sa conversation (le mod l'affiche lui-même 
 
 ### Où est Pierre ?
 
-Sylvie attend devant la Mairie avec Lucas : son mari Pierre y est entré avec une pétition il y a trois semaines, et n'est jamais ressorti. Elle demande de l'aide :
+Sylvie se balade sur la place avec Lucas (le soir, ils vont attendre devant la Mairie) : son mari Pierre est entré à la Mairie avec une pétition il y a trois semaines, et n'est jamais ressorti. Elle demande de l'aide :
 
 1. **Où est Pierre ?** Interroger son frère Jean, Martine (qui a vu de la lumière sous la Mairie et entendu crier « Sylvie ! ») et Gribbs (qui connaît la bibliothèque qui pivote).
 2. **Sous la Mairie.** Trouver le passage secret, descendre jusqu'à la cellule de Pierre ; il donne une lettre pour sa femme. Sylvie la lit…

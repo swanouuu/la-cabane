@@ -2,18 +2,23 @@ package fr.cabane.client;
 
 import fr.cabane.Cabane;
 import fr.cabane.client.ui.Ios;
+import fr.cabane.labo.Labo;
 import fr.cabane.labo.Woohp;
 import fr.cabane.labo.WoohpTrajet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -33,6 +38,8 @@ public final class ClientWoohp {
     /** La distance maximale de l'aspiration (on s'arrête avant si un mur bloque) : elle est parcourue en un peu plus d'une seconde. */
     private static final double DISTANCE = 45;
     private static final double PAS = 0.5;
+    /** Assise dans un chariot, une espionne a les pieds 0,41 bloc sous lui (le siège du chariot, moins celui du joueur). */
+    private static final double ASSIS = 0.4125;
 
     private static boolean actif;
     /** 0 : le son, puis l'aspiration ; 1 : dans le chariot ; arrêté à l'arrivée. */
@@ -58,15 +65,30 @@ public final class ClientWoohp {
                 actif = true;
                 phase = 1;
                 ticksChariot = 0;
+                // sa taille normale tout de suite (son jeu gardait la toute petite taille du trou, la caméra au fond du chariot)
+                AttributeInstance taille = mc.player.getAttribute(Attributes.SCALE);
+                if (taille != null) {
+                    taille.removeModifier(Woohp.RETRECIR);
+                }
+                mc.player.refreshDimensions();
                 // dans le toboggan : le cliquetis des rails, et un souffle d'aspirateur
                 mc.getSoundManager().play(new Boucle(SoundEvents.MINECART_INSIDE, 0.9F, 1.1F, 1));
                 mc.getSoundManager().play(new Boucle(SoundEvents.ELYTRA_FLYING, 0.6F, 1.5F, 1));
             }
-            default -> actif = false;
+            default -> {
+                actif = false;
+                // arrivée : on descend du chariot tout de suite (sans attendre que le jeu remarque qu'il a disparu)
+                if (mc.player.isPassenger()) {
+                    mc.player.stopRiding();
+                }
+            }
         }
     }
 
     private static void demarrer(Minecraft mc) {
+        // le son du WOOHP dans ses oreilles, sur le volume général : il la suit pendant qu'elle file, et passe même si le
+        // volume des joueurs est baissé
+        mc.getSoundManager().play(SimpleSoundInstance.forUI(Labo.SON_WOOHP.get(), 1F, 1F));
         actif = true;
         phase = 0;
         ticks = 0;
@@ -138,6 +160,31 @@ public final class ClientWoohp {
         }
     }
 
+    /**
+     * Dans son jeu à elle, le chariot suit exactement le toboggan, au milieu du tube. Le serveur ne donne sa position que
+     * par à-coups : le chariot avançait en retard, coupait les virages à travers le verre, et la caméra se décrochait de
+     * lui (on se voyait de dehors en première personne, plus dedans à la troisième).
+     */
+    private static void suivreLeToboggan(Minecraft mc) {
+        double t = ticksChariot / 20.0;
+        Vec3 p = WoohpTrajet.position(tube, t).subtract(0, WoohpTrajet.SIEGE, 0);
+        if (!(mc.player.getVehicle() instanceof AbstractMinecart chariot)) {
+            // le chariot n'est pas encore arrivé dans son jeu (une demi-seconde après le changement de monde) : elle
+            // attend assise à sa place, au lieu de tomber dans le tube
+            mc.player.setDeltaMovement(Vec3.ZERO);
+            mc.player.setPos(p.x, p.y - ASSIS, p.z);
+            mc.player.fallDistance = 0;
+            return;
+        }
+        Vec3 d = WoohpTrajet.direction(tube, t);
+        if (Math.abs(d.y) < 0.95) {
+            chariot.setYRot((float) Math.toDegrees(Math.atan2(-d.x, d.z)) + 90F);
+        }
+        chariot.setDeltaMovement(Vec3.ZERO);
+        chariot.setPos(p);
+        chariot.positionRider(mc.player);
+    }
+
     /** Dans le chariot, le regard se tourne doucement dans le sens du toboggan (on peut quand même jeter un œil à côté). */
     private static void regarderDevant(Minecraft mc) {
         Vec3 d = WoohpTrajet.direction(tube, ticksChariot / 20.0 + 0.3);
@@ -146,7 +193,8 @@ public final class ClientWoohp {
             return;
         }
         float lacet = (float) Math.toDegrees(Math.atan2(-d.x, d.z));
-        float tangage = Mth.clamp((float) Math.toDegrees(-Math.atan2(d.y, horizontal)), -40, 50);
+        // pas trop vers le bas : on regarde le tube devant soi, pas le fond du chariot
+        float tangage = Mth.clamp((float) Math.toDegrees(-Math.atan2(d.y, horizontal)) * 0.6F, -25, 25);
         float y = mc.player.getYRot();
         mc.player.setYRot(y + Mth.wrapDegrees(lacet - y) * 0.2F);
         mc.player.setXRot(Mth.lerp(0.2F, mc.player.getXRot(), tangage));
@@ -236,6 +284,15 @@ public final class ClientWoohp {
                 if (++ticksChariot > 20 * 30) {
                     actif = false;
                 }
+            }
+        }
+
+        /** Après le tick du chariot : on le remet sur le toboggan, avec l'espionne dedans, avant que l'image soit dessinée. */
+        @SubscribeEvent
+        public static void apresTick(ClientTickEvent.Post event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (actif && phase == 1 && mc.player != null) {
+                suivreLeToboggan(mc);
             }
         }
 

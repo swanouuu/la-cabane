@@ -289,16 +289,18 @@ export function genererPnj(ecrire) {
   ] });
 
   // ------------------------------------------------------------ Sylvie et Lucas : la femme et le fils de Pierre
-  pnj({ fichier: "sylvie", nom: "Sylvie, la femme de Pierre", couleur: "light_purple", dialogues: [
+  // Sylvie se balade sur la place, et Lucas, un gamin (deux fois plus petit qu'un adulte), suit sa maman partout
+  pnj({ fichier: "sylvie", nom: "Sylvie, la femme de Pierre", couleur: "light_purple", objectifs: balade(0.45), dialogues: [
     { label: "default", titre: "Sylvie", texte: [
-      "Excusez-moi… Vous n'auriez pas vu mon mari ? Pierre. Grand, un chapeau de paille, il parle trop fort. Il est entré dans cette Mairie il y a trois semaines. Il n'en est jamais ressorti.",
-      "Tous les soirs, je viens ici avec Lucas. On attend. Le Président passe devant nous et il sourit. Il sourit toujours.",
+      "Excusez-moi… Vous n'auriez pas vu mon mari ? Pierre. Grand, un chapeau de paille, il parle trop fort. Il est entré dans la Mairie il y a trois semaines. Il n'en est jamais ressorti.",
+      "Tous les soirs, je vais devant la Mairie avec Lucas. On attend. Le Président passe devant nous et il sourit. Il sourit toujours.",
       "« Parti travailler à la capitale. » Pierre ne serait jamais parti sans embrasser son fils. Jamais.",
     ], boutons: [{ texte: "Parle-moi de Pierre", vers: "pierre" }, BYE("Courage, Sylvie")] },
     { label: "pierre", titre: "Pierre", texte: "Il est pêcheur, et il fait les blagues les plus nulles de Beauvais. Il avait promis à Lucas de lui apprendre à pêcher. Le jour où il a disparu, il était allé porter une pétition au Président : trente signatures contre les Pillards. Trente. Il était si fier.",
       boutons: [RETOUR, BYE("On va le retrouver")] },
   ] });
-  pnj({ fichier: "lucas", nom: "Lucas, le fils de Pierre", couleur: "aqua", echelle: 0.6, dialogues: [
+  pnj({ fichier: "lucas", nom: "Lucas, le fils de Pierre", couleur: "aqua", taille: 0.6,
+    objectifs: `{Type:"FOLLOW_ENTITY_BY_UUID",Prio:3,SpeedModifier:1.1,TargetEntityUUID:${uuid("sylvie")},StartDistance:4.0f,StopDistance:2.0f},{Type:"LOOK_AT_PLAYER",Prio:7},{Type:"LOOK_RANDOM_AROUND",Prio:8}`, dialogues: [
     { label: "default", titre: "Lucas", texte: [
       "T'as pas vu mon papa ? Il a un chapeau. Et il fait des blagues nulles. Mais moi je rigole quand même.",
       "Maman dit qu'il est à la capitale. Mais la capitale c'est où ? Personne sait.",
@@ -312,7 +314,7 @@ export function genererPnj(ecrire) {
       "Je passe devant la Mairie, maintenant, et je souris. C'est mon tour.",
     ], boutons: [BYE("Bonne soirée, Sylvie")] },
   ] });
-  pnj({ fichier: "lucas_libre", qui: "lucas", nom: "Lucas, le fils de Pierre", couleur: "aqua", peau: "lucas", voix: "lucas", echelle: 0.6, objectifs: balade(0.5), dialogues: [
+  pnj({ fichier: "lucas_libre", qui: "lucas", nom: "Lucas, le fils de Pierre", couleur: "aqua", peau: "lucas", voix: "lucas", taille: 0.6, objectifs: balade(0.5), dialogues: [
     { label: "default", titre: "Lucas", texte: [
       "MON PAPA EST RENTRÉ ! Il avait gardé mon dessin dans sa poche ! Tout froissé !",
       "Papa m'apprend à pêcher. J'ai attrapé une botte. Il dit que ça compte.",

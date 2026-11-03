@@ -22,6 +22,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
@@ -74,7 +75,8 @@ public final class Woohp {
     public static final int TOBOGGAN = 50;
     /** Un gadget sort du distributeur toutes les… (ticks). */
     private static final int CADENCE = 30;
-    private static final ResourceLocation RETRECIR = Cabane.id("woohp_aspiration");
+    /** Le rétrécissement dans le trou (un modificateur de taille, retiré en haut du toboggan). */
+    public static final ResourceLocation RETRECIR = Cabane.id("woohp_aspiration");
     private static final String CHARIOT = "woohp.chariot";
 
     /** Une espionne en route : son tube, le tick du serveur où le son a retenti, et son chariot dans le toboggan. */
@@ -227,9 +229,14 @@ public final class Woohp {
             retenirLeDepart(j);
             TRAJETS.put(j.getUUID(), new Trajet(i, maintenant));
             j.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, TOBOGGAN + 10, 4, false, false));
-            // le son du WOOHP, pour elle et pour ceux qui sont autour
-            j.serverLevel().playSound(null, j.getX(), j.getY(), j.getZ(), Labo.SON_WOOHP.get(), SoundSource.PLAYERS, 1.6F, 1F);
+            // le son du WOOHP pour ceux qui sont autour ; elle, son jeu le lui joue dans les oreilles (ClientWoohp)
+            j.serverLevel().playSound(j, j.getX(), j.getY(), j.getZ(), Labo.SON_WOOHP.get(), SoundSource.PLAYERS, 1.6F, 1F);
             PacketDistributor.sendToPlayer(j, new Etape(0, i));
+        }
+        // Jerry entend aussi le WOOHP qu'il vient d'envoyer, sur le volume général (pas celui des joueurs, souvent baissé)
+        ServerPlayer jerry = ctx.getSource().getPlayer();
+        if (jerry != null && !espionnes.contains(jerry)) {
+            jerry.playNotifySound(Labo.SON_WOOHP.get(), SoundSource.MASTER, 1F, 1F);
         }
         // pas de message dans le chat : la surprise reste entière
         return espionnes.size();
@@ -383,6 +390,8 @@ public final class Woohp {
     private static void arriver(ServerPlayer j, Trajet t) {
         j.stopRiding();
         if (t.chariot != null) {
+            // son jeu apprend tout de suite que le chariot est vide : elle en sort direct, sans devoir appuyer sur Maj
+            j.connection.send(new ClientboundSetPassengersPacket(t.chariot));
             t.chariot.discard();
         }
         poserSurLePad(j, t.tube);

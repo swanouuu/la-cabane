@@ -19,8 +19,11 @@ import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
 
 /**
- * Le pack de sons privé « Beauvais - voix » (les vraies voix, le vrai son du WOOHP…) : s'il est dans le dossier
- * resourcepacks, il est toujours actif, tout en haut, même si personne ne l'a coché dans les packs de ressources.
+ * Le pack privé « Beauvais - voix » (les vraies voix, le vrai son du WOOHP, Kurama…) : s'il est dans le dossier
+ * resourcepacks, il est toujours actif et cloué tout en haut (on ne peut ni le décocher ni passer un autre pack
+ * au-dessus). Il prend la place du pack que le jeu trouve lui-même dans ce dossier (le même nom) : on n'en voit qu'un
+ * dans la liste des packs de ressources. Il ne contient que des choses du mod (cabane:…) : les packs de textures des
+ * joueurs (blocs, objets…) s'appliquent quand même.
  */
 @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
 public final class PackVoix {
@@ -32,13 +35,15 @@ public final class PackVoix {
             return;
         }
         Path dossier = FMLPaths.GAMEDIR.get().resolve("resourcepacks");
-        for (Path p : new Path[] {dossier.resolve(NOM), dossier.resolve(NOM + ".zip")}) {
+        for (String fichier : new String[] {NOM, NOM + ".zip"}) {
+            Path p = dossier.resolve(fichier);
             if (!Files.exists(p)) {
                 continue;
             }
             Pack.ResourcesSupplier contenu = Files.isDirectory(p) ? new PathPackResources.PathResourcesSupplier(p) : new FilePackResources.FileResourcesSupplier(p);
-            PackLocationInfo info = new PackLocationInfo("cabane_voix", Component.literal(NOM), PackSource.BUILT_IN, Optional.empty());
-            Pack pack = Pack.readMetaAndCreate(info, contenu, PackType.CLIENT_RESOURCES, new PackSelectionConfig(true, Pack.Position.TOP, false));
+            // le même identifiant que celui du dossier resourcepacks : notre pack (ajouté après) remplace le sien
+            PackLocationInfo info = new PackLocationInfo("file/" + fichier, Component.literal(NOM), PackSource.BUILT_IN, Optional.empty());
+            Pack pack = Pack.readMetaAndCreate(info, contenu, PackType.CLIENT_RESOURCES, new PackSelectionConfig(true, Pack.Position.TOP, true));
             if (pack != null) {
                 event.addRepositorySource(ajouter -> ajouter.accept(pack));
                 return;
