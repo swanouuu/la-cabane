@@ -128,13 +128,81 @@ function glace(i, j, k, v = 0.5) {
 
 const FACES = { devant: 1, dos: 2, droite: 3, gauche: 4, haut: 5, bas: 6 };
 
+/** Un bruit doux, de -1 à 1 (des taches de quelques pixels, puis plus fines) : pour un bord qui ne soit pas droit. */
+function bruit(a, b, k) {
+  const un = (x, y, kk) => {
+    const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j, l = (t) => t * t * (3 - 2 * t);
+    const h = (p, q) => hache(p, q, kk) * 2 - 1;
+    const haut = h(i, j) + (h(i + 1, j) - h(i, j)) * l(fx), bas = h(i, j + 1) + (h(i + 1, j + 1) - h(i, j + 1)) * l(fx);
+    return haut + (bas - haut) * l(fy);
+  };
+  return 0.7 * un(a / 3.2, b / 3.2, k) + 0.3 * un(a / 1.4, b / 1.4, k + 9);
+}
+
+/**
+ * L'éveil 2 : ce texel de la partie nom est-il pris par la lave (ou la glace) ? Le bras du fruit, tout entier ; sa
+ * jambe, presque ; le buste et la tête, avec un bord qui ondule et déborde du milieu par endroits ; quelques coulées
+ * de l'autre côté. Le visage reste libre (seul le bord de la joue et le bas de la mâchoire, du côté du fruit).
+ * m.bras : la lave ne tient encore que le bras, et mord l'épaule.
+ */
+function couvert(m, s, cote, nom, t) {
+  const plein = prisDedans(m, s, cote, nom, t);
+  if (plein || m.bras) return plein ? 1 : 0;
+  // des veines fines (des fissures de lave, du givre) qui dépassent le bord et rampent sur la peau
+  const [x, y, z] = t.centre, k = s > 0 ? 0 : 50;
+  if (nom === "tete" && t.face === "devant") return 0;
+  return Math.abs(bruit(y * 1.3 + z, x * 1.3 - z, 320 + k)) < 0.035 && s * x > -2.2 ? 2 : 0;
+}
+
+function prisDedans(m, s, cote, nom, t) {
+  const [x, y, z] = t.centre, sx = s * x, autre = cote === "G" ? "D" : "G";
+  if (nom === "bras" + cote) return true;
+  if (m.bras) return nom === "corps" && sx + 1.5 * bruit(y, z + x, 300) > 2.4 && y > 20 + 2 * bruit(x, y, 310);
+  switch (nom) {
+    // un bord qui ondule (jamais droit), des taches qui passent le milieu, des trous de peau du côté du fruit
+    case "corps": {
+      const ph = s > 0 ? 0 : 2.1, k = s > 0 ? 0 : 50;
+      const bord = 2.2 * Math.sin(y * 0.8 + z * 0.6 + ph) + 1.2 * Math.sin(y * 2.3 + ph * 2) + 1.5 * bruit(y, z, 301 + k) - 0.4;
+      const ile = bruit(y * 1.2 + z, x * 1.2, 313 + k);
+      return (sx + bord > 0 && ile > -0.5) || ile > 0.6;
+    }
+    case "tete":
+      if (t.face === "devant") return (sx > 3 && bruit(y, x, 302) > -0.3) || (y < 25.6 && sx > 1.2 + 1.5 * bruit(y, x, 303));
+      return sx + 1.6 * Math.sin(y * 1.1 + z * 0.7 + (s > 0 ? 0 : 1.7)) + 3 * bruit(y + z, z - x, 304 + (s > 0 ? 0 : 50)) > -0.4;
+    case "jambe" + cote: return y + 7 * bruit(z + x * 0.7, y * 0.7, 305) > 3 && bruit(y, z - x, 314) > -0.55;
+    case "jambe" + autre: return y > 6 + 4 * bruit(z, y, 306) && sx + 4.5 * bruit(z + x, y, 307) > 0.6;
+    case "bras" + autre: return y > 19 + 3 * bruit(z + x, y, 308) && bruit(y, z + x, 309) > 0.05;
+    default: return false;
+  }
+}
+
+/** La couleur de la matière de l'éveil 2 sur ce texel (lave ou glace), éclairée par l, et si elle brille. */
+function matiere(m, nom, t, l) {
+  const [x, y, z] = t.centre, N = t.N;
+  const [a, b] = Math.abs(N[2]) > 0.5 ? [x, y] : Math.abs(N[0]) > 0.5 ? [z, y] : [x, z];
+  const k = FACES[t.face] + 10 * PARTIES(false).findIndex((p) => p[0] === nom);
+  const c = m.sorte === "lave" ? magma(Math.floor(a + 40), Math.floor(b + 40), k, 3, 0.85) : glace(Math.floor(a + 40), Math.floor(40 - b), k, 1 - y / 32);
+  return c[3] === 1 ? c.slice(0, 3) : clair(c, l);
+}
+
+/** L'armure (casque, plastron, jambières, bottes) : les morceaux, leur gonflement, et la hauteur qu'ils couvrent. */
+const ARMURE = [
+  ["tete", 1, (t) => !(t.face === "devant" && t.centre[1] < 29.5 && Math.abs(t.centre[0]) < 3.5)],
+  ["corps", 1, () => true],
+  ["brasD", 1, (t) => t.centre[1] > 16.5], ["brasG", 1, (t) => t.centre[1] > 16.5],
+  ["jambeD", 0.5, (t) => t.centre[1] > 4.5], ["jambeG", 0.5, (t) => t.centre[1] > 4.5],
+  ["jambeD", 1, (t) => t.centre[1] < 4.5], ["jambeG", 1, (t) => t.centre[1] < 4.5],
+];
+
 // ------------------------------------------------------------------ le joueur et sa main
 const PIVOTS = { tete: [0, 24, 0], corps: [0, 12, 0], brasD: [-5, 22, 0], brasG: [5, 22, 0], jambeD: [-2, 12, 0], jambeG: [2, 12, 0] };
 
 /**
  * Un joueur : sa peau, dans une pose. o.tete, o.brasD, o.brasG : [rx, rz, ry] ; o.jambeD, o.jambeG : rx ; o.buste penche
  * le haut du corps en avant ; o.lacet, o.penche, o.decale : tout le corps. o.main = { cote: "G" | "D", sorte: "lave" |
- * "glace" } change cette main ; o.teinte = { c, k } colore tout le corps (le givre). Rend les transformations des parties.
+ * "glace" } change cette main ; o.teinte = { c, k } colore tout le corps (le givre). o.moitie = { sorte, bras } (l'éveil 2) :
+ * la moitié du corps du côté de la main (gauche pour la lave, droite pour la glace) devient de la lave ou de la glace ;
+ * avec bras, seulement ce bras (la moitié qui gagne). Rend les transformations des parties.
  */
 function perso(sc, peau, o = {}) {
   const lacet = o.lacet ?? 0, penche = o.penche ?? 0, decale = o.decale ?? [0, 0, 0], buste = o.buste ?? 0;
@@ -152,8 +220,26 @@ function perso(sc, peau, o = {}) {
   }
   const elem = o.main;
   const brasElem = elem && "bras" + elem.cote;
+  // l'éveil 2 : la moitié du corps (le côté de la main du fruit) ; s = +1 à gauche (+x), -1 à droite
+  const m = o.moitie, s = m && (m.sorte === "lave" ? 1 : -1), cote = s > 0 ? "G" : "D";
   for (const [nom, boite, uv1, uv2, gonfle] of PARTIES(false)) {
     for (const [uv, g, d] of [[uv1, 0, 0], [uv2, gonfle, 0.02]]) for (const t of texels(boite, uv, g, 1)) {
+      const pris = m ? couvert(m, s, cote, nom, t) : 0;
+      if (pris === 2) {
+        const i = (t.ty * 64 + t.tx) * 4;
+        const l = sc.lumiere(T[nom].n(t.N), false);
+        if (l < 0 || (g > 0 && peau.px[i + 3] < 128)) continue;
+        sc.quad(t.coins.map(T[nom].p), m.sorte === "lave" ? LAVE_O : clair(mix(GLACE_C, BLANC, 0.5), l), d + 0.005, m.sorte === "lave");
+        continue;
+      }
+      if (pris === 1) {
+        // la matière remplace la peau et les habits (la seconde couche disparaît de ce côté)
+        if (g > 0 || (nom === brasElem && t.centre[1] < 16.4)) continue;
+        const l = sc.lumiere(T[nom].n(t.N), false);
+        if (l < 0) continue;
+        sc.quad(t.coins.map(T[nom].p), matiere(m, nom, t, l), d, true);
+        continue;
+      }
       const i = (t.ty * 64 + t.tx) * 4;
       if (peau.px[i + 3] < 128) continue;
       const l = sc.lumiere(T[nom].n(t.N), false);
@@ -170,6 +256,23 @@ function perso(sc, peau, o = {}) {
       }
       if (o.teinte) c = mix(c, o.teinte.c, o.teinte.k);
       sc.quad(t.coins.map(T[nom].p), c, d, false);
+    }
+  }
+  if (o.armure) {
+    for (const [nom, g, garde] of ARMURE) {
+      const boite = PARTIES(false).find((p) => p[0] === nom)[1];
+      for (const t of texels(boite, [0, 0], g, 1)) {
+        if (!garde(t) || (nom === brasElem && t.centre[1] < 16.4)) continue;
+        const l = sc.lumiere(T[nom].n(t.N), false);
+        if (l < 0) continue;
+        if (m && couvert(m, s, cote, nom, t) === 1) {
+          sc.quad(t.coins.map(T[nom].p), matiere(m, nom, t, l), 0.04, true);
+          continue;
+        }
+        const bord = hache(t.tx, t.ty, 311) < 0.12;
+        const c = mix(o.armure, [255, 255, 255], bord ? 0.35 : 0.12 * hache(t.tx >> 1, t.ty >> 1, 312));
+        sc.quad(t.coins.map(T[nom].p), clair(c, l), 0.04, false);
+      }
     }
   }
   if (elem) (elem.sorte === "lave" ? mainLave : mainGlace)(sc, T[brasElem], elem.cote, elem);
@@ -658,6 +761,7 @@ const vues = [
 
 // les briques servent aussi à la planche des fruits eux-mêmes (objets.mjs)
 export { ajoute, sous, fois, rotX, rotY, TOUR, ID, brille, pave, cube, pointe, flamme, cristal, perso, brule, givre, sol, legende, regarde, epee, EPEE, fissure,
+  magma, glace, jetLave, jetGlace, croissant, aretes, bain, FACES, couvert, matiere,
   CROUTE, CROUTE_R, LAVE_R, LAVE_O, LAVE_J, GLACE, GLACE_C, BLANC, FUMEE, HERBE, TERRE, FOND, SKINS, PEAU_LAVE, PEAU_GLACE, STEVE, LAVE, GEL };
 
 const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

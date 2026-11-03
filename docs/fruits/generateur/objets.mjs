@@ -8,9 +8,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ecrirePng, clair, mix, hache, norme, croix, scene, ecrireTexte } from "./moteur.mjs";
+import { ecrirePng, clair, mix, hache, norme, croix, scene, ecrireTexte, texels, PARTIES } from "./moteur.mjs";
 import {
-  ajoute, sous, fois, rotY, TOUR, ID, brille, pave, cube, flamme, cristal, perso, sol, legende, EPEE, fissure,
+  ajoute, sous, fois, rotY, TOUR, ID, brille, pave, cube, flamme, cristal, perso, sol, legende, EPEE, fissure, magma, glace, couvert,
   CROUTE, CROUTE_R, LAVE_O, LAVE_J, LAVE_R, GLACE, GLACE_C, BLANC, FUMEE, HERBE, FOND, PEAU_LAVE, PEAU_GLACE, STEVE, SKINS, LAVE, GEL,
 } from "./rendu.mjs";
 
@@ -515,6 +515,41 @@ function gants() {
   return { lave, lueur, glace };
 }
 
+/**
+ * L'éveil 2 en jeu : la moitié du corps, sur la disposition d'une peau de joueur (256×256 pour 64×64 : quatre pixels par
+ * pixel du modèle), avec le même bord irrégulier que les maquettes (couvert, dans rendu.mjs). Le reste est transparent.
+ * La lave a une seconde texture, ses fissures seules, qui brillent.
+ */
+function moities() {
+  const N = 256, sortie = {};
+  for (const [sorte, s, cote] of [["lave", 1, "G"], ["glace", -1, "D"]]) {
+    const px = Buffer.alloc(N * N * 4), lueur = Buffer.alloc(N * N * 4);
+    for (const [nom, boite, uv1] of PARTIES(false)) {
+      for (const t of texels(boite, uv1, 0, 1)) {
+        const pris = couvert({ sorte }, s, cote, nom, t);
+        if (!pris) continue;
+        for (let dy = 0; dy < 4; dy++) for (let dx = 0; dx < 4; dx++) {
+          const X = t.tx * 4 + dx, Y = t.ty * 4 + dy, i = (Y * N + X) * 4;
+          if (pris === 2) {
+            if (sorte === "lave") { px.set([...LAVE_O, 255], i); lueur.set([...LAVE_O, 255], i); }
+            else px.set([...mix(GLACE_C, BLANC, 0.5).map(Math.round), 235], i);
+            continue;
+          }
+          if (sorte === "lave") {
+            const c = magma(X, Y, 401, 11, 2.6);
+            px.set([...c.slice(0, 3).map(Math.round), 255], i);
+            if (c[3] === 1) lueur.set([...c.slice(0, 3).map(Math.round), 255], i);
+          } else {
+            px.set([...glace(X >> 1, Y >> 1, 402, Math.max(0, Math.min(1, 1 - t.centre[1] / 32))).map(Math.round), 225], i);
+          }
+        }
+      }
+    }
+    sortie[sorte] = { px, lueur };
+  }
+  return sortie;
+}
+
 /** Une petite texture de tige (16×16) pour la vrille du fruit posé : vert, plus clair d'un côté. */
 function tige() {
   const px = Buffer.alloc(16 * 16 * 4);
@@ -554,6 +589,10 @@ function fichiersDuMod() {
   png(path.join(ASSETS, "textures", "entity", "fruit", "gant_lave.png"), 128, 128, g.lave);
   png(path.join(ASSETS, "textures", "entity", "fruit", "gant_lave_lueur.png"), 128, 128, g.lueur);
   png(path.join(ASSETS, "textures", "entity", "fruit", "gant_glace.png"), 128, 128, g.glace);
+  const m = moities();
+  png(path.join(ASSETS, "textures", "entity", "fruit", "moitie_lave.png"), 256, 256, m.lave.px);
+  png(path.join(ASSETS, "textures", "entity", "fruit", "moitie_lave_lueur.png"), 256, 256, m.lave.lueur);
+  png(path.join(ASSETS, "textures", "entity", "fruit", "moitie_glace.png"), 256, 256, m.glace.px);
   for (const [id, msg] of [["magma", "cabane.magma"], ["givre", "cabane.givre"], ["eau", "cabane.eau"]]) {
     json(path.join(DATA, "damage_type", id + ".json"), { exhaustion: 0.1, message_id: msg, scaling: "never" });
   }

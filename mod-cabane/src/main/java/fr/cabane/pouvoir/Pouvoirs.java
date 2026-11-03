@@ -138,8 +138,8 @@ public final class Pouvoirs {
 
     /**
      * Un éveil dure au plus 2 minutes ; ensuite (ou si on s'endort avant), le pouvoir se repose : 2 minutes pour les
-     * pouvoirs de niveau 1 (Susano, Hachibi, la marque, les fruits du démon), 1 minute pour Minato, les espionnes et
-     * les pouvoirs qui montent plus haut.
+     * pouvoirs de niveau 1 (Susano, Hachibi, la marque, et les fruits du démon restés au niveau 1), 1 minute pour
+     * Minato, les espionnes et les pouvoirs qui montent plus haut (les fruits passés au niveau 2).
      */
     public static final int DUREE_EVEIL = 2 * 60 * 20;
     public static final int REPOS_EVEIL = 60 * 20;
@@ -163,7 +163,8 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3 : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) ? 2 : 1;
+                return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || Fruit.est(pouvoir) ? 2 : 1;
             }
         }
 
@@ -363,7 +364,7 @@ public final class Pouvoirs {
             Espionne.eveiller(joueur);
         }
         if (Fruit.est(elu.pouvoir())) {
-            Fruit.eveiller(joueur);
+            Fruit.eveiller(joueur, suivant);
         }
         envoyerEtat(joueur, elu, suivant, true);
     }
@@ -430,10 +431,11 @@ public final class Pouvoirs {
         Espionne.endormir(joueur);
         Fruit.endormir(joueur);
         armure(joueur, 0);
-        if (EVEILLES.remove(joueur.getUUID()) != null) {
+        Integer etait = EVEILLES.remove(joueur.getUUID());
+        if (etait != null) {
             DEBUT_EVEIL.remove(joueur.getUUID());
             if (!pouvoir(joueur).equals(Susano3.DEV)) {
-                REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + repos(joueur));
+                REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + repos(joueur, etait));
             }
             Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
             PacketDistributor.sendToAllPlayers(new Etat(joueur.getUUID(), elu == null ? "susano" : elu.pouvoir(),
@@ -441,10 +443,19 @@ public final class Pouvoirs {
         }
     }
 
-    /** Combien de temps son pouvoir se repose après un éveil (voir REPOS_NIVEAU_1). */
-    private static int repos(ServerPlayer joueur) {
+    /**
+     * Combien de temps son pouvoir se repose après un éveil où il est monté jusqu'à ce niveau (voir REPOS_NIVEAU_1) :
+     * les fruits du démon se reposent 2 minutes s'ils sont restés au niveau 1, 1 minute s'ils sont passés au 2.
+     */
+    private static int repos(ServerPlayer joueur, int niveau) {
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
-        return elu != null && elu.niveauMax() == 1 && !elu.pouvoir().equals(Minato.NOM) && !Espionne.est(elu.pouvoir()) ? REPOS_NIVEAU_1 : REPOS_EVEIL;
+        if (elu == null || elu.pouvoir().equals(Minato.NOM) || Espionne.est(elu.pouvoir())) {
+            return REPOS_EVEIL;
+        }
+        if (Fruit.est(elu.pouvoir())) {
+            return niveau >= 2 ? REPOS_EVEIL : REPOS_NIVEAU_1;
+        }
+        return elu.niveauMax() == 1 ? REPOS_NIVEAU_1 : REPOS_EVEIL;
     }
 
     // ================================================================ frapper
@@ -724,9 +735,10 @@ public final class Pouvoirs {
             }
             int reste = entree.getValue() + (Espionne.est(pouvoir(joueur)) ? Espionne.DUREE_EVEIL : DUREE_EVEIL) - maintenant;
             if (reste <= 0) {
+                int repos = repos(joueur, niveau(joueur));
                 endormir(joueur);
                 joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose "
-                        + (repos(joueur) == REPOS_NIVEAU_1 ? "deux minutes." : "une minute.")).withStyle(ChatFormatting.GOLD), false);
+                        + (repos == REPOS_NIVEAU_1 ? "deux minutes." : "une minute.")).withStyle(ChatFormatting.GOLD), false);
             } else if (reste == 60 * 20 || reste == 30 * 20 || (reste <= 10 * 20 && reste % 20 == 0)) {
                 joueur.displayClientMessage(Component.literal("Éveil : encore " + reste / 20 + " s")
                         .withStyle(reste <= 10 * 20 ? ChatFormatting.RED : ChatFormatting.GOLD), true);

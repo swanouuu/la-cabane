@@ -44,6 +44,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
@@ -59,6 +60,7 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RenderArmEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -67,12 +69,17 @@ import org.joml.Vector3f;
  * Les fruits du démon chez chaque joueur (voir {@link Fruit}) : la main de lave (la gauche) ou de glace (la droite)
  * des éveillés, vue de l'extérieur comme à la première personne ; les jets, l'éruption et l'ère glaciaire (rien que du
  * dessin : rien ne reste au sol) ; le bloc de glace autour de ceux qui sont gelés ; l'animation quand on mange un fruit
- * (la spirale, la main qui change un instant, le bord de l'écran) ; les touches et le panneau.
+ * (la spirale, la main qui change un instant, le bord de l'écran) ; les touches et le panneau. Au niveau 2 : la moitié
+ * du corps (par-dessus l'armure s'il en porte), le grand poing, les lances, les météores et le faisan en vol.
  */
 public final class ClientFruit {
     private static final ResourceLocation GANT_LAVE = Cabane.id("textures/entity/fruit/gant_lave.png");
     private static final ResourceLocation GANT_LAVE_LUEUR = Cabane.id("textures/entity/fruit/gant_lave_lueur.png");
     private static final ResourceLocation GANT_GLACE = Cabane.id("textures/entity/fruit/gant_glace.png");
+    /** La moitié du corps (l'éveil 2), sur la disposition d'une peau de joueur : voir docs/fruits/generateur/objets.mjs. */
+    private static final ResourceLocation MOITIE_LAVE = Cabane.id("textures/entity/fruit/moitie_lave.png");
+    private static final ResourceLocation MOITIE_LAVE_LUEUR = Cabane.id("textures/entity/fruit/moitie_lave_lueur.png");
+    private static final ResourceLocation MOITIE_GLACE = Cabane.id("textures/entity/fruit/moitie_glace.png");
     private static final ResourceLocation NEIGE_POUDREUSE = ResourceLocation.withDefaultNamespace("textures/misc/powder_snow_outline.png");
     private static final RandomSource HASARD = RandomSource.create();
     private static final double DUREE_JET = 0.4;
@@ -119,19 +126,184 @@ public final class ClientFruit {
     private static final List<Onde> ONDES = new ArrayList<>();
     /** Ce que l'ère glaciaire a pris dans la glace : l'entité → quand la glace se brise (System.nanoTime). */
     private static final Map<Integer, Long> GELES = new HashMap<>();
+    /** Le niveau de chaque éveillé : 1 la main, 2 la moitié du corps. */
+    private static final Map<UUID, Integer> NIVEAUX = new HashMap<>();
+
+    /** Un tir de l'éveil 2 en vol (voir Fruit) : il avance ici comme sur le serveur, jusqu'à ce que le serveur l'arrête. */
+    private static final class Vol {
+        final int sorte;
+        final Vec3 de;
+        final Vec3 dir;
+        final double vitesse;
+        final double portee;
+        final long debut;
+        final int graine = HASARD.nextInt(1000);
+        int id;
+
+        Vol(int sorte, Vec3 de, Vec3 dir, double vitesse, double portee, long debut) {
+            this.sorte = sorte;
+            this.de = de;
+            this.dir = dir.normalize();
+            this.vitesse = vitesse;
+            this.portee = portee;
+            this.debut = debut;
+        }
+
+        double age(Minecraft mc, float partiel) {
+            return mc.level.getGameTime() - debut + partiel;
+        }
+
+        Vec3 pos(Minecraft mc, float partiel) {
+            return de.add(dir.scale(Math.min(portee, vitesse * age(mc, partiel))));
+        }
+    }
+
+    private static final Map<Integer, Vol> VOLS = new HashMap<>();
+
+    /** Le sillage gelé du faisan : des pics qui sortent du sol derrière lui, puis fondent. */
+    private record Pic(Vec3 pos, long debut, double taille) {
+    }
+
+    private static final List<Pic> PICS = new ArrayList<>();
+
+    /** La pluie de météores : la zone qui rougeoie au sol, et le nuage de cendres d'où tombent les roches. */
+    private record Zone(Vec3 centre, long debut) {
+    }
+
+    private static final List<Zone> ZONES = new ArrayList<>();
+    private static final double DUREE_ZONE = 3.8;
+
+    /** Là où une météore (ou le grand poing) s'est écrasée : une flaque de magma qui refroidit, une onde de choc. */
+    private record Cratere(Vec3 pos, long debut, double taille, int graine) {
+    }
+
+    private static final List<Cratere> CRATERES = new ArrayList<>();
+
+    /** Le sillage du faisan : une bande de givre au sol, d'un point au suivant, qui s'efface. */
+    private record Bande(Vec3 a, Vec3 b, Vec3 cote, long debut) {
+    }
+
+    private static final List<Bande> BANDES = new ArrayList<>();
+    private static final Map<Integer, Vec3> DERNIER_SOL = new HashMap<>();
+
+    /** Les éclats de glace quand le faisan se brise : ils volent, retombent, disparaissent. */
+    private record Eclat(Vec3 pos, Vec3 vitesse, long debut) {
+    }
+
+    private static final List<Eclat> BRISURES = new ArrayList<>();
+    /** L'écran tremble quand une météore ou le poing s'écrase tout près : depuis quand, et à quel point. */
+    private static long secousse = -1;
+    private static float forceSecousse;
+
+    private static void secouer(Vec3 p, float force) {
+        Minecraft mc = Minecraft.getInstance();
+        double d = mc.player == null ? 99 : mc.player.position().distanceTo(p);
+        if (d < 18) {
+            secousse = System.nanoTime();
+            forceSecousse = Math.max(forceSecousse * 0.5F, force * (float) (1 - d / 18));
+        }
+    }
+
+    /** Le sol sous ce point (pour poser un cratère ou le sillage). */
+    private static double sol(Minecraft mc, Vec3 p) {
+        int y = mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, Mth.floor(p.x), Mth.floor(p.z));
+        return Math.abs(y - p.y) < 6 ? y : p.y;
+    }
 
     // ================================================================ ce que dit le serveur
 
     public static void recevoir(Pouvoirs.Etat p) {
         if (p.eveille()) {
             EVEILLES.put(p.joueur(), p.pouvoir());
+            NIVEAUX.put(p.joueur(), p.niveau());
         } else {
             EVEILLES.remove(p.joueur());
+            NIVEAUX.remove(p.joueur());
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && p.joueur().equals(mc.player.getUUID())) {
+                pretJet = 0;
+                pretChoc = 0;
+            }
         }
     }
 
     public static void oublier(UUID joueur) {
         EVEILLES.remove(joueur);
+        NIVEAUX.remove(joueur);
+    }
+
+    public static void vol(Fruit.Vol p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            Vol v = new Vol(p.sorte(), vec(p.de()), vec(p.dir()), p.vitesse(), p.portee(), mc.level.getGameTime());
+            v.id = p.id();
+            VOLS.put(p.id(), v);
+        }
+    }
+
+    /** Le tir s'arrête : le poing explose, la météore s'écrase, la lance se brise, le faisan éclate en neige. */
+    public static void arret(Fruit.Arret p) {
+        Vol v = VOLS.remove(p.id());
+        Minecraft mc = Minecraft.getInstance();
+        if (v == null || mc.level == null) {
+            return;
+        }
+        Vec3 o = vec(p.pos());
+        BlockParticleOption glace = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState());
+        switch (v.sorte) {
+            case Fruit.POING -> {
+                for (int i = 0; i < 3; i++) {
+                    mc.level.addParticle(ParticleTypes.EXPLOSION, o.x + aleat(0.8), o.y + aleat(0.6), o.z + aleat(0.8), 0, 0, 0);
+                }
+                for (int i = 0; i < 40; i++) {
+                    mc.level.addParticle(i % 3 == 0 ? ParticleTypes.LAVA : ParticleTypes.FLAME, o.x, o.y, o.z, aleat(0.3), HASARD.nextDouble() * 0.3, aleat(0.3));
+                }
+                for (int i = 0; i < 10; i++) {
+                    mc.level.addParticle(ParticleTypes.LARGE_SMOKE, o.x + aleat(1), o.y + HASARD.nextDouble(), o.z + aleat(1), 0, 0.05, 0);
+                }
+                CRATERES.add(new Cratere(new Vec3(o.x, sol(mc, o), o.z), System.nanoTime(), 2.2, HASARD.nextInt(100)));
+                secouer(o, 1F);
+            }
+            case Fruit.METEORE -> {
+                for (int i = 0; i < 24; i++) {
+                    double a = HASARD.nextDouble() * Math.PI * 2;
+                    mc.level.addParticle(i % 4 == 0 ? ParticleTypes.LAVA : ParticleTypes.FLAME, o.x, o.y + 0.2, o.z, Math.cos(a) * 0.2, 0.15 + HASARD.nextDouble() * 0.2, Math.sin(a) * 0.2);
+                }
+                mc.level.addParticle(ParticleTypes.EXPLOSION, o.x, o.y + 0.5, o.z, 0, 0, 0);
+                for (int i = 0; i < 8; i++) {
+                    mc.level.addParticle(ParticleTypes.LARGE_SMOKE, o.x + aleat(1.2), o.y + 0.3 + HASARD.nextDouble(), o.z + aleat(1.2), 0, 0.06, 0);
+                }
+                CRATERES.add(new Cratere(new Vec3(o.x, sol(mc, o), o.z), System.nanoTime(), 1.6 + HASARD.nextDouble() * 0.8, HASARD.nextInt(100)));
+                secouer(o, 0.7F);
+            }
+            case Fruit.LANCE -> {
+                for (int i = 0; i < 14; i++) {
+                    mc.level.addParticle(i % 2 == 0 ? glace : ParticleTypes.SNOWFLAKE, o.x, o.y, o.z, aleat(0.15), HASARD.nextDouble() * 0.15, aleat(0.15));
+                }
+            }
+            default -> {
+                for (int i = 0; i < 90; i++) {
+                    mc.level.addParticle(i % 3 == 0 ? glace : ParticleTypes.SNOWFLAKE, o.x + aleat(2.5), o.y + aleat(1.5), o.z + aleat(2.5), aleat(0.3), HASARD.nextDouble() * 0.3, aleat(0.3));
+                }
+                // le faisan se brise : une gerbe de grands éclats de glace
+                long t0 = System.nanoTime();
+                for (int i = 0; i < 40; i++) {
+                    double a = HASARD.nextDouble() * Math.PI * 2;
+                    BRISURES.add(new Eclat(o, new Vec3(Math.cos(a) * (3 + HASARD.nextDouble() * 6), 2 + HASARD.nextDouble() * 6, Math.sin(a) * (3 + HASARD.nextDouble() * 6)), t0));
+                }
+                DERNIER_SOL.remove(p.id());
+                secouer(o, 0.6F);
+            }
+        }
+    }
+
+    private static int id(Vol v) {
+        return v.id;
+    }
+
+    /** Son niveau, s'il est éveillé (0 sinon). */
+    private static int niveau(UUID joueur) {
+        return EVEILLES.containsKey(joueur) ? NIVEAUX.getOrDefault(joueur, 1) : 0;
     }
 
     public static void repas(Fruit.Repas p) {
@@ -143,6 +315,10 @@ public final class ClientFruit {
     }
 
     public static void onde(Fruit.Onde p) {
+        if (Fruit.PLUIE.equals(p.sorte())) {
+            ZONES.add(new Zone(vec(p.centre()), System.nanoTime()));
+            return;
+        }
         Onde o = new Onde(Fruit.GLACE.equals(p.sorte()), vec(p.centre()), System.nanoTime(), HASARD.nextInt());
         ONDES.add(o);
         Minecraft mc = Minecraft.getInstance();
@@ -279,7 +455,56 @@ public final class ClientFruit {
         return joueur.getSkin().model() == PlayerSkin.Model.SLIM;
     }
 
-    /** Vu de l'extérieur : le gant sur la main du fruit. */
+    /**
+     * Les modèles de la moitié du corps : [bras fins][épais]. Épais (1,15 pixel), il passe par-dessus une armure ; mince
+     * (0,3), il colle à la peau.
+     */
+    @SuppressWarnings("unchecked")
+    private static final PlayerModel<AbstractClientPlayer>[][] MOITIES = new PlayerModel[2][2];
+
+    private static PlayerModel<AbstractClientPlayer> modeleMoitie(boolean fin, boolean epais) {
+        int f = fin ? 1 : 0, e = epais ? 1 : 0;
+        if (MOITIES[f][e] == null) {
+            MOITIES[f][e] = new PlayerModel<>(LayerDefinition.create(PlayerModel.createMesh(new CubeDeformation(epais ? 1.15F : 0.3F), fin), 64, 64)
+                    .bakeRoot(), fin);
+        }
+        return MOITIES[f][e];
+    }
+
+    /** Ces morceaux, avec la matière de la moitié (la lave brille aussi dans le noir). */
+    private static void rendreMoitie(PoseStack ps, MultiBufferSource buffers, int lumiere, boolean glace, int dessous, ModelPart... parties) {
+        if (glace) {
+            VertexConsumer c = buffers.getBuffer(RenderType.entityTranslucent(MOITIE_GLACE));
+            for (ModelPart p : parties) {
+                p.render(ps, c, lumiere, dessous);
+            }
+            return;
+        }
+        VertexConsumer c = buffers.getBuffer(RenderType.entityCutoutNoCull(MOITIE_LAVE));
+        for (ModelPart p : parties) {
+            p.render(ps, c, lumiere, dessous);
+        }
+        VertexConsumer l = buffers.getBuffer(RenderType.eyes(MOITIE_LAVE_LUEUR));
+        for (ModelPart p : parties) {
+            p.render(ps, l, LightTexture.FULL_BRIGHT, dessous);
+        }
+    }
+
+    /** L'éveil 2 : la moitié du corps, par-dessus l'armure là où il en porte (elle l'avale). */
+    private static void moitie(PoseStack ps, MultiBufferSource buffers, int lumiere, AbstractClientPlayer joueur, PlayerModel<AbstractClientPlayer> parent,
+            boolean glace, int dessous) {
+        boolean fin = fin(joueur);
+        PlayerModel<AbstractClientPlayer> mince = modeleMoitie(fin, false), epais = modeleMoitie(fin, true);
+        parent.copyPropertiesTo(mince);
+        parent.copyPropertiesTo(epais);
+        PlayerModel<AbstractClientPlayer> tete = joueur.getItemBySlot(EquipmentSlot.HEAD).isEmpty() ? mince : epais;
+        PlayerModel<AbstractClientPlayer> torse = joueur.getItemBySlot(EquipmentSlot.CHEST).isEmpty() ? mince : epais;
+        PlayerModel<AbstractClientPlayer> jambes = joueur.getItemBySlot(EquipmentSlot.LEGS).isEmpty() && joueur.getItemBySlot(EquipmentSlot.FEET).isEmpty()
+                ? mince : epais;
+        rendreMoitie(ps, buffers, lumiere, glace, dessous, tete.head, torse.body, torse.rightArm, torse.leftArm, jambes.rightLeg, jambes.leftLeg);
+    }
+
+    /** Vu de l'extérieur : le gant sur la main du fruit ; au niveau 2, la moitié du corps. */
     public static final class Couche extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
         public Couche(PlayerRenderer parent) {
             super(parent);
@@ -293,10 +518,14 @@ public final class ClientFruit {
                 return;
             }
             boolean glace = glace(sorte);
+            int dessous = LivingEntityRenderer.getOverlayCoords(joueur, 0);
+            if (niveau(joueur.getUUID()) >= 2) {
+                moitie(ps, buffers, lumiere, joueur, getParentModel(), glace, dessous);
+            }
             ModelPart bras = glace ? getParentModel().rightArm : getParentModel().leftArm;
             ps.pushPose();
             bras.translateAndRotate(ps);
-            dessinerGant(ps, buffers, lumiere, glace, fin(joueur), glace, LivingEntityRenderer.getOverlayCoords(joueur, 0));
+            dessinerGant(ps, buffers, lumiere, glace, fin(joueur), glace, dessous);
             ps.popPose();
         }
     }
@@ -317,6 +546,13 @@ public final class ClientFruit {
             dansBras = false;
         }
         ModelPart partie = bras == HumanoidArm.RIGHT ? rendu.getModel().rightArm : rendu.getModel().leftArm;
+        if (niveau(joueur.getUUID()) >= 2) {
+            // au niveau 2, tout le bras est de lave (ou de glace)
+            PlayerModel<AbstractClientPlayer> mince = modeleMoitie(fin(joueur), false);
+            ModelPart m = bras == HumanoidArm.RIGHT ? mince.rightArm : mince.leftArm;
+            m.copyFrom(partie);
+            rendreMoitie(ps, buffers, lumiere, glace, OverlayTexture.NO_OVERLAY, m);
+        }
         ps.pushPose();
         partie.translateAndRotate(ps);
         dessinerGant(ps, buffers, lumiere, glace, fin(joueur), bras == HumanoidArm.RIGHT, OverlayTexture.NO_OVERLAY);
@@ -368,7 +604,7 @@ public final class ClientFruit {
         }
         String sorte = EVEILLES.get(mc.player.getUUID());
         if (sorte != null) {
-            panneau(g, mc.font, glace(sorte));
+            panneau(g, mc.font, glace(sorte), niveau(mc.player.getUUID()));
         }
     }
 
@@ -409,16 +645,21 @@ public final class ClientFruit {
         RenderSystem.disableBlend();
     }
 
-    private static void panneau(GuiGraphics g, Font font, boolean glace) {
+    private static void panneau(GuiGraphics g, Font font, boolean glace, int niveau) {
         long maintenant = System.nanoTime();
         double jet = Math.max(0, (pretJet - maintenant) / 1e9), choc = Math.max(0, (pretChoc - maintenant) / 1e9);
+        boolean fort = niveau >= 2;
+        String gauche = fort ? (glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse")
+                : glace ? "Arme +2 dégâts, ralentit" : "Arme +2 dégâts, enflamme";
+        String droit = fort ? (glace ? "Lances de glace" : "Grand poing de magma") : glace ? "Jet de glace" : "Jet de lave";
+        String shift = fort ? (glace ? "Faisan de glace" : "Pluie de météores") : glace ? "Ère glaciaire" : "Éruption";
         String[][] lignes = {
-                {"Clic gauche", glace ? "Arme +2 dégâts, ralentit" : "Arme +2 dégâts, enflamme"},
-                {"Clic droit", (glace ? "Jet de glace" : "Jet de lave") + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
-                {"Shift", (glace ? "Ère glaciaire" : "Éruption") + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
+                {"Clic gauche", gauche},
+                {"Clic droit", droit + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
+                {"Shift", shift + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
         };
         boolean[] gris = {false, jet > 0, choc > 0};
-        String titre = glace ? "Hie Hie no Mi" : "Magu Magu no Mi";
+        String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + (fort ? "  ·  niveau 2" : "");
         int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
         int largeurTouche = 0, largeurAction = font.width(titre) - 10;
         for (String[] l : lignes) {
@@ -609,6 +850,90 @@ public final class ClientFruit {
                 pointe(voile, m, base, new Vec3(Math.cos(angle) * 0.4, 1, Math.sin(angle) * 0.4), h, 0.35 + 0.3 * graine.nextDouble(), 0.8F);
             }
         }
+        // les tirs de l'éveil 2
+        for (Vol v : VOLS.values()) {
+            Vec3 p = v.pos(mc, partiel).subtract(cam);
+            double t = v.age(mc, partiel);
+            switch (v.sorte) {
+                case Fruit.POING -> poing(voile, m, p, v.dir, t);
+                case Fruit.LANCE -> pointe(voile, m, p.subtract(v.dir.scale(0.9)), v.dir, 1.9, 0.26, 0.9F);
+                case Fruit.METEORE -> meteore(voile, m, p, v.dir, t, v.graine);
+                default -> faisan(voile, m, p, v.dir, t);
+            }
+        }
+        // la pluie de météores : la zone qui rougeoie au sol, le nuage sombre au-dessus, rouge par-dessous
+        for (Zone z : ZONES) {
+            double t = secondes(z.debut());
+            float a = (float) Math.max(0, Math.min(1, Math.min(t / 0.3, (DUREE_ZONE - t) / 0.5)));
+            float pouls = (float) (0.75 + 0.25 * Math.sin(t * 9));
+            Vec3 c0 = z.centre().add(0, 0.06, 0).subtract(cam);
+            Vec3 ciel = z.centre().add(-6.5, 31, -3.5).subtract(cam);
+            for (int i = 0; i < 48; i++) {
+                double a0 = i * Math.PI * 2 / 48, a1 = (i + 1) * Math.PI * 2 / 48;
+                Vec3 i0 = c0.add(Math.cos(a0) * 6.2, 0, Math.sin(a0) * 6.2), i1 = c0.add(Math.cos(a1) * 6.2, 0, Math.sin(a1) * 6.2);
+                Vec3 o0 = c0.add(Math.cos(a0) * 6.7, 0, Math.sin(a0) * 6.7), o1 = c0.add(Math.cos(a1) * 6.7, 0, Math.sin(a1) * 6.7);
+                quad(voile, m, i0, i1, o1, o0, 1F, 0.3F * pouls, 0.05F, 0.85F * a);
+                quad(voile, m, c0, c0, i0, i1, 1F, 0.25F, 0.05F, 0.14F * a);
+            }
+            // le nuage : des volutes de fumée noire, en volume, et la lave qui rougeoie entre elles, par-dessous
+            RandomSource g = RandomSource.create(z.debut());
+            double gonfle = Math.min(1, t / 0.6);
+            for (int k = 0; k < 40; k++) {
+                double an = g.nextDouble() * Math.PI * 2, rr = Math.sqrt(g.nextDouble()) * 9.5;
+                Vec3 q = ciel.add(Math.cos(an) * rr, (g.nextDouble() - 0.3) * 2.6 + Math.sin(t * 1.5 + k) * 0.15, Math.sin(an) * rr);
+                float gris = 0.1F + 0.12F * g.nextFloat();
+                cube(voile, m, q, (1 + g.nextDouble() * 1.7) * (0.4 + 0.6 * gonfle), an + t * 0.15, gris, gris * 0.85F, gris * 0.8F, 0.92F * a);
+            }
+            for (int k = 0; k < 16; k++) {
+                double an = g.nextDouble() * Math.PI * 2, rr = Math.sqrt(g.nextDouble()) * 8;
+                Vec3 q = ciel.add(Math.cos(an) * rr, -1.4 - g.nextDouble() * 0.6, Math.sin(an) * rr);
+                cube(voile, m, q, 0.5 + g.nextDouble() * 0.6, an + t, 1F, (0.35F + 0.25F * g.nextFloat()) * pouls, 0.05F, 0.9F * a);
+            }
+        }
+        // les cratères : une flaque de magma qui refroidit, et l'onde de choc qui part
+        for (Cratere k : CRATERES) {
+            double t = secondes(k.debut());
+            float chaud = (float) Math.max(0, 1 - t / 2.6);
+            Vec3 c0 = k.pos().add(0, 0.05, 0).subtract(cam);
+            for (int i = 0; i < 16; i++) {
+                double a0 = i * Math.PI * 2 / 16, a1 = (i + 1) * Math.PI * 2 / 16;
+                double r0 = k.taille() * (0.75 + 0.3 * Math.sin(a0 * 3 + k.graine())), r1 = k.taille() * (0.75 + 0.3 * Math.sin(a1 * 3 + k.graine()));
+                quad(voile, m, c0, c0, c0.add(Math.cos(a0) * r0, 0, Math.sin(a0) * r0), c0.add(Math.cos(a1) * r1, 0, Math.sin(a1) * r1),
+                        1F, 0.3F + 0.55F * chaud, 0.04F + 0.25F * chaud, 0.92F * chaud);
+            }
+            if (t < 0.45) {
+                double rr = 0.5 + t / 0.45 * 5;
+                float al = (float) (0.6 * (1 - t / 0.45));
+                for (int i = 0; i < 32; i++) {
+                    double a0 = i * Math.PI * 2 / 32, a1 = (i + 1) * Math.PI * 2 / 32;
+                    quad(voile, m, c0.add(Math.cos(a0) * rr, 0.1, Math.sin(a0) * rr), c0.add(Math.cos(a1) * rr, 0.1, Math.sin(a1) * rr),
+                            c0.add(Math.cos(a1) * (rr + 0.6), 0.1, Math.sin(a1) * (rr + 0.6)), c0.add(Math.cos(a0) * (rr + 0.6), 0.1, Math.sin(a0) * (rr + 0.6)),
+                            1F, 0.78F, 0.45F, al);
+                }
+            }
+        }
+        // le sillage du faisan : une large bande de givre
+        for (Bande b : BANDES) {
+            float a = (float) Math.max(0, Math.min(1, (2.6 - secondes(b.debut())) / 0.7));
+            Vec3 l = b.cote().scale(1.6);
+            quad(voile, m, b.a().add(l).subtract(cam), b.b().add(l).subtract(cam), b.b().subtract(l).subtract(cam), b.a().subtract(l).subtract(cam),
+                    0.88F, 0.96F, 1F, 0.6F * a);
+        }
+        // les éclats du faisan qui se brise
+        for (Eclat e : BRISURES) {
+            double t = secondes(e.debut());
+            Vec3 p = e.pos().add(e.vitesse().scale(t)).add(0, -9 * t * t, 0);
+            Vec3 v = e.vitesse().add(0, -18 * t, 0);
+            pointe(voile, m, p.subtract(cam), v, 0.9, 0.22, (float) Math.max(0, 0.9 - t));
+        }
+        // le sillage gelé du faisan : des pics qui jaillissent puis fondent
+        for (Pic pic : PICS) {
+            double age = secondes(pic.debut());
+            double h = pic.taille() * Math.min(1, age / 0.15) * Math.max(0, Math.min(1, (2.2 - age) / 0.5));
+            if (h > 0.02) {
+                pointe(voile, m, pic.pos().subtract(cam), new Vec3(0, 1, 0), h, 0.3 + 0.12 * pic.taille(), 0.8F);
+            }
+        }
         // ceux qui sont pris dans la glace
         for (Map.Entry<Integer, Long> g : GELES.entrySet()) {
             Entity e = mc.level.getEntity(g.getKey());
@@ -621,7 +946,159 @@ public final class ClientFruit {
         buffers.endBatch(Types.VOILE);
     }
 
+    /** Un repère qui regarde vers f : d sur le côté, h vers le haut. */
+    private static Vec3[] repere(Vec3 dir) {
+        Vec3 f = dir.normalize();
+        Vec3 d = Math.abs(f.y) < 0.95 ? f.cross(new Vec3(0, 1, 0)).normalize() : new Vec3(1, 0, 0);
+        return new Vec3[] {f, d, d.cross(f).normalize()};
+    }
+
+    /** Le grand poing de magma : un poing fermé, quatre phalanges devant, des plaques de croûte, des gouttes derrière. */
+    private static void poing(VertexConsumer c, Matrix4f m, Vec3 p, Vec3 dir, double t) {
+        Vec3[] r = repere(dir);
+        Vec3 f = r[0], d = r[1], h = r[2];
+        double angle = Math.atan2(f.z, f.x);
+        cube(c, m, p, 0.62, angle, 1F, 0.42F, 0.08F, 1F);
+        for (int k = 0; k < 4; k++) {
+            cube(c, m, p.add(f.scale(0.62)).add(d.scale((k - 1.5) * 0.3)).add(h.scale(0.22)), 0.17, angle, 1F, 0.78F, 0.25F, 1F);
+        }
+        cube(c, m, p.add(f.scale(0.3)).add(d.scale(0.62)).add(h.scale(-0.2)), 0.2, angle, 1F, 0.6F, 0.15F, 1F);
+        for (int k = 0; k < 7; k++) {
+            Vec3 q = p.add(d.scale(Math.sin(k * 2.7) * 0.5)).add(h.scale(Math.cos(k * 1.9) * 0.5)).add(f.scale(Math.sin(k * 3.1) * 0.4));
+            cube(c, m, q, 0.2, angle + k, 0.28F, 0.09F, 0.05F, 1F);
+        }
+        for (int k = 1; k <= 6; k++) {
+            Vec3 q = p.subtract(f.scale(0.5 + k * 0.42)).add(d.scale(Math.sin(t * 0.8 + k) * 0.12)).add(h.scale(Math.cos(t * 0.7 + k) * 0.12));
+            float u = k / 6F;
+            cube(c, m, q, 0.34 - 0.035 * k, t * 0.3 + k, 1F, 0.85F - 0.5F * u, 0.3F - 0.25F * u, 1F);
+        }
+    }
+
+    /** Une météore : une grosse roche de magma (un cœur qui brille sous des plaques de croûte), et sa longue traînée de feu. */
+    private static void meteore(VertexConsumer c, Matrix4f m, Vec3 p, Vec3 dir, double t, int graine) {
+        Vec3[] r = repere(dir);
+        Vec3 f = r[0], d = r[1], h = r[2];
+        double tourne = t * 0.25 + graine;
+        cube(c, m, p, 0.85, tourne, 1F, 0.55F, 0.1F, 1F);
+        for (int k = 0; k < 9; k++) {
+            Vec3 q = p.add(d.scale(Math.sin(k * 2.1 + graine) * 0.62)).add(h.scale(Math.cos(k * 1.7 + graine) * 0.62)).add(f.scale(Math.sin(k * 2.9 + graine) * 0.5));
+            cube(c, m, q, 0.42, tourne + k, 0.22F, 0.07F, 0.04F, 1F);
+        }
+        for (int k = 1; k <= 12; k++) {
+            float u = k / 12F;
+            Vec3 q = p.subtract(f.scale(0.6 + k * 0.7)).add(d.scale(Math.sin(t * 0.9 + k) * 0.15 * u)).add(h.scale(Math.cos(t * 0.8 + k) * 0.15 * u));
+            cube(c, m, q, 0.75 - 0.05 * k, t * 0.4 + k, 1F, 0.95F - 0.6F * u, 0.45F - 0.4F * u, 1F - 0.5F * u);
+        }
+    }
+
+    /**
+     * Le faisan de glace, géant (près de 12 blocs d'envergure) : un corps de glace, une tête à crête et son bec, deux
+     * grandes ailes à deux rangs de plumes qui battent, une longue queue.
+     */
+    private static void faisan(VertexConsumer c, Matrix4f m, Vec3 p, Vec3 dir, double t) {
+        Vec3[] r = repere(dir);
+        Vec3 f = r[0], d = r[1], h = r[2];
+        double angle = Math.atan2(f.z, f.x), k0 = 1.8;
+        for (int k = -1; k <= 1; k++) {
+            cube(c, m, p.add(f.scale(k * 0.55 * k0)), (0.5 - 0.07 * Math.abs(k)) * k0, angle, 0.55F, 0.78F, 1F, 0.92F);
+        }
+        Vec3 tete = p.add(f.scale(1.15 * k0)).add(h.scale(0.35 * k0));
+        cube(c, m, tete, 0.3 * k0, angle, 0.7F, 0.88F, 1F, 0.95F);
+        pointe(c, m, tete.add(f.scale(0.25 * k0)), f.add(h.scale(-0.2)), 0.8 * k0, 0.22 * k0, 0.95F);
+        for (int k = 0; k < 3; k++) {
+            pointe(c, m, tete.add(h.scale(0.2 * k0)), h.add(f.scale(-0.8 - 0.3 * k)).add(d.scale((k - 1) * 0.3)), (0.7 + 0.15 * k) * k0, 0.12 * k0, 0.9F);
+        }
+        double bat = 0.45 * Math.sin(t * 0.55);
+        for (int cote = -1; cote <= 1; cote += 2) {
+            for (int couche = 0; couche < 2; couche++) {
+                for (int k = 0; k < 8; k++) {
+                    Vec3 base = p.add(d.scale(cote * 0.5 * k0)).add(f.scale((0.5 - k * 0.22) * k0)).add(h.scale((0.15 - couche * 0.1) * k0));
+                    Vec3 vers = d.scale(cote).add(h.scale(0.25 + bat - 0.03 * k - couche * 0.12)).add(f.scale(-0.1 - 0.14 * k - couche * 0.1));
+                    pointe(c, m, base, vers, (3.6 - 0.26 * k - couche * 0.8) * k0, (0.55 - 0.03 * k) * k0, couche == 0 ? 0.96F : 0.88F);
+                }
+            }
+        }
+        for (int k = -2; k <= 2; k++) {
+            pointe(c, m, p.subtract(f.scale(0.8 * k0)).add(d.scale(k * 0.16 * k0)), f.scale(-1).add(h.scale(0.04 + 0.03 * Math.sin(t * 0.4 + k))).add(d.scale(k * 0.1)),
+                    (3 + (2 - Math.abs(k)) * 0.7) * k0, 0.32 * k0, 0.95F);
+        }
+    }
+
     // ================================================================ les particules
+
+    /** Au niveau 2 : des flammes et de la fumée sortent de l'épaule et de la tête (ou du givre flotte autour). */
+    private static void particulesMoitie(Minecraft mc, Player j, boolean glace) {
+        float lacet = j.yBodyRot * Mth.DEG_TO_RAD;
+        Vec3 cote = new Vec3(-Mth.cos(lacet), 0, -Mth.sin(lacet)).scale(glace ? 0.28 : -0.28);
+        Vec3 p = j.position().add(cote).add(0, (j.isCrouching() ? 1.15 : 1.35) + HASARD.nextDouble() * 0.5, 0);
+        if (glace) {
+            if (HASARD.nextInt(2) == 0) {
+                mc.level.addParticle(ParticleTypes.SNOWFLAKE, p.x + aleat(0.3), p.y + aleat(0.4), p.z + aleat(0.3), aleat(0.01), -0.01, aleat(0.01));
+            }
+        } else {
+            mc.level.addParticle(ParticleTypes.FLAME, p.x + aleat(0.15), p.y, p.z + aleat(0.15), 0, 0.03, 0);
+            if (HASARD.nextInt(5) == 0) {
+                mc.level.addParticle(ParticleTypes.SMOKE, p.x, p.y + 0.5, p.z, 0, 0.04, 0);
+            }
+        }
+    }
+
+    /** Les tirs en vol : du feu et de la fumée derrière le poing et les météores, de la neige derrière les lances ; le faisan laisse son sillage gelé. */
+    private static void particulesVols(Minecraft mc) {
+        long maintenant = System.nanoTime();
+        for (Vol v : VOLS.values()) {
+            Vec3 p = v.pos(mc, 0);
+            switch (v.sorte) {
+                case Fruit.POING, Fruit.METEORE -> {
+                    for (int i = 0; i < 3; i++) {
+                        mc.level.addParticle(ParticleTypes.FLAME, p.x + aleat(0.4), p.y + aleat(0.4), p.z + aleat(0.4), 0, 0.02, 0);
+                    }
+                    mc.level.addParticle(ParticleTypes.LARGE_SMOKE, p.x, p.y + 0.4, p.z, 0, 0.04, 0);
+                }
+                case Fruit.LANCE -> mc.level.addParticle(ParticleTypes.SNOWFLAKE, p.x, p.y, p.z, 0, 0, 0);
+                default -> {
+                    for (int i = 0; i < 10; i++) {
+                        mc.level.addParticle(ParticleTypes.SNOWFLAKE, p.x + aleat(4), p.y + aleat(1.2), p.z + aleat(4), 0, -0.02, 0);
+                    }
+                    Vec3[] r = repere(v.dir);
+                    double y = sol(mc, p);
+                    for (int cote = -1; cote <= 1; cote += 2) {
+                        for (int k = 0; k < 2; k++) {
+                            Vec3 bord = p.add(r[1].scale(cote * (1.2 + HASARD.nextDouble() * 1.6)));
+                            PICS.add(new Pic(new Vec3(bord.x, y - 0.2, bord.z), maintenant, 0.8 + HASARD.nextDouble() * 1.6));
+                        }
+                    }
+                    Vec3 ici = new Vec3(p.x, y + 0.04, p.z);
+                    Vec3 avant = DERNIER_SOL.put(id(v), ici);
+                    if (avant != null && avant.distanceTo(ici) < 4) {
+                        BANDES.add(new Bande(avant, ici, new Vec3(r[1].x, 0, r[1].z).normalize(), maintenant));
+                    }
+                    for (int i = 0; i < 4; i++) {
+                        mc.level.addParticle(ParticleTypes.END_ROD, p.x + aleat(3), p.y + aleat(1), p.z + aleat(3), 0, -0.01, 0);
+                    }
+                }
+            }
+        }
+        VOLS.values().removeIf(v -> v.age(mc, 0) > 400 || v.vitesse * v.age(mc, 0) > v.portee + 8);
+        PICS.removeIf(pic -> secondes(pic.debut()) > 2.3);
+        // le nuage de la pluie : de la fumée, des gouttes de lave qui tombent, des cendres dans la zone
+        for (Zone z : ZONES) {
+            Vec3 ciel = z.centre().add(-6.5, 31, -3.5);
+            for (int i = 0; i < 3; i++) {
+                double a = HASARD.nextDouble() * Math.PI * 2, r = HASARD.nextDouble() * 9;
+                mc.level.addParticle(ParticleTypes.LARGE_SMOKE, ciel.x + Math.cos(a) * r, ciel.y + 1, ciel.z + Math.sin(a) * r, 0, 0.05, 0);
+                mc.level.addParticle(ParticleTypes.FALLING_LAVA, ciel.x + Math.cos(a) * r * 0.8, ciel.y - 0.3, ciel.z + Math.sin(a) * r * 0.8, 0, 0, 0);
+            }
+            for (int i = 0; i < 4; i++) {
+                double a = HASARD.nextDouble() * Math.PI * 2, r = HASARD.nextDouble() * 6.5;
+                mc.level.addParticle(ParticleTypes.ASH, z.centre().x + Math.cos(a) * r, z.centre().y + 0.5 + HASARD.nextDouble() * 4, z.centre().z + Math.sin(a) * r, 0, 0, 0);
+            }
+        }
+        ZONES.removeIf(z -> secondes(z.debut()) > DUREE_ZONE);
+        CRATERES.removeIf(k -> secondes(k.debut()) > 2.7);
+        BANDES.removeIf(b -> secondes(b.debut()) > 2.6);
+        BRISURES.removeIf(e -> secondes(e.debut()) > 0.9);
+    }
 
     /** Autour de la main du fruit : des flammes, des gouttes de lave ; ou des flocons et un peu de givre. */
     private static void particulesMain(Minecraft mc, Player j, boolean glace) {
@@ -772,6 +1249,14 @@ public final class ClientFruit {
                 JETS.clear();
                 ONDES.clear();
                 GELES.clear();
+                NIVEAUX.clear();
+                VOLS.clear();
+                PICS.clear();
+                ZONES.clear();
+                CRATERES.clear();
+                BANDES.clear();
+                BRISURES.clear();
+                DERNIER_SOL.clear();
                 return;
             }
             String moi = EVEILLES.get(mc.player.getUUID());
@@ -779,7 +1264,7 @@ public final class ClientFruit {
             // s'accroupir (l'appui, pas le maintien) : l'éruption ou l'ère glaciaire
             boolean accroupi = mc.options.keyShift.isDown();
             if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc) {
-                pretChoc = maintenant + Fruit.RECHARGE_CHOC * 50_000_000L;
+                pretChoc = maintenant + (niveau(mc.player.getUUID()) >= 2 ? Fruit.RECHARGE_CHOC_2 : Fruit.RECHARGE_CHOC) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Choc());
             }
@@ -788,6 +1273,9 @@ public final class ClientFruit {
                 Player j = mc.level.getPlayerByUUID(e.getKey());
                 if (j != null && !j.isInvisible() && !(j == mc.player && mc.options.getCameraType().isFirstPerson())) {
                     particulesMain(mc, j, glace(e.getValue()));
+                    if (niveau(e.getKey()) >= 2) {
+                        particulesMoitie(mc, j, glace(e.getValue()));
+                    }
                 }
             }
             REPAS.entrySet().removeIf(e -> secondes(e.getValue().debut) > DUREE_REPAS + 0.5);
@@ -806,6 +1294,7 @@ public final class ClientFruit {
                 particulesOnde(mc, o);
             }
             GELES.values().removeIf(fin -> fin < maintenant);
+            particulesVols(mc);
         }
 
         /** Éveillé, le clic droit lance le jet (et rien d'autre) ; le clic gauche reste celui de l'arme, plus fort. */
@@ -819,7 +1308,7 @@ public final class ClientFruit {
             event.setCanceled(true);
             event.setSwingHand(false);
             if (System.nanoTime() >= pretJet) {
-                pretJet = System.nanoTime() + Fruit.RECHARGE_JET * 50_000_000L;
+                pretJet = System.nanoTime() + (niveau(mc.player.getUUID()) >= 2 ? Fruit.RECHARGE_JET_2 : Fruit.RECHARGE_JET) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Jet());
             }
@@ -856,9 +1345,27 @@ public final class ClientFruit {
                     cote, mc.player, rendu, glace(sorte));
         }
 
+        /** Une météore ou le poing s'écrase tout près : l'écran tremble un peu. */
+        @SubscribeEvent
+        public static void tremblement(ViewportEvent.ComputeCameraAngles event) {
+            if (secousse < 0) {
+                return;
+            }
+            double apres = (System.nanoTime() - secousse) / 1e9;
+            if (apres > 0.4) {
+                secousse = -1;
+                forceSecousse = 0;
+                return;
+            }
+            float force = forceSecousse * (float) (1 - apres / 0.4);
+            event.setRoll(event.getRoll() + (HASARD.nextFloat() - 0.5F) * 5 * force);
+            event.setPitch(event.getPitch() + (HASARD.nextFloat() - 0.5F) * 3 * force);
+        }
+
         @SubscribeEvent
         public static void monde(RenderLevelStageEvent event) {
-            if ((JETS.isEmpty() && ONDES.isEmpty() && GELES.isEmpty()) || event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
+            if ((JETS.isEmpty() && ONDES.isEmpty() && GELES.isEmpty() && VOLS.isEmpty() && PICS.isEmpty() && ZONES.isEmpty() && CRATERES.isEmpty()
+                    && BANDES.isEmpty() && BRISURES.isEmpty()) || event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
                     || Minecraft.getInstance().level == null) {
                 return;
             }

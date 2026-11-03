@@ -69,6 +69,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.AABB;
@@ -107,6 +108,12 @@ import org.joml.Vector3f;
  * <li>shift : l'éruption, 5 blocs autour, 4 cœurs, on vole en l'air et on brûle ; ou l'ère glaciaire, 3 cœurs, et on
  * reste gelé sur place 2 s.</li>
  * </ul>
+ * Encore la touche Éveil : le niveau 2 (docs/fruits/planche-niveau2.png). La moitié de son corps devient de la lave
+ * (ou de la glace), armure comprise ; le clic gauche frappe 2 cœurs de plus et éclabousse (ou le givre s'étend) à 2
+ * blocs ; le clic droit lance un grand poing de magma (ou cinq lances de glace en éventail) ; le shift fait pleuvoir des
+ * météores là où il vise (ou lance un faisan de glace géant) ; qui le frappe prend feu (ou gèle). Ces tirs volent pour
+ * de vrai, tick après tick ({@link Tir}).
+ * <p>
  * Rien ne reste au sol : les jets, les geysers et les pics de glace ne sont que dessinés.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
@@ -129,6 +136,27 @@ public final class Fruit {
     /** Le pouvoir monte en lui pendant 3 s quand il mange le fruit. */
     public static final int DUREE_REPAS = 60;
 
+    /** L'éveil 2 : le grand poing (ou les lances) et la pluie de météores (ou le faisan), et ce qu'ils font. */
+    public static final int RECHARGE_JET_2 = 8 * 20;
+    public static final int RECHARGE_CHOC_2 = 25 * 20;
+    private static final float BONUS_ARME_2 = 4;
+    private static final float ECLABOUSSURE = 3;
+    private static final float DEGATS_POING = 12;
+    private static final float DEGATS_EXPLOSION = 4;
+    private static final float DEGATS_LANCE = 6;
+    private static final float DEGATS_METEORE = 5;
+    private static final float DEGATS_FAISAN = 12;
+    private static final double PORTEE_2 = 24;
+    private static final double PORTEE_PLUIE = 30;
+    public static final int GEL_FAISAN = 60;
+    /** Les sortes de tirs de l'éveil 2 : le grand poing, une lance, une météore, le faisan. */
+    public static final int POING = 0;
+    public static final int LANCE = 1;
+    public static final int METEORE = 2;
+    public static final int FAISAN = 3;
+    /** La sorte d'onde de la pluie de météores (la zone et le nuage, côté client). */
+    public static final String PLUIE = "pluie";
+
     private static final ResourceKey<DamageType> MAGMA = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("magma"));
     private static final ResourceKey<DamageType> GIVRE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("givre"));
     private static final ResourceKey<DamageType> EAU = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("eau"));
@@ -137,8 +165,8 @@ public final class Fruit {
         return LAVE.equals(pouvoir) || GLACE.equals(pouvoir);
     }
 
-    /** Qui a son fruit éveillé en ce moment, et quand son jet et son shift seront de nouveau prêts (ticks du serveur). */
-    private static final Set<UUID> EVEILLES = new HashSet<>();
+    /** Qui a son fruit éveillé en ce moment (et à quel niveau), et quand son jet et son shift seront prêts (ticks du serveur). */
+    private static final Map<UUID, Integer> EVEILLES = new HashMap<>();
     private static final Map<UUID, Integer> PRET_JET = new HashMap<>();
     private static final Map<UUID, Integer> PRET_CHOC = new HashMap<>();
 
@@ -370,6 +398,31 @@ public final class Fruit {
         }
     }
 
+    /** Serveur → ceux qui sont autour : un tir de l'éveil 2 part (sa sorte, d'où, vers où, à quelle vitesse, jusqu'où). */
+    public record Vol(int id, int sorte, Vector3f de, Vector3f dir, float vitesse, float portee) implements CustomPacketPayload {
+        public static final Type<Vol> TYPE = new Type<>(Cabane.id("fruit_vol"));
+        public static final StreamCodec<ByteBuf, Vol> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Vol::id, ByteBufCodecs.VAR_INT, Vol::sorte, ByteBufCodecs.VECTOR3F, Vol::de, ByteBufCodecs.VECTOR3F, Vol::dir,
+                ByteBufCodecs.FLOAT, Vol::vitesse, ByteBufCodecs.FLOAT, Vol::portee, Vol::new);
+
+        @Override
+        public Type<Vol> type() {
+            return TYPE;
+        }
+    }
+
+    /** Serveur → ceux qui sont autour : ce tir s'arrête là ({@code eclate} : il explose ou s'écrase). */
+    public record Arret(int id, Vector3f pos, boolean eclate) implements CustomPacketPayload {
+        public static final Type<Arret> TYPE = new Type<>(Cabane.id("fruit_arret"));
+        public static final StreamCodec<ByteBuf, Arret> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Arret::id, ByteBufCodecs.VECTOR3F, Arret::pos, ByteBufCodecs.BOOL, Arret::eclate, Arret::new);
+
+        @Override
+        public Type<Arret> type() {
+            return TYPE;
+        }
+    }
+
     @SubscribeEvent
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
@@ -386,7 +439,9 @@ public final class Fruit {
                 .playToClient(Repas.TYPE, Repas.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.repas(p)))
                 .playToClient(Trait.TYPE, Trait.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.trait(p)))
                 .playToClient(Onde.TYPE, Onde.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.onde(p)))
-                .playToClient(Gel.TYPE, Gel.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.gel(p)));
+                .playToClient(Gel.TYPE, Gel.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.gel(p)))
+                .playToClient(Vol.TYPE, Vol.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.vol(p)))
+                .playToClient(Arret.TYPE, Arret.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit.arret(p)));
     }
 
     /** À tous ceux qui sont à moins de 96 blocs de ce point. */
@@ -428,11 +483,26 @@ public final class Fruit {
 
     // ================================================================ s'éveiller, s'endormir
 
-    static void eveiller(ServerPlayer joueur) {
-        EVEILLES.add(joueur.getUUID());
+    static void eveiller(ServerPlayer joueur, int niveau) {
+        EVEILLES.put(joueur.getUUID(), niveau);
         boolean glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
         ServerLevel monde = joueur.serverLevel();
         Vec3 main = main(joueur, glace);
+        if (niveau >= 2) {
+            // la moitié du corps change d'un coup : une gerbe tout autour de lui
+            monde.sendParticles(glace ? ParticleTypes.SNOWFLAKE : ParticleTypes.FLAME, joueur.getX(), joueur.getY(0.6), joueur.getZ(), 70, 0.5, 0.8, 0.5, 0.08);
+            if (glace) {
+                son(joueur, SoundEvents.GLASS_BREAK, 1.2F, 0.5F);
+                son(joueur, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.4F, 0.5F);
+                son(joueur, SoundEvents.POWDER_SNOW_BREAK, 1.2F, 0.5F);
+            } else {
+                monde.sendParticles(ParticleTypes.LAVA, joueur.getX(), joueur.getY(0.6), joueur.getZ(), 16, 0.4, 0.6, 0.4, 0);
+                son(joueur, SoundEvents.LAVA_EXTINGUISH, 1.2F, 0.5F);
+                son(joueur, SoundEvents.BLAZE_SHOOT, 1F, 0.4F);
+                son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.4F, 1.3F);
+            }
+            return;
+        }
         if (glace) {
             monde.sendParticles(ParticleTypes.SNOWFLAKE, main.x, main.y, main.z, 24, 0.25, 0.25, 0.25, 0.04);
             son(joueur, SoundEvents.GLASS_BREAK, 0.8F, 1.5F);
@@ -447,10 +517,18 @@ public final class Fruit {
 
     static void endormir(ServerPlayer joueur) {
         EVEILLES.remove(joueur.getUUID());
+        // le repos (1 ou 2 minutes) dure plus que les recharges : au réveil, tout est prêt
+        PRET_JET.remove(joueur.getUUID());
+        PRET_CHOC.remove(joueur.getUUID());
     }
 
     private static boolean eveille(ServerPlayer joueur) {
-        return EVEILLES.contains(joueur.getUUID()) && est(Pouvoirs.pouvoir(joueur));
+        return EVEILLES.containsKey(joueur.getUUID()) && est(Pouvoirs.pouvoir(joueur));
+    }
+
+    /** Son niveau en ce moment : 0 endormi, 1 la main, 2 la moitié du corps. */
+    private static int niveau(ServerPlayer joueur) {
+        return eveille(joueur) ? EVEILLES.get(joueur.getUUID()) : 0;
     }
 
     private static void son(ServerPlayer joueur, SoundEvent son, float volume, float hauteur) {
@@ -492,8 +570,13 @@ public final class Fruit {
         if (maintenant < PRET_JET.getOrDefault(joueur.getUUID(), 0)) {
             return;
         }
-        PRET_JET.put(joueur.getUUID(), maintenant + RECHARGE_JET);
         boolean glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
+        if (niveau(joueur) >= 2) {
+            PRET_JET.put(joueur.getUUID(), maintenant + RECHARGE_JET_2);
+            jet2(joueur, glace);
+            return;
+        }
+        PRET_JET.put(joueur.getUUID(), maintenant + RECHARGE_JET);
         ServerLevel monde = joueur.serverLevel();
         Vec3 oeil = joueur.getEyePosition();
         Vec3 loin = oeil.add(joueur.getLookAngle().scale(PORTEE_JET));
@@ -533,8 +616,13 @@ public final class Fruit {
         if (maintenant < PRET_CHOC.getOrDefault(joueur.getUUID(), 0)) {
             return;
         }
-        PRET_CHOC.put(joueur.getUUID(), maintenant + RECHARGE_CHOC);
         boolean glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
+        if (niveau(joueur) >= 2) {
+            PRET_CHOC.put(joueur.getUUID(), maintenant + RECHARGE_CHOC_2);
+            choc2(joueur, glace);
+            return;
+        }
+        PRET_CHOC.put(joueur.getUUID(), maintenant + RECHARGE_CHOC);
         ServerLevel monde = joueur.serverLevel();
         Vec3 centre = joueur.position();
         envoyer(monde, centre, new Onde(joueur.getUUID(), glace ? GLACE : LAVE, v(centre)));
@@ -555,7 +643,7 @@ public final class Fruit {
             }
             if (glace) {
                 blesser(cible, source(joueur, GIVRE), DEGATS_GLACIAIRE);
-                geler(cible);
+                geler(cible, DUREE_GEL);
             } else {
                 blesser(cible, source(joueur, MAGMA), DEGATS_ERUPTION);
                 cible.igniteForSeconds(5);
@@ -566,14 +654,225 @@ public final class Fruit {
         }
     }
 
-    /** L'ère glaciaire : pris dans un bloc de glace, il ne bouge plus pendant 2 s. */
-    private static void geler(LivingEntity cible) {
+    /** L'ère glaciaire (2 s) ou le faisan (3 s) : pris dans un bloc de glace, il ne bouge plus. */
+    private static void geler(LivingEntity cible, int ticks) {
         ServerLevel monde = (ServerLevel) cible.level();
-        GELES.put(cible.getId(), new Gele(monde, cible.position(), monde.getServer().getTickCount() + DUREE_GEL));
-        cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, DUREE_GEL + 20, 1));
+        GELES.put(cible.getId(), new Gele(monde, cible.position(), monde.getServer().getTickCount() + ticks));
+        cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ticks + 20, 1));
         givrer(cible);
-        envoyer(monde, cible.position(), new Gel(cible.getId(), DUREE_GEL));
+        envoyer(monde, cible.position(), new Gel(cible.getId(), ticks));
     }
+
+    // ================================================================ l'éveil 2 : les tirs
+
+    /** Un tir de l'éveil 2, qui vole pour de vrai tick après tick : sa sorte, où il est, vers où, ce qu'il a déjà touché. */
+    private static final class Tir {
+        final int id;
+        final UUID tireur;
+        final ServerLevel monde;
+        final int sorte;
+        final Vec3 dir;
+        final double vitesse;
+        /** La pluie d'où vient une météore : combien de fois chaque cible a déjà été touchée (3 au plus). */
+        final Map<Integer, Integer> pluie;
+        final Set<Integer> touches = new HashSet<>();
+        Vec3 pos;
+        double reste;
+
+        Tir(int id, ServerPlayer tireur, int sorte, Vec3 pos, Vec3 dir, double vitesse, double portee, Map<Integer, Integer> pluie) {
+            this.id = id;
+            this.tireur = tireur.getUUID();
+            this.monde = tireur.serverLevel();
+            this.sorte = sorte;
+            this.pos = pos;
+            this.dir = dir.normalize();
+            this.vitesse = vitesse;
+            this.reste = portee;
+            this.pluie = pluie;
+        }
+    }
+
+    private static final List<Tir> TIRS = new ArrayList<>();
+    private static int prochainTir;
+    /** La largeur de chaque sorte de tir : ce qui passe à moins de ça est touché. */
+    private static final double[] LARGEURS = {1.3, 0.6, 0.5, 1.8};
+
+    /** Une pluie de météores : autour de quel point, depuis quand, et combien de fois chaque cible a été touchée. */
+    private record Pluie(UUID tireur, ServerLevel monde, Vec3 centre, int debut, Map<Integer, Integer> coups) {
+    }
+
+    private static final List<Pluie> PLUIES = new ArrayList<>();
+
+    private static void lancer(ServerPlayer joueur, int sorte, Vec3 pos, Vec3 dir, double vitesse, double portee, Map<Integer, Integer> pluie) {
+        Tir t = new Tir(prochainTir++, joueur, sorte, pos, dir, vitesse, portee, pluie);
+        TIRS.add(t);
+        envoyer(t.monde, pos, new Vol(t.id, sorte, v(pos), v(t.dir), (float) vitesse, (float) portee));
+    }
+
+    /** Clic droit, au niveau 2 : le grand poing de magma, ou cinq lances de glace en éventail. */
+    private static void jet2(ServerPlayer joueur, boolean glace) {
+        Vec3 regard = joueur.getLookAngle();
+        if (glace) {
+            for (int k = -2; k <= 2; k++) {
+                float a = k * 12 * Mth.DEG_TO_RAD;
+                Vec3 dir = new Vec3(regard.x * Mth.cos(a) - regard.z * Mth.sin(a), regard.y, regard.x * Mth.sin(a) + regard.z * Mth.cos(a));
+                lancer(joueur, LANCE, main(joueur, true), dir, 2, PORTEE_2, null);
+            }
+            son(joueur, SoundEvents.GLASS_BREAK, 1F, 1.3F);
+            son(joueur, SoundEvents.SNOW_GOLEM_SHOOT, 1.2F, 0.6F);
+        } else {
+            lancer(joueur, POING, main(joueur, false).add(regard), regard, 1.6, PORTEE_2, null);
+            son(joueur, SoundEvents.BLAZE_SHOOT, 1.2F, 0.5F);
+            son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.5F, 1.4F);
+        }
+    }
+
+    /** Shift, au niveau 2 : la pluie de météores là où il vise, ou le faisan de glace droit devant. */
+    private static void choc2(ServerPlayer joueur, boolean glace) {
+        ServerLevel monde = joueur.serverLevel();
+        Vec3 regard = joueur.getLookAngle();
+        if (glace) {
+            Vec3 dir = new Vec3(regard.x, Mth.clamp(regard.y, -0.25, 0.25), regard.z);
+            Vec3 depart = joueur.getEyePosition().add(0, -0.5, 0).add(new Vec3(regard.x, 0, regard.z).normalize().scale(1.5));
+            lancer(joueur, FAISAN, depart, dir, 1.2, PORTEE_2, null);
+            son(joueur, SoundEvents.PHANTOM_FLAP, 1.6F, 0.6F);
+            son(joueur, SoundEvents.ENDER_DRAGON_FLAP, 1.4F, 1.2F);
+            son(joueur, SoundEvents.PHANTOM_AMBIENT, 1.4F, 1.7F);
+            son(joueur, SoundEvents.GLASS_BREAK, 1.2F, 0.6F);
+            son(joueur, SoundEvents.POWDER_SNOW_BREAK, 1.4F, 0.5F);
+            return;
+        }
+        Vec3 oeil = joueur.getEyePosition(), loin = oeil.add(regard.scale(PORTEE_PLUIE));
+        HitResult bloc = monde.clip(new ClipContext(oeil, loin, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
+        Vec3 centre = bloc.getType() == HitResult.Type.MISS ? loin : bloc.getLocation();
+        // la zone est au sol, même s'il vise un peu en l'air
+        double ySol = monde.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(centre.x), Mth.floor(centre.z));
+        if (Math.abs(ySol - centre.y) < 16) {
+            centre = new Vec3(centre.x, ySol, centre.z);
+        }
+        PLUIES.add(new Pluie(joueur.getUUID(), monde, centre, joueur.server.getTickCount(), new HashMap<>()));
+        // la zone qui rougeoie au sol, le nuage de cendres au-dessus (dessinés chez chacun)
+        envoyer(monde, centre, new Onde(joueur.getUUID(), PLUIE, v(centre)));
+        // il frappe vers le ciel : une colonne de lave qui monte
+        envoyer(monde, joueur.position(), new Trait(joueur.getUUID(), LAVE, v(main(joueur, false)), v(main(joueur, false).add(0, 16, 0))));
+        son(joueur, SoundEvents.BLAZE_SHOOT, 1.4F, 0.4F);
+        son(joueur, SoundEvents.FIRECHARGE_USE, 1.2F, 0.5F);
+    }
+
+    /** Les tirs avancent d'un tick ; les pluies font tomber leurs météores (une toutes les 3 ticks, pendant 2,5 s). */
+    private static void tirs(MinecraftServer server, int maintenant) {
+        for (Pluie p : new ArrayList<>(PLUIES)) {
+            int age = maintenant - p.debut();
+            ServerPlayer tireur = server.getPlayerList().getPlayer(p.tireur());
+            if (age > 75 || tireur == null || tireur.level() != p.monde()) {
+                PLUIES.remove(p);
+                continue;
+            }
+            if (age >= 10 && age <= 60 && age % 3 == 0) {
+                RandomSource hasard = tireur.getRandom();
+                double a = hasard.nextDouble() * Mth.TWO_PI, d = Math.sqrt(hasard.nextDouble()) * 6;
+                int x = Mth.floor(p.centre().x + Math.cos(a) * d), z = Mth.floor(p.centre().z + Math.sin(a) * d);
+                double y = p.monde().getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+                if (Math.abs(y - p.centre().y) > 12) {
+                    y = p.centre().y;
+                }
+                Vec3 sol = new Vec3(x + 0.5, y, z + 0.5), depart = sol.add(-8 + hasard.nextDouble() * 3, 30, -5 + hasard.nextDouble() * 3);
+                lancer(tireur, METEORE, depart, sol.subtract(depart), 1.8, sol.distanceTo(depart) + 1, p.coups());
+            }
+        }
+        for (Tir t : new ArrayList<>(TIRS)) {
+            ServerPlayer tireur = server.getPlayerList().getPlayer(t.tireur);
+            if (tireur == null || tireur.level() != t.monde) {
+                finir(t, null, false);
+                continue;
+            }
+            double pas = Math.min(t.vitesse, t.reste);
+            Vec3 de = t.pos, suivant = de.add(t.dir.scale(pas));
+            HitResult bloc = t.monde.clip(new ClipContext(de, suivant, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, tireur));
+            Vec3 bout = bloc.getType() == HitResult.Type.MISS ? suivant : bloc.getLocation();
+            double l = LARGEURS[t.sorte];
+            LivingEntity arret = null;
+            for (LivingEntity e : t.monde.getEntitiesOfClass(LivingEntity.class, new AABB(de, bout).inflate(l + 1), e -> Pouvoirs.cible(tireur, e) && !e.isSpectator())) {
+                AABB b = e.getBoundingBox().inflate(l);
+                if (t.touches.contains(e.getId()) || !b.contains(de) && b.clip(de, bout).isEmpty()) {
+                    continue;
+                }
+                t.touches.add(e.getId());
+                if (toucher(tireur, t, e)) {
+                    arret = e;
+                    break;
+                }
+            }
+            if (arret != null) {
+                finir(t, arret.getBoundingBox().getCenter(), true);
+                continue;
+            }
+            t.pos = bout;
+            t.reste -= pas;
+            if (bloc.getType() != HitResult.Type.MISS || t.reste <= 1e-3) {
+                finir(t, t.pos, t.sorte == POING || t.sorte == METEORE);
+            }
+        }
+    }
+
+    /** Ce que fait un tir à ce qu'il touche ; vrai s'il s'arrête là (le faisan, lui, traverse tout). */
+    private static boolean toucher(ServerPlayer tireur, Tir t, LivingEntity cible) {
+        switch (t.sorte) {
+            case LANCE -> {
+                blesser(cible, source(tireur, GIVRE), DEGATS_LANCE);
+                cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
+                givrer(cible);
+                return true;
+            }
+            case FAISAN -> {
+                blesser(cible, source(tireur, GIVRE), DEGATS_FAISAN);
+                geler(cible, GEL_FAISAN);
+                return false;
+            }
+            default -> {
+                // le poing et les météores éclatent (voir finir)
+                return true;
+            }
+        }
+    }
+
+    /** Le tir s'arrête (contre un mur, une cible, ou au bout de sa course) ; le poing explose, la météore s'écrase. */
+    private static void finir(Tir t, Vec3 ou, boolean eclate) {
+        TIRS.remove(t);
+        Vec3 p = ou == null ? t.pos : ou;
+        envoyer(t.monde, p, new Arret(t.id, v(p), eclate));
+        ServerPlayer tireur = t.monde.getServer().getPlayerList().getPlayer(t.tireur);
+        if (!eclate || tireur == null) {
+            return;
+        }
+        if (t.sorte == POING) {
+            t.monde.playSound(null, p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.4F, 0.8F);
+            t.monde.playSound(null, p.x, p.y, p.z, SoundEvents.LAVA_EXTINGUISH, SoundSource.PLAYERS, 1.2F, 0.6F);
+            for (LivingEntity e : t.monde.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(2.5), e -> Pouvoirs.cible(tireur, e) && !e.isSpectator())) {
+                boolean directe = t.touches.contains(e.getId());
+                blesser(e, source(tireur, MAGMA), directe ? DEGATS_POING : DEGATS_EXPLOSION);
+                e.igniteForSeconds(directe ? 6 : 3);
+                Vec3 dehors = e.position().subtract(p).multiply(1, 0, 1);
+                Vec3 d = dehors.lengthSqr() < 0.01 ? t.dir : dehors.normalize();
+                e.setDeltaMovement(e.getDeltaMovement().add(d.x * 0.8, 0.45, d.z * 0.8));
+                e.hurtMarked = true;
+            }
+        } else if (t.sorte == METEORE) {
+            t.monde.playSound(null, p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 0.8F, 1.2F);
+            for (LivingEntity e : t.monde.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(2.2), e -> Pouvoirs.cible(tireur, e) && !e.isSpectator())) {
+                int deja = t.pluie == null ? 0 : t.pluie.getOrDefault(e.getId(), 0);
+                if (deja >= 3) {
+                    continue;
+                }
+                if (t.pluie != null) {
+                    t.pluie.put(e.getId(), deja + 1);
+                }
+                blesser(e, source(tireur, MAGMA), DEGATS_METEORE);
+                e.igniteForSeconds(3);
+            }
+        }
+    }
+
 
     // ================================================================ les passifs, et ce qui dure
 
@@ -599,6 +898,7 @@ public final class Fruit {
                 marcherSurLEau(joueur);
             }
         }
+        tirs(server, maintenant);
         // la glace de ses pas refond toute seule
         GLACES.entrySet().removeIf(e -> {
             if (maintenant < e.getValue()) {
@@ -680,22 +980,57 @@ public final class Fruit {
                 event.setCanceled(true);
                 return;
             }
+            // l'éveil 2 : qui le frappe de près prend feu (ou gèle)
+            if (!dansPouvoir && niveau(victime) >= 2 && source.getEntity() instanceof LivingEntity agresseur && source.getDirectEntity() == agresseur
+                    && agresseur != victime && agresseur.distanceTo(victime) < 6) {
+                if (LAVE.equals(pouvoir)) {
+                    agresseur.igniteForSeconds(3);
+                } else {
+                    agresseur.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1));
+                    givrer(agresseur);
+                }
+            }
         }
         if (dansPouvoir || !(source.getEntity() instanceof ServerPlayer joueur) || source.getDirectEntity() != joueur
                 || !source.is(DamageTypes.PLAYER_ATTACK) || !eveille(joueur)) {
             return;
         }
         LivingEntity cible = event.getEntity();
-        event.setAmount(event.getAmount() + BONUS_ARME);
+        boolean fort = niveau(joueur) >= 2, glace = GLACE.equals(Pouvoirs.pouvoir(joueur));
+        event.setAmount(event.getAmount() + (fort ? BONUS_ARME_2 : BONUS_ARME));
         ServerLevel monde = joueur.serverLevel();
-        if (GLACE.equals(Pouvoirs.pouvoir(joueur))) {
-            cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0));
+        if (glace) {
+            cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, fort ? 80 : 60, fort ? 1 : 0));
             givrer(cible);
             monde.sendParticles(ParticleTypes.SNOWFLAKE, cible.getX(), cible.getY(0.6), cible.getZ(), 14, 0.3, 0.4, 0.3, 0.04);
         } else {
-            cible.igniteForSeconds(4);
+            cible.igniteForSeconds(fort ? 6 : 4);
             monde.sendParticles(ParticleTypes.FLAME, cible.getX(), cible.getY(0.6), cible.getZ(), 12, 0.3, 0.4, 0.3, 0.03);
         }
+        if (fort) {
+            eclabousser(joueur, cible, glace);
+        }
+    }
+
+    /** L'éveil 2 : le coup éclabousse de lave (ou le givre s'étend) sur ce qui est à 2 blocs de la cible. */
+    private static void eclabousser(ServerPlayer joueur, LivingEntity cible, boolean glace) {
+        ServerLevel monde = joueur.serverLevel();
+        for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, cible.getBoundingBox().inflate(2.5),
+                e -> e != cible && Pouvoirs.cible(joueur, e) && !e.isSpectator())) {
+            if (e.distanceTo(cible) > 2.5) {
+                continue;
+            }
+            blesser(e, source(joueur, glace ? GIVRE : MAGMA), ECLABOUSSURE);
+            if (glace) {
+                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0));
+                givrer(e);
+                monde.sendParticles(ParticleTypes.SNOWFLAKE, e.getX(), e.getY(0.5), e.getZ(), 10, 0.3, 0.4, 0.3, 0.03);
+            } else {
+                e.igniteForSeconds(3);
+                monde.sendParticles(ParticleTypes.LAVA, e.getX(), e.getY(0.5), e.getZ(), 4, 0.2, 0.3, 0.2, 0);
+            }
+        }
+        monde.sendParticles(glace ? ParticleTypes.SNOWFLAKE : ParticleTypes.LAVA, cible.getX(), cible.getY(0.5), cible.getZ(), glace ? 30 : 8, 1, 0.3, 1, 0.05);
     }
 
     /** Dans l'eau, un fruit du démon ne guérit pas : sinon, le ventre plein, on regagnerait plus vite que l'eau ne prend. */
@@ -717,6 +1052,8 @@ public final class Fruit {
         PRET_JET.clear();
         PRET_CHOC.clear();
         GELES.clear();
+        TIRS.clear();
+        PLUIES.clear();
         GLACES.keySet().forEach(Fruit::fondre);
         GLACES.clear();
     }
