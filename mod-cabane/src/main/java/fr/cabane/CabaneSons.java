@@ -17,6 +17,8 @@ public final class CabaneSons {
     public static final DeferredHolder<SoundEvent, SoundEvent> VOITURE = son("voiture");
     /** Le bruit de chaque téléportation de Minato : un vrai coup de tonnerre (ceux de Minecraft), pas trop fort. */
     public static final DeferredHolder<SoundEvent, SoundEvent> MINATO_FLASH = son("minato.flash");
+    /** L'éveil d'Ichibi : un rugissement par défaut, le son de la vidéo de l'hôte dans le pack privé (voix/effets/ichibi.eveil.ogg). */
+    public static final DeferredHolder<SoundEvent, SoundEvent> ICHIBI_EVEIL = son("ichibi.eveil");
 
     /** Une voix par PNJ : quand on ouvre son dialogue, il dit une de ses répliques enregistrées (s'il en a). */
     public static final List<String> VOIX = List.of("gardien", "cartographe", "marchand", "forgeron", "fee", "pole_emploi", "cousin",

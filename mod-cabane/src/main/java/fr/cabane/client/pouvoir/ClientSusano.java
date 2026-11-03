@@ -172,7 +172,18 @@ public final class ClientSusano {
         } else {
             TRANSFORMES.remove(p.joueur());
         }
-        // Hachibi, la marque maudite, Minato, les espionnes et les fruits du démon ont leur propre dessin
+        // Hachibi, la marque maudite, Minato, les espionnes, les fruits du démon et Ichibi ont leur propre dessin
+        if (fr.cabane.pouvoir.Ichibi.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.oublier(p.joueur());
+            ClientMinato.oublier(p.joueur());
+            ClientEspionne.oublier(p.joueur());
+            ClientFruit.oublier(p.joueur());
+            ClientIchibi.recevoir(p);
+            return;
+        }
+        ClientIchibi.oublier(p.joueur());
         if (fr.cabane.pouvoir.Fruit.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());
@@ -273,6 +284,10 @@ public final class ClientSusano {
     }
 
     public static void geste(Pouvoirs.Geste p) {
+        if (p.geste() >= fr.cabane.pouvoir.Ichibi.GESTE_COUP) {
+            ClientIchibi.geste(p);
+            return;
+        }
         if (p.geste() >= fr.cabane.pouvoir.Hachibi.GESTE_GRIFFE) {
             ClientHachibi.geste(p);
             return;

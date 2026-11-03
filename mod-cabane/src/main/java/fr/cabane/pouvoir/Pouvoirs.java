@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM,
-            Espionne.NOM, Fruit.LAVE, Fruit.GLACE);
+            Espionne.NOM, Fruit.LAVE, Fruit.GLACE, Ichibi.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -138,7 +138,7 @@ public final class Pouvoirs {
 
     /**
      * Un éveil dure au plus 2 minutes ; ensuite (ou si on s'endort avant), le pouvoir se repose : 2 minutes pour les
-     * pouvoirs de niveau 1 (Susano, Hachibi, la marque, et les fruits du démon restés au niveau 1), 1 minute pour
+     * pouvoirs de niveau 1 (Susano, Hachibi, la marque, Ichibi, et les fruits du démon restés au niveau 1), 1 minute pour
      * Minato, les espionnes et les pouvoirs qui montent plus haut (les fruits passés au niveau 2).
      */
     public static final int DUREE_EVEIL = 2 * 60 * 20;
@@ -366,6 +366,9 @@ public final class Pouvoirs {
         if (Fruit.est(elu.pouvoir())) {
             Fruit.eveiller(joueur, suivant);
         }
+        if (Ichibi.est(elu.pouvoir())) {
+            Ichibi.eveiller(joueur);
+        }
         envoyerEtat(joueur, elu, suivant, true);
     }
 
@@ -430,6 +433,7 @@ public final class Pouvoirs {
         Susano3.endormir(joueur);
         Espionne.endormir(joueur);
         Fruit.endormir(joueur);
+        Ichibi.endormir(joueur);
         armure(joueur, 0);
         Integer etait = EVEILLES.remove(joueur.getUUID());
         if (etait != null) {
@@ -491,6 +495,10 @@ public final class Pouvoirs {
         }
         if (niveau > 0 && hachibi(joueur)) {
             Hachibi.griffe(joueur);
+            return;
+        }
+        if (niveau > 0 && Ichibi.est(pouvoir(joueur))) {
+            Ichibi.coup(joueur);
             return;
         }
         if (niveau == 0 || ECRASEMENTS.containsKey(joueur.getUUID())) {
@@ -562,6 +570,10 @@ public final class Pouvoirs {
         }
         if (niveau > 0 && hachibi(joueur)) {
             Hachibi.bete(joueur);
+            return;
+        }
+        if (niveau > 0 && Ichibi.est(pouvoir(joueur))) {
+            Ichibi.attraper(joueur);
             return;
         }
         if (niveau == 0 || ECRASEMENTS.containsKey(joueur.getUUID())) {
@@ -702,6 +714,10 @@ public final class Pouvoirs {
             Hachibi.accroupi(joueur);
             return;
         }
+        if (niveau > 0 && Ichibi.est(pouvoir(joueur))) {
+            Ichibi.nuage(joueur);
+            return;
+        }
         if (niveau == 0) {
             return;
         }
@@ -821,9 +837,9 @@ public final class Pouvoirs {
         for (String pouvoir : LISTE) {
             // Hachibi, la marque maudite et Minato ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || pouvoir.equals(Minato.NOM) || Fruit.est(pouvoir)) {
+            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || pouvoir.equals(Minato.NOM) || Fruit.est(pouvoir) || Ichibi.est(pouvoir)) {
                 Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : pouvoir.equals(Minato.NOM) ? Couleur.JAUNE
-                        : pouvoir.equals(Fruit.LAVE) ? Couleur.ORANGE : pouvoir.equals(Fruit.GLACE) ? Couleur.CYAN : Couleur.VIOLET;
+                        : pouvoir.equals(Fruit.LAVE) || Ichibi.est(pouvoir) ? Couleur.ORANGE : pouvoir.equals(Fruit.GLACE) ? Couleur.CYAN : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else if (Espionne.est(pouvoir)) {
                 // les espionnes : vert (Sam), rouge (Clover) ou jaune (Alex), rouge par défaut

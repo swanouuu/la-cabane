@@ -24,6 +24,16 @@
       }
     ]
   },
+  "ichibi.eveil": {
+    "subtitle": "subtitles.cabane.ichibi.eveil",
+    "sounds": [
+      {
+        "name": "minecraft:entity.ravager.roar",
+        "type": "event",
+        "pitch": 0.8
+      }
+    ]
+  },
   "woohp.aspiration": {
     "subtitle": "subtitles.cabane.woohp.aspiration",
     "sounds": [

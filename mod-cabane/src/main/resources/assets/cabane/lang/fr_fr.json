@@ -171,5 +171,6 @@
   "death.attack.cabane.givre.player": "%1$s a été gelé",
   "death.attack.cabane.eau": "%1$s a coulé : un fruit du démon ne sait pas nager",
   "death.attack.cabane.eau.item": "%1$s a coulé en fuyant %2$s",
-  "death.attack.cabane.eau.player": "%1$s a coulé en fuyant %2$s"
+  "death.attack.cabane.eau.player": "%1$s a coulé en fuyant %2$s",
+  "subtitles.cabane.ichibi.eveil": "Le sable d'Ichibi se réveille"
 }
