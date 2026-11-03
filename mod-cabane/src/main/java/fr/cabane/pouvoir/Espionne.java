@@ -53,7 +53,7 @@ import org.joml.Vector3f;
  * maquettes de docs/spies. L'Éveil leur met tout de suite la combinaison (un modèle tout fin, voir
  * {@link ClientEspionne}) ; il dure 3 minutes, puis se repose 1 minute. Éveillée :
  * <ul>
- * <li>clic gauche, toujours : le rouge à lèvres laser, un rayon fin (2,5 cœurs) ;</li>
+ * <li>clic gauche, toujours : le rouge à lèvres laser, un rayon fin (4 cœurs) ;</li>
  * <li>clic droit : le gadget choisi. Le sèche-cheveux souffle tout ce qui est devant ; les lunettes infrarouges (on les
  * met, on les enlève) montrent les créatures à travers les murs ; le parfum ralentit et aveugle 3 s ; le chewing-gum
  * colle la cible visée dans une bulle pendant 2 s ;</li>
@@ -86,7 +86,8 @@ public final class Espionne {
     private static final int GRAPPIN = 5;
 
     private static final double PORTEE_LASER = 24;
-    private static final float DEGATS_LASER = 5;
+    /** Les espionnes restent les plus fortes (équilibrage par niveau) : 4 cœurs par tir, à 24 blocs. */
+    private static final float DEGATS_LASER = 8;
     private static final double PORTEE_SOUFFLE = 7;
     private static final double PORTEE_PARFUM = 5;
     private static final int DUREE_PARFUM = 60;

@@ -67,7 +67,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM,
+    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
             Espionne.NOM, Fruit.LAVE, Fruit.GLACE, Ichibi.NOM);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
@@ -164,7 +164,7 @@ public final class Pouvoirs {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
                 return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3
-                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || Fruit.est(pouvoir) ? 2 : 1;
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.est(pouvoir) ? 2 : 1;
             }
         }
 
@@ -357,8 +357,8 @@ public final class Pouvoirs {
         if (Maudit.est(elu.pouvoir())) {
             Maudit.eveiller(joueur, niveau + 1);
         }
-        if (elu.pouvoir().equals(Minato.NOM)) {
-            Minato.eveiller(joueur);
+        if (Minato.est(elu.pouvoir())) {
+            Minato.eveiller(joueur, suivant);
         }
         if (Espionne.est(elu.pouvoir())) {
             Espionne.eveiller(joueur);
@@ -380,7 +380,8 @@ public final class Pouvoirs {
 
     /** Les pouvoirs qui vont ensemble (on passe de l'un à l'autre sans s'endormir) : les deux Susano, les deux marques. */
     private static String famille(String pouvoir) {
-        return pouvoir.startsWith("susano") ? "susano" : Maudit.est(pouvoir) ? Maudit.NOM : Hachibi.est(pouvoir) ? Hachibi.NOM : pouvoir;
+        return pouvoir.startsWith("susano") ? "susano" : Maudit.est(pouvoir) ? Maudit.NOM : Hachibi.est(pouvoir) ? Hachibi.NOM
+                : Minato.est(pouvoir) ? Minato.NOM : pouvoir;
     }
 
     private static boolean hachibi(ServerPlayer joueur) {
@@ -393,21 +394,26 @@ public final class Pouvoirs {
     private static final net.minecraft.resources.ResourceLocation RECUL = Cabane.id("pouvoir_recul");
 
     /**
-     * Un pouvoir éveillé protège comme une armure de diamant complète (sans enchantement) ; le Susano niveau 2, comme
-     * de la netherite ; la marque maudite, comme une armure de fer, deux fois plus au niveau 2 (sa Protection est dans
-     * {@link Maudit}). Endormi (niveau 0), plus rien.
+     * Un pouvoir éveillé protège comme une armure de diamant complète (sans enchantement) ; le Susano niveau 2 et Minato,
+     * comme de la netherite ; la marque maudite, comme une armure de fer, deux fois plus au niveau 2 (sa Protection est
+     * dans {@link Maudit}) ; le chevalier, le mode Kurama de Minato 2 et les espionnes, un peu plus que la netherite.
+     * Endormi (niveau 0), plus rien.
      */
     private static void armure(ServerPlayer joueur, int niveau) {
-        // la marque maudite, les espionnes (leur combinaison) et les fruits du démon : comme du fer
-        boolean fer = Maudit.est(pouvoir(joueur)) || Espionne.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur));
+        // la marque maudite et les fruits du démon : comme du fer
+        boolean fer = Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur));
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
-        boolean chevalier = Susano3.est(pouvoir(joueur)) && niveau >= 3;
+        // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2 et la combinaison des espionnes, toujours au plus haut)
+        boolean chevalier = Susano3.est(pouvoir(joueur)) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2
+                || Espionne.est(pouvoir(joueur)) && niveau > 0;
+        // Minato (niveau 1) compte comme un niveau 2 : de la netherite
+        boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : chevalier ? 24 : 20);
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE,
-                niveau == 0 || fer ? 0 : bete ? 10 : chevalier ? 14 : niveau >= 2 && !pouvoir(joueur).equals(Hachibi.NOM2) ? 12 : 8);
-        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, chevalier ? 0.6 : niveau >= 2 ? 0.4 : 0);
+                niveau == 0 || fer ? 0 : bete ? 10 : chevalier ? 14 : netherite || niveau >= 2 && !pouvoir(joueur).equals(Hachibi.NOM2) ? 12 : 8);
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, chevalier ? 0.6 : niveau >= 2 || netherite ? 0.4 : 0);
     }
 
     private static void modif(ServerPlayer joueur, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribut,
@@ -453,7 +459,7 @@ public final class Pouvoirs {
      */
     private static int repos(ServerPlayer joueur, int niveau) {
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
-        if (elu == null || elu.pouvoir().equals(Minato.NOM) || Espionne.est(elu.pouvoir())) {
+        if (elu == null || Minato.est(elu.pouvoir()) || Espionne.est(elu.pouvoir())) {
             return REPOS_EVEIL;
         }
         if (Fruit.est(elu.pouvoir())) {
@@ -837,8 +843,8 @@ public final class Pouvoirs {
         for (String pouvoir : LISTE) {
             // Hachibi, la marque maudite et Minato ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || pouvoir.equals(Minato.NOM) || Fruit.est(pouvoir) || Ichibi.est(pouvoir)) {
-                Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : pouvoir.equals(Minato.NOM) ? Couleur.JAUNE
+            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || Minato.est(pouvoir) || Fruit.est(pouvoir) || Ichibi.est(pouvoir)) {
+                Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Minato.est(pouvoir) ? Couleur.JAUNE
                         : pouvoir.equals(Fruit.LAVE) || Ichibi.est(pouvoir) ? Couleur.ORANGE : pouvoir.equals(Fruit.GLACE) ? Couleur.CYAN : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else if (Espionne.est(pouvoir)) {

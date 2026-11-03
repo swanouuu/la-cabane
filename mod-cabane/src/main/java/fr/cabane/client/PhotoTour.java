@@ -277,6 +277,20 @@ public final class PhotoTour {
                 fr.cabane.client.pouvoir.ClientMinatoCombo.demo();
                 return 2;
             }
+            // Minato 2 (mode Kurama) : « act eclair » (accroupi + clic droit : TP où il regarde), « act poser-pieds » (un seul
+            // appui accroupi : un kunai à ses pieds), « act bijuu-demo » (la Bijuu Dama vue de l'extérieur, sur la créature la plus proche)
+            case "eclair" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Minato.Eclair());
+                return 2;
+            }
+            case "poser-pieds" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Minato.PoserPieds());
+                return 2;
+            }
+            case "bijuu-demo" -> {
+                fr.cabane.client.pouvoir.ClientBijuuDama.demo();
+                return 2;
+            }
             // « act chidori » : le clic droit de la marque maudite niveau 2
             case "chidori" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Maudit.Lancer());

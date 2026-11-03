@@ -78,10 +78,34 @@ import org.joml.Vector3f;
  * vraiment. Accroupi + clic gauche, il lance un kunai (toutes les 10 secondes) qui retombe comme une boule de neige et se
  * plante dans le premier bloc ou la première créature ; recommencer l'y téléporte, même s'il est encore en vol. Ce
  * kunai-là est indépendant de la marque posée (accroupi + clic droit), qu'on rejoint en s'accroupissant deux fois vite.
+ * <p>
+ * Minato 2 (liste blanche « minato2 ») : la touche Éveil donne d'abord ce Minato-là (niveau 1), puis le mode Kurama
+ * (niveau 2, voir docs/minato2). Chaque coup qui touche le téléporte autour de sa cible (huit places) et sa vue reste
+ * bloquée sur elle tant qu'il frappe (une seconde sans frapper la libère) ; accroupi + clic droit, il se téléporte là
+ * où il regarde ; s'accroupir une fois plante un kunai à ses pieds, deux fois l'y ramène ; le clic droit lance la Bijuu
+ * Dama : il se téléporte sur ce qu'il vise et frappe, et si ça touche, Kurama apparaît derrière lui et tire (12,5 s de
+ * cinématique pour lui et sa cible, vue dans le monde par les autres, comme le combo).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Minato {
     public static final String NOM = "minato";
+    /** Minato 2 : le même Minato au niveau 1, puis le mode Kurama au niveau 2. */
+    public static final String NOM2 = "minato2";
+
+    public static boolean est(String pouvoir) {
+        return pouvoir.equals(NOM) || pouvoir.equals(NOM2);
+    }
+
+    /** La Bijuu Dama, en ticks depuis qu'il touche : sa durée, le coup de poing, l'impact de la boule, le dôme. */
+    public static final int DUREE_BIJUU = 266, COUP_BIJUU = 6, PROJETEE = 26, IMPACT_BIJUU = 168, DOME_BIJUU = 192;
+    /** Les points de la Bijuu Dama, dans l'ordre du paquet : la cible, lui (devant elle), où elle est projetée, Kurama. */
+    public static final int B_CIBLE = 0, B_LUI = 1, B_PROJETEE = 2, B_KURAMA = 3;
+    /** Jusqu'où il vise (la Bijuu Dama) ; le TP où il regarde va plus loin, toutes les 5 secondes. */
+    private static final double PORTEE_BIJUU = 30, PORTEE_ECLAIR = 40;
+    public static final int RECHARGE_ECLAIR = 100;
+    /** Le dôme : jusqu'où il touche, et combien (la cible, elle, prend la boule : 16 + 14 qui traversent l'armure). */
+    private static final double RAYON_DOME = 10;
+    private static final float DEGATS_DOME = 12, BIJUU_NORMAL = 14, BIJUU_PERCANT = 14, BIJUU_POING = 2;
     /** Le combo, en ticks, à partir du moment où le kunai touche. */
     public static final int DUREE = 311;
     public static final int RECHARGE = 1200;
@@ -92,7 +116,8 @@ public final class Minato {
     public static final double JET_VITESSE = 1.8, JET_GRAVITE = 0.03, JET_FREIN = 0.99;
     /** Au-delà (en ticks), il est perdu. */
     public static final int JET_VIE = 120;
-    private static final float JET_DEGATS = 4;
+    /** Le kunai lancé à la main : 3 cœurs au niveau 1 (un niveau 2 dans l'équilibrage), 4 en mode Kurama (un niveau 3). */
+    private static final float JET_DEGATS = 6, JET_DEGATS_2 = 8;
     /** Entre deux kunais lancés à la main (y aller ne recharge rien). */
     public static final int RECHARGE_JET = 200;
 
@@ -101,12 +126,12 @@ public final class Minato {
 
     /**
      * Les coups : quand (en ticks après le début), la part qui passe par l'armure (une frappe normale) et celle qui la
-     * traverse, Protection comprise (l'Éclair Jaune). Sans armure : 16 (8 cœurs) ; en diamant Protection IV : environ
-     * 7,5 (presque 4 cœurs), parce que les 7 de l'Éclair Jaune passent toujours.
+     * traverse, Protection comprise (l'Éclair Jaune). Sans armure : 20 (10 cœurs, depuis l'équilibrage par niveau : Minato
+     * compte comme un niveau 2) ; en diamant Protection IV, plus de 4 cœurs, parce que l'Éclair Jaune passe toujours.
      */
     private static final int[] QUAND = {5, 59, 62, 65, 68, 72, 75, 78, 81, 84, 153, 193};
-    private static final float[] NORMAL = {2, 1 / 3F, 1 / 3F, 1 / 3F, 1 / 3F, 1 / 3F, 1 / 3F, 1 / 3F, 1 / 3F, 1 / 3F, 2.5F, 1.5F};
-    private static final float[] PERCANT = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3};
+    private static final float[] NORMAL = {2.5F, 5 / 12F, 5 / 12F, 5 / 12F, 5 / 12F, 5 / 12F, 5 / 12F, 5 / 12F, 5 / 12F, 5 / 12F, 3.125F, 1.875F};
+    private static final float[] PERCANT = {1.25F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3.75F, 3.75F};
     /** Les dégâts qui traversent l'armure et Protection (data/cabane/damage_type, et les tags bypasses_armor / bypasses_enchantments). */
     public static final ResourceKey<DamageType> ECLAIR_JAUNE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("eclair_jaune"));
 
@@ -146,6 +171,37 @@ public final class Minato {
     private static final Map<UUID, Enchainement> COMBOS = new HashMap<>();
     /** Le tick à partir duquel ce joueur peut relancer. */
     private static final Map<UUID, Integer> PRET = new HashMap<>();
+    /** Le niveau de ceux qui sont éveillés : 1 (Minato), 2 (le mode Kurama de Minato 2). */
+    private static final Map<UUID, Integer> NIVEAUX = new HashMap<>();
+    /** Le tick à partir duquel il peut se téléporter là où il regarde (mode Kurama). */
+    private static final Map<UUID, Integer> PRET_ECLAIR = new HashMap<>();
+
+    /** Le verrou du mode Kurama : la cible sur laquelle sa vue reste bloquée, son dernier coup, sa dernière place autour. */
+    private static final class Verrou {
+        int cible = -1;
+        int dernier;
+        int place = -1;
+    }
+
+    private static final Map<UUID, Verrou> VERROUS = new HashMap<>();
+    /** Les coups portés pendant ce tick en mode Kurama (joueur → cible) : la téléportation suit, à la fin du tick. */
+    private static final Map<UUID, Integer> FRAPPES = new HashMap<>();
+
+    /** Une Bijuu Dama en cours : la cible, le tick de départ, ses points (voir B_CIBLE…), ce qui a déjà frappé. */
+    private static final class Bijuu {
+        int cible;
+        int debut;
+        Vec3[] points;
+        boolean poing;
+        boolean impact;
+        boolean dome;
+    }
+
+    private static final Map<UUID, Bijuu> BIJUUS = new HashMap<>();
+
+    static int niveau(UUID joueur) {
+        return NIVEAUX.getOrDefault(joueur, 0);
+    }
     /** Vrai pendant nos propres coups (les seuls qui passent pendant le combo). */
     private static boolean frappe;
 
@@ -261,9 +317,67 @@ public final class Minato {
         }
     }
 
+    /** Serveur → lui : sa vue se bloque sur cette entité (mode Kurama), ou se libère (-1). */
+    public record Viseur(int cible) implements CustomPacketPayload {
+        public static final Type<Viseur> TYPE = new Type<>(Cabane.id("minato_viseur"));
+        public static final StreamCodec<ByteBuf, Viseur> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, Viseur::cible, Viseur::new);
+
+        @Override
+        public Type<Viseur> type() {
+            return TYPE;
+        }
+    }
+
+    /** Client → serveur : accroupi + clic droit en mode Kurama (se téléporter là où il regarde). */
+    public record Eclair() implements CustomPacketPayload {
+        public static final Type<Eclair> TYPE = new Type<>(Cabane.id("minato_eclair"));
+        public static final StreamCodec<ByteBuf, Eclair> CODEC = StreamCodec.unit(new Eclair());
+
+        @Override
+        public Type<Eclair> type() {
+            return TYPE;
+        }
+    }
+
+    /** Client → serveur : il s'est accroupi une seule fois en mode Kurama (un kunai se plante à ses pieds). */
+    public record PoserPieds() implements CustomPacketPayload {
+        public static final Type<PoserPieds> TYPE = new Type<>(Cabane.id("minato_poser_pieds"));
+        public static final StreamCodec<ByteBuf, PoserPieds> CODEC = StreamCodec.unit(new PoserPieds());
+
+        @Override
+        public Type<PoserPieds> type() {
+            return TYPE;
+        }
+    }
+
+    /** Serveur → ceux qui sont autour : la Bijuu Dama commence (avec ses points), ou s'arrête net (points vide). */
+    public record BijuuDama(UUID joueur, int cible, List<Vector3f> points) implements CustomPacketPayload {
+        public static final Type<BijuuDama> TYPE = new Type<>(Cabane.id("minato_bijuu"));
+        public static final StreamCodec<ByteBuf, BijuuDama> CODEC = StreamCodec.composite(
+                UUIDUtil.STREAM_CODEC, BijuuDama::joueur, ByteBufCodecs.VAR_INT, BijuuDama::cible,
+                ByteBufCodecs.VECTOR3F.apply(ByteBufCodecs.list()), BijuuDama::points, BijuuDama::new);
+
+        @Override
+        public Type<BijuuDama> type() {
+            return TYPE;
+        }
+    }
+
     @SubscribeEvent
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
+                .playToServer(Eclair.TYPE, Eclair.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer joueur) {
+                        eclair(joueur);
+                    }
+                }))
+                .playToServer(PoserPieds.TYPE, PoserPieds.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer joueur) {
+                        poserPieds(joueur);
+                    }
+                }))
+                .playToClient(Viseur.TYPE, Viseur.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientMinato.viseur(p)))
+                .playToClient(BijuuDama.TYPE, BijuuDama.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientMinato.bijuu(p)))
                 .playToServer(Lancer.TYPE, Lancer.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur) {
                         lancer(joueur);
@@ -306,17 +420,17 @@ public final class Minato {
     // ================================================================ s'éveiller, s'endormir
 
     private static final ResourceLocation COURSE = Cabane.id("minato_vitesse");
-    /** Éveillé, il court bien plus vite : +55 %, juste en dessous de la bête de Hachibi (+65 %). */
-    private static final double BONUS_VITESSE = 0.55;
+    /** Éveillé, il court bien plus vite : +55 %, juste en dessous de la bête de Hachibi (+65 %) ; en mode Kurama, +80 %. */
+    private static final double BONUS_VITESSE = 0.55, BONUS_VITESSE_2 = 0.8;
 
-    private static void vitesse(ServerPlayer joueur, boolean eveille) {
+    private static void vitesse(ServerPlayer joueur, int niveau) {
         AttributeInstance a = joueur.getAttribute(Attributes.MOVEMENT_SPEED);
         if (a == null) {
             return;
         }
         a.removeModifier(COURSE);
-        if (eveille) {
-            a.addTransientModifier(new AttributeModifier(COURSE, BONUS_VITESSE, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        if (niveau > 0) {
+            a.addTransientModifier(new AttributeModifier(COURSE, niveau >= 2 ? BONUS_VITESSE_2 : BONUS_VITESSE, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         }
     }
 
@@ -334,14 +448,17 @@ public final class Minato {
 
     private static final ResourceLocation FRAPPE = Cabane.id("minato_kunai_degats");
     private static final ResourceLocation CADENCE = Cabane.id("minato_kunai_cadence");
-    /** Le kunai vaut une épée en diamant (+6 de dégâts, -2,4 de vitesse d'attaque) Tranchant II (+1,5). */
-    private static final double DEGATS_KUNAI = 6, CADENCE_KUNAI = -2.4;
+    /**
+     * Le kunai, au niveau 1 : 11 de dégâts avec son Tranchant II (+1,5), à la cadence d'une épée (-2,4 de vitesse
+     * d'attaque) : Minato compte comme un niveau 2. En mode Kurama (un niveau 3) : 13, un coup toutes les 0,4 s.
+     */
+    private static final double DEGATS_KUNAI = 8.5, CADENCE_KUNAI = -2.4, DEGATS_KUNAI_2 = 10.5, CADENCE_KUNAI_2 = -1.5;
     private static final float TRANCHANT = 1.5F;
 
     /** Éveillé, ce qu'apporte l'objet tenu (ses modificateurs de main) est remplacé par ce qu'apporterait le kunai. */
-    public static void arme(Player joueur, boolean eveille) {
-        caler(joueur.getAttribute(Attributes.ATTACK_DAMAGE), FRAPPE, Item.BASE_ATTACK_DAMAGE_ID, DEGATS_KUNAI, eveille);
-        caler(joueur.getAttribute(Attributes.ATTACK_SPEED), CADENCE, Item.BASE_ATTACK_SPEED_ID, CADENCE_KUNAI, eveille);
+    public static void arme(Player joueur, int niveau) {
+        caler(joueur.getAttribute(Attributes.ATTACK_DAMAGE), FRAPPE, Item.BASE_ATTACK_DAMAGE_ID, niveau >= 2 ? DEGATS_KUNAI_2 : DEGATS_KUNAI, niveau > 0);
+        caler(joueur.getAttribute(Attributes.ATTACK_SPEED), CADENCE, Item.BASE_ATTACK_SPEED_ID, niveau >= 2 ? CADENCE_KUNAI_2 : CADENCE_KUNAI, niveau > 0);
     }
 
     private static void caler(AttributeInstance a, ResourceLocation id, ResourceLocation objet, double voulu, boolean eveille) {
@@ -360,19 +477,31 @@ public final class Minato {
         }
     }
 
-    static void eveiller(ServerPlayer joueur) {
+    /** Niveau 1 : Minato ; niveau 2 (Minato 2) : le mode Kurama, dont la transformation (3 s) se dessine chez chacun. */
+    static void eveiller(ServerPlayer joueur, int niveau) {
         ELUS.add(joueur.getUUID());
-        vitesse(joueur, true);
-        arme(joueur, true);
-        joueur.serverLevel().sendParticles(jaune(), joueur.getX(), joueur.getY(1), joueur.getZ(), 24, 0.5, 0.9, 0.5, 0.1);
-        joueur.serverLevel().playSound(null, joueur.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.8F, 1.6F);
+        NIVEAUX.put(joueur.getUUID(), niveau);
+        vitesse(joueur, niveau);
+        arme(joueur, niveau);
+        ServerLevel monde = joueur.serverLevel();
+        if (niveau >= 2) {
+            // le chakra de Kurama : un grondement qui monte, puis le rugissement quand l'anneau arrive à la tête
+            monde.playSound(null, joueur.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.2F, 0.6F);
+            monde.playSound(null, joueur.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 0.9F, 1.4F);
+            monde.sendParticles(ParticleTypes.END_ROD, joueur.getX(), joueur.getY(0.1), joueur.getZ(), 40, 0.6, 0.1, 0.6, 0.05);
+            return;
+        }
+        monde.sendParticles(jaune(), joueur.getX(), joueur.getY(1), joueur.getZ(), 24, 0.5, 0.9, 0.5, 0.1);
+        monde.playSound(null, joueur.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.8F, 1.6F);
     }
 
     /** Le combo en cours continue (c'est une cinématique) ; seuls les kunais en vol disparaissent. */
     static void endormir(ServerPlayer joueur) {
         ELUS.remove(joueur.getUUID());
-        vitesse(joueur, false);
-        arme(joueur, false);
+        NIVEAUX.remove(joueur.getUUID());
+        liberer(joueur);
+        vitesse(joueur, 0);
+        arme(joueur, 0);
         if (VOLS.remove(joueur.getUUID()) != null) {
             envoyer(joueur.serverLevel(), joueur.position(), new Kunai(joueur.getUUID(), 2, v(joueur.position()), new Vector3f()));
         }
@@ -392,6 +521,10 @@ public final class Minato {
         UUID id = joueur.getUUID();
         int maintenant = joueur.server.getTickCount();
         if (!ELUS.contains(id) || VOLS.containsKey(id) || fige(joueur)) {
+            return;
+        }
+        if (niveau(id) >= 2) {
+            bijuu(joueur);
             return;
         }
         int pret = PRET.getOrDefault(id, 0);
@@ -666,7 +799,7 @@ public final class Minato {
             ENVOLS.remove(id);
             envoyer(monde, a, new Jet(id, false, v(touche.getLocation()), v(e.vitesse)));
             if (Pouvoirs.cible(joueur, cible)) {
-                cible.hurt(joueur.damageSources().thrown(joueur, joueur), JET_DEGATS);
+                cible.hurt(joueur.damageSources().thrown(joueur, joueur), niveau(id) >= 2 ? JET_DEGATS_2 : JET_DEGATS);
             }
             monde.playSound(null, cible.blockPosition(), SoundEvents.TRIDENT_HIT, SoundSource.PLAYERS, 0.8F, 1.6F);
             joueur.displayClientMessage(Component.literal("Kunai planté dans " + cible.getName().getString() + ". Accroupi + clic gauche pour le rejoindre."), true);
@@ -757,6 +890,224 @@ public final class Minato {
         }
     }
 
+    // ================================================================ le mode Kurama (Minato 2, niveau 2)
+
+    /** Accroupi + clic droit : il se téléporte là où il regarde (40 blocs au plus), toutes les 5 secondes. */
+    private static void eclair(ServerPlayer joueur) {
+        UUID id = joueur.getUUID();
+        int maintenant = joueur.server.getTickCount();
+        if (niveau(id) < 2 || fige(joueur) || sauteTropTot(joueur)) {
+            return;
+        }
+        int pret = PRET_ECLAIR.getOrDefault(id, 0);
+        if (maintenant < pret) {
+            joueur.displayClientMessage(Component.literal(String.format("Pas encore… (%d s)", (pret - maintenant + 19) / 20)), true);
+            return;
+        }
+        ServerLevel monde = joueur.serverLevel();
+        Vec3 oeil = joueur.getEyePosition();
+        Vec3 regard = joueur.getLookAngle();
+        Vec3 loin = oeil.add(regard.scale(PORTEE_ECLAIR));
+        HitResult bloc = monde.clip(new ClipContext(oeil, loin, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
+        Vec3 fin = bloc.getType() == HitResult.Type.MISS ? loin : bloc.getLocation();
+        EntityHitResult vise = ProjectileUtil.getEntityHitResult(monde, joueur, oeil, fin, new AABB(oeil, fin).inflate(1),
+                e -> e instanceof LivingEntity && e != joueur && e.isAlive() && !e.isSpectator(), 0.3F);
+        Vec3 vers;
+        if (vise != null) {
+            // juste devant ce qu'il vise, de son côté
+            Entity e = vise.getEntity();
+            Vec3 cote = joueur.position().subtract(e.position()).multiply(1, 0, 1);
+            Vec3 devant = e.position().add(cote.lengthSqr() < 1.0E-4 ? Vec3.ZERO : cote.normalize().scale(1.2 + e.getBbWidth() / 2));
+            vers = monde.noCollision(joueur, joueur.getBoundingBox().move(devant.subtract(joueur.position()))) ? devant : sol(monde, devant);
+        } else if (bloc instanceof net.minecraft.world.phys.BlockHitResult b) {
+            // contre le bloc visé, du côté où il le voit : debout dessus si c'est le sol, sinon en l'air devant
+            Vec3 face = fin.add(Vec3.atLowerCornerOf(b.getDirection().getNormal()).scale(0.6));
+            vers = sol(monde, face);
+            if (!monde.noCollision(joueur, joueur.getBoundingBox().move(vers.subtract(joueur.position())))) {
+                vers = face.subtract(0, 0.9, 0);
+            }
+        } else {
+            // dans le vide : là où ses yeux arrivent (il retombe ensuite)
+            vers = fin.subtract(0, joueur.getEyeHeight(), 0);
+        }
+        PRET_ECLAIR.put(id, maintenant + RECHARGE_ECLAIR);
+        sauter(joueur, monde, vers);
+    }
+
+    /** Une seule fois accroupi : un kunai se plante à ses pieds (la marque posée), qu'on rejoint en s'accroupissant deux fois. */
+    private static void poserPieds(ServerPlayer joueur) {
+        if (niveau(joueur.getUUID()) < 2 || fige(joueur)) {
+            return;
+        }
+        ServerLevel monde = joueur.serverLevel();
+        marquer(joueur.server, joueur.getUUID(), false, new Marques.Marque(monde.dimension().location().toString(), joueur.position(), null, "", null));
+        joueur.displayClientMessage(Component.literal("Kunai planté. Accroupis-toi deux fois vite pour y revenir, d'où que tu sois."), true);
+        joueur.swing(InteractionHand.MAIN_HAND, true);
+        monde.playSound(null, joueur.blockPosition(), SoundEvents.TRIDENT_HIT_GROUND, SoundSource.PLAYERS, 0.8F, 1.6F);
+    }
+
+    /**
+     * Après un coup qui touche, en mode Kurama : il se téléporte à la place suivante autour de la cible (devant, à
+     * gauche, à droite, derrière, en haut à gauche, en haut à droite, en haut derrière, en bas derrière), tourné vers
+     * elle, avec le flash et le bruit du TP ; sa vue reste bloquée sur elle, et il flotte tant qu'il frappe.
+     */
+    private static void autour(ServerPlayer joueur, LivingEntity cible, int maintenant) {
+        UUID id = joueur.getUUID();
+        ServerLevel monde = joueur.serverLevel();
+        Verrou v = VERROUS.computeIfAbsent(id, k -> new Verrou());
+        boolean nouveau = v.cible != cible.getId();
+        v.cible = cible.getId();
+        v.dernier = maintenant;
+        double lacet = Math.toRadians(cible.getYRot());
+        Vec3 avant = new Vec3(-Math.sin(lacet), 0, Math.cos(lacet));
+        Vec3 gauche = new Vec3(avant.z, 0, -avant.x);
+        double r = 1.5 + cible.getBbWidth() / 2;
+        Vec3[] places = {avant.scale(r), gauche.scale(r), gauche.scale(-r), avant.scale(-r), gauche.scale(r * 0.8).add(0, 1.6, 0),
+                gauche.scale(-r * 0.8).add(0, 1.6, 0), avant.scale(-r * 0.8).add(0, 2.1, 0), avant.add(gauche).normalize().scale(-r * 0.85)};
+        for (int essai = 0; essai < places.length; essai++) {
+            v.place = (v.place + 1) % places.length;
+            Vec3 p = cible.position().add(places[v.place]);
+            if (!monde.noCollision(joueur, joueur.getBoundingBox().move(p.subtract(joueur.position())))) {
+                continue;
+            }
+            Vec3 d = cible.getEyePosition().subtract(p.add(0, joueur.getEyeHeight(), 0));
+            float y = (float) Math.toDegrees(Math.atan2(-d.x, d.z));
+            float x = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+            eclairs(monde, joueur.position());
+            joueur.teleportTo(monde, p.x, p.y, p.z, y, x);
+            joueur.setYHeadRot(y);
+            eclairs(monde, p);
+            break;
+        }
+        joueur.setNoGravity(true);
+        joueur.setDeltaMovement(Vec3.ZERO);
+        joueur.hurtMarked = true;
+        joueur.fallDistance = 0;
+        if (nouveau) {
+            PacketDistributor.sendToPlayer(joueur, new Viseur(cible.getId()));
+        }
+    }
+
+    /** La vue se libère (une seconde sans frapper, la cible partie, l'éveil fini) et il retombe. */
+    private static void liberer(ServerPlayer joueur) {
+        if (VERROUS.remove(joueur.getUUID()) != null) {
+            joueur.setNoGravity(false);
+            joueur.fallDistance = 0;
+            PacketDistributor.sendToPlayer(joueur, new Viseur(-1));
+        }
+    }
+
+    /**
+     * Le clic droit en mode Kurama : ce qui vit le plus droit devant lui, à vue, à 30 blocs au plus. Il se téléporte
+     * devant et frappe : c'est la Bijuu Dama. S'il n'y a personne : 10 secondes de recharge.
+     */
+    private static void bijuu(ServerPlayer joueur) {
+        UUID id = joueur.getUUID();
+        int maintenant = joueur.server.getTickCount();
+        int pret = PRET.getOrDefault(id, 0);
+        if (maintenant < pret) {
+            joueur.displayClientMessage(Component.literal(String.format("Kurama reprend son souffle… (%d s)", (pret - maintenant + 19) / 20)), true);
+            return;
+        }
+        ServerLevel monde = joueur.serverLevel();
+        Vec3 oeil = joueur.getEyePosition();
+        Vec3 regard = joueur.getLookAngle();
+        LivingEntity cible = null;
+        double meilleur = Math.cos(Math.toRadians(9));
+        for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(oeil, oeil.add(regard.scale(PORTEE_BIJUU))).inflate(3),
+                e -> Pouvoirs.cible(joueur, e) && !fige(e) && !e.isSpectator())) {
+            Vec3 vers = e.getBoundingBox().getCenter().subtract(oeil);
+            double d = vers.length();
+            double droit = d < 1.0E-4 ? 1 : vers.scale(1 / d).dot(regard);
+            if (d <= PORTEE_BIJUU && droit > meilleur && joueur.hasLineOfSight(e)) {
+                meilleur = droit;
+                cible = e;
+            }
+        }
+        if (cible == null) {
+            PRET.put(id, maintenant + RECHARGE_RATE);
+            joueur.displayClientMessage(Component.literal("Personne en vue… (10 s)"), true);
+            monde.playSound(null, joueur.blockPosition(), SoundEvents.PLAYER_ATTACK_NODAMAGE, SoundSource.PLAYERS, 1F, 0.8F);
+            return;
+        }
+        Vec3 o = cible.position();
+        Vec3 f = new Vec3(o.x - joueur.getX(), 0, o.z - joueur.getZ());
+        f = f.lengthSqr() < 1.0E-4 ? Pouvoirs.devant(joueur) : f.normalize();
+        Vec3[] p = new Vec3[4];
+        p[B_CIBLE] = o;
+        p[B_LUI] = sol(monde, o.subtract(f.scale(1.3 + cible.getBbWidth() / 2)));
+        p[B_PROJETEE] = sol(monde, o.add(f.scale(libre(monde, o, f, 4.5, cible))));
+        p[B_KURAMA] = p[B_LUI].subtract(f.scale(7));
+        Bijuu b = new Bijuu();
+        b.cible = cible.getId();
+        b.debut = maintenant;
+        b.points = p;
+        BIJUUS.put(id, b);
+        liberer(joueur);
+        eclairs(monde, joueur.position());
+        float y = (float) Math.toDegrees(Math.atan2(-f.x, f.z));
+        joueur.teleportTo(monde, p[B_LUI].x, p[B_LUI].y, p[B_LUI].z, y, 0);
+        eclairs(monde, p[B_LUI]);
+        List<Vector3f> points = new ArrayList<>();
+        for (Vec3 q : p) {
+            points.add(v(q));
+        }
+        envoyer(monde, o, new BijuuDama(id, cible.getId(), points));
+    }
+
+    /** Un pas de la Bijuu Dama : les deux restent figés à leur place ; le poing, l'impact de la boule, puis le dôme frappent. */
+    private static void bijuuPas(ServerPlayer joueur, Bijuu b, int age) {
+        ServerLevel monde = joueur.serverLevel();
+        Entity e = monde.getEntity(b.cible);
+        tenir(joueur, b.points[B_LUI]);
+        if (!(e instanceof LivingEntity cible) || !cible.isAlive()) {
+            return;
+        }
+        tenir(cible, age < PROJETEE ? b.points[B_CIBLE] : b.points[B_PROJETEE]);
+        if (!b.poing && age >= COUP_BIJUU) {
+            b.poing = true;
+            frapper(joueur, cible, BIJUU_POING, 0);
+        }
+        if (!b.impact && age >= IMPACT_BIJUU) {
+            b.impact = true;
+            frapper(joueur, cible, BIJUU_NORMAL, BIJUU_PERCANT);
+        }
+        if (!b.dome && age >= DOME_BIJUU) {
+            b.dome = true;
+            // le dôme : tous ceux qui sont autour (pas lui, pas la cible qui a déjà pris la boule) ; aucun bloc ne bouge
+            Vec3 c = b.points[B_PROJETEE];
+            for (LivingEntity autour : monde.getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(RAYON_DOME),
+                    a -> Pouvoirs.cible(joueur, a) && a != cible && a.position().distanceTo(c) <= RAYON_DOME)) {
+                autour.hurt(joueur.damageSources().playerAttack(joueur), DEGATS_DOME);
+                Vec3 loin = autour.position().subtract(c);
+                autour.knockback(2, -loin.x, -loin.z);
+                autour.setDeltaMovement(autour.getDeltaMovement().add(0, 0.7, 0));
+                autour.hurtMarked = true;
+            }
+        }
+    }
+
+    private static void finirBijuu(MinecraftServer server, UUID id, Bijuu b, boolean net) {
+        BIJUUS.remove(id);
+        PRET.put(id, server.getTickCount() + RECHARGE);
+        ServerPlayer joueur = server.getPlayerList().getPlayer(id);
+        if (joueur == null) {
+            return;
+        }
+        ServerLevel monde = joueur.serverLevel();
+        if (net) {
+            envoyer(monde, b.points[B_CIBLE], new BijuuDama(id, b.cible, List.of()));
+            return;
+        }
+        Entity cible = monde.getEntity(b.cible);
+        if (cible != null && cible.isAlive()) {
+            Vec3 e = debout(monde, b.points[B_PROJETEE]) ? b.points[B_PROJETEE] : b.points[B_CIBLE];
+            cible.teleportTo(e.x, e.y, e.z);
+        }
+        Vec3 lui = b.points[B_LUI];
+        joueur.teleportTo(lui.x, lui.y, lui.z);
+    }
+
     // ================================================================ le combo
 
     /** Un endroit où tenir debout, près de p (en cherchant un peu plus haut et plus bas), sinon p tel quel. */
@@ -819,11 +1170,16 @@ public final class Minato {
     }
 
     private static boolean fige(LivingEntity e) {
-        if (COMBOS.containsKey(e.getUUID())) {
+        if (COMBOS.containsKey(e.getUUID()) || BIJUUS.containsKey(e.getUUID())) {
             return true;
         }
         for (Enchainement c : COMBOS.values()) {
             if (c.cible == e.getId()) {
+                return true;
+            }
+        }
+        for (Bijuu b : BIJUUS.values()) {
+            if (b.cible == e.getId()) {
                 return true;
             }
         }
@@ -883,10 +1239,47 @@ public final class Minato {
         for (UUID id : ELUS) {
             ServerPlayer joueur = server.getPlayerList().getPlayer(id);
             if (joueur != null) {
-                arme(joueur, true);
+                arme(joueur, niveau(id));
             }
         }
         COUPS.clear();
+        // le mode Kurama : chaque coup porté pendant ce tick le téléporte autour de sa cible
+        for (Map.Entry<UUID, Integer> e : FRAPPES.entrySet()) {
+            ServerPlayer joueur = server.getPlayerList().getPlayer(e.getKey());
+            if (joueur != null && niveau(e.getKey()) >= 2 && !fige(joueur) && joueur.serverLevel().getEntity(e.getValue()) instanceof LivingEntity cible
+                    && cible.isAlive()) {
+                autour(joueur, cible, maintenant);
+            }
+        }
+        FRAPPES.clear();
+        // une seconde sans frapper (ou la cible partie, morte, trop loin) : la vue se libère et il retombe
+        for (Map.Entry<UUID, Verrou> e : new ArrayList<>(VERROUS.entrySet())) {
+            ServerPlayer joueur = server.getPlayerList().getPlayer(e.getKey());
+            if (joueur == null) {
+                VERROUS.remove(e.getKey());
+                continue;
+            }
+            Entity cible = joueur.serverLevel().getEntity(e.getValue().cible);
+            if (maintenant - e.getValue().dernier > 20 || !(cible instanceof LivingEntity l) || !l.isAlive() || cible.distanceTo(joueur) > 12) {
+                liberer(joueur);
+            } else {
+                joueur.fallDistance = 0;
+            }
+        }
+        for (Map.Entry<UUID, Bijuu> e : new ArrayList<>(BIJUUS.entrySet())) {
+            Bijuu b = e.getValue();
+            ServerPlayer joueur = server.getPlayerList().getPlayer(e.getKey());
+            if (joueur == null) {
+                BIJUUS.remove(e.getKey());
+                continue;
+            }
+            int age = maintenant - b.debut;
+            if (age >= DUREE_BIJUU) {
+                finirBijuu(server, e.getKey(), b, false);
+            } else {
+                bijuuPas(joueur, b, age);
+            }
+        }
         for (Map.Entry<UUID, Enchainement> e : new ArrayList<>(COMBOS.entrySet())) {
             Enchainement c = e.getValue();
             ServerPlayer joueur = server.getPlayerList().getPlayer(e.getKey());
@@ -933,7 +1326,7 @@ public final class Minato {
      */
     @SubscribeEvent
     public static void degats(LivingIncomingDamageEvent event) {
-        if (!frappe && !COMBOS.isEmpty() && fige(event.getEntity())) {
+        if (!frappe && (!COMBOS.isEmpty() || !BIJUUS.isEmpty()) && fige(event.getEntity())) {
             event.setCanceled(true);
             return;
         }
@@ -953,6 +1346,9 @@ public final class Minato {
             float bonus = EnchantmentHelper.modifyDamage(joueur.serverLevel(), joueur.getWeaponItem(), event.getTarget(),
                     joueur.damageSources().playerAttack(joueur), base) - base;
             COUPS.put(joueur.getUUID(), new Coup(event.getTarget().getId(), joueur.getAttackStrengthScale(0.5F), bonus));
+            if (niveau(joueur.getUUID()) >= 2 && event.getTarget() instanceof LivingEntity cible && Pouvoirs.cible(joueur, cible)) {
+                FRAPPES.put(joueur.getUUID(), cible.getId());
+            }
         }
     }
 
@@ -969,6 +1365,12 @@ public final class Minato {
         if (event.getEntity() instanceof ServerPlayer joueur && COMBOS.containsKey(joueur.getUUID())) {
             finir(joueur.server, joueur.getUUID(), COMBOS.get(joueur.getUUID()), true);
         }
+        if (event.getEntity() instanceof ServerPlayer joueur && BIJUUS.containsKey(joueur.getUUID())) {
+            finirBijuu(joueur.server, joueur.getUUID(), BIJUUS.get(joueur.getUUID()), true);
+        }
+        if (event.getEntity() instanceof ServerPlayer joueur) {
+            liberer(joueur);
+        }
     }
 
     @SubscribeEvent
@@ -978,14 +1380,31 @@ public final class Minato {
             if (c != null) {
                 finir(joueur.server, joueur.getUUID(), c, true);
             }
+            Bijuu b = BIJUUS.get(joueur.getUUID());
+            if (b != null) {
+                finirBijuu(joueur.server, joueur.getUUID(), b, true);
+            }
+            liberer(joueur);
             VOLS.remove(joueur.getUUID());
             ENVOLS.remove(joueur.getUUID());
             ELUS.remove(joueur.getUUID());
+            NIVEAUX.remove(joueur.getUUID());
         }
     }
 
     @SubscribeEvent
     public static void arret(ServerStoppingEvent event) {
+        for (UUID id : new ArrayList<>(VERROUS.keySet())) {
+            ServerPlayer joueur = event.getServer().getPlayerList().getPlayer(id);
+            if (joueur != null) {
+                joueur.setNoGravity(false);
+            }
+        }
+        VERROUS.clear();
+        FRAPPES.clear();
+        BIJUUS.clear();
+        NIVEAUX.clear();
+        PRET_ECLAIR.clear();
         ELUS.clear();
         VOLS.clear();
         ENVOLS.clear();

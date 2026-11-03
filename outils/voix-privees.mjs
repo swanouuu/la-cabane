@@ -1,6 +1,7 @@
 // Le pack de ressources « Beauvais - voix » : les répliques que certains PNJ lâchent tout seuls (voix/ambiance/<pnj>-N.ogg),
 // la bande-son de la cinématique de Vegeta (voix/cinematique/), et des bruitages du doublage qui remplacent ceux du mod
-// (voix/effets/<son>.ogg, par exemple minato.flash.ogg pour les téléportations de Minato).
+// (voix/effets/<son>.ogg, par exemple minato.flash.ogg pour les téléportations de Minato), et Kurama pour la Bijuu Dama
+// de Minato 2 (voix/kurama/modele.json et kurama.png : le modèle et la texture d'un autre mod, qui sont à leur auteur).
 // Ces enregistrements ne vont ni sur GitHub ni dans le mod : ils voyagent seulement dans dist/SakaiMod.zip, envoyé à la main.
 // Le serveur joue le son cabane:ambiance.<pnj> (Ambiance.java) ; ceux qui ont le pack l'entendent. Sans le pack, les
 // bruitages restent ceux du mod.
@@ -42,6 +43,11 @@ export function packVoix() {
       fichiers.push([`assets/cabane/sounds/effets/${nom}.ogg`, fs.readFileSync(path.join(effets, fichier))]);
       sons[son] = { replace: true, subtitle: `subtitles.cabane.${son}`, sounds: [{ name: `cabane:effets/${nom}` }] };
     }
+  }
+  // Kurama (ModeleKurama : assets/cabane/kurama/modele.json et textures/entity/kurama/kurama.png)
+  const kurama = path.join(RACINE, "voix", "kurama");
+  for (const [fichier, dans] of [["modele.json", "assets/cabane/kurama/modele.json"], ["kurama.png", "assets/cabane/textures/entity/kurama/kurama.png"]]) {
+    if (fs.existsSync(path.join(kurama, fichier))) fichiers.push([dans, fs.readFileSync(path.join(kurama, fichier))]);
   }
   if (!fichiers.length) return [];
   return [

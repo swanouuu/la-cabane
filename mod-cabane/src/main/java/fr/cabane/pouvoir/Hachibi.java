@@ -73,6 +73,9 @@ public final class Hachibi {
     private static final float GRIFFE = 9;
     private static final float GRIFFE_BETE = 13;
     private static final float BOMBE = 18;
+    /** Hachibi tout court (un pouvoir de niveau 1) : sa bête frappe moins fort que celle de Hachibi 2 (l'équilibrage par niveau). */
+    private static final float GRIFFE_BETE_1 = 11;
+    private static final float BOMBE_1 = 14;
     private static final double RAYON_BOMBE = 6;
     /** Le niveau 3 (et le 4) de Hachibi 2 : 1,25 fois plus fort. */
     private static final float PLUS_FORT = 1.25F;
@@ -143,6 +146,8 @@ public final class Hachibi {
         Vec3 direction;
         int age;
         int genre;
+        /** Celle de Hachibi tout court (niveau 1), moins forte. */
+        boolean faible;
     }
 
     private static final Map<UUID, Etat> ETATS = new HashMap<>();
@@ -282,7 +287,7 @@ public final class Hachibi {
         e.main = 1 - e.main;
         Pouvoirs.geste(joueur, GESTE_GRIFFE, e.main);
         double portee = e.bete ? 4.5 : 3.5;
-        float degats = (e.bete ? GRIFFE_BETE : GRIFFE) * force(e);
+        float degats = (e.bete ? e.forme == 0 ? GRIFFE_BETE_1 : GRIFFE_BETE : GRIFFE) * force(e);
         Vec3 devant = Pouvoirs.devant(joueur);
         ServerLevel monde = joueur.serverLevel();
         for (LivingEntity cible : monde.getEntitiesOfClass(LivingEntity.class, joueur.getBoundingBox().inflate(portee, 2, portee),
@@ -614,6 +619,7 @@ public final class Hachibi {
         b.pos = gueule(joueur);
         b.direction = joueur.getLookAngle().normalize();
         b.genre = genre(e);
+        b.faible = e.forme == 0;
         e.vol = b;
         e.bombeRecharge = maintenant + (b.genre == 2 ? RECHARGE_BOMBE_NOIRE : RECHARGE_BOMBE);
         envoyer(joueur, new Boule(joueur.getUUID(), 1, b.pos.toVector3f(), b.direction.toVector3f(), b.genre));
@@ -632,7 +638,7 @@ public final class Hachibi {
             boolean quelquun = !monde.getEntitiesOfClass(LivingEntity.class, new AABB(b.pos, b.pos).inflate(1.2 + 0.4 * b.genre), c -> Pouvoirs.cible(joueur, c)).isEmpty();
             if (bloc || quelquun || b.age > 60) {
                 e.vol = null;
-                exploser(joueur, b.pos, b.genre);
+                exploser(joueur, b.pos, b.genre, b.faible);
                 return;
             }
         }
@@ -642,10 +648,10 @@ public final class Hachibi {
      * BOUM : pas de feu, pas de trou dans le sol, mais tout ce qui vit autour prend très cher et vole. La grosse bombe
      * (niveau 3) est 1,25 fois plus forte et plus large ; la noire (niveau 4) encore plus.
      */
-    private static void exploser(ServerPlayer joueur, Vec3 centre, int genre) {
+    private static void exploser(ServerPlayer joueur, Vec3 centre, int genre, boolean faible) {
         ServerLevel monde = joueur.serverLevel();
         double rayon = genre == 2 ? RAYON_BOMBE_NOIRE : genre == 1 ? RAYON_BOMBE * PLUS_FORT : RAYON_BOMBE;
-        float max = genre == 2 ? BOMBE_NOIRE : genre == 1 ? BOMBE * PLUS_FORT : BOMBE;
+        float max = genre == 2 ? BOMBE_NOIRE : genre == 1 ? BOMBE * PLUS_FORT : faible ? BOMBE_1 : BOMBE;
         for (LivingEntity cible : monde.getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(rayon),
                 c -> Pouvoirs.cible(joueur, c))) {
             Vec3 loin = cible.position().add(0, cible.getBbHeight() / 2, 0).subtract(centre);

@@ -203,7 +203,7 @@ public final class ClientSusano {
             return;
         }
         ClientEspionne.oublier(p.joueur());
-        if (p.pouvoir().equals(fr.cabane.pouvoir.Minato.NOM)) {
+        if (fr.cabane.pouvoir.Minato.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());
             ClientMaudit.oublier(p.joueur());

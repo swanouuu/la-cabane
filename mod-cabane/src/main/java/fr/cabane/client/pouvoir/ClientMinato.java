@@ -75,6 +75,30 @@ public final class ClientMinato {
     /** Le clic gauche est resté enfoncé depuis la dernière fois (il ne compte qu'à l'appui). */
     private static boolean gaucheTenu;
 
+    /** Le niveau de chaque Minato éveillé : 1, ou 2 (le mode Kurama de Minato 2). */
+    private static final Map<UUID, Integer> NIVEAUX = new HashMap<>();
+    /** Mode Kurama : l'entité sur laquelle ma vue est bloquée (-1 : libre). */
+    private static int visee = -1;
+    /** Mode Kurama : quand je pourrai me téléporter là où je regarde (System.nanoTime), -1 si c'est déjà possible. */
+    private static long pretEclair = -1;
+    /** Mode Kurama : depuis quand j'ai enfoncé accroupi, si un clic est venu pendant, et quand je l'ai lâché vite (un seul appui). */
+    private static long appuiAccroupi;
+    private static boolean clicPendantAccroupi;
+    private static long toucheSeule = -1;
+
+    private static int niveau(UUID joueur) {
+        return NIVEAUX.getOrDefault(joueur, 0);
+    }
+
+    /** Un Minato est-il en train de jouer une cinématique (le combo ou la Bijuu Dama), avec moi dedans ? */
+    private static boolean enScene() {
+        return ClientMinatoCombo.participant() || ClientBijuuDama.participant();
+    }
+
+    private static boolean cache(Entity e) {
+        return ClientMinatoCombo.cache(e) || ClientBijuuDama.cache(e);
+    }
+
     /** Une marque d'un Minato : un kunai planté (1, la pointe vers dir s'il a été lancé) ou sur quelqu'un (2). */
     private record Marque(int type, String dim, Vec3 pos, Vec3 dir, int entite, String nom) {
     }
@@ -142,11 +166,34 @@ public final class ClientMinato {
 
     // ================================================================ ce que dit le serveur
 
+    /** Suis-je un Minato 2 (la touche Éveil me donnera le mode Kurama) ? */
+    private static boolean minato2;
+
     public static void recevoir(Pouvoirs.Etat p) {
         Minecraft mc = Minecraft.getInstance();
+        if (moi(p.joueur())) {
+            minato2 = p.pouvoir().equals(Minato.NOM2);
+        }
+        int avant = niveau(p.joueur());
         if (!p.eveille()) {
             ELUS.remove(p.joueur());
+            NIVEAUX.remove(p.joueur());
+            // la fin du mode Kurama : l'anneau redescend et enlève la tenue
+            if (avant >= 2) {
+                ClientKurama.detransformer(p.joueur());
+            }
+            if (moi(p.joueur())) {
+                visee = -1;
+            }
             return;
+        }
+        NIVEAUX.put(p.joueur(), p.niveau());
+        if (p.niveau() >= 2 && avant < 2) {
+            if (p.annonce()) {
+                ClientKurama.transformer(p.joueur());
+            } else {
+                ClientKurama.dejaLa(p.joueur());
+            }
         }
         if (ELUS.add(p.joueur()) && p.annonce() && mc.level != null) {
             Player joueur = mc.level.getPlayerByUUID(p.joueur());
@@ -161,6 +208,47 @@ public final class ClientMinato {
 
     public static void oublier(UUID joueur) {
         ELUS.remove(joueur);
+        NIVEAUX.remove(joueur);
+        ClientKurama.oublier(joueur);
+    }
+
+    /** Mode Kurama : ma vue se bloque sur cette entité (ou se libère). */
+    public static void viseur(Minato.Viseur p) {
+        visee = p.cible();
+    }
+
+    public static void bijuu(Minato.BijuuDama p) {
+        if (p.points().isEmpty()) {
+            ClientBijuuDama.arreter(p.joueur());
+            return;
+        }
+        LAMES.remove(p.joueur());
+        if (moi(p.joueur())) {
+            pret = System.nanoTime() + (Minato.DUREE_BIJUU + Minato.RECHARGE) * 50_000_000L;
+            visee = -1;
+        }
+        ClientBijuuDama.demarrer(p);
+    }
+
+    /** Ma vue suit la cible bloquée (le mode Kurama) : à chaque image, je la regarde droit dans les yeux. */
+    private static void suivre(float partiel) {
+        Minecraft mc = Minecraft.getInstance();
+        if (visee < 0 || mc.player == null || mc.level == null || enScene()) {
+            return;
+        }
+        Entity e = mc.level.getEntity(visee);
+        if (e == null || !e.isAlive()) {
+            visee = -1;
+            return;
+        }
+        Vec3 d = e.getPosition(partiel).add(0, e.getEyeHeight(), 0).subtract(mc.player.getEyePosition(partiel));
+        float lacet = (float) Math.toDegrees(Math.atan2(-d.x, d.z));
+        float tangage = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+        mc.player.setYRot(lacet);
+        mc.player.setXRot(tangage);
+        mc.player.yRotO = lacet;
+        mc.player.xRotO = tangage;
+        mc.player.setYHeadRot(lacet);
     }
 
     public static void kunai(Minato.Kunai p) {
@@ -329,24 +417,37 @@ public final class ClientMinato {
 
     private static void ecran(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui || !ELUS.contains(mc.player.getUUID()) || ClientMinatoCombo.cinematique()) {
+        if (mc.player == null || mc.options.hideGui || !ELUS.contains(mc.player.getUUID()) || ClientMinatoCombo.cinematique() || ClientBijuuDama.participant()) {
             return;
         }
+        UUID moi = mc.player.getUUID();
+        boolean kurama = niveau(moi) >= 2;
         double reste = pret < 0 ? 0 : -secondes(pret);
-        boolean vol = LAMES.containsKey(mc.player.getUUID()) && !LAMES.get(mc.player.getUUID()).plante;
-        String kunai = vol ? "Kunai (en vol…)" : reste > 0 ? String.format("Kunai (%.0f s)", Math.ceil(reste)) : "Lancer le kunai";
-        String titre = "MINATO  ·  ÉCLAIR JAUNE";
-        Marque m = MARQUES.get(mc.player.getUUID());
+        boolean vol = LAMES.containsKey(moi) && !LAMES.get(moi).plante;
+        String kunai = kurama ? (reste > 0 ? String.format("Bijuu Dama (%.0f s)", Math.ceil(reste)) : "Bijuu Dama")
+                : vol ? "Kunai (en vol…)" : reste > 0 ? String.format("Kunai (%.0f s)", Math.ceil(reste)) : "Lancer le kunai";
+        String titre = kurama ? "MINATO  ·  MODE KURAMA" : "MINATO  ·  ÉCLAIR JAUNE";
+        Marque m = MARQUES.get(moi);
         String marque = m == null ? "Aucun kunai posé" : m.type() == 2 ? "Rejoindre " + m.nom() : "Revenir au kunai";
         // le kunai lancé à la main : en vol ou planté, on y va ; sinon on en lance un (après la recharge)
-        Marque lance = LANCES.get(mc.player.getUUID());
-        boolean envol = ENVOLS.containsKey(mc.player.getUUID());
+        Marque lance = LANCES.get(moi);
+        boolean envol = ENVOLS.containsKey(moi);
         double resteJet = pretJet < 0 ? 0 : -secondes(pretJet);
         String jet = envol ? "Attraper le kunai en vol" : lance != null ? (lance.type() == 2 ? "Rejoindre " + lance.nom() : "Aller au kunai lancé")
                 : resteJet > 0 ? String.format("Lancer un kunai (%.0f s)", Math.ceil(resteJet)) : "Lancer un kunai";
-        String[][] lignes = {{"Clic gauche", "Frapper au kunai"}, {"Clic droit", kunai}, {"Accroupi + clic gauche", jet},
-                {"Accroupi + clic droit", "Poser la marque"}, {"Accroupi ×2", marque}, {ClientSusano.EVEIL.getTranslatedKeyMessage().getString(), "Rendormir"}};
-        boolean[] gris = {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, false};
+        double resteEclair = pretEclair < 0 ? 0 : -secondes(pretEclair);
+        String eveil = ClientSusano.EVEIL.getTranslatedKeyMessage().getString();
+        // Minato 2 au niveau 1 : la touche Éveil donne le mode Kurama
+        boolean monte = !kurama && Minecraft.getInstance().getConnection() != null && minato2;
+        String[][] lignes = kurama
+                ? new String[][] {{"Clic gauche", "Frapper (TP autour)"}, {"Clic droit", kunai},
+                        {"Accroupi + clic droit", resteEclair > 0 ? String.format("TP où tu regardes (%.0f s)", Math.ceil(resteEclair)) : "TP où tu regardes"},
+                        {"Accroupi + clic gauche", jet}, {"Accroupi ×1", "Planter un kunai"}, {"Accroupi ×2", marque}, {eveil, "Rendormir"}}
+                : new String[][] {{"Clic gauche", "Frapper au kunai"}, {"Clic droit", kunai}, {"Accroupi + clic gauche", jet},
+                        {"Accroupi + clic droit", "Poser la marque"}, {"Accroupi ×2", marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
+        boolean[] gris = kurama
+                ? new boolean[] {false, reste > 0, resteEclair > 0, !envol && lance == null && resteJet > 0, false, m == null, false}
+                : new boolean[] {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, false};
         Font font = mc.font;
         int largeurTouche = 0;
         int largeurAction = font.width(titre) - 10;
@@ -358,7 +459,7 @@ public final class ClientMinato {
         int ph = 22 + lignes.length * 13;
         int x = 6;
         int y = g.guiHeight() / 2 - ph / 2;
-        int teinte = 0xFFFFD23A;
+        int teinte = kurama ? 0xFFFF9A2A : 0xFFFFD23A;
         g.fill(x, y, x + pw, y + ph, 0xA0000000);
         g.fill(x, y, x + 2, y + ph, teinte);
         g.drawString(font, titre, x + 8, y + 6, teinte, true);
@@ -402,8 +503,13 @@ public final class ClientMinato {
             // s'accroupir deux fois de suite, vite (les appuis, pas le maintien), avec une marque posée : on y va
             boolean accroupi = mc.options.keyShift.isDown();
             UUID moi = mc.player.getUUID();
-            if (accroupi && !accroupiAvant && mc.screen == null && ELUS.contains(moi) && !ClientMinatoCombo.participant()) {
-                long t = System.nanoTime();
+            boolean libre = mc.screen == null && ELUS.contains(moi) && !enScene();
+            long t = System.nanoTime();
+            if (accroupi && !accroupiAvant && libre) {
+                appuiAccroupi = t;
+                clicPendantAccroupi = false;
+                // un second appui annule le kunai qu'un seul appui allait planter
+                toucheSeule = -1;
                 if (t - dernierAccroupi < DOUBLE_ACCROUPI && MARQUES.containsKey(moi)) {
                     PacketDistributor.sendToServer(new Minato.Rejoindre());
                     dernierAccroupi = 0;
@@ -411,7 +517,24 @@ public final class ClientMinato {
                     dernierAccroupi = t;
                 }
             }
+            // mode Kurama : un seul appui, court, sans clic pendant, et rien derrière : un kunai se plante à ses pieds
+            if (!accroupi && accroupiAvant && libre && niveau(moi) >= 2 && dernierAccroupi == appuiAccroupi
+                    && t - appuiAccroupi < 300_000_000L && !clicPendantAccroupi) {
+                toucheSeule = t;
+            }
+            if (toucheSeule > 0 && t - appuiAccroupi > DOUBLE_ACCROUPI) {
+                toucheSeule = -1;
+                if (libre && niveau(moi) >= 2) {
+                    PacketDistributor.sendToServer(new Minato.PoserPieds());
+                }
+            }
             accroupiAvant = accroupi;
+            if (!ELUS.contains(moi) || niveau(moi) < 2) {
+                visee = -1;
+            }
+            if (pretEclair >= 0 && secondes(pretEclair) > 0) {
+                pretEclair = -1;
+            }
             if (!mc.options.keyAttack.isDown()) {
                 gaucheTenu = false;
             }
@@ -443,7 +566,7 @@ public final class ClientMinato {
                     Player joueur = mc.level.getPlayerByUUID(id);
                     // pas autour de soi en vue à la première personne : les grains passeraient devant les yeux
                     boolean yeux = joueur == mc.player && mc.options.getCameraType().isFirstPerson();
-                    if (joueur != null && !yeux && !ClientMinatoCombo.cache(joueur)) {
+                    if (joueur != null && !yeux && !cache(joueur) && !ClientKurama.mode(id)) {
                         mc.level.addParticle(JAUNE, joueur.getX() + aleat(0.45), joueur.getY() + 0.2 + HASARD.nextDouble() * 1.6,
                                 joueur.getZ() + aleat(0.45), 0, 0.02, 0);
                     }
@@ -459,7 +582,23 @@ public final class ClientMinato {
         @SubscribeEvent
         public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || !ELUS.contains(mc.player.getUUID()) || ClientMinatoCombo.participant()) {
+            if (mc.player == null || !ELUS.contains(mc.player.getUUID()) || enScene()) {
+                return;
+            }
+            if (mc.options.keyShift.isDown()) {
+                clicPendantAccroupi = true;
+            }
+            // mode Kurama, accroupi + clic droit : se téléporter là où il regarde
+            if (event.isUseItem() && mc.options.keyShift.isDown() && niveau(mc.player.getUUID()) >= 2) {
+                event.setCanceled(true);
+                event.setSwingHand(false);
+                if (System.nanoTime() - dernierClic > 300_000_000L) {
+                    dernierClic = System.nanoTime();
+                    if (pretEclair < 0) {
+                        pretEclair = System.nanoTime() + Minato.RECHARGE_ECLAIR * 50_000_000L;
+                    }
+                    PacketDistributor.sendToServer(new Minato.Eclair());
+                }
                 return;
             }
             if (event.isAttack() && mc.options.keyShift.isDown()) {
@@ -482,12 +621,18 @@ public final class ClientMinato {
             }
         }
 
-        /** Pendant un combo, les vrais lanceur et cible ne sont pas dessinés : leurs doubles jouent la scène. */
+        /** Pendant un combo ou une Bijuu Dama, les vrais lanceur et cible ne sont pas dessinés : leurs doubles jouent la scène. */
         @SubscribeEvent
         public static void cacher(RenderLivingEvent.Pre<?, ?> event) {
-            if (ClientMinatoCombo.cache(event.getEntity())) {
+            if (cache(event.getEntity())) {
                 event.setCanceled(true);
             }
+        }
+
+        /** Mode Kurama : la vue bloquée sur la cible, à chaque image. */
+        @SubscribeEvent
+        public static void image(net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event) {
+            suivre(event.getPartialTick().getGameTimeDeltaPartialTick(false));
         }
 
         /** Éveillé, on tient le kunai de Minato, quoi qu'on ait vraiment en main (ici à la première personne). */
@@ -525,7 +670,7 @@ public final class ClientMinato {
             Player p = event.getEntity();
             ItemStack kunai = kunaiEnMain();
             Inventory inv = p.getInventory();
-            if (ELUS.contains(p.getUUID()) && !kunai.isEmpty() && !ClientMinatoCombo.cache(p) && !TENUS.containsKey(p)
+            if (ELUS.contains(p.getUUID()) && !kunai.isEmpty() && !cache(p) && !TENUS.containsKey(p)
                     && inv.selected >= 0 && inv.selected < inv.items.size()) {
                 TENUS.put(p, inv.items.set(inv.selected, kunai));
             }
@@ -550,7 +695,7 @@ public final class ClientMinato {
             float temps = (mc.level.getGameTime() + partiel) / 20F;
             for (UUID id : ELUS) {
                 Player joueur = mc.level.getPlayerByUUID(id);
-                if (joueur == null || ClientMinatoCombo.cache(joueur) || joueur.isInvisible()
+                if (joueur == null || cache(joueur) || ClientKurama.mode(id) || joueur.isInvisible()
                         || (joueur == mc.player && mc.options.getCameraType().isFirstPerson())) {
                     continue;
                 }

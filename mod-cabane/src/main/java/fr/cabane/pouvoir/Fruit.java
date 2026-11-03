@@ -141,11 +141,11 @@ public final class Fruit {
     public static final int RECHARGE_CHOC_2 = 25 * 20;
     private static final float BONUS_ARME_2 = 4;
     private static final float ECLABOUSSURE = 3;
-    private static final float DEGATS_POING = 12;
+    private static final float DEGATS_POING = 14;
     private static final float DEGATS_EXPLOSION = 4;
     private static final float DEGATS_LANCE = 6;
     private static final float DEGATS_METEORE = 5;
-    private static final float DEGATS_FAISAN = 12;
+    private static final float DEGATS_FAISAN = 14;
     private static final double PORTEE_2 = 24;
     private static final double PORTEE_PLUIE = 30;
     public static final int GEL_FAISAN = 60;

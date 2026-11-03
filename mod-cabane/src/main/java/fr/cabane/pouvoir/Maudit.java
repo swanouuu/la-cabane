@@ -228,11 +228,12 @@ public final class Maudit {
     private static final double PORTEE = 40;
     /**
      * Les coups, comme le combo de Minato : la part qui passe par l'armure, et celle qui la traverse (Protection
-     * comprise). Sans armure : 16 (8 cœurs).
+     * comprise). Sans armure : 20 (10 cœurs).
      */
     private static final int[] QUAND = {IMPACT, SPHERE};
-    private static final float[] NORMAL = {6, 3};
-    private static final float[] PERCANT = {4, 3};
+    // (20 en tout depuis l'équilibrage par niveau : autant que le combo de Minato au niveau 1)
+    private static final float[] NORMAL = {7.5F, 3.75F};
+    private static final float[] PERCANT = {5, 3.75F};
     /** Les dégâts du Chidori (data/cabane/damage_type) : ils traversent l'armure et ses enchantements ({@link #degats}). */
     public static final ResourceKey<DamageType> CHIDORI = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("chidori"));
 

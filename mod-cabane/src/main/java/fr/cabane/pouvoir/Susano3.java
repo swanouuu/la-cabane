@@ -57,7 +57,7 @@ public final class Susano3 {
     /** Le grand coup (accroupi) : 15 secondes de recharge ; l'épée touche le sol au bout de 9 ticks. */
     public static final int RECHARGE_GRAND = 300;
     public static final int IMPACT_GRAND = 9;
-    private static final float DEGATS_GRAND = 18;
+    private static final float DEGATS_GRAND = 22;
     /** Il touche tout ce qui est à 8 blocs autour de lui, et jusqu'à 12 blocs devant. */
     private static final double RAYON_GRAND = 8;
     private static final double PORTEE_GRAND = 12;
