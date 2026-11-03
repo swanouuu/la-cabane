@@ -116,6 +116,9 @@ import org.joml.Vector3f;
  * accroupi, il fait pleuvoir des météores là où il vise (ou lance un faisan de glace géant) ; qui le frappe prend feu
  * (ou gèle). Ces tirs volent pour de vrai, tick après tick ({@link Tir}).
  * <p>
+ * Sur « lave3 » ou « glace3 », une troisième fois : le niveau 3 (tout le corps, le casque en tête de dragon, le dragon
+ * guidé au clic droit maintenu, l'attaque ultime accroupi) ; voir {@link Fruit3}.
+ * <p>
  * Rien ne reste au sol : les jets, les geysers et les pics de glace ne sont que dessinés.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
@@ -125,6 +128,9 @@ public final class Fruit {
     /** Les mêmes avec le niveau 2 : seul l'hôte les donne (/pouvoir) ; manger le fruit ne met que sur « lave » ou « glace ». */
     public static final String LAVE2 = "lave2";
     public static final String GLACE2 = "glace2";
+    /** Et avec le niveau 3 (le casque en tête de dragon, le dragon guidé, l'attaque ultime) : voir {@link Fruit3}. */
+    public static final String LAVE3 = "lave3";
+    public static final String GLACE3 = "glace3";
 
     public static final ResourceLocation MAGU = Cabane.id("magu_magu_no_mi");
     public static final ResourceLocation HIE = Cabane.id("hie_hie_no_mi");
@@ -171,26 +177,31 @@ public final class Fruit {
     /** La sorte d'onde de la pluie de météores (la zone et le nuage, côté client). */
     public static final String PLUIE = "pluie";
 
-    private static final ResourceKey<DamageType> MAGMA = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("magma"));
-    private static final ResourceKey<DamageType> GIVRE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("givre"));
+    static final ResourceKey<DamageType> MAGMA = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("magma"));
+    static final ResourceKey<DamageType> GIVRE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("givre"));
     private static final ResourceKey<DamageType> EAU = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("eau"));
 
     public static boolean est(String pouvoir) {
         return lave(pouvoir) || glace(pouvoir);
     }
 
-    /** La glace, au niveau 1 ou 2 (sinon, c'est la lave). */
+    /** La glace, au niveau 1, 2 ou 3 (sinon, c'est la lave). */
     public static boolean glace(String pouvoir) {
-        return GLACE.equals(pouvoir) || GLACE2.equals(pouvoir);
+        return GLACE.equals(pouvoir) || GLACE2.equals(pouvoir) || GLACE3.equals(pouvoir);
     }
 
     public static boolean lave(String pouvoir) {
-        return LAVE.equals(pouvoir) || LAVE2.equals(pouvoir);
+        return LAVE.equals(pouvoir) || LAVE2.equals(pouvoir) || LAVE3.equals(pouvoir);
     }
 
     /** Les listes qui vont jusqu'au niveau 2 ; « lave » et « glace » (ce que donne le fruit) restent au niveau 1. */
     public static boolean deuxieme(String pouvoir) {
         return LAVE2.equals(pouvoir) || GLACE2.equals(pouvoir);
+    }
+
+    /** Les listes qui vont jusqu'au niveau 3 : « lave3 » et « glace3 » (seul l'hôte les donne). */
+    public static boolean troisieme(String pouvoir) {
+        return LAVE3.equals(pouvoir) || GLACE3.equals(pouvoir);
     }
 
     /** Qui a son fruit éveillé en ce moment (et à quel niveau), et quand son jet et son coup accroupi seront prêts (ticks du serveur). */
@@ -483,7 +494,7 @@ public final class Fruit {
         }
     }
 
-    private static Vector3f v(Vec3 p) {
+    static Vector3f v(Vec3 p) {
         return new Vector3f((float) p.x, (float) p.y, (float) p.z);
     }
 
@@ -520,6 +531,10 @@ public final class Fruit {
     static void eveiller(ServerPlayer joueur, int niveau) {
         EVEILLES.put(joueur.getUUID(), niveau);
         boolean glace = glace(Pouvoirs.pouvoir(joueur));
+        if (niveau >= 3) {
+            Fruit3.eveiller(joueur, glace);
+            return;
+        }
         if (niveau >= 2) {
             if (glace) {
                 son(joueur, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.4F, 0.5F);
@@ -540,6 +555,7 @@ public final class Fruit {
     }
 
     static void endormir(ServerPlayer joueur) {
+        Fruit3.endormir(joueur);
         if (EVEILLES.remove(joueur.getUUID()) != null && joueur.isAlive()) {
             // la lave refroidit en sifflant, la glace se fend et fond (ClientFruit la montre se retirer jusqu'à la main)
             if (glace(Pouvoirs.pouvoir(joueur))) {
@@ -555,31 +571,31 @@ public final class Fruit {
         PRET_CHOC.remove(joueur.getUUID());
     }
 
-    private static boolean eveille(ServerPlayer joueur) {
+    static boolean eveille(ServerPlayer joueur) {
         return EVEILLES.containsKey(joueur.getUUID()) && est(Pouvoirs.pouvoir(joueur));
     }
 
     /** Son niveau en ce moment : 0 endormi, 1 la main, 2 la moitié du corps. */
-    private static int niveau(ServerPlayer joueur) {
+    static int niveau(ServerPlayer joueur) {
         return eveille(joueur) ? EVEILLES.get(joueur.getUUID()) : 0;
     }
 
-    private static void son(ServerPlayer joueur, SoundEvent son, float volume, float hauteur) {
+    static void son(ServerPlayer joueur, SoundEvent son, float volume, float hauteur) {
         joueur.serverLevel().playSound(null, joueur.getX(), joueur.getEyeY(), joueur.getZ(), son, SoundSource.PLAYERS, volume, hauteur);
     }
 
     /** La main du fruit, bras tendu devant : la gauche pour la lave, la droite pour la glace. */
-    private static Vec3 main(ServerPlayer joueur, boolean glace) {
+    static Vec3 main(ServerPlayer joueur, boolean glace) {
         Vec3 regard = joueur.getLookAngle();
         Vec3 droite = new Vec3(-regard.z, 0, regard.x).normalize();
         return joueur.getEyePosition().add(regard.scale(0.55)).add(droite.scale(glace ? 0.34 : -0.34)).add(0, -0.4, 0);
     }
 
-    private static DamageSource source(ServerPlayer joueur, ResourceKey<DamageType> type) {
+    static DamageSource source(ServerPlayer joueur, ResourceKey<DamageType> type) {
         return new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(type), joueur);
     }
 
-    private static void blesser(LivingEntity cible, DamageSource source, float degats) {
+    static void blesser(LivingEntity cible, DamageSource source, float degats) {
         dansPouvoir = true;
         try {
             cible.hurt(source, degats);
@@ -589,7 +605,7 @@ public final class Fruit {
     }
 
     /** Le froid : la cible se couvre de givre (comme dans la neige poudreuse), sans en prendre les dégâts. */
-    private static void givrer(LivingEntity cible) {
+    static void givrer(LivingEntity cible) {
         cible.setTicksFrozen(Math.max(cible.getTicksFrozen(), cible.getTicksRequiredToFreeze() - 1));
     }
 
@@ -650,6 +666,9 @@ public final class Fruit {
             return;
         }
         boolean glace = glace(Pouvoirs.pouvoir(joueur));
+        if (niveau(joueur) >= 3 && Fruit3.ultime(joueur, glace)) {
+            return;
+        }
         if (niveau(joueur) >= 2) {
             PRET_CHOC.put(joueur.getUUID(), maintenant + RECHARGE_CHOC_2);
             choc2(joueur, glace);
@@ -689,7 +708,7 @@ public final class Fruit {
     }
 
     /** L'ère glaciaire (2 s) ou le faisan (3 s) : pris dans un bloc de glace, il ne bouge plus. */
-    private static void geler(LivingEntity cible, int ticks) {
+    static void geler(LivingEntity cible, int ticks) {
         ServerLevel monde = (ServerLevel) cible.level();
         GELES.put(cible.getId(), new Gele(monde, cible.position(), monde.getServer().getTickCount() + ticks));
         cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ticks + 20, 1));

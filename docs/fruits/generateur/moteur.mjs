@@ -103,7 +103,11 @@ export const croix = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * 
 
 export const tourner = (v, n, ang) => { const c = Math.cos(ang), s = Math.sin(ang), k = croix(n, v), d = n[0] * v[0] + n[1] * v[1] + n[2] * v[2]; return v.map((x, i) => x * c + k[i] * s + n[i] * d * (1 - c)); };
 
-export function scene({ lacet = -28, tangage = 10, echelle = 9, w = 360, h = 520, pied = null, aura = null, fond = [236, 236, 242], centre = [0, 0, 0] }) {
+/**
+ * Une scène vue de loin (projection parallèle) ; avec recul, la caméra est à cette distance du centre et voit en
+ * perspective (ce qui est près est plus gros), comme en jeu.
+ */
+export function scene({ lacet = -28, tangage = 10, echelle = 9, w = 360, h = 520, pied = null, aura = null, fond = [236, 236, 242], centre = [0, 0, 0], recul = null }) {
   const img = Buffer.alloc(w * h * 4);
   const z = new Float32Array(w * h).fill(-1e9);
   const ailes = new Uint8Array(w * h);
@@ -121,16 +125,20 @@ export function scene({ lacet = -28, tangage = 10, echelle = 9, w = 360, h = 520
     }
   }
   const a = (lacet * Math.PI) / 180, b = (tangage * Math.PI) / 180;
-  const vue = ([x0, y0, z0]) => {
+  const tourne = ([x0, y0, z0]) => {
     const x = x0 - centre[0], y = y0 - centre[1], zz = z0 - centre[2];
     const x1 = x * Math.cos(a) + zz * Math.sin(a), z1 = -x * Math.sin(a) + zz * Math.cos(a);
-    const y2 = y * Math.cos(b) - z1 * Math.sin(b), z2 = y * Math.sin(b) + z1 * Math.cos(b);
-    return [w / 2 + x1 * echelle, (pied ?? h * 0.88) - y2 * echelle, z2];
+    return [x1, y * Math.cos(b) - z1 * Math.sin(b), y * Math.sin(b) + z1 * Math.cos(b)];
   };
-  const dirVue = (n) => { const o = vue([0, 0, 0]), p = vue(n); return [(p[0] - o[0]) / echelle, -(p[1] - o[1]) / echelle, p[2] - o[2]]; };
+  const vue = (p) => {
+    const [x1, y2, z2] = tourne(p), f = recul ? recul / Math.max(1, recul - z2) : 1;
+    return [w / 2 + x1 * echelle * f, (pied ?? h * 0.88) - y2 * echelle * f, z2];
+  };
+  const dirVue = (n) => { const o = tourne([0, 0, 0]), p = tourne(n); return [p[0] - o[0], p[1] - o[1], p[2] - o[2]]; };
   /** Un quadrilatère plein, de couleur unie, à la profondeur de son centre. */
   const quad = (coins, c, decale = 0, aile = false) => {
     const pts = coins.map(vue);
+    if (recul && pts.some((p) => p[2] > recul - 4)) return;
     const zc = pts.reduce((s, p) => s + p[2], 0) / 4 + decale;
     const [p0, p1, p2] = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]) > 1e-6 ? [pts[0], pts[1], pts[2]] : [pts[0], pts[2], pts[3]];
     const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2], vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
@@ -155,6 +163,7 @@ export function scene({ lacet = -28, tangage = 10, echelle = 9, w = 360, h = 520
   /** Un quadrilatère transparent (plan) : il teinte ce qui est derrière lui, sans rien cacher. À dessiner en dernier. */
   const voile = (coins, c, alpha) => {
     const pts = coins.map(vue);
+    if (recul && pts.some((p) => p[2] > recul - 4)) return;
     const [p0, p1, p2] = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]) > 1e-6 ? [pts[0], pts[1], pts[2]] : [pts[0], pts[2], pts[3]];
     const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2], vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
     const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
@@ -178,7 +187,8 @@ export function scene({ lacet = -28, tangage = 10, echelle = 9, w = 360, h = 520
   };
   const lumiere = (n, deuxFaces) => {
     const v = dirVue(n);
-    if (!deuxFaces && v[2] < 0.01) return -1;
+    // en perspective, une face peut se voir même tournée un peu à l'envers : le tampon de profondeur trie
+    if (!deuxFaces && !recul && v[2] < 0.01) return -1;
     const l = norme([-0.35, 0.55, 0.75]);
     const d = Math.abs(v[0] * l[0] + v[1] * l[1] + v[2] * l[2]);
     return 0.62 + 0.42 * d;

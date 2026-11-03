@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
-            Fruit.LAVE, Fruit.LAVE2, Fruit.GLACE, Fruit.GLACE2, Ichibi.NOM, Foudre.NOM, Foudre.NOM2);
+            Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Foudre.NOM, Foudre.NOM2);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -163,7 +163,7 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) ? 3
+                return pouvoir.equals(Hachibi.NOM2) ? 4 : Susano3.est(pouvoir) || Fruit.troisieme(pouvoir) ? 3
                         : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) ? 2 : 1;
             }
         }
@@ -404,13 +404,14 @@ public final class Pouvoirs {
      * Endormi (niveau 0), plus rien.
      */
     private static void armure(ServerPlayer joueur, int niveau) {
-        // la marque maudite, les fruits du démon et la foudre : comme du fer
-        boolean fer = Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur));
+        // la marque maudite, les fruits du démon (jusqu'au niveau 2) et la foudre : comme du fer
+        boolean fer = Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) && niveau < 3 || Foudre.est(pouvoir(joueur));
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = pouvoir(joueur).equals(Hachibi.NOM2) && niveau >= 3;
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
         // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2, toujours au plus haut)
-        boolean chevalier = Susano3.est(pouvoir(joueur)) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
+        // (et les fruits au niveau 3)
+        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
         // Minato (niveau 1) compte comme un niveau 2 : de la netherite
         boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : chevalier ? 24 : 20);

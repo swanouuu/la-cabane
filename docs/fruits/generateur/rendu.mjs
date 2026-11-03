@@ -62,7 +62,7 @@ function pave(sc, a, b, T, couleur, pas = 0.5, decale = 0, aile = false) {
       const c = couleur(f.nom, (i + 0.5) / nu, (j + 0.5) / nv, i, j);
       if (!c) continue;
       const p = (u, v) => T.p(ajoute(ajoute(f.O, fois(f.U, u / nu)), fois(f.V, v / nv)));
-      sc.quad([p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1)], c[3] === 1 ? c.slice(0, 3) : clair(c, l), decale, aile);
+      sc.quad([p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1)], c[3] === 1 ? c.slice(0, 3) : clair(c, l), decale, aile, { emissif: c[3] === 1, normale: T.n(f.N) });
     }
   }
 }
@@ -83,13 +83,13 @@ function pointe(sc, b, dir, longueur, largeur, couleur, aile, emissif) {
   const coin = (a, c) => b.map((x, i) => x + ((e1[i] * a + e2[i] * c) * largeur) / 2);
   const base = [coin(-1, -1), coin(1, -1), coin(1, 1), coin(-1, 1)];
   const bout = b.map((x, i) => x + d[i] * longueur);
-  sc.quad(base, emissif ? couleur(0) : clair(couleur(0), sc.lumiere(fois(d, -1), true)), 0, aile);
+  sc.quad(base, emissif ? couleur(0) : clair(couleur(0), sc.lumiere(fois(d, -1), true)), 0, aile, { emissif, normale: fois(d, -1) });
   for (let k = 0; k < 4; k++) {
     const p0 = base[k], p1 = base[(k + 1) % 4];
-    const l = emissif ? 1 : sc.lumiere(norme(croix(sous(p1, p0), sous(bout, p0))), true);
+    const nf = norme(croix(sous(p1, p0), sous(bout, p0))), l = emissif ? 1 : sc.lumiere(nf, true);
     for (let j = 0; j < 4; j++) {
       const q = (p, t) => p.map((x, i) => x + (bout[i] - x) * t);
-      sc.quad([q(p0, j / 4), q(p1, j / 4), q(p1, (j + 1) / 4), q(p0, (j + 1) / 4)], clair(couleur(j / 3), l), 0, aile);
+      sc.quad([q(p0, j / 4), q(p1, j / 4), q(p1, (j + 1) / 4), q(p0, (j + 1) / 4)], clair(couleur(j / 3), l), 0, aile, { emissif, normale: nf, centre: b });
     }
   }
 }
@@ -183,12 +183,16 @@ function prisDedans(m, s, cote, nom, t) {
   }
 }
 
-/** La couleur de la matière de l'éveil 2 sur ce texel (lave ou glace), éclairée par l, et si elle brille. */
+/**
+ * La couleur de la matière de l'éveil 2 sur ce texel (lave ou glace), éclairée par l, et si elle brille. m.texture(i, j,
+ * k, y) peut remplacer celle de la glace (l'éveil 3).
+ */
 function matiere(m, nom, t, l) {
   const [x, y, z] = t.centre, N = t.N;
   const [a, b] = Math.abs(N[2]) > 0.5 ? [x, y] : Math.abs(N[0]) > 0.5 ? [z, y] : [x, z];
   const k = FACES[t.face] + 10 * PARTIES(false).findIndex((p) => p[0] === nom);
-  const c = m.sorte === "lave" ? magma(Math.floor(a + 40), Math.floor(b + 40), k, 3, 0.85) : glace(Math.floor(a + 40), Math.floor(40 - b), k, 1 - y / 32);
+  const c = m.sorte === "lave" ? magma(Math.floor(a + 40), Math.floor(b + 40), k, m.taille ?? 3, m.ouvert ?? 0.85)
+    : (m.texture ?? glace)(Math.floor(a + 40), Math.floor(40 - b), k, 1 - y / 32);
   return c[3] === 1 ? c.slice(0, 3) : clair(c, l);
 }
 
@@ -231,7 +235,7 @@ function perso(sc, peau, o = {}) {
   const m = o.moitie, s = m && (m.sorte === "lave" ? 1 : -1), cote = s > 0 ? "G" : "D";
   for (const [nom, boite, uv1, uv2, gonfle] of PARTIES(false)) {
     for (const [uv, g, d] of [[uv1, 0, 0], [uv2, gonfle, 0.02]]) for (const t of texels(boite, uv, g, 1)) {
-      const pris = m ? couvert(m, s, cote, nom, t) : 0;
+      const pris = m ? (m.couvert ?? couvert)(m, s, cote, nom, t) : 0;
       if (pris === 2) {
         const i = (t.ty * 64 + t.tx) * 4;
         const l = sc.lumiere(T[nom].n(t.N), false);
@@ -272,7 +276,7 @@ function perso(sc, peau, o = {}) {
         if (!garde(t) || (nom === brasElem && t.centre[1] < 16.4)) continue;
         const l = sc.lumiere(T[nom].n(t.N), false);
         if (l < 0) continue;
-        if (m && couvert(m, s, cote, nom, t) === 1) {
+        if (m && (m.couvert ?? couvert)(m, s, cote, nom, t) === 1) {
           sc.quad(t.coins.map(T[nom].p), matiere(m, nom, t, l), 0.04, true);
           continue;
         }

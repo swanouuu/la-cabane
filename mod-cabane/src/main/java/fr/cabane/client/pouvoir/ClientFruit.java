@@ -93,6 +93,13 @@ public final class ClientFruit {
     private static final ResourceLocation[] MOITIE_LAVE_ETAPES = etapes("moitie_lave", 12);
     private static final ResourceLocation[] MOITIE_LAVE_LUEUR_ETAPES = etapes("moitie_lave_lueur", 12);
     private static final ResourceLocation[] MOITIE_GLACE_ETAPES = etapes("moitie_glace", 12);
+    /** Le niveau 3 : tout le corps, sauf une partie de l'autre bras (docs/fruits/generateur/jeu3.mjs), et ses étapes. */
+    private static final ResourceLocation MOITIE3_LAVE = Cabane.id("textures/entity/fruit/moitie3_lave.png");
+    private static final ResourceLocation MOITIE3_LAVE_LUEUR = Cabane.id("textures/entity/fruit/moitie3_lave_lueur.png");
+    private static final ResourceLocation MOITIE3_GLACE = Cabane.id("textures/entity/fruit/moitie3_glace.png");
+    private static final ResourceLocation[] MOITIE3_LAVE_ETAPES = etapes("moitie3_lave", 8);
+    private static final ResourceLocation[] MOITIE3_LAVE_LUEUR_ETAPES = etapes("moitie3_lave_lueur", 8);
+    private static final ResourceLocation[] MOITIE3_GLACE_ETAPES = etapes("moitie3_glace", 8);
     private static final ResourceLocation NEIGE_POUDREUSE = ResourceLocation.withDefaultNamespace("textures/misc/powder_snow_outline.png");
     private static final RandomSource HASARD = RandomSource.create();
     private static final double DUREE_JET = 0.4;
@@ -103,6 +110,9 @@ public final class ClientFruit {
     private static final double MONTEE_CORPS = 1.9;
     private static final double DESCENTE_MAIN = 0.8;
     private static final double DESCENTE_CORPS = 1.2;
+    /** Le niveau 3 : la matière finit de prendre le corps, puis le casque se forme. */
+    private static final double MONTEE_3 = 1.6;
+    private static final double DESCENTE_3 = 1.0;
 
     private static ResourceLocation[] etapes(String nom, int images) {
         ResourceLocation[] l = new ResourceLocation[images - 1];
@@ -259,11 +269,16 @@ public final class ClientFruit {
     private static float forceSecousse;
 
     private static void secouer(Vec3 p, float force) {
+        secouer(p, force, 18);
+    }
+
+    /** La même, jusqu'à « portee » blocs (le niveau 3 secoue de plus loin). */
+    static void secouer(Vec3 p, float force, double portee) {
         Minecraft mc = Minecraft.getInstance();
-        double d = mc.player == null ? 99 : mc.player.position().distanceTo(p);
-        if (d < 18) {
+        double d = mc.player == null ? 999 : mc.player.position().distanceTo(p);
+        if (d < portee) {
             secousse = System.nanoTime();
-            forceSecousse = Math.max(forceSecousse * 0.5F, force * (float) (1 - d / 18));
+            forceSecousse = Math.max(forceSecousse * 0.5F, force * (float) (1 - d / portee));
         }
     }
 
@@ -298,6 +313,7 @@ public final class ClientFruit {
             if (mc.player != null && p.joueur().equals(mc.player.getUUID())) {
                 pretJet = 0;
                 pretChoc = 0;
+                ClientFruit3.endormi();
             }
         }
     }
@@ -320,7 +336,7 @@ public final class ClientFruit {
         double t = secondes(tr.debut), l = tr.de;
         while (l != tr.a) {
             boolean monte = tr.a > l;
-            double duree = (monte ? l < 1 : l <= 1) ? (monte ? MONTEE_MAIN : DESCENTE_MAIN) : (monte ? MONTEE_CORPS : DESCENTE_CORPS);
+            double duree = monte ? (l < 1 ? MONTEE_MAIN : l < 2 ? MONTEE_CORPS : MONTEE_3) : (l <= 1 ? DESCENTE_MAIN : l <= 2 ? DESCENTE_CORPS : DESCENTE_3);
             double borne = monte ? Math.min(tr.a, Math.floor(l) + 1) : Math.max(tr.a, Math.ceil(l) - 1);
             double reste = Math.abs(borne - l) * duree;
             if (t < reste) {
@@ -413,8 +429,13 @@ public final class ClientFruit {
         return v.id;
     }
 
+    /** Sa liste, s'il est éveillé (null sinon). */
+    static String sorte(UUID joueur) {
+        return EVEILLES.get(joueur);
+    }
+
     /** Son niveau, s'il est éveillé (0 sinon). */
-    private static int niveau(UUID joueur) {
+    static int niveau(UUID joueur) {
         return EVEILLES.containsKey(joueur) ? NIVEAUX.getOrDefault(joueur, 1) : 0;
     }
 
@@ -651,6 +672,35 @@ public final class ClientFruit {
         rendreMoitie(ps, buffers, lumiere, glace, dessous, avance, tete.head, torse.body, torse.rightArm, torse.leftArm, jambes.rightLeg, jambes.leftLeg);
     }
 
+    /** Le niveau 3 : tout le corps, par-dessus l'armure là où il en porte ; « avance » : de 0 à 1, pendant qu'elle le gagne. */
+    private static void moitie3(PoseStack ps, MultiBufferSource buffers, int lumiere, AbstractClientPlayer joueur, PlayerModel<AbstractClientPlayer> parent,
+            boolean glace, int dessous, double avance) {
+        boolean fin = fin(joueur);
+        PlayerModel<AbstractClientPlayer> mince = modeleMoitie(fin, false), epais = modeleMoitie(fin, true);
+        parent.copyPropertiesTo(mince);
+        parent.copyPropertiesTo(epais);
+        PlayerModel<AbstractClientPlayer> tete = joueur.getItemBySlot(EquipmentSlot.HEAD).isEmpty() ? mince : epais;
+        PlayerModel<AbstractClientPlayer> torse = joueur.getItemBySlot(EquipmentSlot.CHEST).isEmpty() ? mince : epais;
+        PlayerModel<AbstractClientPlayer> jambes = joueur.getItemBySlot(EquipmentSlot.LEGS).isEmpty() && joueur.getItemBySlot(EquipmentSlot.FEET).isEmpty()
+                ? mince : epais;
+        ModelPart[] parties = {tete.head, torse.body, torse.rightArm, torse.leftArm, jambes.rightLeg, jambes.leftLeg};
+        if (glace) {
+            VertexConsumer c = buffers.getBuffer(RenderType.entityTranslucent(image(MOITIE3_GLACE_ETAPES, MOITIE3_GLACE, avance)));
+            for (ModelPart p : parties) {
+                p.render(ps, c, lumiere, dessous);
+            }
+            return;
+        }
+        VertexConsumer c = buffers.getBuffer(RenderType.entityCutoutNoCull(image(MOITIE3_LAVE_ETAPES, MOITIE3_LAVE, avance)));
+        for (ModelPart p : parties) {
+            p.render(ps, c, lumiere, dessous);
+        }
+        VertexConsumer l = buffers.getBuffer(RenderType.eyes(image(MOITIE3_LAVE_LUEUR_ETAPES, MOITIE3_LAVE_LUEUR, avance)));
+        for (ModelPart p : parties) {
+            p.render(ps, l, LightTexture.FULL_BRIGHT, dessous);
+        }
+    }
+
     /**
      * Ce qui sort de la moitié du corps, comme sur la planche du niveau 2 : des cristaux de glace, ou des flammes. La
      * partie (0 tête, 1 corps, 2 bras droit, 3 bras gauche, 4 jambe droite, 5 jambe gauche), le pied et la direction en
@@ -749,7 +799,11 @@ public final class ClientFruit {
             boolean glace = glace(sorte);
             int dessous = LivingEntityRenderer.getOverlayCoords(joueur, 0);
             double e = etendueVisible(joueur.getUUID());
-            if (e > 1) {
+            if (e > 2) {
+                moitie3(ps, buffers, lumiere, joueur, getParentModel(), glace, dessous, e - 2);
+                pousses(ps, buffers, getParentModel(), glace, 1, age / 20.0);
+                ClientFruit3.armure(ps, buffers, lumiere, joueur, getParentModel(), glace, dessous, e - 2);
+            } else if (e > 1) {
                 moitie(ps, buffers, lumiere, joueur, getParentModel(), glace, dessous, e - 1);
                 pousses(ps, buffers, getParentModel(), glace, e - 1, age / 20.0);
             }
@@ -814,11 +868,11 @@ public final class ClientFruit {
 
     // ================================================================ les touches
 
-    private static long pretJet, pretChoc;
+    static long pretJet, pretChoc;
     private static boolean accroupiAvant;
 
     /** La main du fruit (la gauche pour la lave) : la main principale ou l'autre, selon le bras du joueur. */
-    private static InteractionHand mainDuFruit(Player joueur, boolean glace) {
+    static InteractionHand mainDuFruit(Player joueur, boolean glace) {
         HumanoidArm bras = glace ? HumanoidArm.RIGHT : HumanoidArm.LEFT;
         return joueur.getMainArm() == bras ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
     }
@@ -888,6 +942,10 @@ public final class ClientFruit {
         long maintenant = System.nanoTime();
         double jet = Math.max(0, (pretJet - maintenant) / 1e9), choc = Math.max(0, (pretChoc - maintenant) / 1e9);
         boolean glace = glace(sorte), fort = niveau >= 2;
+        if (niveau >= 3) {
+            panneau3(g, font, glace, jet, choc);
+            return;
+        }
         String gauche = fort ? (glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse")
                 : glace ? "Arme +2 dégâts, ralentit" : "Arme +2 dégâts, enflamme";
         String droit = fort ? (glace ? "Grande flèche de glace" : "Grand poing de magma") : glace ? "Jet de glace" : "Jet de lave";
@@ -896,7 +954,8 @@ public final class ClientFruit {
                 {Clavier.gauche(), gauche},
                 {Clavier.droite(), droit + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
                 {Clavier.accroupi(), accroupi + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
-                {Clavier.nom(ClientSusano.EVEIL), Fruit.deuxieme(sorte) && !fort ? "Niveau 2 : la moitié du corps" : "Rendormir"},
+                {Clavier.nom(ClientSusano.EVEIL), (Fruit.deuxieme(sorte) || Fruit.troisieme(sorte)) && !fort ? "Niveau 2 : la moitié du corps"
+                        : Fruit.troisieme(sorte) ? "Niveau 3 : tout le corps" : "Rendormir"},
         };
         boolean[] gris = {false, jet > 0, choc > 0, false};
         String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + (fort ? "  ·  niveau 2" : "");
@@ -915,6 +974,47 @@ public final class ClientFruit {
             int ly = y + 21 + i * 13;
             g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
             g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
+            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
+        }
+    }
+
+    /**
+     * Le panneau au niveau 3 : le clic droit court (le tir du niveau 2) et maintenu (le dragon), l'accroupi (l'attaque
+     * ultime tant qu'elle n'est pas faite, ensuite celui du niveau 2).
+     */
+    private static void panneau3(GuiGraphics g, Font font, boolean glace, double jet, double choc) {
+        double dragon = ClientFruit3.attenteDragon(), ultime = ClientFruit3.attenteUltime();
+        boolean prete = ClientFruit3.ultimePrete();
+        String accroupi = prete ? (glace ? "Ultime : le Hyoton (une fois)" : "Ultime : le soleil de magma (une fois)")
+                : (glace ? "Faisan de glace" : "Pluie de météores") + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "");
+        String[][] lignes = {
+                {Clavier.gauche(), glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse"},
+                {Clavier.droite(), (glace ? "Grande flèche de glace" : "Grand poing de magma") + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
+                {Clavier.droite() + " maintenu", (glace ? "Dragon de glace : il suit ton regard" : "Dragon de lave : il suit ton regard")
+                        + (dragon > 0 ? "  " + (int) Math.ceil(dragon) + " s" : "")},
+                {Clavier.accroupi(), accroupi},
+                {"", prete ? "" : ClientFruit3.ultimeFaite() ? "Ultime : déjà faite pendant cet éveil" : "Ultime : encore " + (int) Math.ceil(ultime / 60) + " min"},
+                {Clavier.nom(ClientSusano.EVEIL), "Rendormir"},
+        };
+        boolean[] gris = {false, jet > 0, dragon > 0, !prete && choc > 0, true, false};
+        String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + "  ·  niveau 3";
+        int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
+        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
+        for (String[] l : lignes) {
+            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
+            largeurAction = Math.max(largeurAction, font.width(l[1]));
+        }
+        int pw = largeurTouche + largeurAction + 26, ph = 22 + lignes.length * 13;
+        int x = 6, y = g.guiHeight() / 2 - ph / 2;
+        g.fill(x, y, x + pw, y + ph, 0xA0000000);
+        g.fill(x, y, x + 2, y + ph, teinte);
+        g.drawString(font, titre, x + 8, y + 6, teinte, true);
+        for (int i = 0; i < lignes.length; i++) {
+            int ly = y + 21 + i * 13;
+            if (!lignes[i][0].isEmpty()) {
+                g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
+                g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
+            }
             g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
         }
     }
@@ -1661,7 +1761,11 @@ public final class ClientFruit {
             long maintenant = System.nanoTime();
             // s'accroupir (l'appui, pas le maintien) : l'éruption ou l'ère glaciaire
             boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc) {
+            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && niveau(mc.player.getUUID()) >= 3 && ClientFruit3.ultimePrete()) {
+                ClientFruit3.ultimeDemandee();
+                mc.player.swing(mainDuFruit(mc.player, glace(moi)));
+                PacketDistributor.sendToServer(new Fruit.Choc());
+            } else if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc) {
                 pretChoc = maintenant + (niveau(mc.player.getUUID()) >= 2 ? Fruit.RECHARGE_CHOC_2 : Fruit.RECHARGE_CHOC) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Choc());
@@ -1719,7 +1823,8 @@ public final class ClientFruit {
             }
             event.setCanceled(true);
             event.setSwingHand(false);
-            if (System.nanoTime() >= pretJet) {
+            // au niveau 3, court ou maintenu : ClientFruit3 regarde la touche à chaque tick
+            if (niveau(mc.player.getUUID()) < 3 && System.nanoTime() >= pretJet) {
                 pretJet = System.nanoTime() + (niveau(mc.player.getUUID()) >= 2 ? Fruit.RECHARGE_JET_2 : Fruit.RECHARGE_JET) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Jet());
