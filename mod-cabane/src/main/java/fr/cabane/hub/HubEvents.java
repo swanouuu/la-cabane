@@ -409,7 +409,10 @@ public final class HubEvents {
         welcome(joueur);
     }
 
-    /** /start : la vitre de la passerelle s'ouvre, tout le monde embarque, l'avion devient le point de départ. */
+    /**
+     * /start : la vitre de la passerelle s'ouvre, l'avion devient le point de départ, et tout le monde part pour la
+     * cinématique du décollage (Decollage) ; à la fin, on se réveille dans l'avion en feu.
+     */
     public static void demarrer(MinecraftServer server, net.minecraft.commands.CommandSourceStack source) {
         HubData data = HubData.get(server);
         if (data.centre() == null) {
@@ -420,19 +423,30 @@ public final class HubEvents {
             source.sendFailure(Component.literal("La partie a déjà commencé."));
             return;
         }
+        if (Decollage.enCours()) {
+            source.sendFailure(Component.literal("Une cinématique du décollage est déjà en cours : attends qu'elle finisse."));
+            return;
+        }
         data.setDemarre(true);
         ServerLevel level = server.overworld();
         level.setDefaultSpawnPos(HubBuilder.dansAvion(data.centre()), 90F);
         for (BlockPos p : HubBuilder.porteEmbarquement(data.centre())) {
             level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         }
+        server.getPlayerList().broadcastSystemMessage(Component.literal("✈ Embarquement ! Bon vol vers Beauvais…").withStyle(ChatFormatting.GOLD), false);
+        List<ServerPlayer> joueurs = server.getPlayerList().getPlayers().stream().filter(p -> !p.isSpectator()).toList();
+        if (Decollage.lancer(server, joueurs, true, 0, 0)) {
+            return;
+        }
+        // pas de cinématique (l'aéroport manque) : on se réveille tout de suite dans l'avion en feu
         for (ServerPlayer joueur : server.getPlayerList().getPlayers()) {
             if (joueur.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.ADVENTURE) {
                 joueur.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
             }
-            welcome(joueur);
+            if (!welcome(joueur)) {
+                reveil(joueur);
+            }
         }
-        server.getPlayerList().broadcastSystemMessage(Component.literal("✈ Décollage ! Bon vol vers Beauvais…").withStyle(ChatFormatting.GOLD), false);
     }
 
     /** Mort sans lit : on renaît dans l'avion, avec un parachute. */
@@ -447,15 +461,15 @@ public final class HubEvents {
         joueur.sendSystemMessage(Component.literal("Retour dans l'avion… Prends ton parachute et saute !").withStyle(ChatFormatting.YELLOW));
     }
 
-    /** Première connexion : le joueur se réveille dans l'avion en feu, avec son kit de départ. */
-    public static void welcome(ServerPlayer player) {
+    /** Première connexion : le joueur se réveille dans l'avion en feu, avec son kit de départ. Faux s'il l'avait déjà. */
+    public static boolean welcome(ServerPlayer player) {
         HubData data = HubData.get(player.server);
         if (data.centre() == null) {
             player.sendSystemMessage(Component.literal("Le centre de map se construit, ça arrive dans un instant…").withStyle(ChatFormatting.GRAY));
-            return;
+            return false;
         }
         if (!data.markKit(player.getUUID())) {
-            return;
+            return false;
         }
         give(player, new ItemStack(CabaneItems.TELEPHONE.get()));
         Item questBook = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("ftbquests", "book"));
@@ -464,24 +478,32 @@ public final class HubEvents {
         }
         give(player, new ItemStack(Items.BREAD, 8));
         give(player, new ItemStack(Items.TORCH, 16));
-        BlockPos centre = data.centre();
-        if (centre != null) {
-            ServerLevel level = player.server.overworld();
-            BlockPos coffre = HubBuilder.coffreAvion(centre);
-            if (level.getBlockEntity(coffre) instanceof Container conteneur) {
-                remplirParachutes(conteneur);
-            }
-            BlockPos dedans = HubBuilder.dansAvion(centre);
-            player.teleportTo(level, dedans.getX() + 0.5, dedans.getY(), dedans.getZ() + 0.5, 90F, 0F);
-            level.playSound(null, dedans, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.AMBIENT, 0.6F, 0.7F);
-        }
-        player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
-        player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("MAYDAY !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
-        player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Prends un parachute dans le coffre et saute !").withStyle(ChatFormatting.YELLOW)));
+        reveil(player);
         player.sendSystemMessage(Component.literal("Ton avion est en feu au-dessus de la jungle !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         player.sendSystemMessage(Component.literal("• Prends un parachute dans le coffre, saute, puis clic droit en l'air pour l'ouvrir.").withStyle(ChatFormatting.YELLOW));
         player.sendSystemMessage(Component.literal("• En bas, le village de Beauvais t'accueille. Va écouter Marcel le Conteur, au feu de camp : il connaît l'histoire du village.").withStyle(ChatFormatting.YELLOW));
         player.sendSystemMessage(Component.literal("• Téléphone : touche N. Ton argent s'affiche à droite de l'écran.").withStyle(ChatFormatting.YELLOW));
+        return true;
+    }
+
+    /** Le réveil dans l'avion en feu : des parachutes dans le coffre, une explosion, MAYDAY. */
+    public static void reveil(ServerPlayer player) {
+        BlockPos centre = HubData.get(player.server).centre();
+        if (centre == null) {
+            return;
+        }
+        ServerLevel level = player.server.overworld();
+        BlockPos coffre = HubBuilder.coffreAvion(centre);
+        if (level.getBlockEntity(coffre) instanceof Container conteneur) {
+            remplirParachutes(conteneur);
+        }
+        BlockPos dedans = HubBuilder.dansAvion(centre);
+        player.teleportTo(level, dedans.getX() + 0.5, dedans.getY(), dedans.getZ() + 0.5, 90F, 0F);
+        player.fallDistance = 0;
+        level.playSound(null, dedans, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.AMBIENT, 0.6F, 0.7F);
+        player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
+        player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("MAYDAY !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
+        player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Prends un parachute dans le coffre et saute !").withStyle(ChatFormatting.YELLOW)));
     }
 
     private static void remplirParachutes(Container coffre) {

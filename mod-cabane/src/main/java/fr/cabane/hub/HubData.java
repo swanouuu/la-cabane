@@ -21,6 +21,8 @@ public class HubData extends SavedData {
     private boolean demarre;
     /** La version des PNJ posés (voir HubEvents.VERSION_PNJ). */
     private int versionPnj;
+    /** La version de l'aéroport construit dans la dimension du décollage (voir AeroportBuilder.VERSION). */
+    private int versionAeroport;
     /** Le Président est-il tombé ? */
     private boolean libere;
     /** Le centre du PLATO 6Z (au sol), une fois construit. */
@@ -47,6 +49,7 @@ public class HubData extends SavedData {
         NbtUtils.readBlockPos(tag, "centre").ifPresent(pos -> data.centre = pos);
         data.demarre = tag.getBoolean("demarre");
         data.versionPnj = tag.getInt("versionPnj");
+        data.versionAeroport = tag.getInt("versionAeroport");
         data.libere = tag.getBoolean("libere");
         NbtUtils.readBlockPos(tag, "forteresse").ifPresent(pos -> data.forteresse = pos);
         NbtUtils.readBlockPos(tag, "ileVegeta").ifPresent(pos -> data.ileVegeta = pos);
@@ -68,6 +71,7 @@ public class HubData extends SavedData {
         }
         tag.putBoolean("demarre", demarre);
         tag.putInt("versionPnj", versionPnj);
+        tag.putInt("versionAeroport", versionAeroport);
         tag.putBoolean("libere", libere);
         if (ileVegeta != null) {
             tag.put("ileVegeta", NbtUtils.writeBlockPos(ileVegeta));
@@ -147,6 +151,15 @@ public class HubData extends SavedData {
 
     public void setVersionPnj(int version) {
         versionPnj = version;
+        setDirty();
+    }
+
+    public int versionAeroport() {
+        return versionAeroport;
+    }
+
+    public void setVersionAeroport(int version) {
+        versionAeroport = version;
         setDirty();
     }
 

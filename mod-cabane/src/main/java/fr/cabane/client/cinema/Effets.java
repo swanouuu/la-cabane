@@ -70,7 +70,25 @@ public final class Effets {
     /** Pareil, avec le skin teinté (0xRRGGBB, multiplié : 0xFFFFFF le laisse tel quel). */
     public static void personnage(PoseStack pose, MultiBufferSource buffers, ResourceLocation skin, Vec3 pieds, float lacet, Posture p, float alpha,
             int coiffure, float[] couleurCheveux, float echelleCheveux, int teinte) {
-        PlayerModel<LivingEntity> m = modele();
+        dessiner(modele(), pose, buffers, skin, pieds, lacet, p, alpha, coiffure, couleurCheveux, echelleCheveux, teinte);
+    }
+
+    /** Un joueur avec son propre skin, aux bras fins (« Alex ») ou larges selon son modèle, sans coiffure en 3D. */
+    public static void joueur(PoseStack pose, MultiBufferSource buffers, ResourceLocation skin, boolean fin, Vec3 pieds, float lacet, Posture p, int teinte) {
+        dessiner(fin ? modeleFin() : modele(), pose, buffers, skin, pieds, lacet, p, 1F, SANS, NOIR, 1F, teinte);
+    }
+
+    private static PlayerModel<LivingEntity> modeleFin() {
+        if (modeleFin == null) {
+            modeleFin = new PlayerModel<>(net.minecraft.client.Minecraft.getInstance().getEntityModels().bakeLayer(ModelLayers.PLAYER_SLIM), true);
+        }
+        return modeleFin;
+    }
+
+    private static PlayerModel<LivingEntity> modeleFin;
+
+    private static void dessiner(PlayerModel<LivingEntity> m, PoseStack pose, MultiBufferSource buffers, ResourceLocation skin, Vec3 pieds, float lacet,
+            Posture p, float alpha, int coiffure, float[] couleurCheveux, float echelleCheveux, int teinte) {
         m.young = false;
         m.crouching = false;
         m.riding = false;

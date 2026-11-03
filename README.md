@@ -62,7 +62,8 @@ cd pack
 ## Le départ : la salle d'embarquement et `/start`
 
 - Tant que l'hôte n'a pas lancé la partie, tout le monde attend dans la **salle d'embarquement**, au bout de la passerelle de l'avion (mode aventure, on ne casse rien).
-- Quand tout le monde est là, l'hôte tape **`/start`** : la porte s'ouvre, chacun se retrouve dans l'avion à 270 blocs de haut, avec un parachute. Il n'y a plus qu'à sauter.
+- Quand tout le monde est là, l'hôte tape **`/start`** : la porte s'ouvre et la **cinématique du décollage** commence pour tout le monde (1 min 40). On embarque par la passerelle, chacun avec son skin (des passagers inconnus remplissent les sièges vides), on voit les pilotes, l'avion décolle ; dans la cabine on discute avec ses voisins, l'hôtesse passe avec son chariot… puis l'orage, les secousses, une nuée de phantoms dans le réacteur droit. Écran noir : chacun se réveille dans l'avion en feu, à 270 blocs de haut, avec un parachute. Il n'y a plus qu'à sauter.
+- Pendant les scènes de l'aéroport, une musique passe en fond : elle est seulement dans le pack de sons privé « Beauvais - voix » (`voix/cinematique/aeroport.ogg`), jamais sur GitHub.
 - Ensuite, on réapparaît toujours dans l'avion… sauf si on a dormi dans un lit.
 - **En solo**, toutes les commandes (`/start`, `/cabane…`) marchent toujours, même sans avoir activé la triche. **Sur un serveur**, elles restent réservées aux admins.
 
@@ -117,6 +118,7 @@ Autour du village, aucune structure (village, donjon, ruine…) ne s'installe da
 Commandes admin :
 
 - `/start` lance la partie (l'hôte seulement) ;
+- `/cabane decollage` rejoue la cinématique du décollage pour tout le monde (chacun revient ensuite là où il était) ; `/cabane decollage <seconde> <faux>` commence plus loin et ajoute des faux passagers ; `/cabane decollage reconstruire` refait l'aéroport ;
 - `/cabane placer` reconstruit le village à tes pieds et y déplace le spawn ;
 - `/cabane pnj` fait revenir les PNJ ;
 - `/cabane garde <joueur>` lâche la garde présidentielle sur quelqu'un ;
