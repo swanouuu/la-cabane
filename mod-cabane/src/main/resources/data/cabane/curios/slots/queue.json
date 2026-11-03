@@ -1,0 +1,7 @@
+{
+  "order": 185,
+  "icon": "cabane:slot/queue",
+  "validators": [
+    "curios:tag"
+  ]
+}

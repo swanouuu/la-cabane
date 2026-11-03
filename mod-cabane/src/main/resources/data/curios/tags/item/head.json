@@ -2,6 +2,38 @@
   "replace": false,
   "values": [
     {
+      "id": "cabane:detecteur_rouge",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_vert",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_bleu",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_violet",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_jaune",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_orange",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_rose",
+      "required": false
+    },
+    {
+      "id": "cabane:detecteur_cyan",
+      "required": false
+    },
+    {
       "id": "cabane:espionne_lunettes",
       "required": false
     }

@@ -32,6 +32,7 @@ public class Cabane {
         fr.cabane.bouffe.FastFood.init();
         fr.cabane.drogue.MarcheNoir.register(modBus);
         fr.cabane.accessoire.Accessoires.register(modBus);
+        fr.cabane.accessoire.Saiyan.register(modBus);
         fr.cabane.monde.CabaneMonde.register(modBus);
         fr.cabane.labo.Labo.register(modBus);
         fr.cabane.cartel.Cartel.register(modBus);

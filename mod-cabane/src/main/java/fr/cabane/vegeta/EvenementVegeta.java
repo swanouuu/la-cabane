@@ -2,6 +2,7 @@ package fr.cabane.vegeta;
 
 import fr.cabane.Cabane;
 import fr.cabane.CabaneEntities;
+import fr.cabane.accessoire.Saiyan;
 import fr.cabane.client.cinema.ClientCinema;
 import fr.cabane.client.cinema.VoteScreen;
 import fr.cabane.hub.HubData;
@@ -41,6 +42,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -75,6 +77,8 @@ public final class EvenementVegeta {
     private static UUID allie;
     private static boolean victoire;
     private static String issue = "";
+    /** Ceux qui étaient morts à la fin du combat : leur récompense de Saiyan les attend à la réapparition. */
+    private static final Set<UUID> recompensesEnAttente = new HashSet<>();
 
     // ================================================================ réseau
 
@@ -419,6 +423,8 @@ public final class EvenementVegeta {
         if (ticks > 100 && (personne || ticks > DUREE_COMBAT)) {
             server.getPlayerList().broadcastSystemMessage(Component.literal("Vegeta : « Pitoyable. Revenez me voir quand vous serez prêts. » (l'événement pourra être relancé)")
                     .withStyle(ChatFormatting.LIGHT_PURPLE), false);
+            // perdu ou gagné, ceux qui ont combattu repartent avec leurs accessoires de Saiyan
+            joueurs.forEach(EvenementVegeta::recompenseSaiyan);
             arreter(server, false);
         }
     }
@@ -441,6 +447,7 @@ public final class EvenementVegeta {
                 p.drop(diamants, false);
             }
             p.sendSystemMessage(Component.literal("★ +3 000 $ et 3 diamants pour la bataille du ciel de Beauvais.").withStyle(ChatFormatting.GOLD));
+            recompenseSaiyan(p);
         }
         server.getPlayerList().broadcastSystemMessage(Component.literal(aideGoku
                 ? "Vegeta : « … Le M a disparu. Ne croyez pas que je vous dois quelque chose. … Merci. »"
@@ -448,6 +455,32 @@ public final class EvenementVegeta {
                 .withStyle(aideGoku ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.GOLD), false);
         phase = Phase.FIN;
         ticks = 0;
+    }
+
+    /**
+     * La récompense du combat, qu'il soit gagné ou perdu : une queue de Saiyan et un détecteur d'une couleur au hasard
+     * (accessoire/Saiyan), à porter d'un clic droit. Un joueur mort à ce moment-là la reçoit en réapparaissant.
+     */
+    private static void recompenseSaiyan(ServerPlayer p) {
+        if (!p.isAlive()) {
+            recompensesEnAttente.add(p.getUUID());
+            return;
+        }
+        int couleur = p.getRandom().nextInt(Saiyan.COULEURS.size());
+        for (ItemStack s : List.of(new ItemStack(Saiyan.QUEUE.get()), new ItemStack(Saiyan.DETECTEURS.get(couleur).get()))) {
+            if (!p.getInventory().add(s)) {
+                p.drop(s, false);
+            }
+        }
+        p.sendSystemMessage(Component.literal("★ Récompense de Saiyan : une queue de Saiyan et un détecteur " + Saiyan.COULEURS.get(couleur) + ". ")
+                .append(Component.keybind("key.use")).append(" avec l'objet en main pour le porter.").withStyle(ChatFormatting.GOLD));
+    }
+
+    @SubscribeEvent
+    public static void reapparition(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer p && recompensesEnAttente.remove(p.getUUID())) {
+            recompenseSaiyan(p);
+        }
     }
 
     /** Fin de l'événement : on redescend au village, l'île disparaît, Vegeta change de discours. */
@@ -487,6 +520,7 @@ public final class EvenementVegeta {
         phase = Phase.RIEN;
         ile.clear();
         participants.clear();
+        recompensesEnAttente.clear();
         // le serveur s'est arrêté en plein combat : l'île est restée dans le ciel, on l'efface
         var donnees = fr.cabane.hub.HubData.get(event.getServer());
         if (donnees.ileVegeta() != null) {
