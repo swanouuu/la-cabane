@@ -216,11 +216,16 @@ public final class Forteresse {
             }
         }
 
-        /** Les chunks du chantier : la forteresse, ses pentes, et l'avenue au nord. */
+        /**
+         * Les chunks du chantier : la forteresse, ses pentes, et l'avenue au nord. Un ticket de chargement par chunk, qui ne
+         * bloque pas : ils se génèrent en arrière-plan (etape() attend qu'ils soient là). Pas level.setChunkForced, qui
+         * charge chaque chunk tout de suite : sur un monde neuf, le serveur restait bloqué plus d'une minute et le serveur
+         * dédié s'arrêtait tout seul (max-tick-time). Les tickets ne sont pas sauvegardés : rien ne reste forcé après un arrêt.
+         */
         private void forcer(boolean oui) {
             for (int cx = (fx - BORD) >> 4; cx <= (fx + BORD) >> 4; cx++) {
                 for (int cz = (fz - BORD_NORD) >> 4; cz <= (fz + BORD) >> 4; cz++) {
-                    level.setChunkForced(cx, cz, oui);
+                    level.getChunkSource().updateChunkForced(new net.minecraft.world.level.ChunkPos(cx, cz), oui);
                 }
             }
         }
@@ -279,9 +284,10 @@ public final class Forteresse {
                 etapes.get(index++).run();
                 return false;
             }
-            forcer(false);
+            // les coffres d'abord, tant que les chunks sont encore tenus chargés
             HubData.get(level.getServer()).setForteresse(new BlockPos(fx, base, fz));
             coffres(level);
+            forcer(false);
             Cabane.LOGGER.info("PLATO 6Z construit en {} {} {}", fx, base, fz);
             return true;
         }

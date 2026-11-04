@@ -170,11 +170,16 @@ public final class Susano4 {
 
     /** Le pouvoir s'endort : plus de géant, et il peut le refaire au prochain éveil (après l'attente). */
     static void endormir(ServerPlayer joueur) {
+        ranger(joueur);
+        FAITES.remove(joueur.getUUID());
+    }
+
+    /** Le Susano se range (ses yeux restent éveillés) : plus de géant, mais il reste fait pour cet éveil. */
+    static void ranger(ServerPlayer joueur) {
         if (FORMES.remove(joueur.getUUID()) != null) {
             atterrir(joueur);
             PacketDistributor.sendToAllPlayers(new Etat4(joueur.getUUID(), 0, 0));
         }
-        FAITES.remove(joueur.getUUID());
         PERCES.remove(joueur.getUUID());
     }
 

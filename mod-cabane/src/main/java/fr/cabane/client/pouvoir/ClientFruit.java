@@ -875,9 +875,11 @@ public final class ClientFruit {
     public static void toucheUlti() {
         Minecraft mc = Minecraft.getInstance();
         String moi = mc.player == null ? null : EVEILLES.get(mc.player.getUUID());
-        if (moi != null && mc.screen == null && niveau(mc.player.getUUID()) >= 3 && ClientFruit3.ultimePrete()) {
-            ClientFruit3.ultimeDemandee();
-            mc.player.swing(mainDuFruit(mc.player, glace(moi)));
+        // le serveur décide (et le dit s'il refuse) ; le panneau ne la compte faite que quand elle part vraiment
+        if (moi != null && mc.screen == null && niveau(mc.player.getUUID()) >= 3) {
+            if (ClientFruit3.ultimePrete()) {
+                mc.player.swing(mainDuFruit(mc.player, glace(moi)));
+            }
             PacketDistributor.sendToServer(new fr.cabane.pouvoir.Fruit3.Ulti());
         }
     }

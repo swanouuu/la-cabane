@@ -289,5 +289,26 @@
         "volume": 0.8
       }
     ]
+  },
+  "sharingan.eveil": {
+    "subtitle": "subtitles.cabane.sharingan.eveil",
+    "sounds": [
+      {
+        "name": "minecraft:block.beacon.power_select",
+        "type": "event",
+        "pitch": 0.6,
+        "volume": 0.6
+      }
+    ]
+  },
+  "sharingan.mangekyo": {
+    "subtitle": "subtitles.cabane.sharingan.mangekyo",
+    "sounds": [
+      {
+        "name": "minecraft:entity.warden.sonic_charge",
+        "type": "event",
+        "volume": 0.5
+      }
+    ]
   }
 }

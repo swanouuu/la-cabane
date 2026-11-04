@@ -431,7 +431,19 @@ public final class Fruit3 {
         UUID u = joueur.getUUID();
         int maintenant = joueur.server.getTickCount();
         String cle = u + (glace ? "/glace" : "/lave");
-        if (FAITES.contains(u) || maintenant < PRET_ULTIME.getOrDefault(cle, 0) || ULTIMES.stream().anyMatch(x -> x.joueur.equals(u))) {
+        if (ULTIMES.stream().anyMatch(x -> x.joueur.equals(u))) {
+            return false;
+        }
+        // il le lui dit (avant, le panneau croyait l'ultime partie alors que le serveur l'avait refusée)
+        if (FAITES.contains(u)) {
+            joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("L'ultime : une seule fois par éveil.")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY), true);
+            return false;
+        }
+        int reste = PRET_ULTIME.getOrDefault(cle, 0) - maintenant;
+        if (reste > 0) {
+            joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("L'ultime se recharge… encore " + (reste + 19) / 20 + " s")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY), true);
             return false;
         }
         FAITES.add(u);

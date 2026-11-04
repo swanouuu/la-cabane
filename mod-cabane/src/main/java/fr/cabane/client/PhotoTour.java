@@ -254,6 +254,7 @@ public final class PhotoTour {
             // « act ulti » : la touche de l'ulti (Hachibi 4, l'ultime des fruits niveau 3)
             case "ulti" -> {
                 fr.cabane.client.pouvoir.ClientFruit.toucheUlti();
+                fr.cabane.client.pouvoir.ClientSharingan.toucheUlti();
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Hachibi4.Touche(fr.cabane.pouvoir.Hachibi4.ULTI));
                 return 2;
             }

@@ -34,8 +34,13 @@ public class CabaneVoicePlugin implements VoicechatPlugin {
         if (sender == null) {
             return;
         }
-        // bourré : la voix tangue et devient pâteuse, pour ceux qui l'entendent de près comme au téléphone
         UUID id = sender.getPlayer().getUuid();
+        // caché dans le Kamui : personne ne l'entend (ni de près, ni au téléphone)
+        if (VoiceBridge.muet(id)) {
+            event.cancel();
+            return;
+        }
+        // bourré : la voix tangue et devient pâteuse, pour ceux qui l'entendent de près comme au téléphone
         int ivresse = VoixBourree.niveau(id);
         if (ivresse >= 0) {
             byte[] deformee = VoixBourree.deformer(event.getVoicechat(), id, event.getPacket().getOpusEncodedData(), ivresse);

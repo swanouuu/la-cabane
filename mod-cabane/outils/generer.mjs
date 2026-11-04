@@ -17,6 +17,7 @@ import { genererCartel, sonsCartel } from "./cartel.mjs";
 import { genererCatch, sonsCatch } from "./catch.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
+import { genererSharingan, sonsSharingan } from "./sharingan.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -459,6 +460,8 @@ genererCurios({ ecrire });
 genererEspionnes({ ecrire, lang });
 console.log(`Masques ninja : ${genererMasques({ ecrire, lang })} pavés`);
 genererLabo({ ecrire, png, lang });
+// le Sharingan : ses yeux, la dimension du genjutsu (voir pouvoir/Sharingan.java et docs/sharingan)
+genererSharingan({ ecrire, lang });
 console.log(`Cartel : ${genererCartel({ ecrire, lang })} gars du cartel`);
 console.log(`Catch : ${genererCatch({ ecrire, lang })} tenues et masques`);
 
@@ -660,6 +663,8 @@ console.log("Ressources générées dans", RES);
   Object.assign(sons, sonsOperation(RES));
   // la foudre : l'électricité statique, le choc, la charge du Kirin ; synthétisés par outils/foudre.mjs
   Object.assign(sons, sonsFoudre(RES));
+  // le Sharingan : des sons de Minecraft par défaut ; les vrais (de l anime) ne sont que dans le pack privé
+  Object.assign(sons, sonsSharingan());
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");
   const cible = path.join(RES, "assets", "cabane", "sounds", "voix");
   fs.rmSync(cible, { recursive: true, force: true });

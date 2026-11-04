@@ -1,0 +1,30 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.5,
+  "downfall": 0,
+  "effects": {
+    "sky_color": 10489882,
+    "fog_color": 9047060,
+    "water_color": 6291456,
+    "water_fog_color": 3145728,
+    "grass_color": 3147784,
+    "foliage_color": 3147784,
+    "ambient_sound": "minecraft:ambient.crimson_forest.loop",
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2
+    },
+    "particle": {
+      "options": {
+        "type": "minecraft:crimson_spore"
+      },
+      "probability": 0.004
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {},
+  "features": []
+}

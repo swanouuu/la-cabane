@@ -574,6 +574,7 @@ public final class ClientFruit3 {
             ULTIMES.add(u);
             if (mc.player != null && p.joueur().equals(mc.player.getUUID())) {
                 ultimeFaite = true;
+                glaceMoi = p.glace();
                 PRET_ULTIME.put(p.glace(), System.nanoTime() + Fruit3.RECHARGE_ULTIME * 50_000_000L);
             }
             return;
@@ -609,13 +610,6 @@ public final class ClientFruit3 {
 
     static double attenteDragon() {
         return Math.max(0, (pretDragon - System.nanoTime()) / 1e9);
-    }
-
-    /** Il vient de s'accroupir pour l'ultime : on la compte tout de suite (le serveur la lance). */
-    static void ultimeDemandee() {
-        ultimeFaite = true;
-        glaceMoi = moiGlace();
-        PRET_ULTIME.put(glaceMoi, System.nanoTime() + Fruit3.RECHARGE_ULTIME * 50_000_000L);
     }
 
     /** Il s'endort : au prochain éveil, l'ultime pourra repartir (après sa recharge). */

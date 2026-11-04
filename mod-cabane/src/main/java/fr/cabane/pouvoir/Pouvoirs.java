@@ -155,6 +155,23 @@ public final class Pouvoirs {
         return EVEILLES.getOrDefault(joueur.getUUID(), 0);
     }
 
+    /**
+     * Le Susano (docs/sharingan) : la touche Éveil n'éveille que ses yeux (1 Sharingan, 2 Mangekyo, 3 Rinnegan, jusqu'au
+     * niveau de sa liste blanche) et lance le compte à rebours de l'éveil ; le Susano lui-même sort avec sa propre touche
+     * (K), un niveau de plus à chaque appui jusqu'au niveau de ses yeux (et le Susano parfait, pour « susano4 », avec le
+     * Rinnegan), puis il se range : il garde ses yeux. EVEILLES reste le niveau du Susano (0 : pas de Susano).
+     */
+    private static final Map<UUID, Integer> YEUX = new HashMap<>();
+
+    /** Le niveau de ses yeux (0 : endormi). */
+    public static int yeux(ServerPlayer joueur) {
+        return YEUX.getOrDefault(joueur.getUUID(), 0);
+    }
+
+    static int maxYeux(Donnees.Elu elu) {
+        return Math.min(3, elu.niveauMax());
+    }
+
     // ================================================================ la liste blanche, gardée dans le monde
 
     public static final class Donnees extends SavedData {
@@ -335,6 +352,10 @@ public final class Pouvoirs {
             joueur.displayClientMessage(Component.literal("Rien ne s'éveille en toi… pour l'instant.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), true);
             return;
         }
+        if (Sharingan.est(elu.pouvoir())) {
+            basculerYeux(joueur, elu);
+            return;
+        }
         int niveau = niveau(joueur);
         if (Susano4.est(elu.pouvoir()) && niveau == 4) {
             Susano4.finir(joueur);
@@ -385,6 +406,75 @@ public final class Pouvoirs {
             Susano4.eveiller(joueur);
         }
         envoyerEtat(joueur, elu, suivant, true);
+    }
+
+    /** Ses yeux montent d'un niveau (le premier éveil lance le compte à rebours) ; au plus haut, il se rendort. */
+    private static void basculerYeux(ServerPlayer joueur, Donnees.Elu elu) {
+        int y = yeux(joueur);
+        if (y >= maxYeux(elu)) {
+            endormir(joueur);
+            return;
+        }
+        // « susanodev » (pour l'hôte) : droit au Rinnegan, sans limite de temps ni repos
+        boolean dev = elu.pouvoir().equals(Susano3.DEV);
+        if (y == 0 && !dev) {
+            int maintenant = joueur.server.getTickCount();
+            int repos = REPOS.getOrDefault(joueur.getUUID(), 0) - maintenant;
+            if (repos > 0) {
+                joueur.displayClientMessage(Component.literal("Ton pouvoir se repose… encore " + (repos + 19) / 20 + " s").withStyle(ChatFormatting.RED), true);
+                return;
+            }
+            DEBUT_EVEIL.put(joueur.getUUID(), maintenant);
+        }
+        int suivant = dev ? maxYeux(elu) : y + 1;
+        YEUX.put(joueur.getUUID(), suivant);
+        Sharingan.envoyerYeux(joueur, elu, suivant, true);
+    }
+
+    /** La touche du Susano (K) : un niveau de plus, jusqu'au niveau de ses yeux ; au plus haut, il se range. */
+    static void susano(ServerPlayer joueur) {
+        Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
+        if (elu == null || !Sharingan.est(elu.pouvoir())) {
+            return;
+        }
+        int y = yeux(joueur);
+        if (y == 0) {
+            joueur.displayClientMessage(Component.literal("Éveille d'abord tes yeux.").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        int niveau = niveau(joueur);
+        if (niveau == 4) {
+            Susano4.finir(joueur);
+            return;
+        }
+        int max = Math.min(y, elu.niveauMax());
+        if (Susano4.est(elu.pouvoir()) && y >= 3 && Susano4.pret(joueur)) {
+            max = 4;
+        }
+        if (niveau >= max) {
+            rangerSusano(joueur, elu);
+            return;
+        }
+        int suivant = elu.pouvoir().equals(Susano3.DEV) && niveau < 3 ? Math.min(3, max) : niveau + 1;
+        EVEILLES.put(joueur.getUUID(), suivant);
+        armure(joueur, suivant);
+        if (suivant == 4) {
+            Susano4.eveiller(joueur);
+        }
+        envoyerEtat(joueur, elu, suivant, true);
+    }
+
+    /** Le Susano se range : il garde ses yeux (et son compte à rebours). */
+    private static void rangerSusano(ServerPlayer joueur, Donnees.Elu elu) {
+        lacher(joueur, false);
+        CHARGES.remove(joueur.getUUID());
+        ECRASEMENTS.remove(joueur.getUUID());
+        Susano3.endormir(joueur);
+        Susano4.ranger(joueur);
+        armure(joueur, 0);
+        if (EVEILLES.remove(joueur.getUUID()) != null) {
+            PacketDistributor.sendToAllPlayers(new Etat(joueur.getUUID(), elu.pouvoir(), elu.couleur().ordinal(), 0, false, true));
+        }
     }
 
     /** Le Susano parfait se défait : il redescend à ce niveau (le chevalier), sans s'endormir. */
@@ -481,16 +571,21 @@ public final class Pouvoirs {
         Fruit.endormir(joueur);
         Ichibi.endormir(joueur);
         Foudre.endormir(joueur);
+        Sharingan.endormir(joueur);
         armure(joueur, 0);
         Integer etait = EVEILLES.remove(joueur.getUUID());
-        if (etait != null) {
+        Integer yeuxEtaient = YEUX.remove(joueur.getUUID());
+        if (etait != null || yeuxEtaient != null) {
             DEBUT_EVEIL.remove(joueur.getUUID());
             if (!pouvoir(joueur).equals(Susano3.DEV)) {
-                REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + repos(joueur, etait));
+                REPOS.put(joueur.getUUID(), joueur.server.getTickCount() + repos(joueur, etait == null ? yeuxEtaient : etait));
             }
             Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
             PacketDistributor.sendToAllPlayers(new Etat(joueur.getUUID(), elu == null ? "susano" : elu.pouvoir(),
                     elu == null ? 0 : elu.couleur().ordinal(), 0, false, true));
+            if (yeuxEtaient != null && elu != null) {
+                Sharingan.envoyerYeux(joueur, elu, 0, true);
+            }
         }
     }
 
@@ -818,7 +913,7 @@ public final class Pouvoirs {
             }
             int reste = entree.getValue() + DUREE_EVEIL - maintenant;
             // l'ulti de Hachibi 4 va jusqu'au bout de ses 45 secondes : l'éveil s'endort après
-            if (reste <= 0 && !Hachibi4.actif(joueur)) {
+            if (reste <= 0 && !Hachibi4.actif(joueur) && !Meteorite.actif(joueur)) {
                 int repos = repos(joueur, niveau(joueur));
                 endormir(joueur);
                 joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose "
@@ -1007,6 +1102,12 @@ public final class Pouvoirs {
                 PacketDistributor.sendToPlayer(arrivant, new Etat(uuid, elu.pouvoir(), elu.couleur().ordinal(), niveau, true, false));
             }
         });
+        YEUX.forEach((uuid, niveau) -> {
+            Donnees.Elu elu = d.elus.get(uuid);
+            if (elu != null) {
+                PacketDistributor.sendToPlayer(arrivant, new Sharingan.Yeux(uuid, niveau, maxYeux(elu), false));
+            }
+        });
     }
 
     @SubscribeEvent
@@ -1028,6 +1129,7 @@ public final class Pouvoirs {
     @SubscribeEvent
     public static void arret(ServerStoppingEvent event) {
         EVEILLES.clear();
+        YEUX.clear();
         DEBUT_EVEIL.clear();
         REPOS.clear();
         DERNIERE_FRAPPE.clear();

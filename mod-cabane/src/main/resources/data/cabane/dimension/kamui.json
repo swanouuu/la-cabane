@@ -1,0 +1,13 @@
+{
+  "type": "cabane:kamui",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:kamui",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

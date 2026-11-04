@@ -1,0 +1,13 @@
+{
+  "type": "cabane:tsukuyomi",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:tsukuyomi",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

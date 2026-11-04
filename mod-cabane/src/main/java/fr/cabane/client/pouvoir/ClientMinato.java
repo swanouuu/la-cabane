@@ -69,6 +69,24 @@ public final class ClientMinato {
     private static long pretJet = -1;
     private static long dernierClic;
     private static boolean accroupiAvant;
+    /**
+     * La touche ² (Technique) : s'il a une marque (un kunai posé, ou quelqu'un de marqué), il y va ; sinon, en mode Kurama,
+     * il plante un kunai à ses pieds. Vrai si c'était pour Minato (la touche ne fait alors rien d'autre).
+     */
+    public static boolean technique() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !ELUS.contains(mc.player.getUUID()) || enScene()) {
+            return false;
+        }
+        UUID moi = mc.player.getUUID();
+        if (MARQUES.containsKey(moi)) {
+            PacketDistributor.sendToServer(new Minato.Rejoindre());
+        } else if (niveau(moi) >= 2) {
+            PacketDistributor.sendToServer(new Minato.PoserPieds());
+        }
+        return true;
+    }
+
     /** Quand on s'est accroupi la dernière fois (System.nanoTime) : deux fois de suite, vite, on rejoint la marque posée. */
     private static long dernierAccroupi;
     private static final long DOUBLE_ACCROUPI = 400_000_000L;
@@ -442,9 +460,9 @@ public final class ClientMinato {
         String[][] lignes = kurama
                 ? new String[][] {{Clavier.gauche(), "Frapper (TP autour)"}, {Clavier.droite(), kunai},
                         {Clavier.accroupi() + " + " + Clavier.droite(), resteEclair > 0 ? String.format("TP où tu regardes (%.0f s)", Math.ceil(resteEclair)) : "TP où tu regardes"},
-                        {Clavier.accroupi() + " + " + Clavier.gauche(), jet}, {Clavier.accroupi() + " ×1", "Planter un kunai"}, {Clavier.accroupi() + " ×2", marque}, {eveil, "Rendormir"}}
+                        {Clavier.accroupi() + " + " + Clavier.gauche(), jet}, {Clavier.nom(ClientSharingan.SUSANO), m == null ? "Planter un kunai" : marque}, {eveil, "Rendormir"}}
                 : new String[][] {{Clavier.gauche(), "Frapper au kunai"}, {Clavier.droite(), kunai}, {Clavier.accroupi() + " + " + Clavier.gauche(), jet},
-                        {Clavier.accroupi() + " + " + Clavier.droite(), "Poser la marque"}, {Clavier.accroupi() + " ×2", marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
+                        {Clavier.accroupi() + " + " + Clavier.droite(), "Poser la marque"}, {Clavier.nom(ClientSharingan.SUSANO), marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
         boolean[] gris = kurama
                 ? new boolean[] {false, reste > 0, resteEclair > 0, !envol && lance == null && resteJet > 0, false, m == null, false}
                 : new boolean[] {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, false};
@@ -505,29 +523,7 @@ public final class ClientMinato {
             UUID moi = mc.player.getUUID();
             boolean libre = mc.screen == null && ELUS.contains(moi) && !enScene();
             long t = System.nanoTime();
-            if (accroupi && !accroupiAvant && libre) {
-                appuiAccroupi = t;
-                clicPendantAccroupi = false;
-                // un second appui annule le kunai qu'un seul appui allait planter
-                toucheSeule = -1;
-                if (t - dernierAccroupi < DOUBLE_ACCROUPI && MARQUES.containsKey(moi)) {
-                    PacketDistributor.sendToServer(new Minato.Rejoindre());
-                    dernierAccroupi = 0;
-                } else {
-                    dernierAccroupi = t;
-                }
-            }
-            // mode Kurama : un seul appui, court, sans clic pendant, et rien derrière : un kunai se plante à ses pieds
-            if (!accroupi && accroupiAvant && libre && niveau(moi) >= 2 && dernierAccroupi == appuiAccroupi
-                    && t - appuiAccroupi < 300_000_000L && !clicPendantAccroupi) {
-                toucheSeule = t;
-            }
-            if (toucheSeule > 0 && t - appuiAccroupi > DOUBLE_ACCROUPI) {
-                toucheSeule = -1;
-                if (libre && niveau(moi) >= 2) {
-                    PacketDistributor.sendToServer(new Minato.PoserPieds());
-                }
-            }
+            // (planter un kunai à ses pieds et y aller : la touche ², voir technique())
             accroupiAvant = accroupi;
             if (!ELUS.contains(moi) || niveau(moi) < 2) {
                 visee = -1;

@@ -168,11 +168,20 @@ public final class ClientSusano {
         return TRANSFORMES.contains(joueur.getUUID());
     }
 
+    /** Le niveau du Susano du joueur local (0 : endormi). */
+    public static int niveauLocal() {
+        Minecraft mc = Minecraft.getInstance();
+        Susano s = mc.player == null ? null : SUSANOS.get(mc.player.getUUID());
+        return eveille(s) ? s.niveau : 0;
+    }
+
     public static void recevoir(Pouvoirs.Etat p) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
             return;
         }
+        // les yeux du Susano (Sharingan, Mangekyo, Rinnegan) : voir ClientSharingan
+        ClientSharingan.recevoir(p);
         if (p.eveille()) {
             TRANSFORMES.add(p.joueur());
         } else {
@@ -811,7 +820,9 @@ public final class ClientSusano {
             Player joueur = mc.level.getPlayerByUUID(entree.getKey());
             Susano s = entree.getValue();
             s.os.clear();
-            if (joueur == null || joueur.isInvisible() || ClientSusano4.enForme(entree.getKey())) {
+            // dans le Tsukuyomi, pas de Susano : rien que lui, sa cible et ses clones
+            if (joueur == null || joueur.isInvisible() || ClientSusano4.enForme(entree.getKey())
+                    || joueur.level().dimension() == fr.cabane.pouvoir.Genjutsu.DIMENSION || ClientKamui.cache(joueur.getUUID())) {
                 continue;
             }
             double t = secondes(s.debut);
@@ -1167,7 +1178,8 @@ public final class ClientSusano {
     private static void panneau(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         Susano s = mc.player == null ? null : SUSANOS.get(mc.player.getUUID());
-        if (!eveille(s) || secondes(s.debut) < JAILLISSEMENT) {
+        // pas par-dessus les grands yeux du Sharingan (ou le noir du Tsukuyomi)
+        if (!eveille(s) || secondes(s.debut) < JAILLISSEMENT || ClientSharingan.ecranActif()) {
             return;
         }
         boolean grand = s.niveau >= 2;
@@ -1197,6 +1209,14 @@ public final class ClientSusano {
                 {Clavier.accroupi(), chevalier ? (recharge > 0 ? String.format("Grand coup, flammes noires (%.0f s)", Math.ceil(recharge)) : "Grand coup, flammes noires")
                         : recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
                 {EVEIL.getTranslatedKeyMessage().getString(), versParfait ? "Susano parfait (une fois)" : plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
+        // le Susano (les yeux) : ses techniques (Tsukuyomi, Kamui, météorite), la touche du Susano, puis l'éveil des yeux
+        if (fr.cabane.pouvoir.Sharingan.est(s.pouvoir)) {
+            java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(lignes).subList(0, lignes.length - 1));
+            l.addAll(java.util.Arrays.asList(ClientSharingan.lignes(s.niveau)));
+            l.add(ClientSharingan.ligneSusano(s.niveau, fr.cabane.pouvoir.Susano4.est(s.pouvoir)));
+            l.add(ClientSharingan.ligneEveil());
+            lignes = l.toArray(new String[0][]);
+        }
         Font font = mc.font;
         String titre = parfait ? "SUSANO PARFAIT  ·  NIVEAU 4" : chevalier ? "SUSANO  ·  NIVEAU 3" : grand ? "SUSANO  ·  NIVEAU 2" : "SUSANO";
         int largeurTouche = 0;
@@ -1361,6 +1381,10 @@ public final class ClientSusano {
             Minecraft mc = Minecraft.getInstance();
             Susano s = mc.player == null ? null : SUSANOS.get(mc.player.getUUID());
             if (!(event.isAttack() || event.isUseItem()) || !eveille(s) || secondes(s.debut) < FORME) {
+                return;
+            }
+            // le clic gauche sur un bloc le casse, comme d'habitude : le Susano ne frappe pas à chaque coup de pioche
+            if (event.isAttack() && mc.hitResult != null && mc.hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
                 return;
             }
             event.setCanceled(true);
