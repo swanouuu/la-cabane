@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import fr.cabane.Cabane;
+import fr.cabane.client.rituel.ClientRituel;
 import fr.cabane.hachibi3.Hachibi3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -18,7 +19,9 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ViewportEvent;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Le dessin du Hachibi géant : le modèle de la maquette (ModeleHachibi), toujours bien éclairé pour qu'on le voie dans le
@@ -41,15 +44,43 @@ public class RenduHachibi3 extends EntityRenderer<Hachibi3> {
 
     @Override
     public void render(Hachibi3 bete, float lacet, float partiel, PoseStack ps, MultiBufferSource buffers, int lumiere) {
+        // pendant le rituel (ClientRituel) : il rugit et s'agite, puis il est tiré vers le trou en rapetissant et en
+        // devenant doré, ses chaînes de fer cassées ; une fois dans le ventre de l'allongé, on ne le dessine plus
+        ClientRituel.EtatBete rituel = ClientRituel.bete(bete);
+        if (rituel != null && rituel.cachee) {
+            return;
+        }
         VertexConsumer c = buffers.getBuffer(RenderType.entityCutoutNoCull(GRAIN));
         double t = (bete.level().getGameTime() + partiel) / 20.0;
-        float cri = bete.cri(partiel);
+        float cri = Math.max(bete.cri(partiel), rituel == null ? 0 : rituel.cri);
+        float agite = rituel == null ? 0 : rituel.agite;
+        dore = rituel == null ? 0 : rituel.dore;
+        Vec3 cam = entityRenderDispatcher.camera.getPosition();
         ps.pushPose();
+        if (rituel != null && rituel.tire) {
+            // les piquets restent plantés dans le rocher
+            ps.pushPose();
+            ps.mulPose(Axis.YP.rotationDegrees(-lacet));
+            for (Vec3 p : ModeleHachibi.PIQUETS) {
+                boite(c, ps.last(), p.add(0, 1.5, 0), 1.3, 3.0, 1.3, ModeleHachibi.FER);
+                boite(c, ps.last(), p.add(0, 4.6, 0), 1.0, 0.3, 1.0, ModeleHachibi.FER_CLAIR);
+            }
+            ps.popPose();
+            Vec3 d = rituel.pos.subtract(bete.position()), cr = rituel.centreRepos.subtract(bete.position());
+            ps.translate(d.x, d.y, d.z);
+            ps.mulPose(Axis.XP.rotation(rituel.vrille));
+            ps.scale(rituel.echelle, rituel.echelle, rituel.echelle);
+            ps.translate(-cr.x, -cr.y, -cr.z);
+        }
         ps.mulPose(Axis.YP.rotationDegrees(-lacet));
         // le corps respire, et se soulève un peu quand il rugit
         ps.pushPose();
         ps.translate(0, Math.sin(t * 0.9) * 0.25 + cri * 0.5, 0);
         dessiner(c, ps, ModeleHachibi.CORPS);
+        if (rituel != null) {
+            prise(ps, cam, ModeleHachibi.PRISE_COU);
+            prise(ps, cam, ModeleHachibi.PRISE_TORSE);
+        }
         // la tête regarde un peu autour d'elle ; quand il rugit, elle se lève et tremble
         Vec3 pt = ModeleHachibi.PIVOT_TETE;
         ps.translate(pt.x, pt.y, pt.z);
@@ -67,29 +98,63 @@ public class RenduHachibi3 extends EntityRenderer<Hachibi3> {
         for (ModeleHachibi.Partie bras : ModeleHachibi.BRAS) {
             dessiner(c, ps, bras);
         }
-        // les tentacules ondulent autour de leur racine, et s'agitent quand il rugit
+        if (rituel != null) {
+            prise(ps, cam, ModeleHachibi.PRISE_POIGNET);
+            prise(ps, cam, ModeleHachibi.PRISE_POIGNET + 1);
+        }
+        // les tentacules ondulent autour de leur racine, et s'agitent quand il rugit (et quand les chaînes le tirent)
         for (int i = 0; i < ModeleHachibi.TENTACULES.length; i++) {
             Vec3 r = ModeleHachibi.RACINES[i], cote = ModeleHachibi.COTES[i];
-            double angle = 2.5 * Math.sin(t * 0.5 + i) + 6 * cri * Math.sin(t * 3 + i * 0.7);
+            double angle = 2.5 * Math.sin(t * 0.5 + i) + (6 * cri + 14 * agite) * Math.sin(t * (3 + 4 * agite) + i * 0.7);
             ps.pushPose();
             ps.translate(r.x, r.y, r.z);
             ps.mulPose(Axis.YP.rotationDegrees((float) (2.5 * Math.sin(t * 0.37 + i * 1.3))));
             ps.mulPose(new Quaternionf().rotateAxis((float) Math.toRadians(angle), (float) cote.x, 0, (float) cote.z));
             ps.translate(-r.x, -r.y, -r.z);
             dessiner(c, ps, ModeleHachibi.TENTACULES[i]);
+            if (rituel != null && i < 2) {
+                prise(ps, cam, ModeleHachibi.PRISE_TENTACULE + i);
+            }
             ps.popPose();
         }
-        // les chaînes : des menottes et du collier jusqu'aux piquets plantés dans le sol (tendues quand il rugit)
+        // les chaînes : des menottes et du collier jusqu'aux piquets plantés dans le sol (tendues quand il rugit) ;
+        // quand le rituel le tire, elles ont cassé et un bout pend à chaque menotte
         PoseStack.Pose pose = ps.last();
         for (int k = 0; k < ModeleHachibi.PIQUETS.length; k++) {
             Vec3 p = ModeleHachibi.PIQUETS[k];
+            Vec3 debut = ModeleHachibi.CHAINES_DEBUT[k].add(0, k >= 2 ? Math.sin(t * 0.9) * 0.25 + cri * 0.5 : 0, 0);
+            if (rituel != null && rituel.tire) {
+                chaine(c, pose, debut, debut.add(Math.sin(t * 5 + k) * 1.5, -9, 0), 0);
+                continue;
+            }
             boite(c, pose, p.add(0, 1.5, 0), 1.3, 3.0, 1.3, ModeleHachibi.FER);
             boite(c, pose, p.add(0, 4.6, 0), 1.0, 0.3, 1.0, ModeleHachibi.FER_CLAIR);
-            Vec3 debut = ModeleHachibi.CHAINES_DEBUT[k].add(0, k >= 2 ? Math.sin(t * 0.9) * 0.25 + cri * 0.5 : 0, 0);
             chaine(c, pose, debut, p.add(0, 4.6, 0), 1 - 0.8 * cri);
         }
         ps.popPose();
         super.render(bete, lacet, partiel, ps, buffers, lumiere);
+    }
+
+    /** Où sont ses prises pour les chaînes du rituel, à cette image (le PoseStack est relatif à la caméra). */
+    private static void prise(PoseStack ps, Vec3 cam, int i) {
+        Matrix4f m = ps.last().pose();
+        Vec3 p = ModeleHachibi.PRISES[i], a = ModeleHachibi.AXES_PRISES[i];
+        Vector3f w = m.transformPosition(new Vector3f((float) p.x, (float) p.y, (float) p.z));
+        Vector3f d = m.transformDirection(new Vector3f((float) a.x, (float) a.y, (float) a.z)).normalize();
+        ClientRituel.prise(i, new Vec3(w.x + cam.x, w.y + cam.y, w.z + cam.z), new Vec3(d.x, d.y, d.z), ModeleHachibi.RAYONS_PRISES[i]);
+    }
+
+    /** De 0 (rose) à 1 (doré) : quand les chaînes du rituel l'aspirent, il prend leur couleur. */
+    private static float dore;
+
+    private static int teinte(int couleur) {
+        if (dore <= 0) {
+            return couleur;
+        }
+        int r = Math.min(255, (int) ((couleur >> 16 & 255) * (1 + 0.6F * dore)));
+        int g = Math.min(255, (int) ((couleur >> 8 & 255) * (1 + 0.3F * dore)));
+        int b = (int) ((couleur & 255) * (1 - 0.4F * dore));
+        return couleur & 0xFF000000 | r << 16 | g << 8 | b;
     }
 
     private static void dessiner(VertexConsumer c, PoseStack ps, ModeleHachibi.Partie partie) {
@@ -98,9 +163,10 @@ public class RenduHachibi3 extends EntityRenderer<Hachibi3> {
         int[] couleurs = partie.c;
         for (int q = 0; q < couleurs.length; q++) {
             int o = q * 23;
+            int couleur = teinte(couleurs[q]);
             for (int k = 0; k < 4; k++) {
                 int s = o + k * 5;
-                c.addVertex(pose, d[s], d[s + 1], d[s + 2]).setColor(couleurs[q]).setUv(d[s + 3], d[s + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
+                c.addVertex(pose, d[s], d[s + 1], d[s + 2]).setColor(couleur).setUv(d[s + 3], d[s + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
                         .setLight(LUMIERE).setNormal(pose, d[o + 20], d[o + 21], d[o + 22]);
             }
         }

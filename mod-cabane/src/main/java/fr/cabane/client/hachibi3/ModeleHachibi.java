@@ -76,6 +76,14 @@ final class ModeleHachibi {
     static final Vec3[] RACINES = new Vec3[8], COTES = new Vec3[8];
     /** Les chaînes : des menottes (poignets) et du collier (cou) jusqu'au haut de leur piquet, planté dans le sol. */
     static final Vec3[] CHAINES_DEBUT = new Vec3[4], PIQUETS = new Vec3[4];
+    /**
+     * Où s'enroulent les chaînes du rituel (voir ClientRituel), en blocs : le collier et le torse (ils bougent avec le
+     * corps), les deux menottes (avec les bras), puis les deux grandes tentacules du milieu (avec elles). Chacune a son
+     * axe (celui du membre) et le rayon du tour de chaîne.
+     */
+    public static final int PRISE_COU = 0, PRISE_TORSE = 1, PRISE_POIGNET = 2, PRISE_TENTACULE = 4, NB_PRISES = 6;
+    static final Vec3[] PRISES = new Vec3[NB_PRISES], AXES_PRISES = new Vec3[NB_PRISES];
+    public static final double[] RAYONS_PRISES = {6.4, 14.5, 6.0, 6.0, 5.2, 5.2};
 
     /** Les huit : l'angle depuis l'arrière, la longueur, le départ, la montée, le redressement, l'enroulement, l'écart. */
     private static final double[][] TABLE = {
@@ -101,6 +109,8 @@ final class ModeleHachibi {
         for (Partie p : TENTACULES) {
             p.fin();
         }
+        priseTentacule(0);
+        priseTentacule(1);
     }
 
     // ------------------------------------------------------------------ le corps
@@ -119,6 +129,10 @@ final class ModeleHachibi {
         cube(CORPS, CORPS_R, v(0, 22.5, 7), cou, 3.4, 3.2, 3.6, muscle(14, true), 0.5);
         Vec3 collier = v(0, 22.5, 7).add(cou[1].scale(-1.6));
         cube(CORPS, CORPS_R, collier, cou, 3.9, 1.0, 4.1, fer(1.0), 0.5);
+        PRISES[PRISE_COU] = collier.scale(G);
+        AXES_PRISES[PRISE_COU] = cou[1];
+        PRISES[PRISE_TORSE] = h.add(ax[1].scale(9)).scale(G);
+        AXES_PRISES[PRISE_TORSE] = ax[1];
         for (int k = 0; k < 2; k++) {
             int s = k == 0 ? -1 : 1;
             CHAINES_DEBUT[2 + k] = collier.add(s * 3.9, 0, 0).scale(G);
@@ -172,7 +186,31 @@ final class ModeleHachibi {
             Vec3 dehors = axes[0].x * s > 0 ? axes[0] : axes[0].scale(-1);
             CHAINES_DEBUT[k] = menotte.add(dehors.scale(3.9)).scale(G);
             PIQUETS[k] = v(s * 22, 0, 19).scale(G);
+            PRISES[PRISE_POIGNET + k] = menotte.scale(G);
+            AXES_PRISES[PRISE_POIGNET + k] = axes[1];
         }
+    }
+
+    /** La prise d'une tentacule : le milieu de ses quadrilatères vers le tiers de sa longueur, et la direction qu'elle y prend. */
+    private static void priseTentacule(int i) {
+        Partie p = TENTACULES[i];
+        PRISES[PRISE_TENTACULE + i] = moyenne(p, 0.36, 0.40);
+        AXES_PRISES[PRISE_TENTACULE + i] = norme(moyenne(p, 0.40, 0.43).subtract(moyenne(p, 0.33, 0.36)));
+    }
+
+    private static Vec3 moyenne(Partie p, double de, double a) {
+        int n = p.c.length, i0 = (int) (n * de), i1 = Math.max(i0 + 1, (int) (n * a));
+        double x = 0, y = 0, z = 0;
+        for (int q = i0; q < i1; q++) {
+            for (int k = 0; k < 4; k++) {
+                int s = q * 23 + k * 5;
+                x += p.d[s];
+                y += p.d[s + 1];
+                z += p.d[s + 2];
+            }
+        }
+        double m = 4.0 * (i1 - i0);
+        return new Vec3(x / m, y / m, z / m);
     }
 
     private static int poing(int face, double x, double y) {

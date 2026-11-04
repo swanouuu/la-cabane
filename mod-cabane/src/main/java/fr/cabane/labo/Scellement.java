@@ -373,7 +373,8 @@ public final class Scellement {
         }
     }
 
-    private static Hachibi3 bete(ServerLevel level) {
+    /** Le Hachibi enchaîné sur son rocher, s'il y est (le rituel le scelle, puis le retire). */
+    static Hachibi3 bete(ServerLevel level) {
         BlockPos ile = new BlockPos(ILE_X, LaboBuilder.SOL + ILE_Y, LaboBuilder.RZ);
         if (!level.isLoaded(ile)) {
             level.getChunk(ile);
