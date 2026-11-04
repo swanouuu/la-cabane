@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "up": "cabane:block/catch/tablier_bas",
+    "down": "cabane:block/catch/tablier_bas",
+    "north": "cabane:block/catch/tablier_bas_h",
+    "south": "cabane:block/catch/tablier_bas_h",
+    "east": "cabane:block/catch/tablier_bas_h",
+    "west": "cabane:block/catch/tablier_bas_h",
+    "particle": "cabane:block/catch/tablier_bas"
+  }
+}

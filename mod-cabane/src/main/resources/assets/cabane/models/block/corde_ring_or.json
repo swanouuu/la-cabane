@@ -1,0 +1,104 @@
+{
+  "textures": {
+    "c": "cabane:block/catch/corde_or",
+    "particle": "cabane:block/catch/corde_or"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        8,
+        4.3
+      ],
+      "to": [
+        16,
+        9.600000000000001,
+        5.9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#c"
+        },
+        "east": {
+          "texture": "#c"
+        },
+        "south": {
+          "texture": "#c"
+        },
+        "west": {
+          "texture": "#c"
+        },
+        "up": {
+          "texture": "#c"
+        },
+        "down": {
+          "texture": "#c"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        15.2,
+        4.3
+      ],
+      "to": [
+        16,
+        16.8,
+        5.9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#c"
+        },
+        "east": {
+          "texture": "#c"
+        },
+        "south": {
+          "texture": "#c"
+        },
+        "west": {
+          "texture": "#c"
+        },
+        "up": {
+          "texture": "#c"
+        },
+        "down": {
+          "texture": "#c"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        22.4,
+        4.3
+      ],
+      "to": [
+        16,
+        24,
+        5.9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#c"
+        },
+        "east": {
+          "texture": "#c"
+        },
+        "south": {
+          "texture": "#c"
+        },
+        "west": {
+          "texture": "#c"
+        },
+        "up": {
+          "texture": "#c"
+        },
+        "down": {
+          "texture": "#c"
+        }
+      }
+    }
+  ]
+}

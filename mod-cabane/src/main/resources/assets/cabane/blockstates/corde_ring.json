@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "couleur=rouge,facing=north": {
+      "model": "cabane:block/corde_ring_rouge"
+    },
+    "couleur=bleu,facing=north": {
+      "model": "cabane:block/corde_ring_bleu"
+    },
+    "couleur=blanc,facing=north": {
+      "model": "cabane:block/corde_ring_blanc"
+    },
+    "couleur=or,facing=north": {
+      "model": "cabane:block/corde_ring_or"
+    },
+    "couleur=noir,facing=north": {
+      "model": "cabane:block/corde_ring_noir"
+    },
+    "couleur=rouge,facing=east": {
+      "model": "cabane:block/corde_ring_rouge",
+      "y": 90
+    },
+    "couleur=bleu,facing=east": {
+      "model": "cabane:block/corde_ring_bleu",
+      "y": 90
+    },
+    "couleur=blanc,facing=east": {
+      "model": "cabane:block/corde_ring_blanc",
+      "y": 90
+    },
+    "couleur=or,facing=east": {
+      "model": "cabane:block/corde_ring_or",
+      "y": 90
+    },
+    "couleur=noir,facing=east": {
+      "model": "cabane:block/corde_ring_noir",
+      "y": 90
+    },
+    "couleur=rouge,facing=south": {
+      "model": "cabane:block/corde_ring_rouge",
+      "y": 180
+    },
+    "couleur=bleu,facing=south": {
+      "model": "cabane:block/corde_ring_bleu",
+      "y": 180
+    },
+    "couleur=blanc,facing=south": {
+      "model": "cabane:block/corde_ring_blanc",
+      "y": 180
+    },
+    "couleur=or,facing=south": {
+      "model": "cabane:block/corde_ring_or",
+      "y": 180
+    },
+    "couleur=noir,facing=south": {
+      "model": "cabane:block/corde_ring_noir",
+      "y": 180
+    },
+    "couleur=rouge,facing=west": {
+      "model": "cabane:block/corde_ring_rouge",
+      "y": 270
+    },
+    "couleur=bleu,facing=west": {
+      "model": "cabane:block/corde_ring_bleu",
+      "y": 270
+    },
+    "couleur=blanc,facing=west": {
+      "model": "cabane:block/corde_ring_blanc",
+      "y": 270
+    },
+    "couleur=or,facing=west": {
+      "model": "cabane:block/corde_ring_or",
+      "y": 270
+    },
+    "couleur=noir,facing=west": {
+      "model": "cabane:block/corde_ring_noir",
+      "y": 270
+    }
+  }
+}

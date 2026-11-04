@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "lettre=vide": {
+      "model": "cabane:block/tablier_ring_vide"
+    },
+    "lettre=c": {
+      "model": "cabane:block/tablier_ring_c"
+    },
+    "lettre=a": {
+      "model": "cabane:block/tablier_ring_a"
+    },
+    "lettre=t": {
+      "model": "cabane:block/tablier_ring_t"
+    },
+    "lettre=h": {
+      "model": "cabane:block/tablier_ring_h"
+    }
+  }
+}

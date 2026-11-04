@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/marches_ring"
+    },
+    "facing=east": {
+      "model": "cabane:block/marches_ring",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/marches_ring",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/marches_ring",
+      "y": 270
+    }
+  }
+}
