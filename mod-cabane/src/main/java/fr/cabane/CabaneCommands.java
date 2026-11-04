@@ -39,6 +39,13 @@ public final class CabaneCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(CabaneCommands::annuaire)));
 
+        // /histoire : où en est l'histoire contre le Président ; l'hôte débloque la partie suivante (1 à 3)
+        dispatcher.register(Commands.literal("histoire").executes(ctx -> fr.cabane.histoire.Histoire.direPartie(ctx.getSource()))
+                .then(Commands.literal("partie").requires(CabaneCommands::hote)
+                        .then(Commands.argument("numero", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))
+                                .executes(ctx -> fr.cabane.histoire.Histoire.changerPartie(ctx.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "numero"))))));
+
         // /start : l'hôte lance la partie (tout le monde passe de la salle d'embarquement à l'avion)
         dispatcher.register(Commands.literal("start").requires(CabaneCommands::hote).executes(ctx -> {
             fr.cabane.hub.HubEvents.demarrer(ctx.getSource().getServer(), ctx.getSource());
@@ -166,6 +173,24 @@ public final class CabaneCommands {
                     int count = HubEvents.spawnNpcs(level);
                     ctx.getSource().sendSuccess(() -> Component.literal("La Mairie et son secret sont construits, " + count + " PNJ replacés."), true);
                     return 1;
+                }))
+                // les retouches d'un village qui existait déjà : rues pavées, kiosque d'infos déplacé, deux maisons tranquilles
+                .then(Commands.literal("retouches").requires(CabaneCommands::hote).executes(ctx -> {
+                    var level = ctx.getSource().getServer().overworld();
+                    BlockPos centre = fr.cabane.hub.HubData.get(ctx.getSource().getServer()).centre();
+                    if (centre == null) {
+                        ctx.getSource().sendFailure(Component.literal("Beauvais n'est pas encore construit."));
+                        return 0;
+                    }
+                    // le village doit être chargé autour de l'hôte (le tableau de l'ancien kiosque est une entité)
+                    if (ctx.getSource().getLevel() != level || ctx.getSource().getPosition().distanceTo(centre.getCenter()) > 120) {
+                        ctx.getSource().sendFailure(Component.literal("Va d'abord à Beauvais, puis relance la commande."));
+                        return 0;
+                    }
+                    String fait = new fr.cabane.hub.HubBuilder(level, centre).retouches();
+                    ctx.getSource().sendSuccess(() -> Component.literal(fait.isEmpty() ? "Rien à refaire : Beauvais est déjà à jour."
+                            : "Retouches faites : " + fait + ".").withStyle(ChatFormatting.GOLD), true);
+                    return fait.isEmpty() ? 0 : 1;
                 }))
                 // un événement : les Pillards du Sud marchent sur le village
                 .then(Commands.literal("raid").requires(source -> source.hasPermission(2))

@@ -70,11 +70,12 @@ public final class Missions extends SimpleJsonResourceReloadListener {
 
     /**
      * quand : -1 tant que le Président règne, 1 une fois Beauvais libéré, 0 toujours. repetable : minutes avant de la refaire
-     * (0 : une fois). ftb : la quête du livre (identifiant FTB Quests) cochée quand on la rend.
+     * (0 : une fois). ftb : la quête du livre (identifiant FTB Quests) cochée quand on la rend. partie : la partie de
+     * l'histoire qu'il faut avoir débloquée (/histoire partie).
      */
     public record Mission(String id, String qui, String titre, String pitch, String rappel, String merci, List<Objectif> objectifs,
             long argent, int xp, List<ItemStack> objets, List<String> apres, int quand, int repetable, List<ItemStack> donnes, int ordre, String ftb,
-            Semaine semaine) {
+            Semaine semaine, int partie) {
     }
 
     /**
@@ -144,7 +145,8 @@ public final class Missions extends SimpleJsonResourceReloadListener {
                         GsonHelper.getAsString(o, "pitch"), GsonHelper.getAsString(o, "rappel", ""), GsonHelper.getAsString(o, "merci", "Merci !"),
                         List.copyOf(objectifs), GsonHelper.getAsLong(r, "argent", 0), GsonHelper.getAsInt(r, "xp", 0), objets(r, "objets"),
                         List.copyOf(apres), GsonHelper.getAsInt(o, "quand", 0), GsonHelper.getAsInt(o, "repetable", 0), objets(o, "donne"),
-                        GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsString(o, "ftb", ""), semaine(o)));
+                        GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsString(o, "ftb", ""), semaine(o),
+                        GsonHelper.getAsInt(o, "partie", 1)));
             } catch (Exception e) {
                 Cabane.LOGGER.info("Mission {} ignorée : {}", id, e.getMessage());
             }
@@ -406,8 +408,11 @@ public final class Missions extends SimpleJsonResourceReloadListener {
                 return false;
             }
         }
-        boolean libere = HubData.get(joueur.server).libere();
-        return m.quand() == 0 || (m.quand() > 0) == libere;
+        HubData hub = HubData.get(joueur.server);
+        if (hub.partie() < m.partie()) {
+            return false;
+        }
+        return m.quand() == 0 || (m.quand() > 0) == hub.libere();
     }
 
     private static int compter(ServerPlayer joueur, String id) {

@@ -48,13 +48,15 @@ const xp = (k, n) => ({ id: id(k + "/xp"), type: "xp_levels", xp_levels: n });
 const donne = (k, item, n = 1) => ({ id: id(k + "/r/" + item), type: "item", item: objet(item), count: n });
 const commande = (k, cmd) => ({ id: id(k + "/cmd"), type: "command", command: cmd, elevate_perms: true, permission_level: 2, silent: true });
 
-function quete(k, { titre, sous, desc, x, y, taches, recompenses = [], deps = [], forme, taille, argent }) {
+/** invisible : la quête n'apparaît qu'une fois finie ; cachee : elle n'apparaît qu'une fois ses dépendances finies. */
+function quete(k, { titre, sous, desc, x, y, taches, recompenses = [], deps = [], forme, taille, argent, invisible, cachee }) {
   const qid = id(k);
   if (argent) recompenses = [...recompenses, { id: id(k + "/argent"), type: "command", command: `/argent donner {p} ${argent}`, elevate_perms: true, permission_level: 2, silent: true }];
   lang[`quest.${qid}.title`] = titre;
   if (sous) lang[`quest.${qid}.quest_subtitle`] = sous;
   if (desc) lang[`quest.${qid}.quest_desc`] = desc;
-  return { id: qid, x: D(x), y: D(y), tasks: taches, rewards: recompenses, dependencies: deps.map(id), shape: forme, size: taille ? D(taille) : undefined };
+  return { id: qid, x: D(x), y: D(y), tasks: taches, rewards: recompenses, dependencies: deps.map(id), shape: forme, size: taille ? D(taille) : undefined,
+    invisible: invisible || undefined, hide_until_deps_complete: cachee || undefined };
 }
 
 function chapitre(fichier, { titre, icone, ordre, quetes }) {
@@ -129,38 +131,41 @@ const histoire = chapitre("histoire", { titre: "&6&lL'Histoire de Beauvais", ico
     desc: ["Un jour, les Pillards du Sud marcheront sur le village (c'est l'hôte qui décide quand !). Ce jour-là, soyez prêts.", "",
       "Repoussez-les tous, protégez les habitants, puis cochez cette quête."],
     taches: [coche("histoire/raid")], recompenses: [xp("histoire/raid", 8), donne("histoire/raid", "minecraft:totem_of_undying")] }),
-  // Acte III : le secret de la Mairie
-  acte("mairie", { titre: "La Mairie fermée la nuit", sous: "Acte III — Ce qu'on entend sous la terre", x: 8, y: 1, deps: ["avantposte"], argent: 1000,
+  // Acte III : le secret de la Mairie, caché jusqu'à ce que l'hôte lance la deuxième partie (/histoire partie 2 : le mod coche cette porte)
+  acte("partie2", { titre: "&dDeuxième partie", sous: "Le secret de la Mairie", x: 8, y: 2.6, invisible: true,
+    desc: ["L'hôte a lancé la deuxième partie de l'histoire. Sylvie cherche de l'aide… et la Mairie cache quelque chose."],
+    taches: [coche("histoire/partie2")] }),
+  acte("mairie", { titre: "La Mairie fermée la nuit", sous: "Acte III — Ce qu'on entend sous la terre", x: 8, y: 1, deps: ["avantposte", "partie2"], cachee: true, argent: 1000,
     desc: ["La nuit, on entend des machines sous la Mairie. Dans le bureau du Président, une des bibliothèques sonne creux…", "",
       "Trouvez le passage secret, et descendez."],
     taches: [succes("histoire/mairie", "cabane:histoire/laboratoire")], recompenses: [xp("histoire/mairie", 6)] }),
-  acte("pierre", { titre: "Le Sujet 07", x: 10, y: 0, deps: ["mairie"], argent: 500,
+  acte("pierre", { titre: "Le Sujet 07", x: 10, y: 0, deps: ["mairie"], cachee: true, argent: 500,
     desc: ["Au fond du laboratoire, des cellules. Dans l'une d'elles, un homme qui parle encore : Pierre, « parti travailler à la capitale ».", "",
       "Écoutez ce qu'il sait, puis cochez."],
     taches: [coche("histoire/pierre")] }),
-  acte("dossier", { titre: "Le dossier « Projet Augmenté »", x: 10, y: 2, deps: ["mairie"], argent: 1500,
+  acte("dossier", { titre: "Le dossier « Projet Augmenté »", x: 10, y: 2, deps: ["mairie"], cachee: true, argent: 1500,
     desc: ["Le coffre du laboratoire contient un dossier, le carnet du Président et le rapport du Sujet 07. Tout y est : la potion verte, les Pillards payés, la Salle Zéro.", "",
       "Gardez le dossier : c'est la preuve. Et lisez le carnet…"],
     taches: [avoir("histoire/dossier", "cabane:dossier_secret")], recompenses: [xp("histoire/dossier", 6)] }),
   // Acte IV : les Sept Reliques
-  acte("reliques", { titre: "&eLes Sept Reliques", sous: "Acte IV — Aux quatre coins du monde", x: 12, y: 1, deps: ["pierre", "dossier"], forme: "diamond", argent: 3000,
+  acte("reliques", { titre: "&eLes Sept Reliques", sous: "Acte IV — Aux quatre coins du monde", x: 12, y: 1, deps: ["pierre", "dossier"], cachee: true, forme: "diamond", argent: 3000,
     desc: ["Seules les Sept Reliques peuvent ouvrir la Salle Zéro. Le Président les a fait cacher très loin, dans les pires donjons du monde.", "",
       "Suivez le chapitre &eLes Sept Reliques&r : réunissez-les toutes. Brokk en forgera une clé."],
     taches: [succes("histoire/reliques", "cabane:sept_reliques")],
     recompenses: [donne("histoire/reliques", "cabane:cle_salle_zero"), commande("histoire/reliques", '/tellraw {p} {"text":"Brokk : « Sept reliques, une clé. Allez donc rendre visite à votre Président. »","color":"gold"}')] }),
   // Acte V : le PLATO 6Z
-  acte("forteresse", { titre: "&4Le PLATO 6Z", sous: "Acte V — Le repaire", x: 14, y: 1, deps: ["reliques"], argent: 1000,
+  acte("forteresse", { titre: "&4Le PLATO 6Z", sous: "Acte V — Le repaire", x: 14, y: 1, deps: ["reliques"], cachee: true, argent: 1000,
     desc: ["À 10 000 blocs plein sud se dresse le PLATO 6Z, le repaire des Pillards. Au cœur du donjon : la Salle Zéro.", "",
       "Tapez &e/cabane plato&r pour ses coordonnées. Pour l'instant il est scellé : c'est pour plus tard ! L'hôte l'ouvrira quand le moment sera venu.", "",
       "Allez la voir de vos yeux, puis cochez."],
     taches: [coche("histoire/forteresse")] }),
-  acte("liberation", { titre: "&6&lLibérer Beauvais", sous: "Le Président Augmenté", x: 16, y: 1, deps: ["forteresse"], forme: "gear", taille: 2, argent: 25000,
+  acte("liberation", { titre: "&6&lLibérer Beauvais", sous: "Le Président Augmenté", x: 16, y: 1, deps: ["forteresse"], cachee: true, forme: "gear", taille: 2, argent: 25000,
     desc: ["Dans la Salle Zéro, utilisez la Clé sur le pupitre. Le Président se réveillera, fusionné avec sa machine.", "",
       "Il est très, très fort. Venez tous ensemble, avec vos meilleures armes, des potions, des totems. Et ne lâchez rien."],
     taches: [succes("histoire/liberation", "cabane:histoire/liberation")],
     recompenses: [xp("histoire/liberation", 30), donne("histoire/liberation", "minecraft:netherite_ingot", 2), donne("histoire/liberation", "minecraft:diamond_block", 2),
       commande("histoire/liberation", '/title {p} title {"text":"Libérateur de Beauvais","color":"gold"}')] }),
-  acte("epilogue", { titre: "Le Conseil des Anciens", sous: "Épilogue", x: 18, y: 1, deps: ["liberation"], argent: 2000,
+  acte("epilogue", { titre: "Le Conseil des Anciens", sous: "Épilogue", x: 18, y: 1, deps: ["liberation"], cachee: true, argent: 2000,
     desc: ["Beauvais est libre. Pierre a retrouvé le feu de camp, et le Conseil des Anciens se réunit à nouveau.", "",
       "Allez écouter Pierre, puis rendez une petite visite à l'ancien président, dans sa cellule sous la Mairie. Il a sûrement une consultation citoyenne à vous proposer."],
     taches: [coche("histoire/epilogue")], recompenses: [donne("histoire/epilogue", "cabane:biere_86", 6)] }),

@@ -63,7 +63,10 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.minecraft.commands.CommandSourceStack;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -116,6 +119,10 @@ public final class Histoire {
 
         @Override
         protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player joueur, BlockHitResult hit) {
+            // avant la deuxième partie de l'histoire, c'est une bibliothèque comme les autres
+            if (!level.isClientSide && !state.getValue(OUVERTE) && HubData.get(level.getServer()).partie() < 2) {
+                return InteractionResult.PASS;
+            }
             if (!level.isClientSide && !state.getValue(OUVERTE)) {
                 for (BlockPos p : List.of(pos, pos.above(), pos.below())) {
                     if (level.getBlockState(p).is(this)) {
@@ -402,6 +409,212 @@ public final class Histoire {
                 joueur.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Ce que le Président cache sous la Mairie").withStyle(ChatFormatting.GRAY)));
             }
         }
+    }
+
+    // ================================================================ les trois parties de l'histoire (/histoire partie)
+
+    private static final String[] PARTIES = {"", "Les gens du ciel", "Le secret de la Mairie", "Le PLATO 6Z"};
+    /** La quête cachée du livre qui ouvre l'acte III (outils/generer-quetes.mjs, « histoire/partie2 »). */
+    private static final String QUETE_PARTIE_2 = idQuete("histoire/partie2");
+    /** Les joueurs dont le livre a déjà été mis à jour depuis le démarrage du serveur. */
+    private static final java.util.Set<java.util.UUID> LIVRES_A_JOUR = new java.util.HashSet<>();
+
+    /** L'identifiant FTB d'une quête : le même calcul que outils/generer-quetes.mjs. */
+    private static String idQuete(String cle) {
+        try {
+            byte[] h = java.security.MessageDigest.getInstance("SHA-1").digest(("cabane:" + cle).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String hex = java.util.HexFormat.of().withUpperCase().formatHex(h).substring(0, 16);
+            return Integer.toHexString(Character.digit(hex.charAt(0), 16) & 7).toUpperCase() + hex.substring(1);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** /histoire : où en est l'histoire. */
+    public static int direPartie(CommandSourceStack source) {
+        int partie = HubData.get(source.getServer()).partie();
+        source.sendSuccess(() -> Component.literal("L'histoire de Beauvais : partie " + partie + " sur 3, « " + PARTIES[partie] + " ».")
+                .withStyle(ChatFormatting.GOLD), false);
+        return partie;
+    }
+
+    /** /histoire partie <n> : l'hôte débloque la suite (ou revient en arrière, pour les tests). */
+    public static int changerPartie(CommandSourceStack source, int partie) {
+        MinecraftServer server = source.getServer();
+        HubData hub = HubData.get(server);
+        if (hub.libere()) {
+            source.sendFailure(Component.literal("Beauvais est déjà libéré : toute l'histoire est débloquée."));
+            return 0;
+        }
+        if (partie == 3 && !Forteresse.porte(server.overworld(), true)) {
+            source.sendFailure(Component.literal("Le PLATO 6Z n'est pas encore construit : /cabane plato construire, puis recommence."));
+            return 0;
+        }
+        int avant = hub.partie();
+        // l'hôte revient avant la troisième partie : la herse retombe
+        if (avant >= 3 && partie < 3 && hub.forteresseOuverte()) {
+            Forteresse.porte(server.overworld(), false);
+        }
+        hub.setPartie(partie);
+        LIVRES_A_JOUR.clear();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            mettreAJourLivre(p, partie);
+        }
+        if (partie > avant) {
+            annoncer(server, partie);
+        }
+        source.sendSuccess(() -> Component.literal("L'histoire passe à la partie " + partie + " : « " + PARTIES[partie] + " ».").withStyle(ChatFormatting.GOLD), true);
+        return partie;
+    }
+
+    private static void annoncer(MinecraftServer server, int partie) {
+        String ligne = partie == 2 ? "Sylvie, la femme de Pierre, cherche de l'aide. Et la nuit, la Mairie a l'air moins vide qu'elle ne devrait…"
+                : "La grande herse du PLATO 6Z s'est levée. Le Président vous attend dans la Salle Zéro (/cabane plato).";
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(partie == 2 ? "Deuxième partie" : "Troisième partie")
+                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)));
+            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(PARTIES[partie]).withStyle(ChatFormatting.WHITE)));
+            p.playNotifySound(partie == 2 ? SoundEvents.UI_TOAST_CHALLENGE_COMPLETE : SoundEvents.RAID_HORN.value(), SoundSource.MASTER, 1F, 1F);
+        }
+        server.getPlayerList().broadcastSystemMessage(Component.literal("★ " + PARTIES[partie] + " : " + ligne).withStyle(ChatFormatting.GOLD), false);
+    }
+
+    /** La quête cachée du livre suit la partie en cours : cochée à partir de la deuxième, décochée si l'hôte revient avant. */
+    private static void mettreAJourLivre(ServerPlayer joueur, int partie) {
+        String commande = "ftbquests change_progress " + joueur.getGameProfile().getName() + (partie >= 2 ? " complete " : " reset ") + QUETE_PARTIE_2;
+        try {
+            joueur.server.getCommands().getDispatcher().execute(commande, joueur.server.createCommandSourceStack().withSuppressedOutput().withPermission(4));
+        } catch (Exception e) {
+            Cabane.LOGGER.debug("Commande « {} » refusée : {}", commande, e.getMessage());
+        }
+        LIVRES_A_JOUR.add(joueur.getUUID());
+    }
+
+    /** Quelques secondes après l'arrivée d'un joueur (le temps que FTB Quests le connaisse), son livre rattrape l'histoire. */
+    @SubscribeEvent
+    public static void onArrivee(PlayerTickEvent.Post event) {
+        if (event.getEntity() instanceof ServerPlayer joueur && joueur.tickCount == 100 && !LIVRES_A_JOUR.contains(joueur.getUUID())) {
+            int partie = HubData.get(joueur.server).partie();
+            if (partie >= 2) {
+                mettreAJourLivre(joueur, partie);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onDemarrage(ServerStartedEvent event) {
+        LIVRES_A_JOUR.clear();
+    }
+
+    // ================================================================ les reliques : les Pillards du Sud veulent les reprendre
+
+    /** Rang de la relique → combien de Pillards l'attendent (la première est tranquille). */
+    private static final int[] EMBUSCADE = {0, 0, 3, 5, 7, 9, 11, 14};
+    public static final String TAG_EMBUSCADE = "cabane_embuscade";
+
+    /** Une relique est trouvée pour la première fois sur le serveur : plus il y en a déjà eu, plus l'embuscade est grosse. */
+    @SubscribeEvent
+    public static void onSucces(AdvancementEvent.AdvancementEarnEvent event) {
+        ResourceLocation id = event.getAdvancement().id();
+        if (!id.getNamespace().equals(Cabane.MODID) || !id.getPath().startsWith("relique_") || !(event.getEntity() instanceof ServerPlayer joueur)) {
+            return;
+        }
+        int rang = HubData.get(joueur.server).reliqueTrouvee(id.getPath().substring("relique_".length()));
+        if (rang > 0) {
+            embuscade(joueur, Math.min(rang, EMBUSCADE.length - 1));
+        }
+    }
+
+    public static void embuscade(ServerPlayer joueur, int rang) {
+        if (rang <= 1) {
+            joueur.sendSystemMessage(Component.literal("Tu as l'impression qu'on t'observe… Quelqu'un ne veut pas que cette relique rentre à Beauvais.")
+                    .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+            return;
+        }
+        ServerLevel level = joueur.serverLevel();
+        int force = rang >= 6 ? 1 : rang >= 4 ? 0 : -1;
+        int resistance = rang >= 7 ? 1 : rang >= 5 ? 0 : -1;
+        int evocateurs = rang >= 6 ? 2 : rang >= 4 ? 1 : 0;
+        int total = EMBUSCADE[rang] + evocateurs + (rang >= 7 ? 1 : 0);
+        for (int i = 0; i < total; i++) {
+            boolean capitaine = rang >= 7 && i == total - 1;
+            boolean evocateur = !capitaine && i >= EMBUSCADE[rang];
+            BlockPos pos = place(level, joueur.blockPosition(), level.random);
+            boolean noye = pos == null;
+            if (noye) {
+                pos = joueur.blockPosition().offset(level.random.nextInt(5) - 2, 0, level.random.nextInt(5) - 2);
+                noye = level.getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER);
+                if (!noye && !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()) {
+                    pos = joueur.blockPosition();
+                }
+            }
+            EntityType<? extends Mob> type = noye ? EntityType.DROWNED : capitaine ? EntityType.VINDICATOR
+                    : evocateur ? EntityType.EVOKER : i % 3 == 2 ? EntityType.VINDICATOR : EntityType.PILLAGER;
+            Mob pillard = type.create(level);
+            if (pillard == null) {
+                continue;
+            }
+            pillard.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, level.random.nextFloat() * 360F, 0F);
+            pillard.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null);
+            if (noye) {
+                pillard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.TRIDENT));
+            }
+            if (rang >= 3) {
+                pillard.setItemSlot(EquipmentSlot.HEAD, new ItemStack(capitaine ? Items.DIAMOND_HELMET : Items.IRON_HELMET));
+                pillard.setItemSlot(EquipmentSlot.CHEST, new ItemStack(capitaine ? Items.DIAMOND_CHESTPLATE : Items.IRON_CHESTPLATE));
+                pillard.setItemSlot(EquipmentSlot.LEGS, new ItemStack(capitaine ? Items.DIAMOND_LEGGINGS : Items.IRON_LEGGINGS));
+                pillard.setItemSlot(EquipmentSlot.FEET, new ItemStack(capitaine ? Items.DIAMOND_BOOTS : Items.IRON_BOOTS));
+                for (EquipmentSlot slot : new EquipmentSlot[] {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+                    pillard.setDropChance(slot, 0F);
+                }
+            }
+            if (capitaine) {
+                pillard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_AXE));
+                AttributeInstance vie = pillard.getAttribute(Attributes.MAX_HEALTH);
+                if (vie != null) {
+                    vie.setBaseValue(120);
+                    pillard.setHealth(pillard.getMaxHealth());
+                }
+            }
+            if (force >= 0) {
+                pillard.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 20 * 600, force));
+            }
+            if (resistance >= 0) {
+                pillard.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 20 * 600, resistance));
+            }
+            pillard.setCustomName(Component.literal(capitaine ? "Capitaine des Pillards du Sud" : noye ? "Pillard des profondeurs" : "Pillard du Sud")
+                    .withStyle(ChatFormatting.DARK_RED));
+            pillard.addTag(TAG_EMBUSCADE);
+            pillard.setPersistenceRequired();
+            pillard.setTarget(joueur);
+            level.addFreshEntity(pillard);
+        }
+        joueur.connection.send(new ClientboundSetTitleTextPacket(Component.literal("EMBUSCADE !").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)));
+        joueur.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Les Pillards du Sud voulaient cette relique").withStyle(ChatFormatting.GOLD)));
+        level.playSound(null, joueur.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 3F, 1F);
+        joueur.server.getPlayerList().broadcastSystemMessage(Component.literal("⚔ " + joueur.getGameProfile().getName()
+                + " a trouvé une relique… et les Pillards du Sud lui tombent dessus !").withStyle(ChatFormatting.RED), false);
+    }
+
+    /** Un endroit à 5-12 blocs : du sol solide, et deux blocs libres au-dessus, sans eau ni lave. */
+    private static BlockPos place(ServerLevel level, BlockPos autour, RandomSource r) {
+        for (int essai = 0; essai < 40; essai++) {
+            double a = r.nextDouble() * Math.PI * 2;
+            int d = 5 + r.nextInt(8);
+            int x = autour.getX() + (int) Math.round(Math.cos(a) * d);
+            int z = autour.getZ() + (int) Math.round(Math.sin(a) * d);
+            for (int dy = 4; dy >= -6; dy--) {
+                BlockPos p = new BlockPos(x, autour.getY() + dy, z);
+                if (libre(level, p) && libre(level, p.above()) && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP)) {
+                    return p;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean libre(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getCollisionShape(level, p).isEmpty() && level.getFluidState(p).isEmpty();
     }
 
     // ================================================================ les Pillards du Sud (événement lancé par l'hôte)

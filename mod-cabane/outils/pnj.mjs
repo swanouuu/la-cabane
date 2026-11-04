@@ -116,8 +116,11 @@ export function genererPnj(ecrire) {
       "Les gens croient que je suis un sorcier. Je suis cartographe. Bon… un peu sorcier aussi.",
     ], boutons: [{ texte: "Les cartes des reliques", vers: "cartes" }, { texte: "Le matériel d'explorateur", action: "boutique:pnj.cartographe" },
       { texte: "Un conseil ?", vers: "conseil" }, BYE("Merci Karim")] },
-    { label: "cartes", titre: "Les cartes au trésor", texte: "Chaque relique dort dans un donjon lointain, à des milliers de pas d'ici. Ma carte te mène droit dessus : 300 $ la carte. Prévois un lit, à manger, et une Waystone. Chouf !",
-      boutons: [...RELIQUES.map((r) => ({ texte: `${r.lieu} (${r.distance} blocs)`, action: `tresor:${r.cle}:${r.distance}:300` })), RETOUR] },
+    // le prix affiché sur chaque bouton est calculé par le mod (Dialogues.prixCarte) : 300 $, puis trois fois plus à chaque nouvelle carte
+    { label: "cartes", titre: "Les cartes au trésor", texte: [
+      "Chaque relique dort dans un donjon lointain, à des milliers de pas d'ici. Ma carte te mène droit dessus. La première, 300 $. Après, chaque nouvelle carte coûte trois fois plus cher. Pourquoi ? Parce qu'à chaque relique retrouvée, quelqu'un envoie plus de monde pour la reprendre. Je dis pas qui. Chouf.",
+      "300 $ la première carte, trois fois plus à chaque nouvelle. C'est pas moi qui suis cher : c'est le risque. À chaque relique qui rentre, il y a plus de gens armés autour des suivantes. Prévois un lit, à manger, et une Waystone.",
+    ], boutons: [...RELIQUES.map((r) => ({ texte: `${r.lieu} (${r.distance} blocs)`, action: `tresor:${r.cle}:${r.distance}:300` })), RETOUR] },
     { label: "conseil", titre: "Conseil", texte: [
       "Les citadelles du ciel et les fonderies sont très loin. Pose des Waystones en chemin, et ne pars jamais sans lit.",
       "Au nord, la neige. Au sud, le désert. À l'est, des volcans. Et ici, la jungle. Prends un manteau ET de l'eau.",
@@ -145,12 +148,11 @@ export function genererPnj(ecrire) {
       BYE("Euh… à plus")] },
     { label: "secret", titre: "Un secret de Gribbs", texte: [
       "Le Président a peur des poules. C'est vrai. Ne lui dis pas que c'est moi.",
-      "Dans le bureau du Président, à la Mairie, une bibliothèque sonne creux. Une seule. Clique sur la bonne… et descends.",
-      "Le Fourgue, derrière la tour de guet, rachète tout. TOUT. Même ce que tu ne devrais pas avoir.",
+      "La Mairie ferme la nuit. Pourquoi une mairie serait fermée la nuit ? Il y a rien à voler, dans une mairie. Normalement.",
       "Karim vend les cartes des donjons à reliques. Il dit que c'est de la magie. C'est du papier.",
       "Nyota soigne même la gueule de bois. Je dis ça, je dis rien.",
       "Brokk forge des armes de monstres. Apporte-lui les matériaux, et beaucoup d'argent. Beaucoup.",
-      "Les sept reliques ouvrent une salle. La Salle Zéro, très loin au sud. Ne me demande pas comment je le sais.",
+      "Les sept reliques, le Hejj dit qu'elles réveillent le village. Moi je dis qu'un truc aussi bien caché, ça doit ouvrir quelque chose.",
       "Mehdi change ses contrats toutes les heures. Les mieux payés partent vite.",
       "Sylvie attend devant la Mairie tous les soirs. Son Pierre n'est jamais ressorti. Moi, je dis rien. Mais je regarde.",
       "Le Hejj a une demande différente chaque jour. Il paie bien, pour un vieux sur un porche.",
@@ -353,7 +355,7 @@ export function genererPnj(ecrire) {
     ], boutons: [RETOUR, BYE("Noté")] },
   ] });
 
-  // le Fourgue, dans l'ombre derrière la tour de guet : le marché noir
+  // le Fourgue, le marché noir : retiré du village pour l'instant (HubEvents.PARTIS), et personne ne parle de lui
   pnj({ fichier: "fourgue", nom: "Le Fourgue", couleur: "dark_gray", tags: ["fourgue"], dialogues: [
     { label: "default", titre: "Le Fourgue", texte: [
       "Psst. T'as pas vu de flics en venant ? … Bon. Qu'est-ce que tu veux ?",

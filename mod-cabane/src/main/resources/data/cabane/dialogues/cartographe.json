@@ -34,7 +34,8 @@
     "cartes": {
       "titre": "Les cartes au trésor",
       "textes": [
-        "Chaque relique dort dans un donjon lointain, à des milliers de pas d'ici. Ma carte te mène droit dessus : 300 $ la carte. Prévois un lit, à manger, et une Waystone. Chouf !"
+        "Chaque relique dort dans un donjon lointain, à des milliers de pas d'ici. Ma carte te mène droit dessus. La première, 300 $. Après, chaque nouvelle carte coûte trois fois plus cher. Pourquoi ? Parce qu'à chaque relique retrouvée, quelqu'un envoie plus de monde pour la reprendre. Je dis pas qui. Chouf.",
+        "300 $ la première carte, trois fois plus à chaque nouvelle. C'est pas moi qui suis cher : c'est le risque. À chaque relique qui rentre, il y a plus de gens armés autour des suivantes. Prévois un lit, à manger, et une Waystone."
       ],
       "boutons": [
         {

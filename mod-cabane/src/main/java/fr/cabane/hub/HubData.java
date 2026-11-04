@@ -1,6 +1,8 @@
 package fr.cabane.hub;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -8,6 +10,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -37,6 +40,12 @@ public class HubData extends SavedData {
     private int vegeta;
     /** Qui les joueurs ont aidé : « goku » ou « vegeta » (vide avant le combat). */
     private String issueVegeta = "";
+    /** La partie de l'histoire débloquée par l'hôte (/histoire partie) : 1 le village, 2 le secret de la Mairie, 3 le PLATO 6Z. */
+    private int partie = 1;
+    /** Les cartes de reliques vendues par Karim, dans l'ordre (la clé du lieu) : chaque nouvelle coûte trois fois plus. */
+    private final List<String> cartesReliques = new ArrayList<>();
+    /** Les reliques déjà trouvées sur le serveur, dans l'ordre (chacune fait venir plus de Pillards que la précédente). */
+    private final List<String> reliquesTrouvees = new ArrayList<>();
     private final Set<UUID> kits = new HashSet<>();
 
     public static HubData get(MinecraftServer server) {
@@ -57,6 +66,9 @@ public class HubData extends SavedData {
         data.forteresseOuverte = tag.getBoolean("forteresseOuverte");
         data.vegeta = tag.getInt("vegeta");
         data.issueVegeta = tag.getString("issueVegeta");
+        data.partie = Math.max(1, tag.getInt("partie"));
+        tag.getList("cartesReliques", Tag.TAG_STRING).forEach(t -> data.cartesReliques.add(t.getAsString()));
+        tag.getList("reliquesTrouvees", Tag.TAG_STRING).forEach(t -> data.reliquesTrouvees.add(t.getAsString()));
         ListTag list = tag.getList("kits", Tag.TAG_INT_ARRAY);
         for (Tag entry : list) {
             data.kits.add(NbtUtils.loadUUID(entry));
@@ -83,6 +95,13 @@ public class HubData extends SavedData {
         tag.putBoolean("forteresseOuverte", forteresseOuverte);
         tag.putInt("vegeta", vegeta);
         tag.putString("issueVegeta", issueVegeta);
+        tag.putInt("partie", partie);
+        ListTag cartes = new ListTag();
+        cartesReliques.forEach(c -> cartes.add(StringTag.valueOf(c)));
+        tag.put("cartesReliques", cartes);
+        ListTag trouvees = new ListTag();
+        reliquesTrouvees.forEach(r -> trouvees.add(StringTag.valueOf(r)));
+        tag.put("reliquesTrouvees", trouvees);
         ListTag list = new ListTag();
         kits.forEach(id -> list.add(NbtUtils.createUUID(id)));
         tag.put("kits", list);
@@ -101,6 +120,43 @@ public class HubData extends SavedData {
         vegeta = etat;
         issueVegeta = issue;
         setDirty();
+    }
+
+    /** La partie de l'histoire en cours ; une fois Beauvais libéré, tout est forcément débloqué. */
+    public int partie() {
+        return libere ? 3 : partie;
+    }
+
+    public void setPartie(int valeur) {
+        partie = valeur;
+        setDirty();
+    }
+
+    /** Le rang de la carte de ce lieu chez Karim (0 pour la première vendue), ou le rang qu'aurait la prochaine. */
+    public int rangCarte(String lieu) {
+        int i = cartesReliques.indexOf(lieu);
+        return i >= 0 ? i : cartesReliques.size();
+    }
+
+    public boolean carteDejaVendue(String lieu) {
+        return cartesReliques.contains(lieu);
+    }
+
+    public void carteVendue(String lieu) {
+        if (!cartesReliques.contains(lieu)) {
+            cartesReliques.add(lieu);
+            setDirty();
+        }
+    }
+
+    /** @return le rang de cette relique (1 pour la première trouvée sur le serveur), ou 0 si elle l'avait déjà été. */
+    public int reliqueTrouvee(String relique) {
+        if (reliquesTrouvees.contains(relique)) {
+            return 0;
+        }
+        reliquesTrouvees.add(relique);
+        setDirty();
+        return reliquesTrouvees.size();
     }
 
     public boolean libere() {

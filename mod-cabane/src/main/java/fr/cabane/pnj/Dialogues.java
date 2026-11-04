@@ -279,6 +279,12 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
             if (!b.vers().isEmpty()) {
                 choix.add(new Choix(b.texte(), NORMAL));
                 suites.add((j, ss) -> page(j, ss, b.vers()));
+            } else if (b.action().startsWith("tresor:")) {
+                // les cartes des reliques de Karim : le prix du moment, et celles déjà vendues
+                String lieu = b.action().split(":")[1];
+                boolean vendue = fr.cabane.hub.HubData.get(joueur.server).carteDejaVendue(lieu);
+                choix.add(new Choix(b.texte() + " · " + Economie.format(prixCarte(joueur, lieu)) + (vendue ? ", déjà achetée" : ""), BOUTIQUE));
+                suites.add((j, ss) -> action(j, ss, b.action()));
             } else if (!b.action().isEmpty()) {
                 choix.add(new Choix(b.texte(), ecran(b.action()) ? BOUTIQUE : NORMAL));
                 suites.add((j, ss) -> action(j, ss, b.action()));
@@ -529,14 +535,31 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
                     ftb(joueur, "ftbquests open_book", false);
                 }
             }
-            // tresor:<lieu>:<distance>:<prix> : Karim vend la carte d'un donjon à relique
+            // tresor:<lieu>:<distance>:<prix> : Karim vend la carte d'un donjon à relique (le prix de départ ; voir prixCarte)
             case "tresor" -> {
-                if (Economie.payer(joueur, Long.parseLong(a[3]))) {
+                long prix = prixCarte(joueur, a[1]);
+                if (Economie.payer(joueur, prix)) {
+                    fr.cabane.hub.HubData.get(joueur.server).carteVendue(a[1]);
                     ftb(joueur, "cabane carte " + joueur.getGameProfile().getName() + " " + a[1] + " " + a[2], true);
+                } else {
+                    joueur.sendSystemMessage(Component.literal("Karim : « Chouf, cette carte coûte " + Economie.format(prix) + ". Reviens quand t'auras les sous. »")
+                            .withStyle(ChatFormatting.AQUA));
                 }
             }
             default -> Cabane.LOGGER.warn("Action de dialogue inconnue : {}", String.join(":", a));
         }
+    }
+
+    /**
+     * Le prix d'une carte de relique chez Karim : 300 $ la première vendue sur le serveur, puis trois fois plus à chaque
+     * nouvelle. Une carte rachetée (perdue…) coûte le prix qu'elle avait la première fois.
+     */
+    static long prixCarte(ServerPlayer joueur, String lieu) {
+        long prix = 300;
+        for (int i = fr.cabane.hub.HubData.get(joueur.server).rangCarte(lieu); i > 0; i--) {
+            prix *= 3;
+        }
+        return prix;
     }
 
     /** Une commande d'un autre mod : en tant que serveur, ou au nom du joueur (avec les droits qu'il faut). Vrai si elle a marché. */

@@ -2,7 +2,8 @@
 // Appelé par generer.mjs ; écrit data/cabane/missions/<id>.json.
 //   qui : le PNJ qui la donne et à qui on la rend ; apres : les missions à finir avant ; quand : -1 tant que le Président
 //   règne, 1 une fois Beauvais libéré ; repetable : minutes avant de pouvoir la refaire ; donne : objets remis en l'acceptant ;
-//   ftb : la quête du livre cochée quand on la rend.
+//   ftb : la quête du livre cochée quand on la rend ; partie : la partie de l'histoire que l'hôte doit avoir lancée
+//   (/histoire partie 2 : le secret de la Mairie). Ce qui suit une mission de la partie 2 (apres) attend forcément aussi.
 // Objectifs : apporter (pris en rendant la mission), avoir (gardé), tuer, parler (une question à poser à un autre PNJ :
 // il répond, et peut prendre ou donner un objet), succes (un succès du jeu), evenement (« contrat », « mcbeauvais »).
 import fs from "node:fs";
@@ -52,7 +53,7 @@ const MISSIONS = {
     recompense: argent(200, [["minecraft:cooked_beef", 4]]) },
 
   // ------------------------------------------------------------ « Où est Pierre ? » : Sylvie cherche son mari
-  ou_est_pierre: { qui: "sylvie", ordre: 1, quand: -1, titre: "Où est Pierre ?",
+  ou_est_pierre: { qui: "sylvie", ordre: 1, quand: -1, partie: 2, titre: "Où est Pierre ?",
     pitch: "Excusez-moi… Vous n'auriez pas vu mon mari ? Pierre. Il y a trois semaines, il est allé à la Mairie avec une pétition contre les Pillards. Le soir, il n'est pas rentré. Le Président dit qu'il est « parti travailler à la capitale ». Pierre ne serait jamais parti sans embrasser Lucas. Jamais. Je vous en supplie, demandez autour de vous : son frère Jean, Martine qui habite en face de la Mairie… et Gribbs. Gribbs entend tout.",
     objectifs: [
       parler("jean", "Sylvie cherche Pierre… ton frère.", "Pierre ? Mon petit frère… Il est entré à la Mairie un mardi soir, sa pétition sous le bras. Je l'ai attendu devant jusqu'à minuit. Il n'est jamais ressorti. Le lendemain matin, son chapeau était posé sur les marches. Le Président m'a souri et m'a dit : « Il est parti à la capitale. » Quelle capitale ? Pierre déteste les voyages. Il a le mal de mer sur une barque."),
@@ -154,7 +155,7 @@ const MISSIONS = {
     objectifs: [apporter("minecraft:iron_helmet")], merci: "Parfait, il me va. Si tu vois le singe avec l'ancien, ne le provoque pas. Il est armé. D'un casque.", recompense: argent(250) },
   garde_torches: { qui: "garde_ouest", titre: "Des torches pour la ronde", pitch: "La nuit, la ronde autour de la palissade se fait dans le noir complet. Trente-deux torches, et plus personne ne se cogne dans les arbres. Surtout moi.",
     objectifs: [apporter("minecraft:torch", 32)], merci: "Ah, la lumière ! Je vois mes pieds. Je n'avais pas vu mes pieds depuis des mois.", recompense: argent(150) },
-  marcel_dossier: { qui: "conteur", titre: "Le village doit savoir", pitch: "On dit qu'il existe un dossier, sous la Mairie. Le « Projet Augmenté ». Si tu le trouves, apporte-le-moi. Pas pour le garder : pour le lire, au feu de camp, à tout le monde. Le village doit savoir.",
+  marcel_dossier: { qui: "conteur", partie: 2, titre: "Le village doit savoir", pitch: "On dit qu'il existe un dossier, sous la Mairie. Le « Projet Augmenté ». Si tu le trouves, apporte-le-moi. Pas pour le garder : pour le lire, au feu de camp, à tout le monde. Le village doit savoir.",
     objectifs: [avoir("cabane:dossier_secret")], merci: "(Marcel lit longtemps, sans rien dire.) … La potion verte. Les Pillards payés. La Salle Zéro. Tout est là. Ce soir, je ne raconterai pas une histoire. Je raconterai la vérité. Garde-le précieusement : c'est la preuve.",
     recompense: argent(500, [], 3) },
   jean_mi: { qui: "vendeur_cartes", titre: "Un client sérieux", pitch: "Tu veux que je te prenne au sérieux ? Range tes cartes dans un classeur. Un vrai collectionneur a un classeur. Montre-moi le tien.",

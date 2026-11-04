@@ -604,6 +604,11 @@
 		"Ramène-la à Beauvais et pose-la sur un cadre du &6mur des reliques&r, dans la Grande Cabane."
 	]
 	quest.7CCADBA9586409BC.title: "&6Scarabée d'Or"
+	quest.7D5F9224BECE169A.quest_desc: [
+		"L'hôte a lancé la deuxième partie de l'histoire. Sylvie cherche de l'aide… et la Mairie cache quelque chose."
+	]
+	quest.7D5F9224BECE169A.quest_subtitle: "Le secret de la Mairie"
+	quest.7D5F9224BECE169A.title: "&dDeuxième partie"
 	quest.7E9CCC0F6A03976E.quest_desc: [
 		"Un boss redoutable. Venez à plusieurs, avec vos meilleures armes."
 	]

@@ -223,9 +223,25 @@
 			y: -1.0d
 		}
 		{
+			dependencies: [ ]
+			id: "7D5F9224BECE169A"
+			invisible: true
+			rewards: [ ]
+			tasks: [
+				{
+					id: "3EF525A79566C69F"
+					type: "checkmark"
+				}
+			]
+			x: 8.0d
+			y: 2.6d
+		}
+		{
 			dependencies: [
 				"0DC04F56329BC588"
+				"7D5F9224BECE169A"
 			]
+			hide_until_deps_complete: true
 			id: "2BC7B019F689DA68"
 			rewards: [
 				{
@@ -257,6 +273,7 @@
 			dependencies: [
 				"2BC7B019F689DA68"
 			]
+			hide_until_deps_complete: true
 			id: "5DFF817B33E4072A"
 			rewards: [
 				{
@@ -281,6 +298,7 @@
 			dependencies: [
 				"2BC7B019F689DA68"
 			]
+			hide_until_deps_complete: true
 			id: "575C2983B036C8A6"
 			rewards: [
 				{
@@ -316,6 +334,7 @@
 				"5DFF817B33E4072A"
 				"575C2983B036C8A6"
 			]
+			hide_until_deps_complete: true
 			id: "52C8F8B5C2EEFC5F"
 			rewards: [
 				{
@@ -360,6 +379,7 @@
 			dependencies: [
 				"52C8F8B5C2EEFC5F"
 			]
+			hide_until_deps_complete: true
 			id: "753BE5C735570076"
 			rewards: [
 				{
@@ -384,6 +404,7 @@
 			dependencies: [
 				"753BE5C735570076"
 			]
+			hide_until_deps_complete: true
 			id: "12B120B96D758D92"
 			rewards: [
 				{
@@ -443,6 +464,7 @@
 			dependencies: [
 				"12B120B96D758D92"
 			]
+			hide_until_deps_complete: true
 			id: "3BE3E5007AAA200A"
 			rewards: [
 				{
