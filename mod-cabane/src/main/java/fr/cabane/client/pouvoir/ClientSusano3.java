@@ -687,13 +687,19 @@ public final class ClientSusano3 {
     // ================================================================ la flèche qui vole, et les flammes noires
 
     /**
-     * Une flèche en vol : d'où elle part (dans le monde), vers quoi (une entité, ou un point), quand elle est partie, sa
-     * taille (celle du chevalier) et ses couleurs (la grande flèche en flammes noires, bordée de la couleur du Susano).
+     * Une flèche en vol : d'où elle part (l'arc, dans le monde), où elle s'arrête (le bout de la ligne du serveur), quand
+     * elle est partie et combien de secondes elle vole, sa taille (celle du chevalier) et ses couleurs (la grande flèche en
+     * flammes noires, bordée de la couleur du Susano).
      */
-    private record Fleche(Vec3 depart, int cible, Vec3 point, long debut, double taille, GrandeFleche.Teintes teintes) {
+    private record Fleche(Vec3 depart, Vec3 fin, long debut, double duree, double taille, GrandeFleche.Teintes teintes) {
     }
 
     private static final List<Fleche> FLECHES = new ArrayList<>();
+    /** Les flammes noires que la flèche laisse au sol : où, et quand elles prennent (quand la flèche passe au-dessus). */
+    private record Foyer(Vec3 pos, long debut, int graine) {
+    }
+
+    private static final List<Foyer> FOYERS = new ArrayList<>();
     /** Les vagues de flammes noires du grand coup : autour de qui (sa place au moment du coup), et quand il a levé l'épée. */
     private record Vague(Vec3 centre, long debut) {
     }
@@ -708,8 +714,8 @@ public final class ClientSusano3 {
     }
     /** Ce qui brûle de flammes noires : l'entité → jusqu'à quand (temps réel). */
     private static final Map<Integer, Long> FEUX = new HashMap<>();
-    /** La flèche met 0,32 s à arriver (assez pour qu'on la voie filer). */
-    private static final double VOL = 0.32;
+    /** Une gerbe de flammes noires jaillit quand la flèche passe (le vrai feu reste ensuite au sol : FeuNoir). */
+    private static final double DUREE_FOYER = 1.2;
 
     /** Le serveur dit qu'une entité brûle (ou ne brûle plus). */
     public static void flammes(Susano3.Flammes p) {
@@ -720,15 +726,27 @@ public final class ClientSusano3 {
         }
     }
 
-    /** La flèche part de l'arc du chevalier de ce joueur, vers sa cible (ou droit devant). */
-    static void lancer(Player joueur, int cible, float corpsLacet, float taille, Couleur couleur) {
+    /**
+     * La flèche part de l'arc du chevalier de ce joueur, jusqu'au bout de la ligne du serveur, à sa vitesse ; chaque foyer
+     * au sol prend quand elle passe au-dessus (ceux de la flaque, quand elle se plante).
+     */
+    static void lancer(Player joueur, float corpsLacet, float taille, Couleur couleur, Susano3.Trait trait) {
         float k = 0.72F + 0.28F * taille;
         double[] avant = norm(sub(ARC_G.w(), ARC_D.w()));
         double[] local = mul(add(ARC_G.w(), mul(avant, 2.4)), k);
         double a = -corpsLacet * Mth.DEG_TO_RAD;
         Vec3 depart = joueur.position().add(local[0] * Math.cos(a) + local[2] * Math.sin(a), local[1], -local[0] * Math.sin(a) + local[2] * Math.cos(a));
-        Vec3 point = joueur.getEyePosition().add(joueur.getLookAngle().scale(48));
-        FLECHES.add(new Fleche(depart, cible, point, System.nanoTime(), 1.3 * k, GrandeFleche.feuNoir(melange(couleur, 0.35F))));
+        Vec3 ligne = new Vec3(trait.depart()), fin = new Vec3(trait.fin());
+        double longueur = Math.max(0.1, fin.distanceTo(ligne)), vitesse = Susano3.VITESSE_FLECHE * 20;
+        long debut = System.nanoTime();
+        FLECHES.add(new Fleche(depart, fin, debut, longueur / vitesse, 2.0 * k, GrandeFleche.feuNoir(melange(couleur, 0.35F))));
+        Vec3 dir = fin.subtract(ligne).scale(1 / longueur);
+        int graine = (int) (debut >> 10);
+        for (Vector3f q : trait.sol()) {
+            Vec3 pos = new Vec3(q);
+            double d = Mth.clamp(pos.subtract(ligne).dot(dir), 0, longueur);
+            FOYERS.add(new Foyer(pos, debut + (long) (d / vitesse * 1e9), graine++));
+        }
     }
 
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
@@ -736,7 +754,8 @@ public final class ClientSusano3 {
         @SubscribeEvent
         public static void dessiner(RenderLevelStageEvent event) {
             Minecraft mc = Minecraft.getInstance();
-            if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || mc.level == null || FLECHES.isEmpty() && FEUX.isEmpty() && VAGUES.isEmpty()) {
+            if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || mc.level == null
+                    || FLECHES.isEmpty() && FEUX.isEmpty() && VAGUES.isEmpty() && FOYERS.isEmpty()) {
                 return;
             }
             Camera camera = event.getCamera();
@@ -753,14 +772,12 @@ public final class ClientSusano3 {
             // couleur du Susano, et des langues de feu noir qui lèchent sa hampe vers l'arrière
             for (Iterator<Fleche> it = FLECHES.iterator(); it.hasNext(); ) {
                 Fleche f = it.next();
-                double k = (maintenant - f.debut()) / 1e9 / VOL;
-                Entity cible = f.cible() >= 0 ? mc.level.getEntity(f.cible()) : null;
-                Vec3 fin = cible != null ? cible.getPosition(partiel).add(0, cible.getBbHeight() * 0.6, 0) : f.point();
+                double k = (maintenant - f.debut()) / 1e9 / f.duree();
                 if (k >= 1) {
                     it.remove();
                     continue;
                 }
-                Vec3 tete = f.depart().lerp(fin, k), dir = fin.subtract(f.depart()).normalize();
+                Vec3 tete = f.depart().lerp(f.fin(), k), dir = f.fin().subtract(f.depart()).normalize();
                 double visible = 1 + tete.distanceTo(f.depart());
                 GrandeFleche.dessiner(c, m, tete.subtract(cam), dir, visible, f.taille(), temps, f.teintes());
                 double l = Math.min(visible, GrandeFleche.LONGUEUR * f.taille());
@@ -799,6 +816,33 @@ public final class ClientSusano3 {
                     if (taille > 0.05) {
                         langue(c, m, centre.add(Math.cos(a) * d, 0, Math.sin(a) * d), droite, haut, taille, temps * 8 + i * 1.3);
                     }
+                }
+            }
+            // les flammes au sol, sous la ligne de la flèche et en flaque au bout : une touffe de langues noires qui
+            // jaillit quand la flèche passe, ondule, puis retombe
+            for (Iterator<Foyer> it = FOYERS.iterator(); it.hasNext(); ) {
+                Foyer f = it.next();
+                double t = (maintenant - f.debut()) / 1e9;
+                if (t > DUREE_FOYER) {
+                    it.remove();
+                    continue;
+                }
+                if (t < 0) {
+                    continue;
+                }
+                double force = l(t / 0.2) * (1 - l((t - DUREE_FOYER + 0.6) / 0.6)), jaillit = 1 + 0.7 * Math.max(0, 1 - t / 0.35);
+                Vec3 base = f.pos().subtract(cam);
+                for (int i = 0; i < 6; i++) {
+                    double a = hache(i, 21, f.graine()) * Math.PI * 2, d = Math.sqrt(hache(i, 22, f.graine())) * 1.05;
+                    double taille = (0.45 + 0.6 * hache(i, 23, f.graine())) * force * jaillit * (0.8 + 0.2 * Math.sin(temps * 7 + i * 1.9 + f.graine()));
+                    if (taille > 0.04) {
+                        langue(c, m, base.add(Math.cos(a) * d, 0, Math.sin(a) * d), droite, haut, taille, temps * 8 + i * 1.3 + f.graine());
+                    }
+                }
+                if (force > 0.5 && mc.level.random.nextInt(14) == 0) {
+                    mc.level.addParticle(mc.level.random.nextBoolean() ? net.minecraft.core.particles.ParticleTypes.SQUID_INK
+                                    : net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
+                            f.pos().x + (mc.level.random.nextDouble() - 0.5) * 1.6, f.pos().y + 0.3, f.pos().z + (mc.level.random.nextDouble() - 0.5) * 1.6, 0, 0.05, 0);
                 }
             }
             // ce qui brûle : des langues de flammes vraiment noires, sur tout le corps

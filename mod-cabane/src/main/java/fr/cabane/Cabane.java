@@ -35,6 +35,7 @@ public class Cabane {
         fr.cabane.accessoire.Saiyan.register(modBus);
         fr.cabane.monde.CabaneMonde.register(modBus);
         fr.cabane.labo.Labo.register(modBus);
+        fr.cabane.pouvoir.FeuNoir.register(modBus);
         fr.cabane.cartel.Cartel.register(modBus);
         fr.cabane.lutte.Lutte.register(modBus);
         modBus.addListener(PhoneNetwork::register);

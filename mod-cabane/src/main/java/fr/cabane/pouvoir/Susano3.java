@@ -4,9 +4,14 @@ import fr.cabane.Cabane;
 import io.netty.buffer.ByteBuf;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -32,14 +37,18 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import org.joml.Vector3f;
 
 /**
  * Le Susano niveau 3, le chevalier (listes « susano3 » : niveaux 1, 2 puis 3 ; « susanodev » : droit au niveau 3).
  * Le clic gauche, ce sont les coups d'épée (dans {@link Pouvoirs#frapper}, plus loin et plus fort). Ici, le clic droit :
- * il tend un grand arc, et la flèche part un peu plus tard. Elle file droit (en aidant un peu à viser) et ce qu'elle
- * touche prend feu : les flammes noires d'Amaterasu, plus longues et plus fortes qu'un feu normal ; l'eau ne les éteint
- * pas. Accroupi : le grand coup ; il lève son épée et l'abat, une vague de flammes noires part tout autour de lui et
- * embrase ce qu'elle touche. Les flammes, la flèche et la vague sont dessinées chez chaque joueur (ClientSusano3).
+ * il tend un grand arc, et la flèche part un peu plus tard. Elle vole pour de vrai, droit là où il visait (sans aide :
+ * il faut viser), traverse tout ce qu'elle croise, et ce qu'elle touche prend feu : les flammes noires d'Amaterasu, plus
+ * longues et plus fortes qu'un feu normal ; l'eau ne les éteint pas. Sous sa ligne, et en flaque là où elle se plante,
+ * elle pose de vraies flammes noires au sol ({@link FeuNoir}) : elles restent sur leur bloc une minute, rien ne les
+ * éteint, et elles embrasent qui marche dedans. Accroupi : le grand coup ; il lève son épée et l'abat, une vague de
+ * flammes noires part tout autour de lui, embrase ce qu'elle touche et laisse des flammes noires partout autour. Les flammes, la flèche et la
+ * vague sont dessinées chez chaque joueur (ClientSusano3).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Susano3 {
@@ -50,6 +59,21 @@ public final class Susano3 {
     public static final int TENSION = 10;
     private static final double PORTEE_ARC = 48;
     private static final float DEGATS_FLECHE = 10;
+    /**
+     * La flèche file à 3 blocs par tick (48 blocs en 16 ticks) : on la voit venir. Elle est grosse : elle touche ce qui
+     * passe à 1,3 bloc de sa ligne (une bande de 3 blocs de large, comme la grande flèche de glace).
+     */
+    public static final double VITESSE_FLECHE = 3;
+    private static final double LARGEUR_FLECHE = 1.3;
+    /**
+     * Ses flammes au sol (des blocs {@link FeuNoir}) : une bande irrégulière sous sa ligne (le milieu toujours, les côtés
+     * souvent, un peu plus loin parfois), et une flaque de 3 blocs de rayon là où elle se plante.
+     */
+    private static final double PAS_SOL = 1;
+    private static final double[][] BANDE = {{0, 1}, {-1, 0.8}, {1, 0.8}, {-2, 0.3}, {2, 0.3}};
+    private static final int RAYON_FLAQUE = 3;
+    /** Le grand coup laisse une quarantaine de flammes dans les 8 blocs autour de lui (et sous ceux qu'il touche). */
+    private static final int FLAMMES_GRAND = 40;
     /** Les flammes noires : 2 dégâts par seconde pendant 10 secondes (un feu normal : 1 par seconde, bien moins longtemps). */
     public static final int DUREE_FEU = 200;
     private static final float DEGATS_FEU = 2;
@@ -81,6 +105,29 @@ public final class Susano3 {
 
     private static final Map<Integer, Feu> FEUX = new HashMap<>();
 
+    /** Un foyer de flammes noires au sol, et à quelle distance sur la ligne de la flèche il prend. */
+    private record Foyer(Vec3 pos, double distance) {
+    }
+
+    /** Une flèche en vol : qui l'a tirée, sa ligne (départ, direction, longueur), si elle se plante au bout, quand elle est partie, qui elle a déjà touché, ses foyers. */
+    private record Vol(UUID tireur, ServerLevel monde, Vec3 depart, Vec3 dir, double longueur, boolean plantee, int debut, Set<Integer> touches, List<Foyer> foyers) {
+    }
+
+    private static final List<Vol> VOLS = new ArrayList<>();
+
+    /** Serveur → ceux qui voient le tireur : la ligne de la flèche (de son œil jusqu'où elle s'arrête) et ses foyers au sol. */
+    public record Trait(UUID joueur, Vector3f depart, Vector3f fin, List<Vector3f> sol) implements CustomPacketPayload {
+        public static final Type<Trait> TYPE = new Type<>(Cabane.id("trait_noir"));
+        public static final StreamCodec<ByteBuf, Trait> CODEC = StreamCodec.composite(
+                UUIDUtil.STREAM_CODEC, Trait::joueur, ByteBufCodecs.VECTOR3F, Trait::depart, ByteBufCodecs.VECTOR3F, Trait::fin,
+                ByteBufCodecs.VECTOR3F.apply(ByteBufCodecs.list()), Trait::sol, Trait::new);
+
+        @Override
+        public Type<Trait> type() {
+            return TYPE;
+        }
+    }
+
     /** Serveur → ceux qui voient cette entité : elle brûle de flammes noires pendant ce nombre de ticks (0 : éteinte). */
     public record Flammes(int entite, int ticks) implements CustomPacketPayload {
         public static final Type<Flammes> TYPE = new Type<>(Cabane.id("amaterasu"));
@@ -96,7 +143,8 @@ public final class Susano3 {
     @SubscribeEvent
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(Flammes.TYPE, Flammes.CODEC,
-                (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano3.flammes(p)));
+                (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano3.flammes(p)))
+                .playToClient(Trait.TYPE, Trait.CODEC, (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano.trait(p)));
     }
 
     /** Le clic droit au niveau 3 : il tend l'arc (s'il est rechargé). */
@@ -155,6 +203,15 @@ public final class Susano3 {
             e.setDeltaMovement(e.getDeltaMovement().add(0, 0.45, 0));
             e.hurtMarked = true;
             enflammer(e, joueur);
+            poserSous(e, joueur.getUUID());
+        }
+        // des flammes noires posées partout autour, qui restent (FeuNoir)
+        for (int i = 0; i < FLAMMES_GRAND; i++) {
+            double a = monde.random.nextDouble() * Math.PI * 2, d = 1.5 + Math.sqrt(monde.random.nextDouble()) * (RAYON_GRAND - 1.5);
+            Vec3 p = sol(monde, ici.add(Math.cos(a) * d, 3, Math.sin(a) * d), 7, joueur);
+            if (p != null) {
+                FeuNoir.poser(monde, BlockPos.containing(p.x, p.y + 0.05, p.z), joueur.getUUID());
+            }
         }
         Vec3 impact = ici.add(devant.scale(5));
         monde.sendParticles(ParticleTypes.EXPLOSION_EMITTER, impact.x, impact.y + 0.3, impact.z, 1, 0, 0, 0, 0);
@@ -170,45 +227,147 @@ public final class Susano3 {
         monde.playSound(null, impact.x, impact.y, impact.z, SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 1.2F, 0.5F);
     }
 
-    /** La flèche part : elle file là où il regarde, et ce qu'elle touche en premier prend les flammes noires. */
+    /**
+     * La flèche part, droit là où il regarde (jusqu'à 48 blocs, ou jusqu'au premier mur) : elle vole ensuite tick après
+     * tick (voir {@link #tick}). Ses foyers au sol sont choisis tout de suite : sous sa ligne, et en flaque au bout.
+     */
     private static void lacher(ServerPlayer joueur) {
         ServerLevel monde = joueur.serverLevel();
         Vec3 oeil = joueur.getEyePosition(), regard = joueur.getLookAngle();
         Vec3 bout = oeil.add(regard.scale(PORTEE_ARC));
         HitResult mur = monde.clip(new ClipContext(oeil, bout, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
-        if (mur.getType() != HitResult.Type.MISS) {
+        boolean plantee = mur.getType() != HitResult.Type.MISS;
+        if (plantee) {
             bout = mur.getLocation();
         }
-        // la cible : ce qui vit le plus près sur la ligne, en aidant un peu à viser
-        LivingEntity cible = null;
-        double meilleure = Double.MAX_VALUE;
-        for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(oeil, bout).inflate(1.5), e -> Pouvoirs.cible(joueur, e))) {
-            var touche = e.getBoundingBox().inflate(0.7).clip(oeil, bout);
-            if (touche.isPresent() && touche.get().distanceToSqr(oeil) < meilleure) {
-                meilleure = touche.get().distanceToSqr(oeil);
-                cible = e;
+        double longueur = bout.distanceTo(oeil);
+        List<Foyer> foyers = new ArrayList<>();
+        Vec3 cote = new Vec3(-regard.z, 0, regard.x);
+        cote = cote.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : cote.normalize();
+        for (double s = 2; s < longueur; s += PAS_SOL) {
+            for (double[] b : BANDE) {
+                if (monde.random.nextDouble() >= b[1]) {
+                    continue;
+                }
+                Vec3 p = sol(monde, oeil.add(regard.scale(s)).add(cote.scale(b[0] + (monde.random.nextDouble() - 0.5) * 0.6)), 7, joueur);
+                if (p != null) {
+                    foyers.add(new Foyer(p, s));
+                }
             }
         }
-        Pouvoirs.geste(joueur, Pouvoirs.FLECHE, cible == null ? -1 : cible.getId());
+        if (plantee) {
+            // la flaque : chaque bloc à 3 blocs (ou moins) de là où elle se plante
+            Vec3 centre = bout.subtract(regard.scale(0.6));
+            for (int dx = -RAYON_FLAQUE; dx <= RAYON_FLAQUE; dx++) {
+                for (int dz = -RAYON_FLAQUE; dz <= RAYON_FLAQUE; dz++) {
+                    if (dx * dx + dz * dz > RAYON_FLAQUE * RAYON_FLAQUE + 1) {
+                        continue;
+                    }
+                    Vec3 p = sol(monde, centre.add(dx, 1.5, dz), 5, joueur);
+                    if (p != null) {
+                        foyers.add(new Foyer(p, longueur));
+                    }
+                }
+            }
+        }
+        VOLS.add(new Vol(joueur.getUUID(), monde, oeil, regard, longueur, plantee, joueur.server.getTickCount(), new HashSet<>(), foyers));
+        Pouvoirs.geste(joueur, Pouvoirs.FLECHE, -1);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(joueur, new Trait(joueur.getUUID(), v(oeil), v(bout), foyers.stream().map(f -> v(f.pos())).toList()));
         monde.playSound(null, joueur.getX(), joueur.getY() + 2, joueur.getZ(), SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 2F, 0.5F);
         monde.playSound(null, joueur.getX(), joueur.getY() + 2, joueur.getZ(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1F, 0.4F);
-        if (cible == null) {
-            monde.sendParticles(ParticleTypes.SQUID_INK, bout.x, bout.y, bout.z, 20, 0.3, 0.3, 0.3, 0.05);
-            return;
+    }
+
+    /** Le sol sous ce point : le dessus du premier bloc plein, à au plus {@code profondeur} blocs dessous (null sinon). */
+    private static Vec3 sol(ServerLevel monde, Vec3 p, double profondeur, Entity qui) {
+        HitResult h = monde.clip(new ClipContext(p, p.subtract(0, profondeur, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, qui));
+        return h.getType() == HitResult.Type.MISS ? null : h.getLocation();
+    }
+
+    private static Vector3f v(Vec3 p) {
+        return new Vector3f((float) p.x, (float) p.y, (float) p.z);
+    }
+
+    /** Une flèche avance d'un tick : ce qu'elle traverse prend le coup et les flammes noires, ses foyers prennent derrière elle. */
+    private static boolean voler(Vol vol, int maintenant, MinecraftServer server) {
+        ServerPlayer tireur = server.getPlayerList().getPlayer(vol.tireur());
+        int t = maintenant - vol.debut();
+        double d0 = Math.max(0, (t - 1) * VITESSE_FLECHE), d1 = Math.min(vol.longueur(), t * VITESSE_FLECHE);
+        if (d1 <= d0) {
+            return false;
         }
-        cible.hurt(joueur.damageSources().playerAttack(joueur), DEGATS_FLECHE);
-        enflammer(cible, joueur);
+        Vec3 a = vol.depart().add(vol.dir().scale(d0)), b = vol.depart().add(vol.dir().scale(d1));
+        if (tireur != null) {
+            for (LivingEntity e : vol.monde().getEntitiesOfClass(LivingEntity.class, new AABB(a, b).inflate(LARGEUR_FLECHE + 1),
+                    e -> Pouvoirs.cible(tireur, e) && !vol.touches().contains(e.getId()))) {
+                AABB boite = e.getBoundingBox().inflate(LARGEUR_FLECHE);
+                if (boite.contains(a) || boite.clip(a, b).isPresent()) {
+                    vol.touches().add(e.getId());
+                    e.hurt(tireur.damageSources().playerAttack(tireur), DEGATS_FLECHE);
+                    enflammer(e, tireur);
+                    poserSous(e, tireur.getUUID());
+                    vol.monde().sendParticles(ParticleTypes.SQUID_INK, e.getX(), e.getY(0.6), e.getZ(), 16, 0.3, 0.4, 0.3, 0.08);
+                }
+            }
+        }
+        for (Foyer f : vol.foyers()) {
+            if (f.distance() > d0 && f.distance() <= d1) {
+                FeuNoir.poser(vol.monde(), BlockPos.containing(f.pos().x, f.pos().y + 0.05, f.pos().z), vol.tireur());
+            }
+        }
+        if (d1 < vol.longueur()) {
+            return false;
+        }
+        // au bout : elle se plante (une gerbe de flammes noires) ou s'éteint en fumée
+        Vec3 bout = b;
+        if (vol.plantee()) {
+            vol.monde().sendParticles(ParticleTypes.SQUID_INK, bout.x, bout.y, bout.z, 40, 0.8, 0.5, 0.8, 0.12);
+            vol.monde().sendParticles(ParticleTypes.LARGE_SMOKE, bout.x, bout.y, bout.z, 14, 0.7, 0.4, 0.7, 0.05);
+            vol.monde().playSound(null, bout.x, bout.y, bout.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2F, 0.4F);
+            vol.monde().playSound(null, bout.x, bout.y, bout.z, SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 0.8F, 0.5F);
+        } else {
+            vol.monde().sendParticles(ParticleTypes.SQUID_INK, bout.x, bout.y, bout.z, 20, 0.3, 0.3, 0.3, 0.05);
+        }
+        return true;
     }
 
     /** Les flammes noires prennent sur cette entité (ou repartent pour 10 secondes si elle brûlait déjà). */
     public static void enflammer(LivingEntity cible, ServerPlayer tireur) {
+        enflammer(cible, tireur.getUUID());
+    }
+
+    private static void enflammer(LivingEntity cible, UUID tireur) {
         if (!(cible.level() instanceof ServerLevel monde)) {
             return;
         }
-        FEUX.put(cible.getId(), new Feu(monde, monde.getServer().getTickCount() + DUREE_FEU, tireur.getUUID()));
+        FEUX.put(cible.getId(), new Feu(monde, monde.getServer().getTickCount() + DUREE_FEU, tireur));
         cible.clearFire();
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(cible, new Flammes(cible.getId(), DUREE_FEU));
         monde.playSound(null, cible.getX(), cible.getY(), cible.getZ(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.2F, 0.4F);
+    }
+
+    /**
+     * Qui est dans des flammes noires posées au sol prend feu (au plus une fois toutes les 2 secondes, tant qu'il y reste) ;
+     * jamais celui qui les a posées, ni ses alliés.
+     */
+    static void bruler(LivingEntity e, UUID tireur) {
+        if (!(e.level() instanceof ServerLevel monde) || !e.isAlive() || e.getUUID().equals(tireur)) {
+            return;
+        }
+        ServerPlayer joueur = tireur == null ? null : monde.getServer().getPlayerList().getPlayer(tireur);
+        if (joueur != null && !Pouvoirs.cible(joueur, e)) {
+            return;
+        }
+        Feu feu = FEUX.get(e.getId());
+        if (feu == null || feu.fin() - monde.getServer().getTickCount() < DUREE_FEU - 40) {
+            enflammer(e, tireur);
+        }
+    }
+
+    /** Une flamme noire sous les pieds de ce qu'une attaque vient de toucher. */
+    private static void poserSous(LivingEntity e, UUID tireur) {
+        if (e.level() instanceof ServerLevel monde && e.onGround()) {
+            FeuNoir.poser(monde, e.blockPosition(), tireur);
+        }
     }
 
     @SubscribeEvent
@@ -235,6 +394,8 @@ public final class Susano3 {
                 abattre(joueur);
             }
         }
+        // les flèches en vol
+        VOLS.removeIf(vol -> voler(vol, maintenant, server));
         // les flammes noires brûlent : des dégâts chaque seconde, de la fumée noire ; l'eau n'y fait rien
         for (Map.Entry<Integer, Feu> entree : new ArrayList<>(FEUX.entrySet())) {
             Feu feu = entree.getValue();

@@ -283,6 +283,16 @@ public final class ClientSusano {
         }
     }
 
+    /** La flèche du chevalier part de son arc : elle suit la ligne du serveur et laisse ses flammes noires au sol. */
+    public static void trait(fr.cabane.pouvoir.Susano3.Trait p) {
+        Susano s = SUSANOS.get(p.joueur());
+        Minecraft mc = Minecraft.getInstance();
+        Player joueur = mc.level == null ? null : mc.level.getPlayerByUUID(p.joueur());
+        if (joueur != null) {
+            ClientSusano3.lancer(joueur, joueur.yBodyRot, eveille(s) ? ClientSusano3.forme(t3(s)).taille() : 1, s == null ? Couleur.VIOLET : s.couleur, p);
+        }
+    }
+
     public static void geste(Pouvoirs.Geste p) {
         if (p.geste() >= fr.cabane.pouvoir.Ichibi.GESTE_COUP) {
             ClientIchibi.geste(p);
@@ -321,8 +331,8 @@ public final class ClientSusano {
             return;
         }
         if (p.geste() == Pouvoirs.FLECHE) {
+            // la flèche elle-même arrive juste après, avec sa ligne (voir trait)
             if (joueur != null) {
-                ClientSusano3.lancer(joueur, p.cible(), joueur.yBodyRot, ClientSusano3.forme(t3(s)).taille(), s.couleur);
                 son(joueur, SoundEvents.CROSSBOW_SHOOT, 1F, 0.5F);
             }
             return;
