@@ -26,7 +26,7 @@ hash = "ee8986dfa4e40927730b4ea9022ba98e079bafccc0726ac92add2ecd56fc9bb1"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/histoire.snbt"
-hash = "c5d3757efc1d91d65e17c295c829e2a355dcaf93579c7430c8814aadb6d7e852"
+hash = "633e5d807be5309cc58711dbed1ebb198c8fe65a006c87db465562279944345e"
 
 [[files]]
 file = "config/ftbquests/quests/chapters/la_cabane.snbt"
@@ -46,11 +46,11 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "23639426e0d1ae1d685e986e636aa565f16097990004150c83868b0c9efd63ca"
+hash = "6d040ee9b1aabd56c7459e5fa911c37b3f5e27305f05e2b146268e3b98da90e2"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "23639426e0d1ae1d685e986e636aa565f16097990004150c83868b0c9efd63ca"
+hash = "6d040ee9b1aabd56c7459e5fa911c37b3f5e27305f05e2b146268e3b98da90e2"
 
 [[files]]
 file = "emotes/bof.json"
@@ -191,7 +191,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "0b7bc2dc477a7927a91d1a472aa2291450571bd3a1b1f8b9804d202dfaaa4cfd"
+hash = "0bd83779bd50d2c831b7904fcd13eb67ef913dfabbdb16ecbaea8ede98b9f384"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
