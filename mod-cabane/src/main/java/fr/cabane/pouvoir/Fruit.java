@@ -117,7 +117,8 @@ import org.joml.Vector3f;
  * (ou gèle). Ces tirs volent pour de vrai, tick après tick ({@link Tir}).
  * <p>
  * Sur « lave3 » ou « glace3 », une troisième fois : le niveau 3 (tout le corps, le casque en tête de dragon, le dragon
- * guidé au clic droit maintenu, l'attaque ultime accroupi) ; voir {@link Fruit3}.
+ * guidé au clic droit maintenu, le chien de l'enfer ou la capsule de glace accroupi, l'attaque ultime sur la touche
+ * d'ulti) ; voir {@link Fruit3}.
  * <p>
  * Rien ne reste au sol : les jets, les geysers et les pics de glace ne sont que dessinés.
  */
@@ -666,7 +667,10 @@ public final class Fruit {
             return;
         }
         boolean glace = glace(Pouvoirs.pouvoir(joueur));
-        if (niveau(joueur) >= 3 && Fruit3.ultime(joueur, glace)) {
+        // au niveau 3, l'accroupi a son attaque à lui (l'ultime est sur sa propre touche)
+        if (niveau(joueur) >= 3) {
+            PRET_CHOC.put(joueur.getUUID(), maintenant + Fruit3.RECHARGE_ACCROUPI);
+            Fruit3.accroupi(joueur, glace);
             return;
         }
         if (niveau(joueur) >= 2) {

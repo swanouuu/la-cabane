@@ -871,6 +871,17 @@ public final class ClientFruit {
     static long pretJet, pretChoc;
     private static boolean accroupiAvant;
 
+    /** La touche d'ulti (J par défaut) : au niveau 3, l'attaque ultime (le Hyoton, le soleil de magma), si elle est prête. */
+    public static void toucheUlti() {
+        Minecraft mc = Minecraft.getInstance();
+        String moi = mc.player == null ? null : EVEILLES.get(mc.player.getUUID());
+        if (moi != null && mc.screen == null && niveau(mc.player.getUUID()) >= 3 && ClientFruit3.ultimePrete()) {
+            ClientFruit3.ultimeDemandee();
+            mc.player.swing(mainDuFruit(mc.player, glace(moi)));
+            PacketDistributor.sendToServer(new fr.cabane.pouvoir.Fruit3.Ulti());
+        }
+    }
+
     /** La main du fruit (la gauche pour la lave) : la main principale ou l'autre, selon le bras du joueur. */
     static InteractionHand mainDuFruit(Player joueur, boolean glace) {
         HumanoidArm bras = glace ? HumanoidArm.RIGHT : HumanoidArm.LEFT;
@@ -979,24 +990,25 @@ public final class ClientFruit {
     }
 
     /**
-     * Le panneau au niveau 3 : le clic droit court (le tir du niveau 2) et maintenu (le dragon), l'accroupi (l'attaque
-     * ultime tant qu'elle n'est pas faite, ensuite celui du niveau 2).
+     * Le panneau au niveau 3 : le clic droit court (le tir du niveau 2) et maintenu (le dragon), l'accroupi (le chien de
+     * l'enfer ou la capsule de glace), la touche d'ulti (l'attaque ultime, une fois par éveil).
      */
     private static void panneau3(GuiGraphics g, Font font, boolean glace, double jet, double choc) {
         double dragon = ClientFruit3.attenteDragon(), ultime = ClientFruit3.attenteUltime();
         boolean prete = ClientFruit3.ultimePrete();
-        String accroupi = prete ? (glace ? "Ultime : le Hyoton (une fois)" : "Ultime : le soleil de magma (une fois)")
-                : (glace ? "Faisan de glace" : "Pluie de météores") + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "");
+        String ulti = prete ? (glace ? "Ultime : le Hyoton (une fois)" : "Ultime : le soleil de magma (une fois)")
+                : ClientFruit3.ultimeFaite() ? "Ultime : déjà faite pendant cet éveil" : "Ultime : encore " + (int) Math.ceil(ultime / 60) + " min";
         String[][] lignes = {
                 {Clavier.gauche(), glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse"},
                 {Clavier.droite(), (glace ? "Grande flèche de glace" : "Grand poing de magma") + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
                 {Clavier.droite() + " maintenu", (glace ? "Dragon de glace : il suit ton regard" : "Dragon de lave : il suit ton regard")
                         + (dragon > 0 ? "  " + (int) Math.ceil(dragon) + " s" : "")},
-                {Clavier.accroupi(), accroupi},
-                {"", prete ? "" : ClientFruit3.ultimeFaite() ? "Ultime : déjà faite pendant cet éveil" : "Ultime : encore " + (int) Math.ceil(ultime / 60) + " min"},
+                {Clavier.accroupi(), (glace ? "Capsule de glace : enferme ceux qui sont autour" : "Chien de l'enfer : il mord et emporte")
+                        + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
+                {Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), ulti},
                 {Clavier.nom(ClientSusano.EVEIL), "Rendormir"},
         };
-        boolean[] gris = {false, jet > 0, dragon > 0, !prete && choc > 0, true, false};
+        boolean[] gris = {false, jet > 0, dragon > 0, choc > 0, !prete, false};
         String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + "  ·  niveau 3";
         int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
         int largeurTouche = 0, largeurAction = font.width(titre) - 10;
@@ -1759,14 +1771,11 @@ public final class ClientFruit {
             }
             String moi = EVEILLES.get(mc.player.getUUID());
             long maintenant = System.nanoTime();
-            // s'accroupir (l'appui, pas le maintien) : l'éruption ou l'ère glaciaire
+            // s'accroupir (l'appui, pas le maintien) : l'éruption ou l'ère glaciaire, et plus fort à chaque niveau
             boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && niveau(mc.player.getUUID()) >= 3 && ClientFruit3.ultimePrete()) {
-                ClientFruit3.ultimeDemandee();
-                mc.player.swing(mainDuFruit(mc.player, glace(moi)));
-                PacketDistributor.sendToServer(new Fruit.Choc());
-            } else if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc) {
-                pretChoc = maintenant + (niveau(mc.player.getUUID()) >= 2 ? Fruit.RECHARGE_CHOC_2 : Fruit.RECHARGE_CHOC) * 50_000_000L;
+            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc) {
+                int niveau = niveau(mc.player.getUUID());
+                pretChoc = maintenant + (niveau >= 3 ? fr.cabane.pouvoir.Fruit3.RECHARGE_ACCROUPI : niveau >= 2 ? Fruit.RECHARGE_CHOC_2 : Fruit.RECHARGE_CHOC) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Choc());
             }

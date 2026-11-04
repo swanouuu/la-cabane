@@ -697,6 +697,8 @@ public final class ClientHachibi4 {
         }
         while (ULTI.consumeClick()) {
             if (mc.screen == null) {
+                // la même touche sert aussi aux ultimes des fruits niveau 3
+                fr.cabane.client.pouvoir.ClientFruit.toucheUlti();
                 PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.ULTI));
             }
         }

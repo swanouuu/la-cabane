@@ -1155,6 +1155,304 @@ public final class ClientFruit3 {
         }
     }
 
+    // ================================================================ accroupi : le chien de l'enfer, la capsule de glace
+
+    /** Un chien de l'enfer : d'où il part, vers où, depuis quand ; où et quand il a mordu (tMorsure < 0 tant qu'il court). */
+    private static final class Chien3 {
+        final UUID joueur;
+        final Vec3 depart;
+        final Vec3 dir;
+        final long debut;
+        Vec3 morsure;
+        double tMorsure = -1;
+
+        Chien3(UUID joueur, Vec3 depart, Vec3 dir, long debut) {
+            this.joueur = joueur;
+            this.depart = depart;
+            this.dir = dir.normalize();
+            this.debut = debut;
+        }
+
+        double t(Minecraft mc, float partiel) {
+            return (mc.level.getGameTime() - debut + partiel) / 20.0;
+        }
+
+        Vec3 tete(double t) {
+            return morsure != null && t >= tMorsure ? morsure : depart.add(dir.scale(Fruit3.courseChien(t * 20)));
+        }
+    }
+
+    /** Une capsule de glace : d'où partent les lignes, vers qui, depuis quand ; quand tout a éclaté (tEclat < 0 avant). */
+    private static final class Capsule3 {
+        final UUID joueur;
+        final Vec3 centre;
+        final List<Integer> cibles;
+        final long debut;
+        /** Les pieds de chaque cible, au dernier dessin (pour les éclats, même si elle est morte entre-temps). */
+        final Map<Integer, Vec3> pieds = new HashMap<>();
+        double tEclat = -1;
+
+        Capsule3(UUID joueur, Vec3 centre, List<Integer> cibles, long debut) {
+            this.joueur = joueur;
+            this.centre = centre;
+            this.cibles = cibles;
+            this.debut = debut;
+        }
+
+        double t(Minecraft mc, float partiel) {
+            return (mc.level.getGameTime() - debut + partiel) / 20.0;
+        }
+
+        /** Vers où vont les lignes : les cibles ; personne à prendre, huit lignes en étoile qui finissent en cristaux. */
+        List<Vec3> buts(Minecraft mc, float partiel) {
+            List<Vec3> l = new ArrayList<>();
+            for (int id : cibles) {
+                net.minecraft.world.entity.Entity e = mc.level.getEntity(id);
+                if (e != null && tEclat < 0) {
+                    pieds.put(id, e.getPosition(partiel));
+                }
+                Vec3 p = pieds.get(id);
+                if (p != null) {
+                    l.add(p);
+                }
+            }
+            if (cibles.isEmpty()) {
+                for (int q = 0; q < 8; q++) {
+                    double a = q * Math.PI / 4 + 0.3;
+                    l.add(centre.add(Math.cos(a) * 7, 0, Math.sin(a) * 7));
+                }
+            }
+            return l;
+        }
+    }
+
+    private static final List<Chien3> CHIENS = new ArrayList<>();
+    private static final List<Capsule3> CAPSULES = new ArrayList<>();
+
+    public static void chien(Fruit3.Chien p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return;
+        }
+        if (p.phase() == 0) {
+            CHIENS.removeIf(c -> c.joueur.equals(p.joueur()) && c.tMorsure < 0);
+            CHIENS.add(new Chien3(p.joueur(), vec(p.point()), vec(p.dir()), mc.level.getGameTime()));
+            return;
+        }
+        for (Chien3 c : CHIENS) {
+            if (c.joueur.equals(p.joueur()) && c.tMorsure < 0) {
+                c.morsure = vec(p.point());
+                c.tMorsure = c.t(mc, 0);
+                // la morsure : une gerbe de feu là où la gueule se referme
+                ECLATEMENTS.add(new Eclatement(c.morsure, false, System.nanoTime()));
+                gerbeParticules(mc, c.morsure, false);
+                ClientFruit.secouer(c.morsure, 1.2F, 30);
+            }
+        }
+    }
+
+    public static void capsule(Fruit3.Capsule p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return;
+        }
+        if (p.phase() == 0) {
+            CAPSULES.removeIf(x -> x.joueur.equals(p.joueur()) && x.tEclat < 0);
+            CAPSULES.add(new Capsule3(p.joueur(), vec(p.centre()), p.cibles(), mc.level.getGameTime()));
+            return;
+        }
+        for (Capsule3 x : CAPSULES) {
+            if (x.joueur.equals(p.joueur()) && x.tEclat < 0) {
+                x.tEclat = x.t(mc, 0);
+                for (Vec3 b : x.buts(mc, 0)) {
+                    var glace = new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.ICE.defaultBlockState());
+                    for (int q = 0; q < 40; q++) {
+                        particule(mc, glace, b.add(aleat(0.8), 0.3 + HASARD.nextDouble() * 2.2, aleat(0.8)), aleat(0.4), HASARD.nextDouble() * 0.4, aleat(0.4));
+                    }
+                    for (int q = 0; q < 20; q++) {
+                        particule(mc, ParticleTypes.SNOWFLAKE, b.add(aleat(1), 0.5 + HASARD.nextDouble() * 2, aleat(1)), aleat(0.5), HASARD.nextDouble() * 0.4, aleat(0.5));
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- le chien de l'enfer
+
+    /** La taille d'une unité de la tête du chien, en blocs : la tête fait à peu près 2,5 blocs de large et 4 de long. */
+    private static final double K_CHIEN = 0.6;
+
+    /**
+     * Un morceau de la tête, dans le repère du chien (x sur le côté, y en haut, f vers l'avant ; en unités de k) : la boîte
+     * de centre (cx, cy, cz) et de demi-tailles (dx, dy, dz), tournée de « levee » (vers le haut si positif) autour de la
+     * charnière à la hauteur hy et à l'avancée hz (pour les mâchoires).
+     */
+    private static void piece(VertexConsumer v, Matrix4f m, Vec3 o, Vec3[] r, double k, double levee, double hy, double hz,
+            double cx, double cy, double cz, double dx, double dy, double dz, Teinte teinte) {
+        Vec3 x = r[0], y = r[1], f = r[2];
+        double ca = Math.cos(levee), sa = Math.sin(levee);
+        Vec3 ff = f.scale(ca).add(y.scale(sa)), yy = y.scale(ca).subtract(f.scale(sa));
+        Vec3 charniere = o.add(y.scale(hy * k)).add(f.scale(hz * k));
+        Vec3 c = charniere.add(x.scale(cx * k)).add(yy.scale((cy - hy) * k)).add(ff.scale((cz - hz) * k));
+        boite(v, m, c, x.scale(dx * k), yy.scale(dy * k), ff.scale(dz * k), teinte, 1, 3);
+    }
+
+    /** Un point de la tête (mêmes repère et charnière que piece), pour y planter une dent ou une oreille. */
+    private static Vec3 point(Vec3 o, Vec3[] r, double k, double levee, double hy, double hz, double px, double py, double pz) {
+        Vec3 x = r[0], y = r[1], f = r[2];
+        double ca = Math.cos(levee), sa = Math.sin(levee);
+        Vec3 ff = f.scale(ca).add(y.scale(sa)), yy = y.scale(ca).subtract(f.scale(sa));
+        return o.add(y.scale(hy * k)).add(f.scale(hz * k)).add(x.scale(px * k)).add(yy.scale((py - hy) * k)).add(ff.scale((pz - hz) * k));
+    }
+
+    private static Vec3 haut(Vec3[] r, double levee) {
+        return r[1].scale(Math.cos(levee)).subtract(r[2].scale(Math.sin(levee)));
+    }
+
+    /**
+     * Le chien de l'enfer : une tête de chien en magma (croûte noire fendue de lave, yeux blancs de chaleur, crinière de
+     * flammes), sa gueule s'ouvre en courant et claque à la morsure ; derrière elle, un cou de magma jusqu'à sa main.
+     * Après la morsure, tout s'effondre en une demi-seconde.
+     */
+    private static void dessinerChien(PoseStack ps, MultiBufferSource.BufferSource buffers, Vec3 cam, Chien3 c, double t) {
+        double tm = c.tMorsure < 0 ? 1e9 : c.tMorsure;
+        double fin = 1 - entre(t, tm + 0.2, tm + 0.7);
+        if (fin <= 0.01) {
+            return;
+        }
+        double k = K_CHIEN * croissance(t, 0, 0.2) * fin;
+        if (k < 0.02) {
+            return;
+        }
+        Vec3 tete = c.tete(t), f = c.dir;
+        Vec3[] rp = repere(f, null);
+        Vec3[] r = {rp[0], rp[1], f};
+        Vec3 o = tete.subtract(cam);
+        // la gueule s'ouvre en courant, et se referme d'un coup en mordant
+        double ouvert = t < tm ? 0.6 * entre(t, 0.05, 0.35) : 0.6 * (1 - entre(t, tm, tm + 0.07));
+        double haute = ouvert * 0.45, basse = -ouvert;
+        Matrix4f m = ps.last().pose();
+        VertexConsumer v = buffers.getBuffer(Types.PLEIN);
+        Teinte croute = (face, i, j) -> ecaille(false, face, i, j, 11);
+        Teinte noire = (face, i, j) -> mix(CROUTE, CROUTE_R, hache(i, j, face + 610) * 0.5);
+        Teinte braise = (face, i, j) -> mix(LAVE_J, CHAUD, hache(i, j, face + 620));
+        // le cou : des anneaux de magma de plus en plus fins jusqu'à sa main
+        double couru = tete.distanceTo(c.depart);
+        for (int s = 1; s <= 7; s++) {
+            double recul = 1.1 + s * 0.85;
+            if (recul > couru + 0.5) {
+                break;
+            }
+            double rr = (0.95 - s * 0.08) * k / K_CHIEN;
+            Vec3 cen = tete.subtract(f.scale(recul)).subtract(cam).add(r[1].scale(Math.sin(t * 14 - s * 0.9) * 0.12));
+            int graine = s;
+            boite(v, m, cen, r[0].scale(rr), r[1].scale(rr * 0.85), f.scale(0.55 * k / K_CHIEN), (face, i, j) -> ecaille(false, face, i, j, 30 + graine), 1, 3);
+        }
+        // le crâne, l'arcade, la truffe
+        piece(v, m, o, r, k, 0, 0, 0, 0, 0.35, -0.5, 1.15, 1.0, 1.05, croute);
+        piece(v, m, o, r, k, 0, 0, 0, 0, 1.0, 0.42, 1.02, 0.28, 0.28, noire);
+        // l'intérieur de la gueule, qui brûle
+        piece(v, m, o, r, k, 0, 0, 0, 0, 0.05, 1.1, 0.5, 0.18, 0.8, braise);
+        // la mâchoire du haut (le museau) et celle du bas
+        piece(v, m, o, r, k, haute, 0.2, 0.45, 0, 0.38, 1.45, 0.62, 0.3, 0.95, croute);
+        piece(v, m, o, r, k, haute, 0.2, 0.45, 0, 0.64, 2.3, 0.3, 0.16, 0.16, noire);
+        piece(v, m, o, r, k, basse, -0.1, 0.4, 0, -0.27, 1.32, 0.55, 0.2, 0.88, croute);
+        // les yeux blancs de chaleur
+        for (int s = -1; s <= 1; s += 2) {
+            piece(v, m, o, r, k, 0, 0, 0, s * 0.6, 0.62, 0.56, 0.2, 0.13, 0.06, (face, i, j) -> CHAUD);
+        }
+        // les crocs : en haut ils pointent vers le bas, en bas vers le haut ; les deux grands devant
+        Vec3 basH = haut(r, haute).scale(-1), hautB = haut(r, basse);
+        for (int q = 0; q < 6; q++) {
+            double z = 0.75 + q * 0.28;
+            for (int s = -1; s <= 1; s += 2) {
+                boolean croc = q == 5;
+                Vec3 pH = point(o, r, k, haute, 0.2, 0.45, s * (croc ? 0.42 : 0.5), 0.08, z);
+                pic(v, m, pH, basH, (croc ? 0.62 : 0.3) * k, 0.1 * k, BLANCHE, CHAUD, 1);
+                Vec3 pB = point(o, r, k, basse, -0.1, 0.4, s * 0.45, -0.07, z - 0.05);
+                pic(v, m, pB, hautB, (croc ? 0.5 : 0.26) * k, 0.09 * k, BLANCHE, CHAUD, 1);
+            }
+        }
+        // les oreilles, couchées en arrière
+        for (int s = -1; s <= 1; s += 2) {
+            Vec3 base = point(o, r, k, 0, 0, 0, s * 0.75, 1.25, -0.75);
+            Vec3 dir = r[0].scale(s * 0.3).add(r[1]).add(f.scale(-0.55));
+            pic(v, m, base, dir, 1.4 * k, 0.48 * k, CROUTE, LAVE_O, 1);
+        }
+        buffers.endBatch(Types.PLEIN);
+        // la crinière de flammes sur la nuque, et quelques flammes sur le cou
+        VertexConsumer fl = buffers.getBuffer(Types.VOILE);
+        for (int q = 0; q < 9; q++) {
+            Vec3 base = point(o, r, k, 0, 0, 0, -0.95 + q * 0.24, 1.2, -1.15 + 0.1 * Math.sin(q));
+            double vie = 0.75 + 0.25 * Math.sin(t * 11 + q * 1.9);
+            flamme(fl, m, base, r[1].add(f.scale(-0.7)), (1.1 + 0.5 * hache(q, 2, 630)) * 1.5 * k * vie, 0.5 * k);
+        }
+        for (int s = 2; s <= 6; s += 2) {
+            double recul = 1.1 + s * 0.85;
+            if (recul > couru) {
+                break;
+            }
+            Vec3 cen = tete.subtract(f.scale(recul)).subtract(cam).add(r[1].scale(0.7 * k / K_CHIEN));
+            flamme(fl, m, cen, r[1].add(f.scale(-0.6)), (0.9 + 0.3 * Math.sin(t * 9 + s)) * k * 1.6, 0.45 * k);
+        }
+        buffers.endBatch(Types.VOILE);
+    }
+
+    // ---------------------------------------------------------------- la capsule de glace
+
+    /**
+     * La capsule de glace : de ses pieds, une ligne de petits pics de glace file dans le sol jusqu'à chaque cible ; à
+     * l'arrivée, sept grands cristaux poussent autour d'elle et se referment au-dessus (le bloc de glace du gel est dessiné
+     * par ClientFruit) ; à l'éclatement, les cristaux volent en éclats.
+     */
+    private static void dessinerCapsule(VertexConsumer v, Matrix4f m, Vec3 cam, Minecraft mc, Capsule3 x, double t, float partiel) {
+        double te = x.tEclat < 0 ? 1e9 : x.tEclat;
+        double vitesse = Fruit3.VITESSE_LIGNE * 20, fonte = 1 - entre(t, te + 0.05, te + 0.3);
+        List<Vec3> buts = x.buts(mc, partiel);
+        for (int i = 0; i < buts.size(); i++) {
+            Vec3 b = buts.get(i), d = b.subtract(x.centre).multiply(1, 0, 1);
+            double L = d.length();
+            if (L < 0.5) {
+                continue;
+            }
+            Vec3 dir = d.scale(1 / L), cote = new Vec3(-dir.z, 0, dir.x);
+            double front = t * vitesse;
+            for (int s = 0; s * 0.7 + 0.8 < Math.min(front, L); s++) {
+                double u = s * 0.7 + 0.8;
+                double age = t - u / vitesse;
+                double h = (0.45 + 0.55 * hache(i, s, 400)) * croissance(age, 0, 0.12) * (1 - entre(t, te, te + 0.4));
+                if (h > 0.02) {
+                    Vec3 p = x.centre.add(dir.scale(u)).add(cote.scale((hache(i, s, 401) - 0.5) * 0.7)).add(0, Mth.lerp(u / L, 0, b.y - x.centre.y), 0);
+                    Vec3 vers = new Vec3(0, 1, 0).add(cote.scale((hache(i, s, 402) - 0.5) * 0.8)).add(dir.scale(0.25));
+                    cristal(v, m, p.subtract(cam), vers, h, 0.2 + 0.08 * hache(i, s, 403));
+                }
+            }
+            // la cage de cristaux, quand la glace arrive
+            double arrive = L / vitesse, g = croissance(t, arrive, arrive + 0.25) * fonte;
+            if (g > 0.01) {
+                for (int q = 0; q < 7; q++) {
+                    double a = q / 7.0 * Math.PI * 2 + i;
+                    Vec3 base = b.add(Math.cos(a) * 1.15, 0, Math.sin(a) * 1.15);
+                    Vec3 vers = new Vec3(-Math.cos(a) * 0.38, 1, -Math.sin(a) * 0.38);
+                    cristal(v, m, base.subtract(cam), vers, (2.5 + 0.7 * hache(q, i, 404)) * g, 0.42 + 0.12 * hache(q, i, 405));
+                    Vec3 dehors = new Vec3(Math.cos(a) * 0.9, 0.5, Math.sin(a) * 0.9);
+                    cristal(v, m, base.subtract(cam), dehors, (0.8 + 0.5 * hache(q, i, 406)) * g, 0.25);
+                }
+            }
+            // les éclats
+            if (t >= te) {
+                double s = t - te;
+                double reste = 1 - entre(s, 0.3, 1.0);
+                for (int q = 0; q < 16; q++) {
+                    Vec3 e = new Vec3(hache(q, i, 407) - 0.5, 0.3 + hache(q, i, 408), hache(q, i, 409) - 0.5).normalize();
+                    double vit = 5 + 5 * hache(q, i, 410);
+                    Vec3 p = b.add(0, 1.2, 0).add(e.scale(vit * s)).add(0, -9 * s * s, 0);
+                    cristal(v, m, p.subtract(cam), e, (0.5 + 0.5 * hache(q, i, 411)) * reste, 0.22);
+                }
+            }
+        }
+    }
+
     // ================================================================ tout dessiner
 
     private static void dessiner(PoseStack ps, Vec3 cam, float partiel) {
@@ -1178,6 +1476,16 @@ public final class ClientFruit3 {
             } else {
                 soleil(ps, buffers, cam, mc, u, partiel);
             }
+        }
+        for (Chien3 c : CHIENS) {
+            dessinerChien(ps, buffers, cam, c, c.t(mc, partiel));
+        }
+        if (!CAPSULES.isEmpty()) {
+            VertexConsumer v = buffers.getBuffer(Types.PLEIN);
+            for (Capsule3 x : CAPSULES) {
+                dessinerCapsule(v, ps.last().pose(), cam, mc, x, x.t(mc, partiel), partiel);
+            }
+            buffers.endBatch(Types.PLEIN);
         }
     }
 
@@ -1307,6 +1615,38 @@ public final class ClientFruit3 {
         }
     }
 
+    /** Les particules des attaques accroupi : le feu et la lave du chien qui court ; la neige au bout des lignes de glace. */
+    private static void particulesAccroupi(Minecraft mc) {
+        for (Chien3 c : CHIENS) {
+            double t = c.t(mc, 0);
+            if (c.tMorsure >= 0 || t < 0.05) {
+                continue;
+            }
+            Vec3 tete = c.tete(t);
+            for (int q = 0; q < 5; q++) {
+                Vec3 p = tete.add(aleat(1.2), aleat(0.9), aleat(1.2)).subtract(c.dir.scale(HASARD.nextDouble() * 3));
+                particule(mc, q == 0 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, p, aleat(0.04), 0.05, aleat(0.04));
+            }
+            particule(mc, ParticleTypes.LAVA, tete.add(aleat(1), aleat(0.5), aleat(1)), 0, 0, 0);
+        }
+        for (Capsule3 x : CAPSULES) {
+            double t = x.t(mc, 0);
+            if (x.tEclat >= 0) {
+                continue;
+            }
+            double front = t * Fruit3.VITESSE_LIGNE * 20;
+            for (Vec3 b : x.buts(mc, 0)) {
+                Vec3 d = b.subtract(x.centre).multiply(1, 0, 1);
+                double L = d.length();
+                if (L < 0.5) {
+                    continue;
+                }
+                Vec3 p = x.centre.add(d.scale(Math.min(front, L) / L)).add(0, 0.3, 0);
+                particule(mc, ParticleTypes.SNOWFLAKE, p.add(aleat(0.4), 0, aleat(0.4)), aleat(0.08), 0.12, aleat(0.08));
+            }
+        }
+    }
+
     /** L'impact : l'écran tremble pour ceux qui sont près, et un éclair blanc (ou orangé) les aveugle un instant. */
     private static void impact(Minecraft mc, Vec3 p, float force) {
         ClientFruit.secouer(p, 2.2F, 90);
@@ -1404,6 +1744,8 @@ public final class ClientFruit3 {
                 DRAGONS.clear();
                 ECLATEMENTS.clear();
                 ULTIMES.clear();
+                CHIENS.clear();
+                CAPSULES.clear();
                 appuyeAvant = false;
                 envoye = false;
                 return;
@@ -1414,12 +1756,16 @@ public final class ClientFruit3 {
             DRAGONS.values().removeIf(d -> maintenant - d.maj > 40);
             ECLATEMENTS.removeIf(e -> (System.nanoTime() - e.debut()) / 1e9 > 2.2);
             ULTIMES.removeIf(u -> u.t(mc, 0) > (u.glace ? 9 : (u.lance < 0 ? 14 : u.lance + 9.5)));
+            CHIENS.removeIf(c -> c.t(mc, 0) > (c.tMorsure < 0 ? 3 : c.tMorsure + 1));
+            CAPSULES.removeIf(x -> x.t(mc, 0) > (x.tEclat < 0 ? 5 : x.tEclat + 1.2));
             particules(mc);
+            particulesAccroupi(mc);
         }
 
         @SubscribeEvent
         public static void monde(RenderLevelStageEvent event) {
-            if ((DRAGONS.isEmpty() && ECLATEMENTS.isEmpty() && ULTIMES.isEmpty()) || event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
+            if ((DRAGONS.isEmpty() && ECLATEMENTS.isEmpty() && ULTIMES.isEmpty() && CHIENS.isEmpty() && CAPSULES.isEmpty())
+                    || event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
                     || Minecraft.getInstance().level == null) {
                 return;
             }

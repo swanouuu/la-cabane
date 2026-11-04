@@ -48,13 +48,16 @@ import org.joml.Vector3f;
 /**
  * Le niveau 3 des fruits du démon (listes « lave3 » et « glace3 », docs/fruits/planche-niveau3.png et
  * planche-ultimes.png, validés le 2026-11-03). La lave (ou la glace) prend tout le corps, sous un casque en tête de
- * dragon (voir ClientFruit3) ; le clic gauche, le clic droit court et l'accroupi (une fois l'attaque ultime faite) restent
- * ceux du niveau 2. En plus :
+ * dragon (voir ClientFruit3) ; le clic gauche et le clic droit court restent ceux du niveau 2. En plus :
  * <ul>
  * <li>clic droit maintenu : un dragon géant, sans pattes, sort de sa main et suit son regard tant qu'il reste appuyé
  * (5 s au plus, il avance au pas) ; qui le touche en route prend 8 ; quand il relâche (ou contre un mur), il explose :
  * 5 blocs autour, 20 au milieu, 12 au bord, tout brûle 8 s (ou gèle sur place 4 s). Recharge 20 s ;</li>
- * <li>accroupi : l'attaque ultime, une seule fois par éveil 3, puis 5 minutes de recharge. La glace, le Hyoton : sous
+ * <li>accroupi : la lave, le chien de l'enfer : une tête de chien en magma jaillit de sa main, file 18 blocs devant lui,
+ * emporte qui elle touche (4) et le mord au bout (16, il brûle 6 s). La glace, la capsule : des lignes de glace filent dans
+ * le sol jusqu'à ceux qui sont à moins de 12 blocs (8 au plus), des cristaux les enferment (3), et 2 s après tout éclate
+ * (14, ralentis). Recharge 15 s ;</li>
+ * <li>la touche d'ulti (J par défaut) : l'attaque ultime, une seule fois par éveil 3, puis 5 minutes de recharge. La glace, le Hyoton : sous
  * la cible visée à mi-distance, un pylône de glace la projette en l'air, des jets de glace la prennent dans une grosse
  * boule, la boule devient un dragon qui la claque au sol, et une tempête de glace monte très haut. La lave, le soleil de
  * magma : il bondit très haut, reste suspendu, une sphère de magma de 48 blocs grossit au-dessus de sa main ; il la lance
@@ -94,6 +97,21 @@ public final class Fruit3 {
     private static final float SOLEIL_MILIEU = 30;
     private static final float SOLEIL_BORD = 16;
     private static final double RAYON_SOLEIL = 20;
+
+    /** L'accroupi du niveau 3 : le chien de l'enfer (sa course, en blocs et en ticks) et la capsule de glace. */
+    public static final int RECHARGE_ACCROUPI = 15 * 20;
+    public static final double PORTEE_CHIEN = 18;
+    public static final int DUREE_CHIEN = 14;
+    private static final double LARGEUR_CHIEN = 1.8;
+    private static final float DEGATS_PRISE = 4;
+    private static final float DEGATS_MORSURE = 16;
+    private static final double RAYON_CAPSULE = 12;
+    private static final int MAX_CAPSULES = 8;
+    /** Les lignes de glace avancent de tant de blocs par tick ; tout éclate tant de ticks après le début. */
+    public static final double VITESSE_LIGNE = 1.5;
+    public static final int ECLAT_CAPSULE = 48;
+    private static final float DEGATS_CAPSULE_PRISE = 3;
+    private static final float DEGATS_CAPSULE = 14;
 
     /** Les temps des ultimes, en ticks depuis le début (les mêmes que les vidéos docs/fruits/hyoton.mp4 et soleil.mp4). */
     public static final int H_PYLONE = 10, H_BOULE = 26, H_DRAGON = 47, H_CLAQUE = 58, H_FIN_TEMPETE = 140, H_FIN = 150;
@@ -141,6 +159,43 @@ public final class Fruit3 {
         }
     }
 
+    /** Client → serveur : il appuie sur la touche d'ulti, fruit éveillé (l'attaque ultime, si elle est prête). */
+    public record Ulti() implements CustomPacketPayload {
+        public static final Type<Ulti> TYPE = new Type<>(Cabane.id("fruit_ulti"));
+        public static final StreamCodec<ByteBuf, Ulti> CODEC = StreamCodec.unit(new Ulti());
+
+        @Override
+        public Type<Ulti> type() {
+            return TYPE;
+        }
+    }
+
+    /** Serveur → ceux qui sont autour : le chien de l'enfer part de là, vers là (phase 0) ; il mord à ce point (phase 1). */
+    public record Chien(UUID joueur, Vector3f point, Vector3f dir, int phase) implements CustomPacketPayload {
+        public static final Type<Chien> TYPE = new Type<>(Cabane.id("fruit_chien"));
+        public static final StreamCodec<ByteBuf, Chien> CODEC = StreamCodec.composite(
+                UUIDUtil.STREAM_CODEC, Chien::joueur, ByteBufCodecs.VECTOR3F, Chien::point, ByteBufCodecs.VECTOR3F, Chien::dir,
+                ByteBufCodecs.VAR_INT, Chien::phase, Chien::new);
+
+        @Override
+        public Type<Chien> type() {
+            return TYPE;
+        }
+    }
+
+    /** Serveur → ceux qui sont autour : la capsule de glace part de ce centre vers ces entités (phase 0), puis éclate (phase 1). */
+    public record Capsule(UUID joueur, Vector3f centre, List<Integer> cibles, int phase) implements CustomPacketPayload {
+        public static final Type<Capsule> TYPE = new Type<>(Cabane.id("fruit_capsule"));
+        public static final StreamCodec<ByteBuf, Capsule> CODEC = StreamCodec.composite(
+                UUIDUtil.STREAM_CODEC, Capsule::joueur, ByteBufCodecs.VECTOR3F, Capsule::centre,
+                ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), Capsule::cibles, ByteBufCodecs.VAR_INT, Capsule::phase, Capsule::new);
+
+        @Override
+        public Type<Capsule> type() {
+            return TYPE;
+        }
+    }
+
     @SubscribeEvent
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
@@ -149,8 +204,15 @@ public final class Fruit3 {
                         serpent(joueur, p.appuye());
                     }
                 }))
+                .playToServer(Ulti.TYPE, Ulti.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer joueur && Fruit.eveille(joueur) && Fruit.niveau(joueur) >= 3) {
+                        ultime(joueur, Fruit.glace(Pouvoirs.pouvoir(joueur)));
+                    }
+                }))
                 .playToClient(Dragon.TYPE, Dragon.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit3.dragon(p)))
-                .playToClient(Ultime.TYPE, Ultime.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit3.ultime(p)));
+                .playToClient(Ultime.TYPE, Ultime.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit3.ultime(p)))
+                .playToClient(Chien.TYPE, Chien.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit3.chien(p)))
+                .playToClient(Capsule.TYPE, Capsule.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientFruit3.capsule(p)));
     }
 
     /** À tous ceux qui sont à moins de 200 blocs (la tempête et le champignon se voient de loin). */
@@ -364,7 +426,7 @@ public final class Fruit3 {
     /** Ceux qui ont déjà fait leur attaque ultime pendant cet éveil (une seule fois par forme). */
     private static final Set<UUID> FAITES = new HashSet<>();
 
-    /** Accroupi, au niveau 3 : l'attaque ultime, si elle est prête ; vrai si elle part (sinon, c'est l'accroupi du niveau 2). */
+    /** La touche d'ulti, au niveau 3 : l'attaque ultime, si elle est prête ; vrai si elle part. */
     static boolean ultime(ServerPlayer joueur, boolean glace) {
         UUID u = joueur.getUUID();
         int maintenant = joueur.server.getTickCount();
@@ -548,6 +610,168 @@ public final class Fruit3 {
         return age >= S_FIN;
     }
 
+    // ================================================================ accroupi : le chien de l'enfer, la capsule de glace
+
+    /** Le chien de l'enfer en course : d'où il part, vers où, depuis quand, et ceux qu'il emporte dans sa gueule. */
+    private static final class Chien3 {
+        final UUID joueur;
+        final ServerLevel monde;
+        final Vec3 depart;
+        final Vec3 dir;
+        final int debut;
+        final List<LivingEntity> pris = new ArrayList<>();
+        Vec3 tete;
+
+        Chien3(ServerPlayer joueur, Vec3 depart, Vec3 dir) {
+            this.joueur = joueur.getUUID();
+            this.monde = joueur.serverLevel();
+            this.depart = depart;
+            this.dir = dir;
+            this.debut = joueur.server.getTickCount();
+            this.tete = depart;
+        }
+    }
+
+    /** La capsule de glace : d'où partent les lignes, qui elles prennent (et quand la glace arrive), depuis quand. */
+    private static final class Capsule3 {
+        final UUID joueur;
+        final ServerLevel monde;
+        final Vec3 centre;
+        final List<LivingEntity> cibles;
+        final int[] arrivee;
+        final int debut;
+
+        Capsule3(ServerPlayer joueur, Vec3 centre, List<LivingEntity> cibles) {
+            this.joueur = joueur.getUUID();
+            this.monde = joueur.serverLevel();
+            this.centre = centre;
+            this.cibles = cibles;
+            this.debut = joueur.server.getTickCount();
+            this.arrivee = new int[cibles.size()];
+            for (int i = 0; i < cibles.size(); i++) {
+                arrivee[i] = Math.max(2, Mth.ceil(cibles.get(i).position().subtract(centre).horizontalDistance() / VITESSE_LIGNE));
+            }
+        }
+    }
+
+    private static final List<Chien3> CHIENS = new ArrayList<>();
+    private static final List<Capsule3> CAPSULES = new ArrayList<>();
+
+    /** Accroupi au niveau 3 (Fruit.choc s'occupe de la recharge) : le chien de l'enfer, ou la capsule de glace. */
+    static void accroupi(ServerPlayer joueur, boolean glace) {
+        ServerLevel monde = joueur.serverLevel();
+        if (glace) {
+            Vec3 centre = joueur.position();
+            List<LivingEntity> cibles = autour(joueur, monde, centre.add(0, 1, 0), RAYON_CAPSULE).stream()
+                    .sorted(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(joueur))).limit(MAX_CAPSULES).toList();
+            CAPSULES.add(new Capsule3(joueur, centre, cibles));
+            envoyer(monde, centre, new Capsule(joueur.getUUID(), Fruit.v(centre), cibles.stream().map(Entity::getId).toList(), 0));
+            son(monde, centre, SoundEvents.GLASS_BREAK, 1.6F, 0.6F);
+            son(monde, centre, SoundEvents.AMETHYST_BLOCK_RESONATE, 2F, 0.6F);
+            son(monde, centre, SoundEvents.POWDER_SNOW_PLACE, 2F, 0.5F);
+            return;
+        }
+        // il file presque à plat : vers le bas il raserait le sol, vers le haut il partirait dans le ciel
+        Vec3 regard = joueur.getLookAngle();
+        Vec3 dir = new Vec3(regard.x, Mth.clamp(regard.y, -0.25, 0.35), regard.z).normalize();
+        Vec3 depart = Fruit.main(joueur, false);
+        CHIENS.add(new Chien3(joueur, depart, dir));
+        envoyer(monde, depart, new Chien(joueur.getUUID(), Fruit.v(depart), Fruit.v(dir), 0));
+        son(monde, depart, SoundEvents.WOLF_GROWL, 2F, 0.5F);
+        son(monde, depart, SoundEvents.BLAZE_SHOOT, 1.6F, 0.5F);
+        son(monde, depart, SoundEvents.FIRECHARGE_USE, 1.4F, 0.4F);
+    }
+
+    /** Où est la tête du chien, tant de ticks après son départ : vite au début, puis elle ralentit pour mordre. */
+    public static double courseChien(double age) {
+        double k = Mth.clamp(age / DUREE_CHIEN, 0, 1);
+        return PORTEE_CHIEN * (1 - (1 - k) * (1 - k));
+    }
+
+    private static boolean avancerChien(ServerPlayer j, Chien3 c, int age) {
+        Vec3 avant = c.tete, apres = c.depart.add(c.dir.scale(courseChien(age)));
+        HitResult bloc = c.monde.clip(new ClipContext(avant, apres, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, j));
+        boolean mur = bloc.getType() != HitResult.Type.MISS && age > 1;
+        c.tete = mur ? bloc.getLocation().subtract(c.dir.scale(0.6)) : apres;
+        // ceux qu'il croise : il les prend dans sa gueule, une fois chacun
+        for (LivingEntity e : c.monde.getEntitiesOfClass(LivingEntity.class, new AABB(avant, c.tete).inflate(LARGEUR_CHIEN + 1),
+                e -> Pouvoirs.cible(j, e) && !e.isSpectator())) {
+            AABB b = e.getBoundingBox().inflate(LARGEUR_CHIEN);
+            if (c.pris.contains(e) || !b.contains(c.tete) && b.clip(avant, c.tete).isEmpty()) {
+                continue;
+            }
+            c.pris.add(e);
+            Fruit.blesser(e, Fruit.source(j, Fruit.MAGMA), DEGATS_PRISE);
+            e.igniteForSeconds(2);
+            son(c.monde, e.position(), SoundEvents.EVOKER_FANGS_ATTACK, 1.6F, 0.6F);
+        }
+        // il les emporte jusqu'au bout de sa course
+        for (LivingEntity e : c.pris) {
+            if (e.isAlive() && e.level() == c.monde) {
+                placer(e, c.tete.add(c.dir.scale(0.8)).subtract(0, e.getBbHeight() * 0.5, 0));
+            }
+        }
+        if (age % 4 == 0) {
+            son(c.monde, c.tete, SoundEvents.BLAZE_BURN, 1.2F, 0.5F);
+        }
+        if (!mur && age < DUREE_CHIEN) {
+            return false;
+        }
+        // la morsure : la gueule se referme, et tout ce qu'il tient brûle
+        envoyer(c.monde, c.tete, new Chien(c.joueur, Fruit.v(c.tete), Fruit.v(c.dir), 1));
+        son(c.monde, c.tete, SoundEvents.EVOKER_FANGS_ATTACK, 2.4F, 0.4F);
+        son(c.monde, c.tete, SoundEvents.GENERIC_EXPLODE.value(), 1.8F, 0.8F);
+        son(c.monde, c.tete, SoundEvents.WOLF_GROWL, 2F, 0.4F);
+        son(c.monde, c.tete, SoundEvents.LAVA_EXTINGUISH, 1.6F, 0.5F);
+        for (LivingEntity e : c.pris) {
+            if (!e.isAlive() || e.level() != c.monde) {
+                continue;
+            }
+            Fruit.blesser(e, Fruit.source(j, Fruit.MAGMA), DEGATS_MORSURE);
+            e.igniteForSeconds(6);
+            e.setDeltaMovement(c.dir.x * 0.8, 0.55, c.dir.z * 0.8);
+            e.hurtMarked = true;
+            e.fallDistance = 0;
+        }
+        return true;
+    }
+
+    private static boolean avancerCapsule(ServerPlayer j, Capsule3 x, int age) {
+        for (int i = 0; i < x.cibles.size(); i++) {
+            LivingEntity e = x.cibles.get(i);
+            if (age == x.arrivee[i] && e.isAlive() && e.level() == x.monde) {
+                // la glace arrive sous lui : les cristaux l'enferment jusqu'à ce que tout éclate
+                Fruit.blesser(e, Fruit.source(j, Fruit.GIVRE), DEGATS_CAPSULE_PRISE);
+                Fruit.geler(e, ECLAT_CAPSULE - age + 2);
+                son(x.monde, e.position(), SoundEvents.AMETHYST_CLUSTER_PLACE, 1.6F, 0.6F);
+                son(x.monde, e.position(), SoundEvents.PLAYER_HURT_FREEZE, 1.2F, 0.7F);
+            }
+        }
+        if (age % 6 == 0 && age < ECLAT_CAPSULE) {
+            son(x.monde, x.centre, SoundEvents.POWDER_SNOW_STEP, 1.4F, 0.6F);
+        }
+        if (age < ECLAT_CAPSULE) {
+            return false;
+        }
+        envoyer(x.monde, x.centre, new Capsule(x.joueur, Fruit.v(x.centre), x.cibles.stream().map(Entity::getId).toList(), 1));
+        for (LivingEntity e : x.cibles) {
+            if (!e.isAlive() || e.level() != x.monde) {
+                continue;
+            }
+            son(x.monde, e.position(), SoundEvents.GLASS_BREAK, 2F, 0.5F);
+            son(x.monde, e.position(), SoundEvents.AMETHYST_CLUSTER_BREAK, 1.8F, 0.5F);
+            Fruit.blesser(e, Fruit.source(j, Fruit.GIVRE), DEGATS_CAPSULE);
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
+            Fruit.givrer(e);
+            Vec3 dehors = e.position().subtract(x.centre).multiply(1, 0, 1);
+            Vec3 v = dehors.lengthSqr() < 0.01 ? new Vec3(1, 0, 0) : dehors.normalize();
+            e.setDeltaMovement(v.x * 0.5, 0.35, v.z * 0.5);
+            e.hurtMarked = true;
+        }
+        son(x.monde, x.centre, SoundEvents.GENERIC_EXPLODE.value(), 1.2F, 1.4F);
+        return true;
+    }
+
     // ================================================================ ce qui dure
 
     @SubscribeEvent
@@ -557,6 +781,14 @@ public final class Fruit3 {
         for (Serpent3 s : new ArrayList<>(SERPENTS.values())) {
             avancer(server, s);
         }
+        CHIENS.removeIf(c -> {
+            ServerPlayer j = server.getPlayerList().getPlayer(c.joueur);
+            return j == null || j.level() != c.monde || avancerChien(j, c, maintenant - c.debut);
+        });
+        CAPSULES.removeIf(x -> {
+            ServerPlayer j = server.getPlayerList().getPlayer(x.joueur);
+            return j == null || j.level() != x.monde || avancerCapsule(j, x, maintenant - x.debut);
+        });
         for (Ultime3 x : new ArrayList<>(ULTIMES)) {
             ServerPlayer j = server.getPlayerList().getPlayer(x.joueur);
             if (j == null || j.level() != x.monde) {
@@ -600,6 +832,8 @@ public final class Fruit3 {
         SERPENTS.remove(u);
         FAITES.remove(u);
         ULTIMES.removeIf(x -> x.joueur.equals(u));
+        CHIENS.removeIf(c -> c.joueur.equals(u));
+        CAPSULES.removeIf(x -> x.joueur.equals(u));
     }
 
     @SubscribeEvent
@@ -609,6 +843,8 @@ public final class Fruit3 {
         ULTIMES.clear();
         PRET_ULTIME.clear();
         FAITES.clear();
+        CHIENS.clear();
+        CAPSULES.clear();
     }
 
     private Fruit3() {
