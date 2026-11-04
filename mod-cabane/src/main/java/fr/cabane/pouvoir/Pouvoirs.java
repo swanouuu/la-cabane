@@ -67,7 +67,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Hachibi.NOM, Hachibi.NOM2, Hachibi4.NOM, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
+    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Susano4.NOM, Hachibi.NOM, Hachibi.NOM2, Hachibi4.NOM, Maudit.NOM, Maudit.NOM2, Minato.NOM, Minato.NOM2,
             Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Foudre.NOM, Foudre.NOM2);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
@@ -163,7 +163,7 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return Hachibi.deux(pouvoir) ? 4 : Susano3.est(pouvoir) || Fruit.troisieme(pouvoir) ? 3
+                return Hachibi.deux(pouvoir) || Susano4.est(pouvoir) ? 4 : Susano3.est(pouvoir) || Fruit.troisieme(pouvoir) ? 3
                         : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) ? 2 : 1;
             }
         }
@@ -336,6 +336,14 @@ public final class Pouvoirs {
             return;
         }
         int niveau = niveau(joueur);
+        if (Susano4.est(elu.pouvoir()) && niveau == 4) {
+            Susano4.finir(joueur);
+            return;
+        }
+        if (Susano4.est(elu.pouvoir()) && niveau == 3 && !Susano4.pret(joueur)) {
+            endormir(joueur);
+            return;
+        }
         if (niveau >= elu.niveauMax()) {
             endormir(joueur);
             return;
@@ -352,7 +360,7 @@ public final class Pouvoirs {
             // monter de niveau ne remet pas le compteur à zéro : les 2 minutes partent du premier éveil
             DEBUT_EVEIL.put(joueur.getUUID(), maintenant);
         }
-        int suivant = dev ? 3 : niveau + 1;
+        int suivant = dev && niveau < 3 ? 3 : niveau + 1;
         EVEILLES.put(joueur.getUUID(), suivant);
         armure(joueur, suivant);
         if (Hachibi.est(elu.pouvoir())) {
@@ -373,7 +381,21 @@ public final class Pouvoirs {
         if (Foudre.est(elu.pouvoir())) {
             Foudre.eveiller(joueur, suivant);
         }
+        if (suivant == 4 && Susano4.est(elu.pouvoir())) {
+            Susano4.eveiller(joueur);
+        }
         envoyerEtat(joueur, elu, suivant, true);
+    }
+
+    /** Le Susano parfait se défait : il redescend à ce niveau (le chevalier), sans s'endormir. */
+    static void redescendre(ServerPlayer joueur, int niveau) {
+        Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
+        if (elu == null || !EVEILLES.containsKey(joueur.getUUID())) {
+            return;
+        }
+        EVEILLES.put(joueur.getUUID(), niveau);
+        armure(joueur, niveau);
+        envoyerEtat(joueur, elu, niveau, false);
     }
 
     /** Le pouvoir de ce joueur : sa liste blanche (« susano », « hachibi »…), ou rien. */
@@ -396,6 +418,7 @@ public final class Pouvoirs {
     private static final net.minecraft.resources.ResourceLocation ARMURE = Cabane.id("pouvoir_armure");
     private static final net.minecraft.resources.ResourceLocation ROBUSTESSE = Cabane.id("pouvoir_robustesse");
     private static final net.minecraft.resources.ResourceLocation RECUL = Cabane.id("pouvoir_recul");
+    private static final net.minecraft.resources.ResourceLocation VIE = Cabane.id("pouvoir_vie");
 
     /**
      * Un pouvoir éveillé protège comme une armure de diamant complète (sans enchantement) ; le Susano niveau 2 et Minato,
@@ -414,6 +437,19 @@ public final class Pouvoirs {
         boolean chevalier = (Susano3.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
         // Minato (niveau 1) compte comme un niveau 2 : de la netherite
         boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
+        // le Susano parfait (niveau 4) : plus solide que tout, 10 cœurs de plus, impossible à repousser
+        boolean parfait = Susano4.est(pouvoir(joueur)) && niveau >= 4;
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, VIE, parfait ? 20 : 0);
+        if (parfait) {
+            modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, 30);
+            modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE, 16);
+            modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, RECUL, 1);
+            joueur.heal(20);
+            return;
+        }
+        if (joueur.getHealth() > joueur.getMaxHealth()) {
+            joueur.setHealth(joueur.getMaxHealth());
+        }
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, ARMURE, niveau == 0 ? 0 : fer ? 15 * niveau : bete ? 25 : chevalier ? 24 : 20);
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS, ROBUSTESSE,
                 niveau == 0 || fer ? 0 : bete ? 10 : chevalier ? 14 : netherite || niveau >= 2 && !Hachibi.deux(pouvoir(joueur)) ? 12 : 8);
@@ -441,6 +477,7 @@ public final class Pouvoirs {
         Maudit.endormir(joueur);
         Minato.endormir(joueur);
         Susano3.endormir(joueur);
+        Susano4.endormir(joueur);
         Fruit.endormir(joueur);
         Ichibi.endormir(joueur);
         Foudre.endormir(joueur);
@@ -500,6 +537,12 @@ public final class Pouvoirs {
      */
     private static void frapper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
+        if (Susano4.enForme(joueur)) {
+            if (Susano4.actif(joueur)) {
+                Susano4.coup(joueur);
+            }
+            return;
+        }
         if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
             return;
         }
@@ -587,6 +630,13 @@ public final class Pouvoirs {
             return;
         }
         if (niveau == 0 || ECRASEMENTS.containsKey(joueur.getUUID())) {
+            return;
+        }
+        // le Susano parfait : la pluie d'Amaterasu
+        if (Susano4.enForme(joueur)) {
+            if (Susano4.actif(joueur)) {
+                Susano4.pluie(joueur);
+            }
             return;
         }
         // le chevalier n'attrape plus : il tire à l'arc (les flammes noires)
@@ -729,6 +779,13 @@ public final class Pouvoirs {
             return;
         }
         if (niveau == 0) {
+            return;
+        }
+        // le Susano parfait : la perce
+        if (Susano4.enForme(joueur)) {
+            if (Susano4.actif(joueur)) {
+                Susano4.perce(joueur);
+            }
             return;
         }
         // le chevalier ne charge pas : il abat son épée, et tout autour s'embrase de flammes noires

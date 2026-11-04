@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Susano parfait</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #08060f; overflow: hidden; font-family: system-ui, sans-serif; }
+  #outils { position: fixed; left: 10px; top: 8px; right: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 2; pointer-events: none; }
+  .barre { display: flex; gap: 5px; flex-wrap: wrap; pointer-events: auto; }
+  button { background: #1a1530; color: #e8e0ff; border: 1px solid #45397a; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; }
+  button.actif { background: #5a3fb0; border-color: #8f74ff; }
+  button.cache { opacity: 0.45; text-decoration: line-through; }
+  #info { position: fixed; right: 12px; bottom: 10px; color: #9b8cd0; font-size: 12px; }
+  #aide { position: fixed; left: 12px; bottom: 10px; color: #7c6fb0; font-size: 12px; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="outils">
+<div class="barre" id="anims"></div>
+<div class="barre" id="vues"></div>
+<div class="barre" id="pieces"></div>
+<div class="barre" id="couleurs"></div>
+</div>
+<div id="aide">clic gauche : tourner · clic droit : déplacer · molette : zoomer · flèches : tourner</div>
+<div id="info"></div>
+<script type="module">
+// Le Susano parfait en cubes (susano.bin, calculé par susano-voxel.mjs) : chaque cube de surface a sa position, la
+// pente de la surface, sa teinte, sa lueur, sa sorte (chakra, jaune des yeux, noir de l'épée) et sa pièce. On le
+// tourne, on le déplace, on change sa couleur et on cache des pièces ; ce qui luit passe dans le flou lumineux.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const COULEURS = {
+  violet: [0x6a2cff, 0xd9b8ff], bleu: [0x2a5cff, 0x9cc8ff], orange: [0xff7a10, 0xffd080], rouge: [0xe8401c, 0xffb070],
+  vert: [0x22c454, 0xb0ffb8], cyan: [0x18d6e8, 0xb8faff], noir: [0x24222e, 0xffffff],
+};
+const PIECES = ['corps', 'armure', 'pans', 'ceinture', 'tete', 'cheveux', 'ailes', 'plumes', 'poignees', 'flamme', 'sombre'];
+const NOMS = { corps: 'corps', armure: 'épaulières', pans: 'petite jupe', ceinture: 'ceinture', tete: 'tête', cheveux: 'cheveux', ailes: "bras des ailes", plumes: 'plumes', poignees: 'katanas des ailes', flamme: 'épée de flammes', sombre: 'épée sombre' };
+
+const rendu = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+rendu.setPixelRatio(Math.min(2, devicePixelRatio));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x08060f);
+scene.fog = new THREE.Fog(0x08060f, 80, 180);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 500);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.enableDamping = true;
+controles.autoRotateSpeed = 0.7;
+controles.listenToKeyEvents(window);
+controles.keyRotateSpeed = 1.2;
+
+const sol = new THREE.Mesh(new THREE.CircleGeometry(70, 64), new THREE.MeshBasicMaterial({ color: 0x110d1c }));
+sol.rotation.x = -Math.PI / 2;
+scene.add(sol);
+const grille = new THREE.GridHelper(140, 35, 0x2a2245, 0x1d1832);
+grille.position.y = 0.03;
+scene.add(grille);
+const halo = new THREE.Mesh(new THREE.CircleGeometry(15, 48), new THREE.MeshBasicMaterial({ color: 0x6a2cff, transparent: true, opacity: 0.22 }));
+halo.rotation.x = -Math.PI / 2;
+halo.position.y = 0.02;
+scene.add(halo);
+
+const uniformes = { uCorps: { value: new THREE.Color() }, uContour: { value: new THREE.Color() }, uTemps: { value: 0 }, uCache: { value: new Array(16).fill(0) }, uOs: { value: Array.from({ length: 17 }, () => new THREE.Matrix4()) } };
+const materiau = new THREE.ShaderMaterial({
+  uniforms: uniformes,
+  vertexShader: `
+    attribute vec3 iPos; attribute vec3 iNor; attribute vec4 iInfo;
+    uniform float uCache[16];
+    uniform mat4 uOs[17];
+    attribute vec3 iOs;
+    varying vec3 vNor; varying vec3 vInfo; varying vec3 vVue; varying float vY;
+    void main() {
+      int piece = int(iInfo.w + 0.5);
+      float cache = 0.0;
+      for (int i = 0; i < 16; i++) if (i == piece) cache = uCache[i];
+      mat4 M = uOs[int(iOs.x + 0.5)] * (1.0 - iOs.z) + uOs[int(iOs.y + 0.5)] * iOs.z;
+      vec3 p = (M * vec4(position + iPos, 1.0)).xyz;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      vNor = normalize(normalMatrix * (mat3(M) * normalize(mix(normal, iNor, 0.55))));
+      vInfo = iInfo.xyz; vVue = -mv.xyz; vY = iPos.y;
+      gl_Position = cache > 0.5 ? vec4(2.0, 2.0, 2.0, 1.0) : projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    uniform vec3 uCorps; uniform vec3 uContour; uniform float uTemps;
+    varying vec3 vNor; varying vec3 vInfo; varying vec3 vVue; varying float vY;
+    void main() {
+      vec3 n = normalize(vNor), v = normalize(vVue);
+      vec3 l = normalize(vec3(-0.45, 0.75, 0.55)), l2 = normalize(vec3(0.6, 0.2, -0.7));
+      float diff = max(dot(n, l), 0.0), dos = max(dot(n, l2), 0.0) * 0.35, rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+      float t = vInfo.x, e = vInfo.y; int s = int(vInfo.z + 0.5);
+      vec3 sombre = uCorps * 0.1, moyen = uCorps * 0.75, clair = mix(uCorps, uContour, 0.65);
+      vec3 c = t < 0.5 ? mix(sombre, moyen, t * 2.0) : mix(moyen, clair, (t - 0.5) * 2.0);
+      if (s == 2) c = vec3(0.03, 0.022, 0.04);
+      vec3 col = c * (0.22 + 0.9 * diff + dos) + uContour * rim * (s == 2 ? 0.08 : 0.28);
+      col += mix(uContour, vec3(1.0), 0.15) * e * 0.75 * (0.82 + 0.18 * sin(uTemps * 5.0 + vY * 1.3));
+      if (s == 1) col = vec3(1.0, 0.86, 0.25) * 2.2;
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+});
+
+async function charger() {
+  const buf = await (await fetch('susano.bin', { cache: 'no-store' })).arrayBuffer();
+  const f = new Float32Array(buf), n = f[0], pas = f[1];
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), info = new Float32Array(n * 4), osA = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const o = 2 + i * 13;
+    pos.set(f.subarray(o, o + 3), i * 3);
+    nor.set(f.subarray(o + 3, o + 6), i * 3);
+    info.set(f.subarray(o + 6, o + 10), i * 4);
+    osA.set(f.subarray(o + 10, o + 13), i * 3);
+  }
+  OS = (await (await fetch('susano-os.json', { cache: 'no-store' })).json()).os;
+  const g = new THREE.InstancedBufferGeometry().copy(new THREE.BoxGeometry(pas * 1.001, pas * 1.001, pas * 1.001));
+  g.instanceCount = n;
+  g.setAttribute('iPos', new THREE.InstancedBufferAttribute(pos, 3));
+  g.setAttribute('iNor', new THREE.InstancedBufferAttribute(nor, 3));
+  g.setAttribute('iInfo', new THREE.InstancedBufferAttribute(info, 4));
+  g.setAttribute('iOs', new THREE.InstancedBufferAttribute(osA, 3));
+  const m = new THREE.Mesh(g, materiau);
+  m.frustumCulled = false;
+  scene.add(m);
+  document.getElementById('info').textContent = n.toLocaleString('fr') + ' cubes de surface · 1 cube = 1/' + Math.round(1 / pas) + ' de bloc · 29 blocs de haut';
+}
+
+const compo = new EffectComposer(rendu);
+compo.addPass(new RenderPass(scene, camera));
+const flou = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.45, 0.78);
+compo.addPass(flou);
+compo.addPass(new OutputPass());
+
+const bouton = (parent, texte, action, classe) => {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  b.onclick = () => action(b);
+  if (classe) b.classList.add(classe);
+  document.getElementById(parent).appendChild(b);
+  return b;
+};
+function couleur(nom) {
+  const [a, b] = COULEURS[nom];
+  uniformes.uCorps.value.set(a);
+  uniformes.uContour.value.set(b);
+  halo.material.color.set(a);
+  document.querySelectorAll('#couleurs button[data-c]').forEach((x) => x.classList.toggle('actif', x.dataset.c === nom));
+}
+for (const nom of Object.keys(COULEURS)) bouton('couleurs', nom, () => couleur(nom)).dataset.c = nom;
+bouton('couleurs', 'rotation', (b) => { controles.autoRotate = !controles.autoRotate; b.classList.toggle('actif', controles.autoRotate); });
+bouton('couleurs', 'lueur', (b) => { flou.enabled = !flou.enabled; b.classList.toggle('actif', flou.enabled); }, 'actif');
+
+// les vues : la caméra va se placer en douceur
+let vers = null;
+const VUES = {
+  'face': [[0, 17, 70], [0, 16, 0]], 'trois-quarts': [[-40, 22, 56], [0, 16, 0]], 'gauche': [[62, 17, 0], [0, 16, 0]], 'droite': [[-62, 17, 0], [0, 16, 0]],
+  'dos': [[0, 19, -70], [0, 16, 0]], 'dessus': [[0, 80, 8], [0, 12, 0]], 'tête': [[5, 25, 12], [0, 23.8, 0]], 'visage': [[0, 23.2, 13], [0, 23, 0]], 'profil': [[15, 24, 4], [0, 23.5, 1.5]], 'épées': [[0, 8, 40], [0, 6, 4]],
+};
+for (const [nom, v] of Object.entries(VUES)) bouton('vues', nom, () => { vers = v.map((q) => new THREE.Vector3(...q)); controles.autoRotate = false; });
+
+// cacher ou montrer chaque pièce
+PIECES.forEach((p, i) => bouton('pieces', NOMS[p], (b) => {
+  uniformes.uCache.value[i] = uniformes.uCache.value[i] ? 0 : 1;
+  b.classList.toggle('cache', uniformes.uCache.value[i] === 1);
+}));
+// les épées sont cachées au départ : on voit d'abord le modèle de base
+[9, 10].forEach((i) => { uniformes.uCache.value[i] = 1; document.querySelectorAll('#pieces button')[i].classList.add('cache'); });
+bouton('pieces', 'tout montrer', () => {
+  uniformes.uCache.value.fill(0);
+  document.querySelectorAll('#pieces button').forEach((b) => b.classList.remove('cache'));
+});
+
+// ------------------------------------------------------------------ les animations
+// Chaque articulation tourne autour de son pivot (angles x, y, z en radians), à la suite de celle au-dessus d'elle ;
+// le bassin peut aussi se déplacer. x négatif lève un bras ou une jambe vers l'avant ; x positif penche le corps en avant.
+const horloge = new THREE.Clock();
+let OS = [], anim = 'garde', debutAnim = 0, avance = 0;
+const lisse = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+const melange = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
+/** Une suite de poses (temps relatif de 0 à 1 → angles), interpolée en douceur. */
+const cles = (k, liste) => {
+  for (let i = 0; i + 1 < liste.length; i++) if (k <= liste[i + 1][0]) return melange(liste[i][1], liste[i + 1][1], lisse((k - liste[i][0]) / (liste[i + 1][0] - liste[i][0])));
+  return liste[liste.length - 1][1];
+};
+// Les animations. Chaque articulation tourne autour de son pivot (angles x, y, z en radians, ordre YXZ), à la suite de
+// celle au-dessus d'elle ; le bassin peut aussi se déplacer. Repères : x négatif lève un bras ou une jambe vers l'avant,
+// x positif penche le corps en avant ou plie le genou ; z négatif écarte le bras ou la jambe droite (positif à gauche) ;
+// y positif tourne le corps vers sa gauche. Aile droite : z négatif la lève, y négatif la rabat en arrière.
+const TOUR = Math.PI * 2;
+const pos = (x) => Math.max(0, x);
+/** Le battement des ailes en vol (1 = en haut, -1 = en bas) : une descente rapide, une remontée plus lente. */
+const battement = (ph) => {
+  ph = ((ph % 1) + 1) % 1;
+  return ph < 0.4 ? 1 - 2 * lisse(ph / 0.4) : -1 + 2 * lisse((ph - 0.4) / 0.6);
+};
+function poseDe(nom, t) {
+  const P = {}, m = (n, x = 0, y = 0, z = 0) => (P[n] = [x, y, z]);
+  let bassin = [0, 0, 0], vitesse = 0;
+  if (nom === 'garde') {
+    // il respire, déplace un peu son poids, regarde autour de lui ; les ailes respirent aussi, le bout en retard
+    const r = Math.sin(t * 1.5), lent = Math.sin(t * 0.45), tres = Math.sin(t * 0.27);
+    m('bassin', 0, 0.04 * lent, 0.025 * lent);
+    m('torse', 0.03 + 0.025 * r, -0.03 * lent, -0.02 * lent);
+    m('tete', -0.05 - 0.02 * r, 0.3 * tres, 0.03 * lent);
+    m('brasD', -0.06 + 0.03 * r, 0, -0.1 - 0.025 * r); m('brasG', -0.06 + 0.03 * r, 0, 0.1 + 0.025 * r);
+    m('avantD', -0.28 - 0.03 * r); m('avantG', -0.28 - 0.03 * r);
+    m('cuisseD', -0.04, 0.1, -0.07 - 0.02 * lent); m('cuisseG', 0.03, -0.1, 0.07 - 0.02 * lent);
+    m('tibiaD', 0.1 + 0.03 * pos(lent)); m('tibiaG', 0.07 + 0.03 * pos(-lent));
+    const a = 0.07 * Math.sin(t * 1.1), b = 0.06 * Math.sin(t * 1.1 - 0.8);
+    m('aileD', 0, -0.06, -a); m('aileG', 0, 0.06, a);
+    m('boutD', 0, -0.03, -b); m('boutG', 0, 0.03, b);
+    bassin = [0.12 * lent, -0.1 + 0.05 * r, 0];
+  } else if (nom === 'marche' || nom === 'course') {
+    const course = nom === 'course', per = course ? 0.7 : 1.2, ph = (t / per) % 1, a = ph * TOUR;
+    const s = Math.sin(a), c = Math.cos(a);
+    vitesse = course ? 21 : 7.5;
+    // les jambes : la droite avance quand s > 0 ; le genou plie fort pendant que la jambe revient (c > 0), un peu à l'appui
+    const amp = course ? 0.95 : 0.5, pli = course ? 1.75 : 0.95, appui = course ? 0.4 : 0.14, base = course ? -0.28 : -0.04;
+    m('cuisseD', -amp * s + base, 0, -0.03); m('cuisseG', amp * s + base, 0, 0.03);
+    m('tibiaD', 0.1 + pli * pos(c) ** 1.4 + appui * pos(-c) * pos(s + 0.3)); m('tibiaG', 0.1 + pli * pos(-c) ** 1.4 + appui * pos(c) * pos(-s + 0.3));
+    // le bassin tourne avec la jambe qui avance, penche vers la jambe d'appui ; le buste tourne en sens inverse
+    const lacet = (course ? 0.16 : 0.11) * s;
+    m('bassin', course ? 0.18 : 0.04, lacet, (course ? 0.03 : 0.045) * c);
+    m('torse', course ? 0.2 : 0.05, -lacet * 1.7 - (course ? 0.05 : 0.03) * Math.sin(a - 0.4), -(course ? 0.02 : 0.03) * c);
+    m('tete', course ? -0.32 : -0.08, lacet * 0.6 + 0.02 * Math.sin(a - 0.8), 0.02 * c);
+    // les bras balancent à l'opposé des jambes, avec un léger retard ; le coude plie surtout quand le bras passe devant
+    const sb = Math.sin(a - 0.3), ampB = course ? 0.85 : 0.45;
+    m('brasD', ampB * sb - (course ? 0.2 : 0), 0, -0.12 - (course ? 0.08 : 0)); m('brasG', -ampB * sb - (course ? 0.2 : 0), 0, 0.12 + (course ? 0.08 : 0));
+    m('avantD', course ? -1.25 - 0.35 * pos(-sb) : -0.25 - 0.4 * pos(-sb)); m('avantG', course ? -1.25 - 0.35 * pos(sb) : -0.25 - 0.4 * pos(sb));
+    // il descend à chaque pose de pied (marche) ou à chaque appui (course, avec une phase en l'air)
+    const bob = course ? 0.55 - 0.95 * Math.abs(c) : -0.42 * (1 - Math.abs(c));
+    bassin = [0.07 * c, bob, 0];
+    // les ailes repliées en arrière, qui ondulent au rythme des pas, le bout en retard
+    const repli = course ? 0.85 : 0.4, ond = (course ? 0.1 : 0.05) * Math.sin(a * 2 - 0.6), ond2 = (course ? 0.12 : 0.06) * Math.sin(a * 2 - 1.5);
+    m('aileD', 0.05, -repli, (course ? 0.22 : 0.1) + ond); m('aileG', 0.05, repli, -(course ? 0.22 : 0.1) - ond);
+    m('boutD', 0, -(course ? 0.35 : 0.15), ond2); m('boutG', 0, course ? 0.35 : 0.15, -ond2);
+  } else if (nom === 'vol') {
+    // le vol : le corps presque à l'horizontale ; une descente rapide des ailes qui le soulève, une remontée lente où les
+    // ailes se replient en arrière, le bout toujours en retard ; les jambes et les bras traînent
+    const per = 1.15, ph = (t / per) % 1, bat = 0.85 * battement(ph), retard = 0.85 * battement(ph - 0.1) - bat;
+    const replie = ph > 0.4 ? Math.sin((Math.PI * (ph - 0.4)) / 0.6) : 0;
+    vitesse = 18;
+    bassin = [0, 9 + 0.85 * Math.sin((ph - 0.15) * TOUR), 0];
+    m('bassin', 0.85 + 0.05 * Math.sin((ph - 0.25) * TOUR), 0, 0);
+    m('torse', 0.08 - 0.04 * Math.sin((ph - 0.3) * TOUR));
+    m('tete', -0.85 + 0.04 * Math.sin((ph - 0.35) * TOUR));
+    m('cuisseD', 0.28 + 0.07 * Math.sin((ph - 0.4) * TOUR), 0, -0.05); m('cuisseG', 0.18 + 0.07 * Math.sin((ph - 0.55) * TOUR), 0, 0.05);
+    m('tibiaD', 0.45 + 0.1 * Math.sin((ph - 0.5) * TOUR)); m('tibiaG', 0.7 + 0.1 * Math.sin((ph - 0.65) * TOUR));
+    m('brasD', 0.55 + 0.06 * Math.sin((ph - 0.3) * TOUR), 0, -0.3); m('brasG', 0.55 + 0.06 * Math.sin((ph - 0.3) * TOUR), 0, 0.3);
+    m('avantD', -0.2); m('avantG', -0.2);
+    m('aileD', 0.1, -0.15 - 0.4 * replie, -bat); m('aileG', 0.1, 0.15 + 0.4 * replie, bat);
+    m('boutD', 0, -0.55 * replie, -retard); m('boutG', 0, 0.55 * replie, retard);
+  } else if (nom === 'coups') {
+    // trois coups enchaînés : l'épée sombre en diagonale (pas du pied gauche), l'épée de flammes en balayage (pas du pied
+    // droit), puis les deux épées levées et abattues en croix, ailes déployées. Chaque coup : il arme, frappe vite, suit,
+    // revient.
+    const per = 3.7, k = (t % per) / per * 3.7;
+    const zero = [0, 0, 0];
+    // les temps de chaque coup : il arme, frappe, suit, revient
+    const c1 = [[0, zero], [0.32, 'arme'], [0.46, 'frappe'], [0.66, 'suit'], [1.05, zero]];
+    const val = (listes) => {
+      // listes : [[début, {arme, frappe, suit}], ...] → une seule suite de clés
+      const tout = [[0, zero]];
+      for (const [t0, parts] of listes) for (const [tt, v] of c1) if (tt > 0) tout.push([t0 + tt, v === zero ? zero : parts[v]]);
+      tout.push([3.7, zero]);
+      return cles(k, tout);
+    };
+    const D = (ar, fr, su) => ({ arme: ar, frappe: fr, suit: su });
+    const t1 = 0, t2 = 1.15, t3 = 2.3;
+    // coup 3 : plus long (il lève les deux épées haut, saute un peu, abat)
+    m('brasG', ...val([[t1, D([-2.6, 0.35, 0.55], [-0.7, -1.0, -0.05], [-0.35, -1.25, -0.1])], [t2, D([-0.2, 0, 0.35], [-0.35, 0, 0.3], [-0.3, 0, 0.25])], [t3, D([-2.95, -0.2, 0.25], [-0.75, -0.55, 0.05], [-0.45, -0.6, 0.05])]]));
+    m('brasD', ...val([[t1, D([-0.2, 0, -0.35], [-0.35, 0, -0.3], [-0.3, 0, -0.25])], [t2, D([-1.45, -1.15, -0.2], [-1.35, 0.95, -0.1], [-1.0, 1.25, -0.1])], [t3, D([-2.95, 0.2, -0.25], [-0.75, 0.55, -0.05], [-0.45, 0.6, -0.05])]]));
+    m('avantG', ...val([[t1, D([-0.95, 0, 0], [-0.1, 0, 0], [-0.25, 0, 0])], [t2, D([-0.4, 0, 0], [-0.4, 0, 0], [-0.35, 0, 0])], [t3, D([-0.5, 0, 0], [-0.05, 0, 0], [-0.2, 0, 0])]]));
+    m('avantD', ...val([[t1, D([-0.4, 0, 0], [-0.4, 0, 0], [-0.35, 0, 0])], [t2, D([-0.6, 0, 0], [-0.1, 0, 0], [-0.25, 0, 0])], [t3, D([-0.5, 0, 0], [-0.05, 0, 0], [-0.2, 0, 0])]]));
+    m('torse', ...val([[t1, D([-0.08, 0.45, 0.04], [0.2, -0.5, -0.04], [0.16, -0.62, 0])], [t2, D([0.02, -0.55, -0.03], [0.12, 0.6, 0.03], [0.1, 0.72, 0])], [t3, D([-0.22, 0, 0], [0.38, 0, 0], [0.3, 0, 0])]]));
+    m('tete', ...val([[t1, D([-0.08, -0.25, 0], [-0.15, 0.3, 0], [-0.12, 0.35, 0])], [t2, D([-0.05, 0.3, 0], [-0.12, -0.32, 0], [-0.1, -0.4, 0])], [t3, D([0.1, 0, 0], [-0.4, 0, 0], [-0.3, 0, 0])]]));
+    m('bassin', ...val([[t1, D([0, 0.12, 0], [0.06, -0.18, 0], [0.06, -0.22, 0])], [t2, D([0, -0.14, 0], [0.06, 0.2, 0], [0.06, 0.24, 0])], [t3, D([-0.05, 0, 0], [0.12, 0, 0], [0.1, 0, 0])]]));
+    m('cuisseG', ...val([[t1, D([0.05, 0, 0], [-0.62, 0, 0.05], [-0.6, 0, 0.05])], [t2, D([-0.05, 0, 0], [0.38, 0, 0.04], [0.35, 0, 0.04])], [t3, D([-0.15, 0, 0.05], [-0.75, 0, 0.12], [-0.7, 0, 0.12])]]));
+    m('tibiaG', ...val([[t1, D([0.15, 0, 0], [0.4, 0, 0], [0.38, 0, 0])], [t2, D([0.1, 0, 0], [0.28, 0, 0], [0.25, 0, 0])], [t3, D([0.35, 0, 0], [0.7, 0, 0], [0.65, 0, 0])]]));
+    m('cuisseD', ...val([[t1, D([-0.05, 0, 0], [0.38, 0, -0.04], [0.35, 0, -0.04])], [t2, D([0.05, 0, 0], [-0.62, 0, -0.05], [-0.6, 0, -0.05])], [t3, D([-0.15, 0, -0.05], [0.45, 0, -0.12], [0.42, 0, -0.12])]]));
+    m('tibiaD', ...val([[t1, D([0.1, 0, 0], [0.28, 0, 0], [0.25, 0, 0])], [t2, D([0.15, 0, 0], [0.4, 0, 0], [0.38, 0, 0])], [t3, D([0.35, 0, 0], [0.55, 0, 0], [0.5, 0, 0])]]));
+    m('aileD', ...val([[t1, D([0, -0.15, -0.1], [0, 0.15, 0.08], [0, 0.18, 0.1])], [t2, D([0, -0.3, -0.15], [0, 0.1, 0.12], [0, 0.15, 0.12])], [t3, D([0, -0.1, -0.6], [0.1, 0.35, 0.35], [0.1, 0.3, 0.3])]]));
+    m('aileG', ...val([[t1, D([0, 0.3, 0.15], [0, -0.1, -0.12], [0, -0.15, -0.12])], [t2, D([0, 0.15, 0.1], [0, -0.15, -0.08], [0, -0.18, -0.1])], [t3, D([0, 0.1, 0.6], [0.1, -0.35, -0.35], [0.1, -0.3, -0.3])]]));
+    m('boutD', ...val([[t1, D([0, 0, 0.05], [0, 0, -0.08], [0, 0, -0.04])], [t2, D([0, 0, 0.08], [0, 0, -0.1], [0, 0, -0.05])], [t3, D([0, 0, 0.2], [0, 0, -0.25], [0, 0, -0.12])]]));
+    m('boutG', ...val([[t1, D([0, 0, -0.05], [0, 0, 0.08], [0, 0, 0.04])], [t2, D([0, 0, -0.08], [0, 0, 0.1], [0, 0, 0.05])], [t3, D([0, 0, -0.2], [0, 0, 0.25], [0, 0, 0.12])]]));
+    bassin = val([[t1, D([0, -0.1, -0.2], [0, -0.65, 1.5], [0, -0.6, 1.6])], [t2, D([0, -0.1, -0.2], [0, -0.65, 1.5], [0, -0.6, 1.6])], [t3, D([0, 0.7, -0.3], [0, -1.3, 1.9], [0, -1.2, 2.0])]]);
+  }
+  return { P, bassin, vitesse };
+}
+// le passage d'une animation à l'autre se fait en fondu (plus long pour s'envoler ou se poser)
+let ancien = null, debutAncien = 0, bascule = -10;
+function pose(tAbs) {
+  const a = poseDe(anim, tAbs - debutAnim), duree = anim === 'vol' || ancien === 'vol' ? 1.1 : 0.45, k = lisse((tAbs - bascule) / duree);
+  if (!ancien || k >= 1) return a;
+  const b = poseDe(ancien, tAbs - debutAncien), P = {};
+  for (const n of new Set([...Object.keys(a.P), ...Object.keys(b.P)])) P[n] = melange(b.P[n] ?? [0, 0, 0], a.P[n] ?? [0, 0, 0], k);
+  return { P, bassin: melange(b.bassin, a.bassin, k), vitesse: b.vitesse + (a.vitesse - b.vitesse) * k };
+}
+const mat = new THREE.Matrix4(), tmp = new THREE.Matrix4(), eul = new THREE.Euler();
+function poser(t) {
+  const { P, bassin, vitesse } = pose(t);
+  avance += vitesse / 60;
+  grille.position.z = -(avance % 4);
+  const M = uniformes.uOs.value;
+  OS.forEach((o, i) => {
+    const a = P[o.nom] ?? [0, 0, 0], [px, py, pz] = o.pivot;
+    eul.set(a[0], a[1], a[2], 'YXZ');
+    mat.makeTranslation(px, py, pz).multiply(tmp.makeRotationFromEuler(eul)).multiply(tmp.makeTranslation(-px, -py, -pz));
+    if (o.parent < 0) M[i].makeTranslation(...bassin).multiply(mat);
+    else M[i].copy(M[o.parent]).multiply(mat);
+  });
+}
+for (const nom of ['garde', 'marche', 'course', 'vol', 'coups']) {
+  const b = bouton('anims', nom, () => {
+    if (nom === anim) return;
+    const maintenant = horloge.getElapsedTime();
+    ancien = anim; debutAncien = debutAnim; bascule = maintenant;
+    anim = nom;
+    debutAnim = maintenant;
+    document.querySelectorAll('#anims button').forEach((x) => x.classList.toggle('actif', x === b));
+  }, nom === 'garde' ? 'actif' : null);
+}
+
+camera.position.set(...VUES['trois-quarts'][0]);
+controles.target.set(...VUES['trois-quarts'][1]);
+couleur('violet');
+await charger();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  rendu.setSize(innerWidth, innerHeight);
+  compo.setSize(innerWidth, innerHeight);
+});
+rendu.setAnimationLoop(() => {
+  uniformes.uTemps.value = horloge.getElapsedTime();
+  if (OS.length) poser(horloge.getElapsedTime());
+  // la caméra suit le géant quand il s'envole
+  if (anim === 'vol' && !vers) controles.target.y += (25 - controles.target.y) * 0.08;
+  if (vers) {
+    camera.position.lerp(vers[0], 0.12);
+    controles.target.lerp(vers[1], 0.12);
+    if (camera.position.distanceTo(vers[0]) < 0.05) vers = null;
+  }
+  controles.update();
+  compo.render();
+});
+window.vue = (nom) => { vers = VUES[nom].map((q) => new THREE.Vector3(...q)); };
+window.camera = (p, t) => { vers = [new THREE.Vector3(...p), new THREE.Vector3(...t)]; };
+window.anim = (nom) => [...document.querySelectorAll('#anims button')].find((b) => b.textContent === nom)?.click();
+</script>
+</body>
+</html>

@@ -130,6 +130,12 @@ public final class ClientSusano {
         return e >= 1 ? 1 : (float) (1 + 2.70158 * Math.pow(e - 1, 3) + 1.70158 * Math.pow(e - 1, 2));
     }
 
+    /** La couleur du Susano de ce joueur (violet si on ne la connaît pas). */
+    static Couleur couleur(UUID joueur) {
+        Susano s = SUSANOS.get(joueur);
+        return s == null ? Couleur.VIOLET : s.couleur;
+    }
+
     private static boolean eveille(Susano s) {
         return s != null && s.fin < 0;
     }
@@ -259,6 +265,12 @@ public final class ClientSusano {
                 if (s.niveau > 2) {
                     s.niveau = 2;
                 }
+            }
+            // le Susano parfait (niveau 4), et le retour au chevalier
+            if (p.niveau() >= 4) {
+                s.niveau = 4;
+            } else if (p.niveau() == 3 && s.niveau > 3) {
+                s.niveau = 3;
             }
             s.couleur = couleur;
             s.pouvoir = p.pouvoir();
@@ -799,7 +811,7 @@ public final class ClientSusano {
             Player joueur = mc.level.getPlayerByUUID(entree.getKey());
             Susano s = entree.getValue();
             s.os.clear();
-            if (joueur == null || joueur.isInvisible()) {
+            if (joueur == null || joueur.isInvisible() || ClientSusano4.enForme(entree.getKey())) {
                 continue;
             }
             double t = secondes(s.debut);
@@ -900,7 +912,7 @@ public final class ClientSusano {
         return r;
     }
 
-    private static void dessinerOs(MultiBufferSource buffers, List<Os> liste, Couleur couleur, float opacite, float eclat, boolean premierePersonne, float g,
+    static void dessinerOs(MultiBufferSource buffers, List<Os> liste, Couleur couleur, float opacite, float eclat, boolean premierePersonne, float g,
                                    boolean chevalier) {
         float[] corps = rvb(couleur.corps);
         float[] sombre = {corps[0] * 0.18F, corps[1] * 0.18F, corps[2] * 0.18F};
@@ -1170,15 +1182,23 @@ public final class ClientSusano {
             rechargePrise = rechargeArc;
             recharge = rechargeGrand;
         }
-        String[][] lignes = {
+        boolean parfait = s.niveau >= 4;
+        boolean versParfait = s.niveau == 3 && fr.cabane.pouvoir.Susano4.est(s.pouvoir);
+        String[][] lignes = parfait ? new String[][]{
+                {Clavier.gauche(), "Épées : lumière, puis flammes noires"},
+                {Clavier.droite(), ClientSusano4.rechargePluie() > 0 ? String.format("Pluie d'Amaterasu (%.0f s)", Math.ceil(ClientSusano4.rechargePluie())) : "Pluie d'Amaterasu"},
+                {Clavier.accroupi(), ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce (et descendre)"},
+                {mc.options.keyJump.getTranslatedKeyMessage().getString(), "Voler (lentement)"},
+                {EVEIL.getTranslatedKeyMessage().getString(), String.format("Redevenir le chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
+                : new String[][]{
                 {Clavier.gauche(), chevalier ? "Épée (gauche, droite)" : s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
                 {Clavier.droite(), chevalier ? (rechargeArc > 0 ? String.format("Arc, flammes noires (%.0f s)", Math.ceil(rechargeArc)) : "Arc, flammes noires")
                         : s.tient ? (grand ? "Écraser au sol" : "Lâcher") : rechargePrise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(rechargePrise)) : "Attraper"},
                 {Clavier.accroupi(), chevalier ? (recharge > 0 ? String.format("Grand coup, flammes noires (%.0f s)", Math.ceil(recharge)) : "Grand coup, flammes noires")
                         : recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
-                {EVEIL.getTranslatedKeyMessage().getString(), plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
+                {EVEIL.getTranslatedKeyMessage().getString(), versParfait ? "Susano parfait (une fois)" : plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
         Font font = mc.font;
-        String titre = chevalier ? "SUSANO  ·  NIVEAU 3" : grand ? "SUSANO  ·  NIVEAU 2" : "SUSANO";
+        String titre = parfait ? "SUSANO PARFAIT  ·  NIVEAU 4" : chevalier ? "SUSANO  ·  NIVEAU 3" : grand ? "SUSANO  ·  NIVEAU 2" : "SUSANO";
         int largeurTouche = 0;
         int largeurAction = font.width(titre) - 10;
         for (String[] l : lignes) {

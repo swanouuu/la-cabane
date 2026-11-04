@@ -89,7 +89,7 @@ public final class Susano3 {
     public static final ResourceKey<DamageType> AMATERASU = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("amaterasu"));
 
     public static boolean est(String pouvoir) {
-        return NOM.equals(pouvoir) || DEV.equals(pouvoir);
+        return NOM.equals(pouvoir) || DEV.equals(pouvoir) || Susano4.NOM.equals(pouvoir);
     }
 
     /** Qui tend son arc : le joueur → le tick où il a commencé. Et quand chacun a tiré pour la dernière fois. */
