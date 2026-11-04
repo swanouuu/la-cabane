@@ -473,7 +473,7 @@ Object.assign(lang, {
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",
   "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
-  "key.cabane.sirene": "Sirène de la voiture de police", "key.cabane.eveil": "Éveil (pouvoir)", "block.cabane.partie_table": "Table du casino",
+  "key.cabane.sirene": "Sirène de la voiture de police", "key.cabane.eveil": "Éveil (pouvoir)", "key.cabane.ulti": "Ulti (pouvoir)", "block.cabane.partie_table": "Table du casino",
   "subtitles.cabane.voix": "Un habitant parle", "item.cabane.photo": "Photo imprimée", "entity.cabane.tableau_photo": "Photo accrochée", "subtitles.cabane.voiture": "Voiture de police",
   "death.attack.cabane.chidori": "%1$s a été transpercé par le Chidori de %2$s",
   "death.attack.cabane.chidori.item": "%1$s a été transpercé par le Chidori de %2$s",

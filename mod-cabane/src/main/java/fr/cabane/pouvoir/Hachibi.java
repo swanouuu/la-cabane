@@ -56,6 +56,8 @@ import org.joml.Vector3f;
  * droit le serre fort et le lâche, clic gauche le balance ; accroupi + clic droit, une bombe noire, plus forte encore
  * (30 secondes). Ici,
  * la bête vient avec l'Éveil (le clic droit ne la fait pas) et elle ne s'arrête pas.
+ * <p>
+ * Hachibi 4 (liste blanche « hachibi4 ») : tout Hachibi 2, plus l'ulti du Hachibi entier ({@link Hachibi4}).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Hachibi {
@@ -109,9 +111,14 @@ public final class Hachibi {
     public static final int GESTE_SERRE = 16;
     public static final int GESTE_LANCE = 17;
 
-    /** Hachibi, de l'une ou l'autre liste. */
+    /** Hachibi, de l'une ou l'autre liste (Hachibi 4 compris). */
     public static boolean est(String pouvoir) {
-        return pouvoir.equals(NOM) || pouvoir.equals(NOM2);
+        return pouvoir.equals(NOM) || deux(pouvoir);
+    }
+
+    /** Hachibi 2, ou Hachibi 4 (les mêmes quatre formes, plus l'ulti : {@link Hachibi4}). */
+    public static boolean deux(String pouvoir) {
+        return pouvoir.equals(NOM2) || pouvoir.equals(Hachibi4.NOM);
     }
 
     private static final ResourceLocation VITESSE = Cabane.id("hachibi_vitesse");
@@ -183,7 +190,7 @@ public final class Hachibi {
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(Boule.TYPE, Boule.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientHachibi.boule(p)))
                 .playToServer(ClicAccroupi.TYPE, ClicAccroupi.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
-                    if (ctx.player() instanceof ServerPlayer joueur) {
+                    if (ctx.player() instanceof ServerPlayer joueur && !Hachibi4.actif(joueur)) {
                         Etat e = ETATS.get(joueur.getUUID());
                         if (e != null && e.forme == 4) {
                             bombe(joueur, e, joueur.server.getTickCount());
@@ -231,6 +238,7 @@ public final class Hachibi {
     }
 
     static void endormir(ServerPlayer joueur) {
+        Hachibi4.endormir(joueur);
         Etat e = ETATS.remove(joueur.getUUID());
         if (e != null) {
             lacher(joueur, e);
@@ -270,6 +278,9 @@ public final class Hachibi {
 
     /** Clic gauche : un coup de griffe devant (plus fort et plus large en bête) ; au niveau 4, un coup de tentacule. */
     static void griffe(ServerPlayer joueur) {
+        if (Hachibi4.actif(joueur)) {
+            return;
+        }
         Etat e = ETATS.get(joueur.getUUID());
         int maintenant = joueur.server.getTickCount();
         if (e != null && e.forme == 4) {
@@ -421,6 +432,14 @@ public final class Hachibi {
         return joueur.position().add(-Mth.sin(lacet) * 3.0 - Mth.cos(lacet) * balance, 2.3, Mth.cos(lacet) * 3.0 - Mth.sin(lacet) * balance);
     }
 
+    /** L'ulti de Hachibi 4 commence : la tentacule lâche ce qu'elle tenait. */
+    static void lacherPrise(ServerPlayer joueur) {
+        Etat e = ETATS.get(joueur.getUUID());
+        if (e != null) {
+            lacher(joueur, e);
+        }
+    }
+
     private static void lacher(ServerPlayer joueur, Etat e) {
         if (e.prise >= 0) {
             e.prise = -1;
@@ -484,7 +503,7 @@ public final class Hachibi {
     /** Clic droit : devenir la bête (si elle est rechargée), ou redevenir soi-même ; au niveau 4 de Hachibi 2, le balayage. */
     static void bete(ServerPlayer joueur) {
         Etat e = ETATS.get(joueur.getUUID());
-        if (e == null) {
+        if (e == null || Hachibi4.actif(joueur)) {
             return;
         }
         int maintenant = joueur.server.getTickCount();
@@ -537,7 +556,7 @@ public final class Hachibi {
     /** S'accroupir : la course (manteau), la bombe de chakra (bête), ou au niveau 4 de Hachibi 2 la tentacule qui attrape. */
     static void accroupi(ServerPlayer joueur) {
         Etat e = ETATS.get(joueur.getUUID());
-        if (e == null) {
+        if (e == null || Hachibi4.actif(joueur)) {
             return;
         }
         int maintenant = joueur.server.getTickCount();

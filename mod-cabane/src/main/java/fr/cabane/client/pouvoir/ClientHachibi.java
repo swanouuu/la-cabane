@@ -99,6 +99,8 @@ public final class ClientHachibi {
         /** La bombe en cours : 0 la violette, 1 la grosse, 2 la noire. */
         int genre;
         boolean bete;
+        /** Hachibi 4 : il a l'ulti du Hachibi entier (sa touche à lui, aux huit tentacules). */
+        boolean ulti;
         long beteDebut = -1;
         long beteFin = -1;
         long course = -1;
@@ -174,7 +176,8 @@ public final class ClientHachibi {
                 h.tPrecedent = p.annonce() ? -1 : 10;
                 HACHIS.put(p.joueur(), h);
             }
-            int forme = p.pouvoir().equals(Hachibi.NOM2) ? p.niveau() : 0;
+            int forme = Hachibi.deux(p.pouvoir()) ? p.niveau() : 0;
+            h.ulti = p.pouvoir().equals(fr.cabane.pouvoir.Hachibi4.NOM);
             if (forme != h.forme) {
                 changerForme(h, forme, p.annonce() ? maintenant : maintenant - 10_000_000_000L, joueur);
             }
@@ -871,7 +874,8 @@ public final class ClientHachibi {
     private static void ecran(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         Hachi h = mc.player == null ? null : HACHIS.get(mc.player.getUUID());
-        if (!actif(h)) {
+        // dans l'ulti de Hachibi 4, c'est son écran à lui (ClientHachibi4)
+        if (!actif(h) || fr.cabane.client.hachibi4.ClientHachibi4.enUlti(mc.player.getUUID())) {
             return;
         }
         int w = g.guiWidth();
@@ -916,7 +920,7 @@ public final class ClientHachibi {
                 lignes = new String[][]{{Clavier.gauche(), "Griffe de la bête"}, {Clavier.accroupi(), h.forme == 3 && h.charge < 0 && bombeRecharge <= 0 ? "Grosse bombe" : bombe},
                         {eveil, suite}};
             } else {
-                titre = "HACHIBI 2  ·  HUIT QUEUES";
+                titre = h.ulti ? "HACHIBI 4  ·  HUIT QUEUES" : "HACHIBI 2  ·  HUIT QUEUES";
                 double fouet = h.fouet < 0 ? 0 : Hachibi.RECHARGE_FOUET / 20.0 - secondes(h.fouet);
                 double balayage = h.balayage < 0 ? 0 : Hachibi.RECHARGE_BALAYAGE / 20.0 - secondes(h.balayage);
                 double prise = h.priseDebut < 0 ? 0 : Hachibi.RECHARGE_PRISE / 20.0 - secondes(h.priseDebut);
@@ -932,6 +936,14 @@ public final class ClientHachibi {
                             {Clavier.accroupi(), prise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(prise)) : "Attraper"},
                             {Clavier.accroupi() + " + " + Clavier.droite(), h.charge >= 0 ? "Bombe noire (charge…)" : bombeRecharge > 0 ? String.format("Bombe noire (%.0f s)", Math.ceil(bombeRecharge)) : "Bombe noire"},
                             {eveil, "Rendormir"}};
+                }
+                if (h.ulti) {
+                    // Hachibi 4 : la touche de l'ulti, juste avant l'Éveil
+                    String[][] avec = java.util.Arrays.copyOf(lignes, lignes.length + 1);
+                    avec[lignes.length] = avec[lignes.length - 1];
+                    avec[lignes.length - 1] = new String[]{Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "Ulti : le Hachibi entier"};
+                    lignes = avec;
+                    gris = java.util.Arrays.copyOf(gris, 6);
                 }
             }
         } else if (h.bete) {
@@ -1116,7 +1128,8 @@ public final class ClientHachibi {
         @SubscribeEvent
         public static void apres(RenderPlayerEvent.Post event) {
             Hachi h = HACHIS.get(event.getEntity().getUUID());
-            if (h != null && h.forme == 4 && event.getEntity() instanceof AbstractClientPlayer joueur && !joueur.isInvisible()) {
+            if (h != null && h.forme == 4 && event.getEntity() instanceof AbstractClientPlayer joueur && !joueur.isInvisible()
+                    && !fr.cabane.client.hachibi4.ClientHachibi4.enUlti(joueur.getUUID())) {
                 tentacules(event, h, joueur);
             }
         }
