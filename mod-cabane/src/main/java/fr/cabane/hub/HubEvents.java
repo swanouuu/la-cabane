@@ -86,8 +86,6 @@ public final class HubEvents {
             new Pnj("vegeta", -30.5, 42.5, 90F),
             // Jean-Mi, derrière le comptoir de sa boutique de cartes, sur la grande allée (la porte donne à l'est)
             new Pnj("vendeur_cartes", HubBuilder.BOUTIQUE_CARTES[0] - 4.5, HubBuilder.BOUTIQUE_CARTES[1] + 0.5, -90F),
-            // le Fourgue, dans l'ombre derrière la tour de guet : le marché noir
-            new Pnj("fourgue", -38.5, 48.5, 135F),
             new Pnj("orque_1", 55.5, -12.5, 180F),     // devant les hauts-fourneaux
             new Pnj("orque_2", 63.5, -12.5, 180F),
             new Pnj("orque_3", 59.5, 12.5, 0F),
@@ -97,8 +95,12 @@ public final class HubEvents {
             new Pnj("sylvie_libre", -21.5, 1, 34.5, 180F, 1),
             new Pnj("lucas_libre", -20.5, 1, 34.5, 180F, 1));
 
-    /** Les PNJ qui ne font plus partie du village : Kylian, l'équipier d'un fast-food que les joueurs n'ont pas encore bâti. */
-    private static final List<String> PARTIS = List.of("equipier");
+    /**
+     * Les PNJ qui ne font plus partie du village : Kylian, l'équipier d'un fast-food que les joueurs n'ont pas encore bâti,
+     * et le Fourgue (le marché noir), retiré pour l'instant : pour le remettre, lui trouver une place à l'écart (son ancienne,
+     * derrière la tour de guet, est maintenant le jardin d'une maison).
+     */
+    private static final List<String> PARTIS = List.of("equipier", "fourgue");
 
     /** Rayon (en chunks) chargé autour du centre pendant la construction. */
     private static final int RAYON_CHUNKS = 10;
@@ -122,7 +124,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 16;
+    public static final int VERSION_PNJ = 17;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {

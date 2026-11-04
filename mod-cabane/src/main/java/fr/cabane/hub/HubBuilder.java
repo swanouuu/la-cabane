@@ -491,6 +491,7 @@ public class HubBuilder {
         e.add(new Etape("laboratoire", this::laboratoire));
         e.add(new Etape("forge, puits et champs", this::forgePuitsChamps));
         e.add(new Etape("abords", this::abords));
+        e.add(new Etape("maisons tranquilles", this::maisonsTranquilles));
         e.add(new Etape("boulevard et terrains à bâtir", this::quartiers));
         e.add(new Etape("décoration", this::decorer));
         e.add(new Etape("finitions", this::finitions));
@@ -556,9 +557,9 @@ public class HubBuilder {
                 for (int y = Math.min(sol + 1, cible - 3); y < cible; y++) {
                     abs(x, y, z, Blocks.DIRT.defaultBlockState());
                 }
-                boolean terreBattue = Math.sin(x * 0.73 + z * 0.21) * Math.cos(z * 0.67 - x * 0.19) + rnd.nextFloat() * 0.5 > 1.0;
-                abs(x, cible, z, (terreBattue ? Blocks.COARSE_DIRT : Blocks.GRASS_BLOCK).defaultBlockState());
-                if (dedans && !terreBattue && rnd.nextFloat() < 0.10F) {
+                // de l'herbe, sans les plaques de terre semées au hasard d'avant (on aurait dit des bouts de chemins cassés)
+                abs(x, cible, z, Blocks.GRASS_BLOCK.defaultBlockState());
+                if (dedans && rnd.nextFloat() < 0.10F) {
                     abs(x, cible + 1, z, (rnd.nextFloat() < 0.06F ? Blocks.DANDELION : Blocks.SHORT_GRASS).defaultBlockState());
                 }
             }
@@ -584,12 +585,8 @@ public class HubBuilder {
     // ------------------------------------------------------------------ avenues et place
 
     private void avenues() {
-        chemin(-2, 18, 2, RAYON - 1);       // place → grande porte du sud
-        chemin(-2, CZ1 + 5, 2, -18);        // place → Grande Cabane
-        chemin(BX1 + 1, -2, -18, 2);        // place → Grand Bazar
-        chemin(18, -2, 53, 2);              // la rue du village, jusqu'à la forge
-        chemin(-36, 35, -3, 37);            // → feu de camp et tour de guet
-        chemin(30, 3, 31, 40);              // → puits et champs
+        rues();
+        cheminsDeTerre();
         for (int z = 22; z <= Z_PORTE - 6; z += 9) {
             lampadaire(-4, z);
             lampadaire(4, z);
@@ -604,14 +601,111 @@ public class HubBuilder {
         lampadaire(3, -24);
     }
 
-    private void chemin(int xa, int za, int xb, int zb) {
+    /** Les quatre grandes rues, pavées, qui partent de la place. */
+    private void rues() {
+        rue(-2, 18, 2, RAYON - 1);          // place → grande porte du sud
+        rue(-2, CZ1 + 5, 2, -18);           // place → Grande Cabane
+        rue(BX1 + 1, -2, -18, 2);           // place → Grand Bazar
+        rue(18, -2, 53, 2);                 // la rue du village, jusqu'à la forge
+    }
+
+    private void cheminsDeTerre() {
+        chemin(-36, 35, -3, 37);            // → feu de camp et tour de guet
+        chemin(30, 3, 31, 40);              // → puits et champs
+    }
+
+    /** Pendant les retouches d'un village déjà construit : on ne refait que le sol des chemins, sans rien démolir dessus. */
+    private boolean retouche;
+
+    /** Peut-on (re)poser un chemin ici ? À la construction, partout ; aux retouches, seulement sur de la terre ou de l'herbe. */
+    private boolean solDeChemin(int x, int z) {
+        if (!retouche) {
+            return true;
+        }
+        BlockState s = level.getBlockState(c.offset(x, 0, z));
+        return s.is(Blocks.DIRT_PATH) || s.is(Blocks.GRAVEL) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT);
+    }
+
+    /** Dégage le dessus d'une case de chemin : tout à la construction, seulement les herbes aux retouches. */
+    private void degager(int x, int z) {
+        BlockState dessus = level.getBlockState(c.offset(x, 1, z));
+        if (!retouche || (!dessus.isAir() && dessus.canBeReplaced())) {
+            pose(x, 1, z, AIR);
+        }
+    }
+
+    /**
+     * Une rue pavée : pierre taillée, pavés, andésite et un peu de mousse, une bordure de pierre polie de chaque côté,
+     * et quelques pavés qui débordent dans l'herbe, pour qu'elle ne soit pas tirée au cordeau.
+     */
+    private void rue(int xa, int za, int xb, int zb) {
+        boolean versEst = xb - xa >= zb - za;
         for (int x = xa; x <= xb; x++) {
             for (int z = za; z <= zb; z++) {
-                float r = rnd.nextFloat();
-                pose(x, 0, z, (r < 0.12F ? Blocks.COARSE_DIRT : r < 0.18F ? Blocks.GRAVEL : Blocks.DIRT_PATH).defaultBlockState());
-                pose(x, 1, z, AIR);
+                if (!solDeChemin(x, z)) {
+                    continue;
+                }
+                boolean bord = versEst ? z == za || z == zb : x == xa || x == xb;
+                pose(x, 0, z, bord ? bordure() : pave());
+                degager(x, z);
             }
         }
+        frange(xa, za, xb, zb, versEst, true);
+    }
+
+    /**
+     * Un chemin de terre battue, avec quelques mottes plus sombres ; s'il est large, ses bords mordent sur l'herbe ou la
+     * laissent repousser, pour qu'il ait l'air d'avoir été tracé par les pas.
+     */
+    private void chemin(int xa, int za, int xb, int zb) {
+        boolean versEst = xb - xa >= zb - za;
+        int largeur = versEst ? zb - za + 1 : xb - xa + 1;
+        for (int x = xa; x <= xb; x++) {
+            for (int z = za; z <= zb; z++) {
+                if (!solDeChemin(x, z)) {
+                    continue;
+                }
+                boolean bord = largeur >= 3 && (versEst ? z == za || z == zb : x == xa || x == xb);
+                float r = rnd.nextFloat();
+                Block b = bord && r < 0.2F ? Blocks.GRASS_BLOCK : r < (bord ? 0.38F : 0.07F) ? Blocks.COARSE_DIRT : Blocks.DIRT_PATH;
+                pose(x, 0, z, b.defaultBlockState());
+                degager(x, z);
+            }
+        }
+        if (largeur >= 2) {
+            frange(xa, za, xb, zb, versEst, false);
+        }
+    }
+
+    /** Le long des deux bords, de l'autre côté : une case sur cinq environ prend un pavé (pour une rue) ou de la terre. */
+    private void frange(int xa, int za, int xb, int zb, boolean versEst, boolean pavee) {
+        for (int t = versEst ? xa : za; t <= (versEst ? xb : zb); t++) {
+            for (int cote = 0; cote < 2; cote++) {
+                if (rnd.nextFloat() > 0.22F) {
+                    continue;
+                }
+                int x = versEst ? t : cote == 0 ? xa - 1 : xb + 1;
+                int z = versEst ? (cote == 0 ? za - 1 : zb + 1) : t;
+                BlockState dessus = level.getBlockState(c.offset(x, 1, z));
+                if (!level.getBlockState(c.offset(x, 0, z)).is(Blocks.GRASS_BLOCK) || !dessus.canBeReplaced()) {
+                    continue;
+                }
+                pose(x, 0, z, pavee && rnd.nextBoolean() ? pave() : (rnd.nextBoolean() ? Blocks.COARSE_DIRT : Blocks.DIRT_PATH).defaultBlockState());
+                if (!dessus.isAir()) {
+                    pose(x, 1, z, AIR);
+                }
+            }
+        }
+    }
+
+    private BlockState pave() {
+        float r = rnd.nextFloat();
+        return (r < 0.34F ? Blocks.STONE_BRICKS : r < 0.52F ? Blocks.COBBLESTONE : r < 0.66F ? Blocks.ANDESITE : r < 0.76F ? Blocks.CRACKED_STONE_BRICKS
+                : r < 0.86F ? Blocks.MOSSY_STONE_BRICKS : r < 0.94F ? Blocks.MOSSY_COBBLESTONE : Blocks.GRAVEL).defaultBlockState();
+    }
+
+    private BlockState bordure() {
+        return (rnd.nextFloat() < 0.85F ? Blocks.POLISHED_ANDESITE : Blocks.MOSSY_STONE_BRICKS).defaultBlockState();
     }
 
     private static final double RAYON_PLACE = 18;
@@ -1501,6 +1595,189 @@ public class HubBuilder {
         }
     }
 
+    // ------------------------------------------------------------------ deux jolies maisons, dans des coins calmes
+
+    /** Plâtre blanc entre des colombages sombres, toit d'ardoise. */
+    private static final Palette PLATRE = new Palette(Blocks.MUSHROOM_STEM, Blocks.STRIPPED_DARK_OAK_LOG, Blocks.DEEPSLATE_TILE_STAIRS,
+            Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_TILE_SLAB, Blocks.DARK_OAK_DOOR, "dark_oak");
+    /** Murs de terre, poutres de chêne, toit de bois. */
+    private static final Palette TERRE = new Palette(Blocks.PACKED_MUD, Blocks.STRIPPED_OAK_LOG, Blocks.SPRUCE_STAIRS,
+            Blocks.SPRUCE_PLANKS, Blocks.SPRUCE_SLAB, Blocks.OAK_DOOR, "oak");
+
+    /** Deux maisons à vendre, à l'écart : près de la tour de guet, et derrière la Mairie, le long des champs. */
+    private void maisonsTranquilles() {
+        maisonDeLaTour();
+        maisonDesChamps();
+    }
+
+    /**
+     * Au pied de la tour de guet, entre les deux grands arbres ; son allée rejoint le chemin du feu de camp. Vegeta
+     * s'entraîne juste devant le jardin, en (-30.5, 42.5) : la maison lui laisse la place.
+     */
+    private void maisonDeLaTour() {
+        chaumiere(-36, 47, 1, PLATRE, Blocks.DARK_OAK_TRAPDOOR, Blocks.RED_BED, Blocks.RED_CARPET);
+        chemin(-36, 38, -36, 42);
+    }
+
+    /** Derrière la Mairie, contre les champs : une allée longe la clôture jusqu'à une barrière dans les cultures. */
+    private void maisonDesChamps() {
+        chaumiere(37, 47, 1, TERRE, Blocks.SPRUCE_TRAPDOOR, Blocks.GREEN_BED, Blocks.GREEN_CARPET);
+        chemin(30, 42, 37, 42);
+        for (int x = 30; x <= 31; x++) {
+            pose(x, 1, 41, Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(net.minecraft.world.level.block.FenceGateBlock.FACING, Direction.NORTH));
+        }
+    }
+
+    /**
+     * Une maison de 9 x 7 comme neuve : soubassement de pierre, colombages, volets ouverts, azalées sous les fenêtres,
+     * une cheminée qui fume et un feu dans l'âtre. Devant, un jardin clos de fleurs avec son banc ; le tas de bois sur un
+     * côté, le tonneau de pluie et le composteur de l'autre. (cx, zFront) : la porte ; sens : vers où va le fond.
+     */
+    private void chaumiere(int cx, int zFront, int sens, Palette p, Block volet, Block lit, Block tapis) {
+        mcx = cx;
+        mzFront = zFront;
+        msens = sens;
+        Direction fond = versLeFond();
+        Direction devant = fond.getOpposite();
+        for (int u = -6; u <= 6; u++) {
+            for (int v = -5; v <= 8; v++) {
+                for (int y = 1; y <= 12; y++) {
+                    m(u, y, v, AIR);
+                }
+            }
+        }
+        // le sol, et les murs : le soubassement de pierre, puis le plâtre (ou la terre) entre les poutres
+        for (int u = -4; u <= 4; u++) {
+            for (int v = 0; v <= 6; v++) {
+                boolean bord = Math.abs(u) == 4 || v == 0 || v == 6;
+                m(u, -1, v, Blocks.COBBLESTONE.defaultBlockState());
+                m(u, 0, v, bord ? Blocks.STONE_BRICKS.defaultBlockState() : plancher());
+                if (!bord) {
+                    continue;
+                }
+                boolean coin = Math.abs(u) == 4 && (v == 0 || v == 6);
+                boolean fenetre = (v == 0 || v == 6) ? Math.abs(u) == 2 : v == 2 || v == 4;
+                for (int y = 1; y <= 4; y++) {
+                    BlockState s;
+                    if (coin) {
+                        s = pilier(p.poutre(), Direction.Axis.Y);
+                    } else if (y == 1) {
+                        s = briques();
+                    } else if (y == 4) {
+                        s = pilier(p.poutre(), Math.abs(u) == 4 ? Direction.Axis.Z : Direction.Axis.X);
+                    } else if (fenetre) {
+                        s = Blocks.GLASS_PANE.defaultBlockState();
+                    } else {
+                        s = p.mur().defaultBlockState();
+                    }
+                    m(u, y, v, s);
+                }
+            }
+        }
+        for (int y = 1; y <= 2; y++) {
+            m(0, y, 0, p.porte().defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, fond)
+                    .setValue(net.minecraft.world.level.block.DoorBlock.HALF, y == 1
+                            ? net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+                            : net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+        }
+        // le toit à deux pans, le faîte parallèle à la façade ; aux pignons, une poutre et une petite fenêtre
+        for (int v = -1; v <= 7; v++) {
+            int h = 8 - Math.abs(v - 3);
+            for (int u = -5; u <= 5; u++) {
+                if (v == 3) {
+                    m(u, h, v, p.toitPlein().defaultBlockState());
+                    m(u, h + 1, v, p.toitDalle().defaultBlockState());
+                } else {
+                    m(u, h, v, escalier(p.toit(), v < 3 ? fond : devant));
+                }
+            }
+            for (int y = 5; y < h; y++) {
+                if (v >= 1 && v <= 5) {
+                    BlockState s = y == 5 ? pilier(p.poutre(), Direction.Axis.Z)
+                            : v == 3 && y == 6 ? Blocks.GLASS_PANE.defaultBlockState() : p.mur().defaultBlockState();
+                    m(-4, y, v, s);
+                    m(4, y, v, s);
+                }
+            }
+        }
+        // la cheminée au milieu du mur du fond, qui fume au-dessus du toit, et l'âtre dedans
+        for (int y = 1; y <= 10; y++) {
+            m(0, y, 6, Blocks.BRICKS.defaultBlockState());
+        }
+        m(0, 11, 6, Blocks.CAMPFIRE.defaultBlockState());
+        m(-1, 1, 5, Blocks.BRICKS.defaultBlockState());
+        m(1, 1, 5, Blocks.BRICKS.defaultBlockState());
+        m(0, 1, 5, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.FACING, devant));
+        for (int u = -1; u <= 1; u++) {
+            m(u, 2, 5, Blocks.BRICK_SLAB.defaultBlockState());
+        }
+        for (int y = 3; y <= 5; y++) {
+            m(0, y, 5, Blocks.BRICKS.defaultBlockState());
+        }
+        // dedans : le lit, la table devant le feu, un tapis, les rangements
+        m(-3, 1, 4, lit.defaultBlockState().setValue(BedBlock.FACING, fond).setValue(BedBlock.PART, BedPart.FOOT));
+        m(-3, 1, 5, lit.defaultBlockState().setValue(BedBlock.FACING, fond).setValue(BedBlock.PART, BedPart.HEAD));
+        mObjet(0, 1, 4, "handcrafted:" + p.bois() + "_table", null);
+        mObjet(0, 1, 3, "handcrafted:" + p.bois() + "_chair", fond);
+        mObjet(0, 2, 4, "handcrafted:terracotta_crockery_combo", devant);
+        for (int u = -2; u <= -1; u++) {
+            for (int v = 1; v <= 2; v++) {
+                m(u, 1, v, tapis.defaultBlockState());
+            }
+        }
+        m(-3, 1, 1, Blocks.POTTED_FERN.defaultBlockState());
+        m(3, 1, 1, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        m(3, 1, 2, Blocks.CRAFTING_TABLE.defaultBlockState());
+        m(3, 1, 4, Blocks.BOOKSHELF.defaultBlockState());
+        m(3, 1, 5, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
+        m(0, 7, 3, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        // dehors : un volet ouvert à côté de chaque fenêtre, azalées en dessous, la lanterne et le paillasson de la porte
+        for (int u : new int[] {-3, 3}) {
+            for (int y = 2; y <= 3; y++) {
+                m(u, y, -1, volet(volet, devant));
+                m(u, y, 7, volet(volet, fond));
+            }
+        }
+        m(0, 3, -1, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        // le jardin clos : l'allée, les fleurs, un banc, deux lanternes sur la barrière
+        Block[] fleurs = {Blocks.POPPY, Blocks.CORNFLOWER, Blocks.ALLIUM, Blocks.OXEYE_DAISY, Blocks.LILY_OF_THE_VALLEY, Blocks.AZURE_BLUET};
+        for (int u = -5; u <= 5; u++) {
+            for (int v = -4; v <= -1; v++) {
+                m(u, 0, v, u == 0 ? Blocks.DIRT_PATH.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState());
+                if (Math.abs(u) == 5 || v == -4) {
+                    m(u, 1, v, u == 0 ? Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(net.minecraft.world.level.block.FenceGateBlock.FACING, devant)
+                            : Blocks.SPRUCE_FENCE.defaultBlockState());
+                } else if (Math.abs(u) >= 2 && !(u == 4 && v <= -2)) {
+                    m(u, 1, v, fleurs[rnd.nextInt(fleurs.length)].defaultBlockState());
+                }
+            }
+        }
+        m(-2, 1, -1, Blocks.FLOWERING_AZALEA.defaultBlockState());
+        m(2, 1, -1, Blocks.AZALEA.defaultBlockState());
+        mObjet(0, 1, -1, "supplementaries:doormat", devant);
+        for (int v = -3; v <= -2; v++) {
+            m(4, 1, v, escalier(Blocks.SPRUCE_STAIRS, Direction.EAST));
+        }
+        m(-1, 2, -4, Blocks.LANTERN.defaultBlockState());
+        m(1, 2, -4, Blocks.LANTERN.defaultBlockState());
+        // sur les côtés : le tas de bois sous l'avant-toit, le tonneau de pluie et le composteur
+        for (int v = 1; v <= 3; v++) {
+            for (int y = 1; y <= 2; y++) {
+                m(5, y, v, pilier(Blocks.OAK_LOG, Direction.Axis.X));
+            }
+        }
+        m(-5, 1, 4, Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3));
+        m(-5, 1, 3, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+        m(-5, 1, 1, Blocks.COMPOSTER.defaultBlockState());
+        borne(cx + 2, zFront - 5 * sens, PRIX_MAISON, devant);
+    }
+
+    /** Un volet de bois ouvert, plaqué contre le mur derrière lui. */
+    private static BlockState volet(Block trappe, Direction face) {
+        return trappe.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, face)
+                .setValue(net.minecraft.world.level.block.TrapDoorBlock.OPEN, true);
+    }
+
     /** L'allée jusqu'à la rue et des fleurs de chaque côté. */
     private void jardin() {
         Block[] fleurs = {Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.OXEYE_DAISY, Blocks.ALLIUM};
@@ -1634,8 +1911,11 @@ public class HubBuilder {
         // sur la grande allée, entre la place et la grande porte, en face de la Mairie : tout le monde passe devant
         boutiqueCartes(BOUTIQUE_CARTES[0], BOUTIQUE_CARTES[1], Direction.EAST);
         chemin(BOUTIQUE_CARTES[0] + 1, BOUTIQUE_CARTES[1] - 1, -3, BOUTIQUE_CARTES[1] + 1);
-        kiosque(31, -21);
+        kiosque(KIOSQUE[0], KIOSQUE[1]);
     }
+
+    /** Le kiosque d'infos (x, z) : au sud de la place, au bord de la grande allée, là où tout le monde passe en arrivant. */
+    private static final int[] KIOSQUE = {12, 26};
 
     /**
      * L'échoppe de Jean-Mi : 9 de large, 8 de profondeur, la porte et la vitrine sur la façade. (ox, oz) : la porte ;
@@ -1751,19 +2031,23 @@ public class HubBuilder {
             }
             pose(kx + c[0], 4, kz + c[1] + (c[1] < 0 ? 1 : -1), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
         }
-        // le tableau d'infos, au milieu, tourné vers la place (au sud-ouest)
+        // le tableau d'infos, au milieu, écrit des deux côtés : vers la place (au nord) et vers la grande porte (au sud)
         for (int dx = -2; dx <= 2; dx++) {
             for (int y = 1; y <= 3; y++) {
-                pose(kx + dx, y, kz - 1, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+                pose(kx + dx, y, kz, Blocks.DARK_OAK_PLANKS.defaultBlockState());
             }
         }
-        texte(kx + 0.5, 3.6, kz + 0.05, 0F, "[{\"text\":\"INFOS DE BEAUVAIS\\n\",\"color\":\"gold\",\"bold\":true},"
+        String infos = "[{\"text\":\"INFOS DE BEAUVAIS\\n\",\"color\":\"gold\",\"bold\":true},"
                 + "{\"text\":\"Mouloud (Grand Bazar) : téléphone, parachute, étals\\n\",\"color\":\"white\",\"bold\":false},"
                 + "{\"text\":\"Jean-Mi Collector : boosters et classeurs\\n\",\"color\":\"light_purple\",\"bold\":false},"
                 + "{\"text\":\"Brokk (la forge, au bout de la rue) : armes rares\\n\",\"color\":\"white\",\"bold\":false},"
                 + "{\"text\":\"Mehdi : les contrats du marché\\n\",\"color\":\"white\",\"bold\":false},"
                 + "{\"text\":\"Le Hejj : sa demande du jour, et les grands chantiers\\n\",\"color\":\"yellow\",\"bold\":false},"
-                + "{\"text\":\"Terrains à vendre : derrière le boulevard\",\"color\":\"green\",\"bold\":false}]", 0.55F, 0xCC000000, false);
+                + "{\"text\":\"Terrains à vendre : derrière le boulevard\",\"color\":\"green\",\"bold\":false}]";
+        texte(kx + 0.5, 2.0, kz - 0.05, 180F, infos, 0.55F, 0xCC000000, false);
+        texte(kx + 0.5, 2.0, kz + 1.05, 0F, infos, 0.55F, 0xCC000000, false);
+        // et un grand « INFOS » doré au-dessus du toit, qu'on voit de toute la place
+        titre(kx + 0.5, 8.6, kz + 0.5, "INFOS", "", 2.6F);
     }
 
     /**
@@ -2176,18 +2460,8 @@ public class HubBuilder {
      * palissade, et tout autour des terrains à bâtir (une borne « à vendre » chacun) pour les commerces des joueurs.
      */
     private void quartiers() {
-        // le boulevard (4 de large), qui croise la grande allée du sud
+        boulevard();
         int r = RAYON_BOULEVARD;
-        for (int dx = -r - 3; dx <= r + 3; dx++) {
-            for (int dz = -r - 3; dz <= r + 3; dz++) {
-                double d = Math.sqrt(dx * dx + dz * dz);
-                if (Math.abs(d - r) <= 2 && sol(dx, dz)) {
-                    float f = rnd.nextFloat();
-                    pose(dx, 0, dz, (f < 0.1F ? Blocks.COARSE_DIRT : f < 0.16F ? Blocks.GRAVEL : Blocks.DIRT_PATH).defaultBlockState());
-                    pose(dx, 1, dz, AIR);
-                }
-            }
-        }
         // les allées en diagonale, du boulevard aux passages de la palissade
         for (int k = 0; k < 4; k++) {
             double a = Math.PI / 4 + k * Math.PI / 2;
@@ -2232,6 +2506,27 @@ public class HubBuilder {
             }
             if (libre) {
                 parcelle(tx - 5, tz - 5, tx + 5, tz + 5);
+            }
+        }
+    }
+
+    /**
+     * Le boulevard (4 de large), qui croise la grande allée du sud : de la terre battue au milieu, et sur les bords, des
+     * mottes et l'herbe qui repousse par endroits.
+     */
+    private void boulevard() {
+        int r = RAYON_BOULEVARD;
+        for (int dx = -r - 3; dx <= r + 3; dx++) {
+            for (int dz = -r - 3; dz <= r + 3; dz++) {
+                double ecart = Math.abs(Math.sqrt(dx * dx + dz * dz) - r);
+                if (ecart > 2 || !sol(dx, dz)) {
+                    continue;
+                }
+                boolean bord = ecart > 1.4;
+                float f = rnd.nextFloat();
+                Block b = bord && f < 0.35F ? Blocks.GRASS_BLOCK : f < (bord ? 0.6F : 0.07F) ? Blocks.COARSE_DIRT : Blocks.DIRT_PATH;
+                pose(dx, 0, dz, b.defaultBlockState());
+                degager(dx, dz);
             }
         }
     }
@@ -2872,6 +3167,92 @@ public class HubBuilder {
     }
 
     /** Pour la commande « /cabane mairie » : construire la Mairie et son secret dans un village déjà fait. */
+    /**
+     * Pour un Beauvais déjà construit : les grandes rues sont pavées et les chemins refaits, le kiosque d'infos quitte son
+     * coin derrière les maisons de la rue pour le bord de la grande allée, et les deux maisons tranquilles sont
+     * construites. Ce qui est déjà fait n'est jamais refait (une
+     * maison achetée et meublée ne bouge pas). Renvoie ce qui a été fait, ou une chaîne vide.
+     */
+    public String retouches() {
+        List<String> fait = new ArrayList<>();
+        retouche = true;
+        // les chemins d'avant (de la terre toute droite, semée de gravier) : on pave les grandes rues, on refait les chemins
+        // de terre et le boulevard avec des bords naturels, et les plaques de terre semées dans l'herbe s'en vont
+        boolean anciensChemins = false;
+        for (int z = 25; z <= 40 && !anciensChemins; z++) {
+            anciensChemins = level.getBlockState(c.offset(0, 0, z)).is(Blocks.DIRT_PATH);
+        }
+        if (anciensChemins) {
+            nettoyerLaTerreBattue();
+            rues();
+            cheminsDeTerre();
+            chemin(BOUTIQUE_CARTES[0] + 1, BOUTIQUE_CARTES[1] - 1, -3, BOUTIQUE_CARTES[1] + 1);
+            boulevard();
+            fait.add("les grandes rues sont pavées et les chemins refaits");
+        }
+        // l'ancien kiosque, derrière les maisons de la rue : on rend l'herbe, et on retire son tableau
+        if (level.getBlockState(c.offset(31, 6, -21)).is(Blocks.SPRUCE_PLANKS)) {
+            vider(27, -25, 35, -17, 1, 8);
+            for (int x = 27; x <= 35; x++) {
+                for (int z = -25; z <= -17; z++) {
+                    pose(x, 0, z, Blocks.GRASS_BLOCK.defaultBlockState());
+                    if (rnd.nextInt(5) == 0) {
+                        pose(x, 1, z, (rnd.nextBoolean() ? Blocks.SHORT_GRASS : Blocks.FERN).defaultBlockState());
+                    }
+                }
+            }
+            net.minecraft.world.phys.AABB ancien = new net.minecraft.world.phys.AABB(c.getX() + 26, c.getY(), c.getZ() - 26, c.getX() + 37, c.getY() + 10, c.getZ() - 15);
+            for (var t : level.getEntitiesOfClass(net.minecraft.world.entity.Display.TextDisplay.class, ancien, e -> e.getTags().contains(TAG))) {
+                t.discard();
+            }
+            fait.add("l'ancien kiosque est enlevé");
+        }
+        if (!level.getBlockState(c.offset(KIOSQUE[0], 6, KIOSQUE[1])).is(Blocks.SPRUCE_PLANKS)) {
+            // les deux arbres et les buissons qui poussaient là, et qui l'auraient caché depuis la grande allée
+            vider(KIOSQUE[0] - 6, KIOSQUE[1] - 6, KIOSQUE[0] + 6, KIOSQUE[1] + 11, 1, 16);
+            kiosque(KIOSQUE[0], KIOSQUE[1]);
+            fait.add("le kiosque d'infos est au bord de la grande allée");
+        }
+        if (!(level.getBlockState(c.offset(-36, 1, 47)).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            maisonDeLaTour();
+            fait.add("une maison près de la tour de guet");
+        }
+        if (!(level.getBlockState(c.offset(37, 1, 47)).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            maisonDesChamps();
+            fait.add("une maison le long des champs");
+        }
+        if (fait.isEmpty()) {
+            return "";
+        }
+        finitions();
+        var moteur = level.getChunkSource().getLightEngine();
+        for (int cx = (c.getX() - 48) >> 4; cx <= (c.getX() + 48) >> 4; cx++) {
+            for (int cz = (c.getZ() - 32) >> 4; cz <= (c.getZ() + 60) >> 4; cz++) {
+                moteur.lightChunk(level.getChunk(cx, cz), false);
+            }
+        }
+        return String.join(", ", fait);
+    }
+
+    /** Les plaques de terre que l'ancienne construction semait dans l'herbe redeviennent de l'herbe (sauf les bords des grands terrains). */
+    private void nettoyerLaTerreBattue() {
+        int max = RAYON + FONDU;
+        for (int dx = -max; dx <= max; dx++) {
+            for (int dz = -max; dz <= max; dz++) {
+                if (dx * dx + dz * dz > max * max
+                        || dans(dx, dz, -44, -40, -32, -26) || dans(dx, dz, 32, -40, 44, -26) || dans(dx, dz, -54, 18, -40, 30)) {
+                    continue;
+                }
+                int x = c.getX() + dx;
+                int z = c.getZ() + dz;
+                BlockPos p = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
+                if (level.getBlockState(p).is(Blocks.COARSE_DIRT)) {
+                    level.setBlock(p, Blocks.GRASS_BLOCK.defaultBlockState(), FLAGS);
+                }
+            }
+        }
+    }
+
     public void mairieEtSecret() {
         mairie();
         laboratoire();
@@ -2900,7 +3281,7 @@ public class HubBuilder {
         var features = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
         // de grands arbres de jungle sur le pourtour, de plus petits le long de la grande allée
         int[][] geants = {{-58, 6}, {-55, -19}, {-52, -34}, {52, -32}, {26, -50}, {-29, -50}, {-26, 54}, {56, 14}, {12, -56}, {-12, -56}, {48, 34}, {-46, 44}};
-        int[][] petits = {{-10, 30}, {10, 34}, {-10, 48}, {10, 52}, {16, 22}, {-14, 22}, {-24, 46}, {26, 48}};
+        int[][] petits = {{-10, 30}, {-10, 48}, {10, 52}, {-14, 22}, {-24, 46}, {26, 48}};
         for (int[] g : geants) {
             planter(features, net.minecraft.data.worldgen.features.TreeFeatures.MEGA_JUNGLE_TREE, g[0], g[1], true);
         }
@@ -2946,7 +3327,8 @@ public class HubBuilder {
             int x = rnd.nextInt(2 * RAYON - 9) - RAYON + 5;
             int z = rnd.nextInt(2 * RAYON - 9) - RAYON + 5;
             if (x * x + z * z > (RAYON - 6) * (RAYON - 6) || (x * x + z * z) < 22 * 22
-                    || dans(x, z, -45, -41, -31, -25) || dans(x, z, 31, -41, 45, -25) || dans(x, z, 43, 17, 53, 27)) {
+                    || dans(x, z, -45, -41, -31, -25) || dans(x, z, 31, -41, 45, -25) || dans(x, z, 43, 17, 53, 27)
+                    || dans(x, z, 5, 20, 19, 37) || dans(x, z, -42, 38, -30, 55) || dans(x, z, 29, 42, 43, 54)) {
                 continue;
             }
             BlockPos sol = c.offset(x, 0, z);
