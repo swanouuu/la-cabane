@@ -17,3 +17,6 @@ voix/cinematique/
 voix/effets/
 # le modèle et la texture de Kurama (d'un autre mod, à son auteur) : seulement dans le pack privé
 voix/kurama/
+# la musique du menu Échap (les OST des animés, à leurs auteurs) : seulement dans le pack privé
+voix/musique/
+voix/musique-a-trier/

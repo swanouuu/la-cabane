@@ -21,4 +21,11 @@ for (const [nom, contenu] of fichiers) {
   fs.writeFileSync(cible, contenu);
   copies++;
 }
+// les morceaux retirés de voix/musique sortent aussi du pack de test
+const gardes = new Set(fichiers.map(([nom]) => nom));
+const ost = path.join(dossier, "assets", "cabane", "sounds", "ost");
+for (const fichier of fs.existsSync(ost) ? fs.readdirSync(ost) : []) {
+  if (!gardes.has(`assets/cabane/sounds/ost/${fichier}`)) fs.rmSync(path.join(ost, fichier));
+}
+if (!gardes.has("assets/cabane/musique/catalogue.json")) fs.rmSync(path.join(dossier, "assets", "cabane", "musique"), { recursive: true, force: true });
 console.log(`Pack privé « ${NOM_PACK_VOIX} » : ${fichiers.length - 2} fichier(s), ${copies} mis à jour.`);

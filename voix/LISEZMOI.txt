@@ -1,3 +1,7 @@
 Mets ici les voix des PNJ : un fichier .ogg par réplique, nommé avec le nom du PNJ et un numéro
 (par exemple macron-1.ogg, vegeta-fierte.ogg). La liste des noms est dans le README, partie « Les voix des PNJ ».
 Puis lance : node mod-cabane/outils/generer.mjs
+
+La musique du menu Échap (♪ Musique) : mets tes MP3 dans voix/musique/<catégorie>/ (Épique, Tristesse, Ambiance,
+Tension, Drôle, Génériques… un nouveau dossier fait une nouvelle catégorie), nommés « Animé - Titre.mp3 ». tester-en-jeu.bat les
+convertit tout seul ; la liste des OST conseillés est dans voix/musique/A-AJOUTER.txt.
