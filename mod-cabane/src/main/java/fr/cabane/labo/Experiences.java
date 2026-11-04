@@ -132,7 +132,7 @@ public final class Experiences {
 
     /** Est-ce que quelqu'un est sur la table en ce moment ? (pour les écrans) */
     static boolean enCours() {
-        return SEANCES.values().stream().anyMatch(s -> !s.rituel());
+        return Operation.enCours() || SEANCES.values().stream().anyMatch(s -> !s.rituel());
     }
 
     /** Un rituel est-il en cours sur l'autel ? (le sceau s'emballe) */

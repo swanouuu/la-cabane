@@ -5,17 +5,18 @@ import { genererHistoire } from "./histoire.mjs";
 import { genererBoissons, OFFRES_BOISSONS, CONTRATS_BOISSONS } from "./boissons.mjs";
 import { genererMarcheNoir, OFFRES_NOIR } from "./marche-noir.mjs";
 import { genererAccessoires, OFFRES_ACCESSOIRES } from "./accessoires.mjs";
+import { genererSaiyan } from "./saiyan.mjs";
+import { genererCurios } from "./curios.mjs";
+import { genererEspionnes, sonsEspionnes } from "./espionnes.mjs";
+import { genererMasques } from "./masques.mjs";
 import { genererFastFood } from "./fastfood.mjs";
 import { genererMissions } from "./missions.mjs";
 import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
 import { genererCartel, sonsCartel } from "./cartel.mjs";
 import { genererCatch, sonsCatch } from "./catch.mjs";
+import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
-import { genererSaiyan } from "./saiyan.mjs";
-import { genererCurios } from "./curios.mjs";
-import { genererEspionnes, sonsEspionnes } from "./espionnes.mjs";
-import { genererMasques } from "./masques.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -655,6 +656,8 @@ console.log("Ressources générées dans", RES);
   Object.assign(sons, sonsCatch(RES));
   // la fermeture éclair des tenues d'espionnes : synthétisée par outils/espionnes.mjs
   Object.assign(sons, sonsEspionnes(RES));
+  // la grande expérience du labo (/experience) : perceuse, moniteur, lampes, bourdon… synthétisés par outils/operation.mjs
+  Object.assign(sons, sonsOperation(RES));
   // la foudre : l'électricité statique, le choc, la charge du Kirin ; synthétisés par outils/foudre.mjs
   Object.assign(sons, sonsFoudre(RES));
   const dossierVoix = path.join(RES, "..", "..", "..", "..", "voix");

@@ -177,14 +177,6 @@
       }
     ]
   },
-  "espionne.zip": {
-    "subtitle": "subtitles.cabane.espionne.zip",
-    "sounds": [
-      {
-        "name": "cabane:espionne/zip"
-      }
-    ]
-  },
   "catch.cloche": {
     "subtitle": "subtitles.cabane.catch.cloche",
     "sounds": [
@@ -209,6 +201,56 @@
       {
         "name": "cabane:catch/impact",
         "volume": 0.7
+      }
+    ]
+  },
+  "espionne.zip": {
+    "subtitle": "subtitles.cabane.espionne.zip",
+    "sounds": [
+      {
+        "name": "cabane:espionne/zip"
+      }
+    ]
+  },
+  "operation.perceuse": {
+    "sounds": [
+      {
+        "name": "cabane:operation/perceuse"
+      }
+    ]
+  },
+  "operation.perceuse_vide": {
+    "sounds": [
+      {
+        "name": "cabane:operation/perceuse_vide"
+      }
+    ]
+  },
+  "operation.bip": {
+    "sounds": [
+      {
+        "name": "cabane:operation/bip"
+      }
+    ]
+  },
+  "operation.bip_long": {
+    "sounds": [
+      {
+        "name": "cabane:operation/bip_long"
+      }
+    ]
+  },
+  "operation.zap": {
+    "sounds": [
+      {
+        "name": "cabane:operation/zap"
+      }
+    ]
+  },
+  "operation.bourdon": {
+    "sounds": [
+      {
+        "name": "cabane:operation/bourdon"
       }
     ]
   },
