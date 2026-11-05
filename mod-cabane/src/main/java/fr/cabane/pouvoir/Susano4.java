@@ -54,7 +54,7 @@ public final class Susano4 {
     /** Le joueur (derrière la fente des yeux du heaume) est à 33,8 blocs au-dessus des pieds du géant. */
     public static final double HAUT = 21.7;
     /** Le vol : un peu moins vite que le vol créatif (0,05), environ 9 blocs par seconde. */
-    private static final float VOL = 0.045F;
+    private static final float VOL = 0.055F;
     /** Les coups d'épée : un toutes les 0,8 s, sur 13 blocs devant lui ; lumière 14, flammes noires 12 (et le feu au sol). */
     public static final int RECHARGE_COUP = 16;
     private static final double PORTEE_COUP = 13;

@@ -171,10 +171,10 @@ public final class ClientPoulpe {
     /**
      * La saisie : la tentacule part de son dos, file jusqu'à sa prise en arc, puis s'enroule deux tours et demi autour
      * d'elle, de haut en bas ; elle se resserre quand elle la serre. vers est le centre de la prise (dans le repère du
-     * corps), tau de 0 à 1 pendant qu'elle l'attrape, serre de 0 à 1 (un coup de serrage).
+     * corps), tau de 0 à 1 pendant qu'elle l'attrape, serre de 0 à 1 (un coup de serrage). base : d'où elle part
+     * (base(PRISE), sur son dos ; à la première personne, d'en bas à droite de la vue).
      */
-    static void saisie(VertexConsumer c, PoseStack.Pose p, int lumiere, Vec3 vers, double tau, double serre) {
-        Vec3 base = base(PRISE);
+    static void saisie(VertexConsumer c, PoseStack.Pose p, int lumiere, Vec3 base, Vec3 vers, double tau, double serre) {
         double k = Mth.clamp(tau, 0, 1);
         double rayon = 8.5 * (1 - 0.35 * serre), haut = 13;
         // l'entrée de la spirale, au-dessus de la prise, côté joueur

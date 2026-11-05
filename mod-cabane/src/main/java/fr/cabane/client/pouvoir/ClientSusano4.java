@@ -160,6 +160,14 @@ public final class ClientSusano4 {
                 .vers(AnimSusano4.vol(temps), a[2]);
         // en vol sur place, il se tient plus droit
         P.a[AnimSusano4.BASSIN][0] -= 0.55 * a[2] * (1 - Mth.clamp(vitesse / 8, 0, 1));
+        // en vol rapide, il se couche presque à plat : les jambes s'allongent, la tête se relève pour regarder devant
+        double couche = a[2] * Mth.clamp((vitesse - 3) / 6, 0, 1);
+        P.a[AnimSusano4.BASSIN][0] += 0.6 * couche;
+        P.a[AnimSusano4.TETE][0] -= 0.55 * couche;
+        P.a[AnimSusano4.CUISSE_D][0] -= 0.25 * couche;
+        P.a[AnimSusano4.CUISSE_G][0] -= 0.15 * couche;
+        P.a[AnimSusano4.TIBIA_D][0] -= 0.35 * couche;
+        P.a[AnimSusano4.TIBIA_G][0] -= 0.6 * couche;
         // les attaques prennent la main le temps du geste
         for (Coup c : COUPS) {
             if (c.joueur().equals(joueur.getUUID())) {

@@ -234,7 +234,14 @@ const tenir = (fichier, nom, description, parties, entree = 6) => emote(fichier,
 // ---- les poses de RP : pour la police, les discussions, les embrouilles
 tenir("mains_en_l_air", "Les mains en l'air !", "Je me rends, monsieur l'agent.", { rightArm: { pitch: -170, roll: 12 }, leftArm: { pitch: -170, roll: -12 }, head: { pitch: -8 } });
 tenir("mains_sur_la_tete", "Mains sur la tête", "Pour une arrestation dans les règles.", { rightArm: { pitch: -160, yaw: -55, roll: 50 }, leftArm: { pitch: -160, yaw: 55, roll: -50 }, head: { pitch: 10 } });
-tenir("bras_croises", "Bras croisés", "J'attends.", { rightArm: { pitch: -55, yaw: -42, roll: 0 }, leftArm: { pitch: -50, yaw: 42, roll: 0 }, head: { pitch: -4 } });
+// les bras croisés « à la lion » : les coudes devant la poitrine, l'avant-bras droit jusqu'au bras gauche,
+// le gauche passe devant lui un peu plus bas ; jambes écartées, le menton bas
+// (bend : un coude se plie vers l'avant en négatif, un genou vers l'arrière en positif ; axis tourne le pli, + vers la gauche du joueur)
+const CROISES = { rightArm: { pitch: -62, yaw: -55, roll: 0, bend: -45, axis: 55 }, leftArm: { pitch: -50, yaw: 35, roll: 0, bend: -45, axis: -60 } };
+tenir("bras_croises", "Bras croisés", "J'attends.", { ...CROISES, head: { pitch: 6 }, torso: { pitch: -3 }, rightLeg: { roll: 8 }, leftLeg: { roll: -8 } });
+// adossé au mur, bras croisés : le corps penché en arrière, un genou levé, le pied à plat contre le mur
+tenir("adosse_bras_croises", "Adossé, bras croisés", "Contre le mur, tranquille.", { ...CROISES, head: { pitch: 4, yaw: -14, roll: 3 },
+  torso: { pitch: -8 }, rightLeg: { pitch: -58, bend: 135 }, leftLeg: { pitch: 0 } }, 10);
 tenir("mains_aux_hanches", "Mains aux hanches", "Alors, on fait quoi ?", { rightArm: { pitch: -15, yaw: -10, roll: 35 }, leftArm: { pitch: -15, yaw: 10, roll: -35 }, torso: { pitch: -3 } });
 tenir("pointer", "Toi !", "C'est toi que je regarde.", { rightArm: { pitch: -90, yaw: -5 }, head: { pitch: 0 }, torso: { yaw: -8 } }, 4);
 {
@@ -250,6 +257,15 @@ tenir("pointer", "Toi !", "C'est toi que je regarde.", { rightArm: { pitch: -90,
     [3, { torso: { pitch: 10, y: 0 }, rightArm: { pitch: -25, yaw: 30 }, leftArm: { pitch: -25, yaw: -30 }, head: { pitch: -10 } }],
   ], 8);
   emote("mort_de_rire", { nom: "Mort de rire", description: "Hahaha !", boucle: true, retour: b.debut, ...b });
+}
+
+// ---- le 67 : les deux mains devant, paumes en l'air, une qui monte pendant que l'autre descend
+{
+  const b = boucle([
+    [4, { rightArm: { pitch: -55, roll: 8, bend: -85, axis: -20 }, leftArm: { pitch: 5, roll: -8, bend: -70, axis: 20 }, head: { roll: -5 }, torso: { y: -0.15 } }],
+    [4, { rightArm: { pitch: 5, roll: 8, bend: -70, axis: -20 }, leftArm: { pitch: -55, roll: -8, bend: -85, axis: 20 }, head: { roll: 5 }, torso: { y: 0 } }],
+  ], 6);
+  emote("six_sept", { nom: "67", description: "Six… seven !", boucle: true, retour: b.debut, ...b });
 }
 
 console.log("Émotes écrites dans", DOSSIER);

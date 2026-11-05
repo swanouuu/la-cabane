@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Susano4.NOM, Hachibi.NOM, Hachibi.NOM2, Hachibi4.NOM, Maudit.NOM, Maudit.NOM2, Maudit.NOM3, Minato.NOM, Minato.NOM2,
-            Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Foudre.NOM, Foudre.NOM2);
+            Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Foudre.NOM, Foudre.NOM2, Foudre.NOM3, Vent.NOM, Vent.NOM2, Vent.NOM3);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -137,13 +137,17 @@ public final class Pouvoirs {
     private static final Map<UUID, Integer> EVEILLES = new HashMap<>();
 
     /**
-     * Un éveil dure au plus 2 minutes ; ensuite (ou si on s'endort avant), le pouvoir se repose : 2 minutes pour les
-     * pouvoirs de niveau 1 (Susano, Hachibi, la marque, Ichibi, et les fruits du démon restés au niveau 1), 1 minute pour
-     * Minato et les pouvoirs qui montent plus haut (les fruits passés au niveau 2).
+     * Pour tous les pouvoirs, un éveil dure autant de minutes que le niveau atteint (1 minute au niveau 1, 2 au niveau 2,
+     * 3 au niveau 3 et plus), compté depuis le premier éveil ; ensuite (ou si on s'endort avant), le pouvoir se repose
+     * 1 minute.
      */
-    public static final int DUREE_EVEIL = 2 * 60 * 20;
+    public static final int MINUTE_EVEIL = 60 * 20;
     public static final int REPOS_EVEIL = 60 * 20;
-    public static final int REPOS_NIVEAU_1 = 2 * 60 * 20;
+
+    /** Combien de temps dure un éveil arrivé à ce niveau (en ticks). */
+    static int dureeEveil(int niveau) {
+        return Math.max(1, Math.min(3, niveau)) * MINUTE_EVEIL;
+    }
     /** Depuis quand chacun est éveillé, et jusqu'à quand son pouvoir se repose (en ticks du serveur). */
     private static final Map<UUID, Integer> DEBUT_EVEIL = new HashMap<>();
     private static final Map<UUID, Integer> REPOS = new HashMap<>();
@@ -158,7 +162,7 @@ public final class Pouvoirs {
     /**
      * Le Susano (docs/sharingan) : la touche Éveil n'éveille que ses yeux (1 Sharingan, 2 Mangekyo, 3 Rinnegan, jusqu'au
      * niveau de sa liste blanche) et lance le compte à rebours de l'éveil ; le Susano lui-même sort avec sa propre touche
-     * (K), un niveau de plus à chaque appui jusqu'au niveau de ses yeux (et le Susano parfait, pour « susano4 », avec le
+     * (²), un niveau de plus à chaque appui jusqu'au niveau de ses yeux (et le Susano parfait, pour « susano4 », avec le
      * Rinnegan), puis il se range : il garde ses yeux. EVEILLES reste le niveau du Susano (0 : pas de Susano).
      */
     private static final Map<UUID, Integer> YEUX = new HashMap<>();
@@ -180,8 +184,8 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return Hachibi.deux(pouvoir) || Susano4.est(pouvoir) ? 4 : Susano3.est(pouvoir) || pouvoir.equals(Maudit.NOM3) || Fruit.troisieme(pouvoir) ? 3
-                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) ? 2 : 1;
+                return Hachibi.deux(pouvoir) || Susano4.est(pouvoir) ? 4 : Susano3.est(pouvoir) || pouvoir.equals(Maudit.NOM3) || Fruit.troisieme(pouvoir) || pouvoir.equals(Foudre.NOM3) || pouvoir.equals(Vent.NOM3) ? 3
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) || pouvoir.equals(Vent.NOM2) ? 2 : 1;
             }
         }
 
@@ -402,6 +406,9 @@ public final class Pouvoirs {
         if (Foudre.est(elu.pouvoir())) {
             Foudre.eveiller(joueur, suivant);
         }
+        if (Vent.est(elu.pouvoir())) {
+            Vent.eveiller(joueur, suivant);
+        }
         if (suivant == 4 && Susano4.est(elu.pouvoir())) {
             Susano4.eveiller(joueur);
         }
@@ -431,7 +438,7 @@ public final class Pouvoirs {
         Sharingan.envoyerYeux(joueur, elu, suivant, true);
     }
 
-    /** La touche du Susano (K) : un niveau de plus, jusqu'au niveau de ses yeux ; au plus haut, il se range. */
+    /** La touche du Susano (²) : un niveau de plus, jusqu'au niveau de ses yeux ; au plus haut, il se range. */
     static void susano(ServerPlayer joueur) {
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
         if (elu == null || !Sharingan.est(elu.pouvoir())) {
@@ -518,16 +525,15 @@ public final class Pouvoirs {
      */
     private static void armure(ServerPlayer joueur, int niveau) {
         // la marque maudite et les fruits du démon (jusqu'au niveau 2), et la foudre : comme du fer
-        boolean fer = (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) && niveau < 3 || Foudre.est(pouvoir(joueur));
+        boolean fer = (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) && niveau < 3;
         // Hachibi 2 : aux niveaux 3 et 4, 1,25 fois l'armure de diamant
         boolean bete = Hachibi.deux(pouvoir(joueur)) && niveau >= 3;
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
         // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2, toujours au plus haut)
         // (et la marque au niveau 3, aux serpents ; et les fruits au niveau 3)
-        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
+        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
         // Minato (niveau 1) compte comme un niveau 2 : de la netherite
         boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
-        // le Susano parfait (niveau 4) : plus solide que tout, 10 cœurs de plus, impossible à repousser
         boolean parfait = Susano4.est(pouvoir(joueur)) && niveau >= 4;
         modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, VIE, parfait ? 20 : 0);
         if (parfait) {
@@ -571,6 +577,7 @@ public final class Pouvoirs {
         Fruit.endormir(joueur);
         Ichibi.endormir(joueur);
         Foudre.endormir(joueur);
+        Vent.endormir(joueur);
         Sharingan.endormir(joueur);
         armure(joueur, 0);
         Integer etait = EVEILLES.remove(joueur.getUUID());
@@ -589,19 +596,9 @@ public final class Pouvoirs {
         }
     }
 
-    /**
-     * Combien de temps son pouvoir se repose après un éveil où il est monté jusqu'à ce niveau (voir REPOS_NIVEAU_1) :
-     * les fruits du démon se reposent 2 minutes s'ils sont restés au niveau 1, 1 minute s'ils sont passés au 2.
-     */
+    /** Combien de temps son pouvoir se repose après un éveil : 1 minute, quel que soit le pouvoir et le niveau atteint. */
     private static int repos(ServerPlayer joueur, int niveau) {
-        Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
-        if (elu == null || Minato.est(elu.pouvoir())) {
-            return REPOS_EVEIL;
-        }
-        if (Fruit.est(elu.pouvoir()) || Foudre.est(elu.pouvoir())) {
-            return niveau >= 2 ? REPOS_EVEIL : REPOS_NIVEAU_1;
-        }
-        return elu.niveauMax() == 1 ? REPOS_NIVEAU_1 : REPOS_EVEIL;
+        return REPOS_EVEIL;
     }
 
     // ================================================================ frapper
@@ -638,7 +635,7 @@ public final class Pouvoirs {
             }
             return;
         }
-        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -713,7 +710,7 @@ public final class Pouvoirs {
      */
     private static void attraper(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -862,7 +859,7 @@ public final class Pouvoirs {
     /** Le Susano pique droit devant : le joueur file, et tout ce qu'il traverse est fauché. */
     private static void charger(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur))) {
+        if (Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) {
             return;
         }
         if (niveau > 0 && hachibi(joueur)) {
@@ -904,20 +901,18 @@ public final class Pouvoirs {
     public static void tick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
         int maintenant = server.getTickCount();
-        // l'éveil s'épuise au bout de 2 minutes (on prévient à 1 min, 30 s, puis chaque seconde des 10 dernières)
+        // l'éveil s'épuise au bout d'une minute par niveau (on prévient à 1 min, 30 s, puis chaque seconde des 10 dernières)
         for (Map.Entry<UUID, Integer> entree : new ArrayList<>(DEBUT_EVEIL.entrySet())) {
             ServerPlayer joueur = server.getPlayerList().getPlayer(entree.getKey());
             if (joueur == null) {
                 DEBUT_EVEIL.remove(entree.getKey());
                 continue;
             }
-            int reste = entree.getValue() + DUREE_EVEIL - maintenant;
+            int reste = entree.getValue() + dureeEveil(Math.max(niveau(joueur), yeux(joueur))) - maintenant;
             // l'ulti de Hachibi 4 va jusqu'au bout de ses 45 secondes : l'éveil s'endort après
-            if (reste <= 0 && !Hachibi4.actif(joueur) && !Meteorite.actif(joueur)) {
-                int repos = repos(joueur, niveau(joueur));
+            if (reste <= 0 && !Hachibi4.actif(joueur) && !Orage.actif(joueur) && !Meteorite.actif(joueur) && !Vent3.ultiActif(joueur)) {
                 endormir(joueur);
-                joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose "
-                        + (repos == REPOS_NIVEAU_1 ? "deux minutes." : "une minute.")).withStyle(ChatFormatting.GOLD), false);
+                joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose une minute.").withStyle(ChatFormatting.GOLD), false);
             } else if (reste == 60 * 20 || reste == 30 * 20 || (reste <= 10 * 20 && reste % 20 == 0)) {
                 joueur.displayClientMessage(Component.literal("Éveil : encore " + reste / 20 + " s")
                         .withStyle(reste <= 10 * 20 ? ChatFormatting.RED : ChatFormatting.GOLD), true);
@@ -1000,9 +995,10 @@ public final class Pouvoirs {
         for (String pouvoir : LISTE) {
             // Hachibi, la marque maudite et Minato ont leurs couleurs à eux ; pour le Susano, elle est facultative (violet par défaut)
             var joueur = Commands.argument("joueur", EntityArgument.player());
-            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || Minato.est(pouvoir) || Fruit.est(pouvoir) || Ichibi.est(pouvoir) || Foudre.est(pouvoir)) {
+            if (Hachibi.est(pouvoir) || Maudit.est(pouvoir) || Minato.est(pouvoir) || Fruit.est(pouvoir) || Ichibi.est(pouvoir) || Foudre.est(pouvoir) || Vent.est(pouvoir)) {
                 Couleur propre = Hachibi.est(pouvoir) ? Couleur.ROUGE : Minato.est(pouvoir) ? Couleur.JAUNE
-                        : Fruit.lave(pouvoir) || Ichibi.est(pouvoir) ? Couleur.ORANGE : Fruit.glace(pouvoir) || Foudre.est(pouvoir) ? Couleur.CYAN : Couleur.VIOLET;
+                        : Fruit.lave(pouvoir) || Ichibi.est(pouvoir) ? Couleur.ORANGE : Fruit.glace(pouvoir) || Foudre.est(pouvoir) ? Couleur.CYAN
+                        : Vent.est(pouvoir) ? Couleur.VERT : Couleur.VIOLET;
                 joueur.executes(c -> ajouter(c, pouvoir, propre));
             } else {
                 joueur.executes(c -> ajouter(c, pouvoir, Couleur.VIOLET))

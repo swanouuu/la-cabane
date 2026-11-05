@@ -456,6 +456,11 @@ public final class Histoire {
             Forteresse.porte(server.overworld(), false);
         }
         hub.setPartie(partie);
+        // le Président et sa garde : hostiles et mortels à partir de la deuxième partie ; avant, ceux qui sont tombés reviennent
+        fr.cabane.hub.Gardes.partieChangee(server);
+        if (avant >= 2 && partie < 2) {
+            HubEvents.rafraichirPnj(server.overworld());
+        }
         LIVRES_A_JOUR.clear();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             mettreAJourLivre(p, partie);
@@ -468,7 +473,8 @@ public final class Histoire {
     }
 
     private static void annoncer(MinecraftServer server, int partie) {
-        String ligne = partie == 2 ? "Sylvie, la femme de Pierre, cherche de l'aide. Et la nuit, la Mairie a l'air moins vide qu'elle ne devrait…"
+        String ligne = partie == 2 ? "Sylvie, la femme de Pierre, cherche de l'aide. Et la nuit, la Mairie a l'air moins vide qu'elle ne devrait… "
+                + "Le Président a laissé tomber le sourire : sa garde attaque à vue."
                 : "La grande herse du PLATO 6Z s'est levée. Le Président vous attend dans la Salle Zéro (/cabane plato).";
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(partie == 2 ? "Deuxième partie" : "Troisième partie")

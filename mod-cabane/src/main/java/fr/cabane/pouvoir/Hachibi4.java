@@ -212,7 +212,17 @@ public final class Hachibi4 {
     // ================================================================ les touches
 
     private static void touche(ServerPlayer joueur, int action) {
-        // la même touche lance le grand serpent de la marque 3
+        // la même touche lance l'orage de la Foudre 3
+        if (action == ULTI && Pouvoirs.pouvoir(joueur).equals(Foudre.NOM3)) {
+            Orage.lancer(joueur);
+            return;
+        }
+        // et la tornade royale du Vent 3
+        if (action == ULTI && Pouvoirs.pouvoir(joueur).equals(Vent.NOM3)) {
+            Vent3.ulti(joueur);
+            return;
+        }
+        // et le grand serpent de la marque 3
         if (action == ULTI && Pouvoirs.pouvoir(joueur).equals(Maudit.NOM3)) {
             Marque3.ulti(joueur);
             return;

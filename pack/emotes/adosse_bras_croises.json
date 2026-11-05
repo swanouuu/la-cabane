@@ -1,0 +1,97 @@
+{
+  "name": "Adossé, bras croisés",
+  "author": "Beauvais",
+  "description": "Contre le mur, tranquille.",
+  "uuid": "1347fb3d-f8c7-b8e7-b725-c3320404d261",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 10,
+    "beginTick": 10,
+    "endTick": 60,
+    "stopTick": 63,
+    "degrees": true,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightLeg": {
+          "x": -1.9,
+          "y": 12
+        },
+        "leftLeg": {
+          "x": 1.9,
+          "y": 12
+        }
+      },
+      {
+        "tick": 10,
+        "easing": "outQuad",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -62,
+          "yaw": -55,
+          "roll": 0,
+          "bend": -45,
+          "axis": 55
+        },
+        "leftArm": {
+          "pitch": -50,
+          "yaw": 35,
+          "roll": 0,
+          "bend": -45,
+          "axis": -60
+        },
+        "head": {
+          "pitch": 4,
+          "yaw": -14,
+          "roll": 3
+        },
+        "torso": {
+          "pitch": -8
+        },
+        "rightLeg": {
+          "pitch": -58,
+          "bend": 135
+        },
+        "leftLeg": {
+          "pitch": 0
+        }
+      },
+      {
+        "tick": 60,
+        "easing": "InOutSine",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -62,
+          "yaw": -55,
+          "roll": 0,
+          "bend": -45,
+          "axis": 55
+        },
+        "leftArm": {
+          "pitch": -50,
+          "yaw": 35,
+          "roll": 0,
+          "bend": -45,
+          "axis": -60
+        },
+        "head": {
+          "pitch": 4,
+          "yaw": -14,
+          "roll": 3
+        },
+        "torso": {
+          "pitch": -8
+        },
+        "rightLeg": {
+          "pitch": -58,
+          "bend": 135
+        },
+        "leftLeg": {
+          "pitch": 0
+        }
+      }
+    ]
+  }
+}

@@ -49,8 +49,8 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
  * La météorite (l'ultime du Rinnegan, Susano niveau 3, touche J, une fois par éveil puis 5 min de recharge ;
- * docs/sharingan/ulti-meteorite.mp4). Il reste au sol et lève le bras : une sphère noire naît très haut au-dessus de là
- * où il regarde (40 blocs). Elle attire tout : le sol est arraché (de vrais trous sur 9 blocs autour, rebouchés 20 s
+ * docs/sharingan/ulti-meteorite.mp4). Il vise quelqu'un (un joueur, une créature) et lève le bras : sa cible est emportée
+ * à 40 blocs au-dessus du sol, au cœur d'une sphère noire qui naît autour d'elle. Elle attire tout : le sol est arraché (de vrais trous sur 9 blocs autour, rebouchés 20 s
  * après la fin ; on ne touche ni au village ni aux coffres), et ce qui vit dans la zone (34 blocs) est aspiré, puis
  * pris dans la roche. Une météorite de 44 blocs de large se forme, ses fissures violettes s'allument, il serre le
  * poing : elle explose. Ceux qui y étaient pris sont éjectés (28 dégâts) ; les blocs pleuvent partout autour (6 par
@@ -155,6 +155,9 @@ public final class Meteorite {
         final List<Trou> trous = new ArrayList<>();
         final Map<Integer, Vec3> pris = new HashMap<>();
         final Map<Integer, Float> recus = new HashMap<>();
+        /** Celui qu'il a visé : emporté au cœur de la météorite (et d'où il est parti). */
+        int cible = -1;
+        Vec3 depart;
         boolean explose;
         int prochainEclat;
 
@@ -212,22 +215,21 @@ public final class Meteorite {
         if (monde.dimension() == Genjutsu.DIMENSION) {
             return;
         }
-        Vec3 oeil = lanceur.getEyePosition(), regard = lanceur.getLookAngle();
-        BlockHitResult vise = monde.clip(new ClipContext(oeil, oeil.add(regard.scale(64)), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, lanceur));
-        Vec3 point = vise.getType() == HitResult.Type.BLOCK ? vise.getLocation() : oeil.add(regard.scale(40));
-        // pas sur lui : au moins 20 blocs devant
-        Vec3 plat = new Vec3(point.x - lanceur.getX(), 0, point.z - lanceur.getZ());
-        if (plat.length() < 20) {
-            Vec3 devant = new Vec3(regard.x, 0, regard.z);
-            devant = devant.lengthSqr() < 1e-4 ? Pouvoirs.devant(lanceur) : devant.normalize();
-            point = lanceur.position().add(devant.scale(20));
+        LivingEntity cible = visee(lanceur);
+        if (cible == null) {
+            lanceur.displayClientMessage(Component.literal("Vise quelqu'un : la météorite se forme autour de lui.").withStyle(ChatFormatting.GRAY), true);
+            return;
         }
-        int gx = (int) Math.floor(point.x), gz = (int) Math.floor(point.z);
-        int gy = monde.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, gx, gz);
-        Vec3 c = new Vec3(gx + 0.5, gy + HAUT, gz + 0.5);
+        // la sphère naît au-dessus de sa cible : elle y est emportée, tout vient à elle
+        int gx = (int) Math.floor(cible.getX()), gz = (int) Math.floor(cible.getZ());
+        int gy = Math.min(monde.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, gx, gz), (int) Math.floor(cible.getY()) + 1);
+        gy = Math.max(gy, (int) Math.floor(cible.getY()) - 6);
+        Vec3 c = new Vec3(cible.getX(), gy + HAUT, cible.getZ());
         int maintenant = lanceur.server.getTickCount();
         long graine = monde.getRandom().nextLong();
         EnCours e = new EnCours(lanceur.getUUID(), monde, c, gy, maintenant, graine);
+        e.cible = cible.getId();
+        e.depart = cible.position();
         preparerTrous(e, gx, gy, gz);
         EN_COURS.add(e);
         FAITE.add(lanceur.getUUID());
@@ -241,6 +243,33 @@ public final class Meteorite {
         monde.playSound(null, lanceur.getX(), lanceur.getY(), lanceur.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2F, 0.5F);
         monde.playSound(null, c.x, c.y, c.z, SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 6F, 0.5F);
         lanceur.displayClientMessage(Component.literal("Chibaku Tensei…").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.ITALIC), true);
+    }
+
+    /** Celui qu'il vise (jusqu'à 48 blocs, pas à travers les murs), avec un peu d'aide pour viser : ou personne. */
+    private static LivingEntity visee(ServerPlayer lanceur) {
+        ServerLevel monde = lanceur.serverLevel();
+        Vec3 oeil = lanceur.getEyePosition(), regard = lanceur.getLookAngle();
+        Vec3 bout = oeil.add(regard.scale(48));
+        BlockHitResult mur = monde.clip(new ClipContext(oeil, bout, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, lanceur));
+        if (mur.getType() == HitResult.Type.BLOCK) {
+            bout = mur.getLocation();
+        }
+        LivingEntity mieux = null;
+        double plusPres = Double.MAX_VALUE;
+        AABB couloir = new AABB(oeil, bout).inflate(2);
+        for (LivingEntity v : monde.getEntitiesOfClass(LivingEntity.class, couloir,
+                x -> x != lanceur && x.isAlive() && !x.isSpectator() && !(x instanceof net.minecraft.world.entity.decoration.ArmorStand)
+                        && !(x instanceof Player p && p.isCreative()))) {
+            var touche = v.getBoundingBox().inflate(0.8).clip(oeil, bout);
+            if (touche.isPresent()) {
+                double d = touche.get().distanceToSqr(oeil);
+                if (d < plusPres) {
+                    plusPres = d;
+                    mieux = v;
+                }
+            }
+        }
+        return mieux;
     }
 
     /** Ce que la météorite arrache vraiment : le dessus du sol naturel (terre, herbe, pierre, sable, gravier, feuilles), pas le village, pas les coffres. */
@@ -349,7 +378,20 @@ public final class Meteorite {
     private static void aspirer(EnCours e, ServerPlayer lanceur, int t) {
         double r = rayon(t);
         AABB zone = new AABB(e.c.x - ZONE, e.sol - 4, e.c.z - ZONE, e.c.x + ZONE, e.c.y + RAYON + 4, e.c.z + ZONE);
-        for (LivingEntity v : e.monde.getEntitiesOfClass(LivingEntity.class, zone, x -> touchable(e, lanceur, x))) {
+        // sa cible monte au cœur (2 s), puis y reste prise, au milieu de tout ce qui vient à elle
+        if (e.monde.getEntity(e.cible) instanceof LivingEntity v && v.isAlive()) {
+            double k = Math.max(0, Math.min(1, (t - NAISSANCE) / 40.0));
+            k = k * k * (3 - 2 * k);
+            Vec3 coeur = e.c.subtract(0, v.getBbHeight() / 2, 0);
+            Vec3 p = e.depart.add(coeur.subtract(e.depart).scale(k));
+            v.teleportTo(p.x, p.y, p.z);
+            v.setDeltaMovement(Vec3.ZERO);
+            v.fallDistance = 0;
+            if (t % 20 == 0) {
+                v.hurt(source(e, lanceur), DEGATS_PRIS);
+            }
+        }
+        for (LivingEntity v : e.monde.getEntitiesOfClass(LivingEntity.class, zone, x -> touchable(e, lanceur, x) && x.getId() != e.cible)) {
             Vec3 dir = e.pris.get(v.getId());
             if (dir != null) {
                 Vec3 p = e.c.add(dir.scale(r + 0.6)).subtract(0, v.getBbHeight() / 2, 0);
@@ -401,6 +443,15 @@ public final class Meteorite {
             }
         }
         e.pris.clear();
+        // sa cible, au cœur : elle prend tout et retombe, éjectée sur le côté
+        if (e.monde.getEntity(e.cible) instanceof LivingEntity v && v.isAlive()) {
+            double a = e.monde.getRandom().nextDouble() * Math.PI * 2;
+            v.hurt(source, DEGATS_EXPLOSION);
+            v.setDeltaMovement(new Vec3(Math.cos(a) * 1.6, 0.6, Math.sin(a) * 1.6));
+            v.hurtMarked = true;
+            v.fallDistance = 0;
+        }
+        e.cible = -1;
         e.monde.playSound(null, e.c.x, e.c.y, e.c.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 16F, 0.5F);
         e.monde.playSound(null, e.c.x, e.c.y, e.c.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 16F, 0.6F);
         e.monde.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.c.x, e.c.y, e.c.z, 6, RAYON * 0.4, RAYON * 0.4, RAYON * 0.4, 0);

@@ -20,3 +20,7 @@ voix/kurama/
 # la musique du menu Échap (les OST des animés, à leurs auteurs) : seulement dans le pack privé
 voix/musique/
 voix/musique-a-trier/
+# le Susano ailé du même mod (modèle et texture, à son auteur) : seulement dans le pack privé
+voix/susano4/
+# les photos des cartes perso (visages des potes) : jamais sur GitHub
+cartes-photos/

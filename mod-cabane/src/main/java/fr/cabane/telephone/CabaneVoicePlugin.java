@@ -57,6 +57,10 @@ public class CabaneVoicePlugin implements VoicechatPlugin {
         } else {
             VoixMasque.oublier(id);
         }
+        // /vocal echo : on se renvoie sa voix telle que les autres l'entendent, pour l'essayer tout seul
+        if (VoiceBridge.echo(id)) {
+            event.getVoicechat().sendStaticSoundPacketTo(sender, event.getPacket().toStaticSoundPacket());
+        }
         UUID partner = PhoneCalls.activePartner(id);
         if (partner == null) {
             return;

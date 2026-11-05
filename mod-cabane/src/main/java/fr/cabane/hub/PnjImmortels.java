@@ -20,7 +20,8 @@ public final class PnjImmortels {
     @SubscribeEvent
     public static void onCoup(AttackEntityEvent event) {
         Player joueur = event.getEntity();
-        if (!(event.getTarget() instanceof LivingEntity pnj) || !pnj.getTags().contains(TAG) || !(pnj.level() instanceof ServerLevel level)) {
+        if (!(event.getTarget() instanceof LivingEntity pnj) || !pnj.getTags().contains(TAG) || pnj.getTags().contains(Gardes.VULNERABLE)
+                || !(pnj.level() instanceof ServerLevel level)) {
             return;
         }
         if (joueur.getAttackStrengthScale(0.5F) < 0.3F) {
@@ -34,7 +35,8 @@ public final class PnjImmortels {
     @SubscribeEvent
     public static void onMort(LivingDeathEvent event) {
         LivingEntity pnj = event.getEntity();
-        if (pnj.getTags().contains(TAG)) {
+        // en deuxième partie, le Président et sa garde peuvent mourir (voir Gardes)
+        if (pnj.getTags().contains(TAG) && !pnj.getTags().contains(Gardes.VULNERABLE)) {
             event.setCanceled(true);
             pnj.setHealth(pnj.getMaxHealth());
         }

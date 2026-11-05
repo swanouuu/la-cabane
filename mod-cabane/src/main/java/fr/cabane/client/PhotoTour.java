@@ -252,6 +252,17 @@ public final class PhotoTour {
                 return 2;
             }
             // « act ulti » : la touche de l'ulti (Hachibi 4, l'ultime des fruits niveau 3)
+            case "meteorite" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_METEORITE));
+                return 2;
+            }
+            case "technique" -> {
+                // la touche ² : le Susano monte d un niveau (ou Minato va à son kunai)
+                if (!fr.cabane.client.pouvoir.ClientMinato.technique()) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_SUSANO));
+                }
+                return 2;
+            }
             case "ulti" -> {
                 fr.cabane.client.pouvoir.ClientFruit.toucheUlti();
                 fr.cabane.client.pouvoir.ClientSharingan.toucheUlti();

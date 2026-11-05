@@ -11,6 +11,7 @@ import com.mojang.brigadier.context.CommandContext;
 import fr.cabane.hub.HubEvents;
 import fr.cabane.telephone.PhoneCalls;
 import fr.cabane.telephone.PhoneData;
+import fr.cabane.telephone.VoiceBridge;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -38,6 +39,10 @@ public final class CabaneCommands {
                 .then(Commands.literal("annuaire")
                         .requires(source -> source.hasPermission(2))
                         .executes(CabaneCommands::annuaire)));
+
+        // /vocal echo : s'entendre soi-même au vocal (la voix bourrée, sans avoir besoin d'un pote)
+        dispatcher.register(Commands.literal("vocal")
+                .then(Commands.literal("echo").executes(ctx -> run(ctx, CabaneCommands::echo))));
 
         // /histoire : où en est l'histoire contre le Président ; l'hôte débloque la partie suivante (1 à 3)
         dispatcher.register(Commands.literal("histoire").executes(ctx -> fr.cabane.histoire.Histoire.direPartie(ctx.getSource()))
@@ -301,6 +306,19 @@ public final class CabaneCommands {
         joueur.sendSystemMessage(Component.literal("Karim le Chouf te tend une carte au trésor : le donjon est à environ "
                 + distance + " blocs de la cabane.").withStyle(ChatFormatting.AQUA));
         return 1;
+    }
+
+    private static void echo(ServerPlayer joueur) {
+        boolean actif = VoiceBridge.basculerEcho(joueur.getUUID());
+        if (actif && !VoiceBridge.isConnected(joueur.getUUID())) {
+            // on n'allume pas l'écho d'un vocal qui ne marche pas
+            VoiceBridge.basculerEcho(joueur.getUUID());
+            joueur.sendSystemMessage(Component.literal("Ton vocal n'est pas connecté : l'écho ne peut pas marcher.").withStyle(ChatFormatting.RED));
+            return;
+        }
+        joueur.sendSystemMessage(actif
+                ? Component.literal("Écho activé : tu entends ta voix comme les autres l'entendent (mets un casque). Refais /vocal echo pour l'enlever.").withStyle(ChatFormatting.AQUA)
+                : Component.literal("Écho enlevé.").withStyle(ChatFormatting.GRAY));
     }
 
     private static int annuaire(CommandContext<CommandSourceStack> ctx) {

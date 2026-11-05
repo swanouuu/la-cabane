@@ -7,8 +7,24 @@ import net.neoforged.fml.ModList;
 
 /** Accès à Simple Voice Chat sans planter si le mod est absent. */
 public final class VoiceBridge {
-    static boolean isConnected(UUID player) {
+    /** Ceux qui ont mis /vocal echo : ils entendent leur propre voix. */
+    private static final Set<UUID> ECHO = ConcurrentHashMap.newKeySet();
+
+    public static boolean isConnected(UUID player) {
         return ModList.get().isLoaded("voicechat") && CabaneVoicePlugin.isConnected(player);
+    }
+
+    /** Met ou enlève l'écho ; renvoie true s'il est maintenant actif. */
+    public static boolean basculerEcho(UUID player) {
+        if (ECHO.remove(player)) {
+            return false;
+        }
+        ECHO.add(player);
+        return true;
+    }
+
+    static boolean echo(UUID player) {
+        return ECHO.contains(player);
     }
 
     /** Ceux qu'on n'entend plus (caché dans le Kamui) : leur micro ne part plus, eux entendent toujours les autres. */

@@ -13,7 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MinecraftMixin {
     @Inject(method = "shouldEntityAppearGlowing", at = @At("HEAD"), cancellable = true)
     private void cabane$infrarouge(Entity entite, CallbackInfoReturnable<Boolean> cir) {
-        if (ClientEspionne.infrarouge(entite)) {
+        // (et les yeux du Sharingan, pas loin : un contour rouge, voir ClientSharingan.regardPercant)
+        if (ClientEspionne.infrarouge(entite) || fr.cabane.client.pouvoir.ClientSharingan.regardPercant(entite)) {
             cir.setReturnValue(true);
         }
     }

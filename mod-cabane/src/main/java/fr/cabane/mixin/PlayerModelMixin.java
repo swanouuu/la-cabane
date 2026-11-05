@@ -27,7 +27,10 @@ public abstract class PlayerModelMixin {
             fr.cabane.client.cartel.ClientCartel.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.lutte.CorpsCatcheur.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.pouvoir.ClientFoudre.poser((PlayerModel<?>) (Object) this, joueur);
+            fr.cabane.client.pouvoir.ClientOrage.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.pouvoir.ClientFruit3.poser((PlayerModel<?>) (Object) this, joueur);
+            // le vent : bras en T pour la répulsion, la hallebarde tenue pour la tempête, la main tendue à l'éveil
+            fr.cabane.client.pouvoir.ClientVent.poser((PlayerModel<?>) (Object) this, joueur);
             // le Susano : le bras levé vers la météorite ; dans le Tsukuyomi, la cible en croix et les clones l'arme pointée
             fr.cabane.client.pouvoir.ClientMeteorite.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.pouvoir.ClientGenjutsu.poser((PlayerModel<?>) (Object) this, joueur);

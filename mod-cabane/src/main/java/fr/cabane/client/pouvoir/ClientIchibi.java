@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -65,7 +66,8 @@ import org.joml.Vector3f;
  * en sable (par-dessus l'armure s'il en porte), avec l'œil d'Ichibi ; à la place du bras droit, un grand bras de sable
  * griffu, avec ses piques, qui frappe, s'allonge pour attraper et tient sa prise dans un poing géant ; l'oreille, les
  * piques du dos et la grosse queue ; le nuage de sable sous ses pieds. À l'éveil, le sable monte : le bras d'abord, puis
- * la moitié du corps et la queue. À la première personne, on voit le grand bras. Les textures sont faites par
+ * la moitié du corps et la queue. À la première personne, on voit le grand bras (tendu jusqu'à sa prise, quand il
+ * tient quelqu'un). Les textures sont faites par
  * docs/ichibi/generateur/textures.mjs.
  */
 public final class ClientIchibi {
@@ -458,10 +460,15 @@ public final class ClientIchibi {
 
     /** Où est le milieu de cette créature, dans le repère du modèle de ce joueur (en pixels : y vers le bas, l'avant vers -z). */
     private static Vector3f versModele(AbstractClientPlayer joueur, Entity cible, float partiel) {
-        Vec3 w = cible.getPosition(partiel).add(0, cible.getBbHeight() / 2, 0).subtract(joueur.getPosition(partiel));
+        return versModele(joueur, cible.getPosition(partiel).add(0, cible.getBbHeight() / 2, 0), partiel);
+    }
+
+    private static Vector3f versModele(AbstractClientPlayer joueur, Vec3 point, float partiel) {
+        Vec3 w = point.subtract(joueur.getPosition(partiel));
         float lacet = Mth.rotLerp(partiel, joueur.yBodyRotO, joueur.yBodyRot);
+        // le modèle d'un joueur est dessiné à 0,9375 (PlayerRenderer.scale)
         return new Vector3f((float) w.x, (float) w.y, (float) w.z).rotateY((float) Math.toRadians(lacet - 180)).mul(-1, -1, 1)
-                .add(0, 1.501F, 0).mul(16);
+                .div(0.9375F).add(0, 1.501F, 0).mul(16);
     }
 
     // ================================================================ la moitié du corps
@@ -548,6 +555,41 @@ public final class ClientIchibi {
         }
     }
 
+    /**
+     * À la première personne, le jeu ne dessine pas son corps (ni la couche) : quand il tient quelqu'un, le grand bras
+     * tendu jusqu'à lui et la main qui l'enserre sont dessinés dans le monde, comme les voient les autres. Le bras part
+     * d'en bas à droite de la vue (comme une main à la première personne) : depuis l'épaule, juste sous l'œil, il
+     * cacherait la moitié de l'écran.
+     */
+    private static void brasTendu(PoseStack ps, Camera camera, float partiel) {
+        Minecraft mc = Minecraft.getInstance();
+        AbstractClientPlayer moi = mc.player;
+        Ichi i = moi == null ? null : ICHIS.get(moi.getUUID());
+        Entity tenu = i == null || i.prise < 0 ? null : moi.level().getEntity(i.prise);
+        if (tenu == null || moi.isInvisible() || !mc.options.getCameraType().isFirstPerson()) {
+            return;
+        }
+        modeles();
+        MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+        RenderType type = RenderType.entityCutoutNoCull(SABLE);
+        Vec3 cam = camera.getPosition();
+        Vector3f d = new Vector3f(camera.getLookVector()).mul(0.1F).add(new Vector3f(camera.getLeftVector()).mul(-0.55F))
+                .add(new Vector3f(camera.getUpVector()).mul(-0.55F));
+        Vector3f epaule = versModele(moi, cam.add(d.x, d.y, d.z), partiel);
+        // comme LivingEntityRenderer.render : ses pieds, son corps tourné, le modèle à l'envers et à 0,9375 ; puis le départ du bras
+        Vec3 p = moi.getPosition(partiel).subtract(cam);
+        ps.pushPose();
+        ps.translate(p.x, p.y, p.z);
+        ps.mulPose(Axis.YP.rotationDegrees(180 - Mth.rotLerp(partiel, moi.yBodyRotO, moi.yBodyRot)));
+        ps.scale(-0.9375F, -0.9375F, 0.9375F);
+        ps.translate(epaule.x / 16, epaule.y / 16 - 1.501F, epaule.z / 16);
+        double serre = i.serre < 0 ? 9 : secondes(i.serre);
+        tendre(ps, buffers.getBuffer(type), mc.getEntityRenderDispatcher().getPackedLightCoords(moi, partiel), LivingEntityRenderer.getOverlayCoords(moi, 0),
+                versModele(moi, tenu, partiel).sub(epaule), serre < DUREE_SERRE ? lisse(serre / (DUREE_SERRE * 0.6)) : 0);
+        ps.popPose();
+        buffers.endBatch(type);
+    }
+
     // ================================================================ le nuage
 
     private static void nuages(PoseStack ps, Vec3 cam, float partiel) {
@@ -617,31 +659,15 @@ public final class ClientIchibi {
         boolean tient = i.prise >= 0;
         // les touches de ce joueur, pas celles par défaut (s'accroupir n'est pas forcément Maj)
         String[][] lignes = {
-                {touche(o.keyAttack), tient ? "Le jeter" : "Coup du bras d'Ichibi"},
-                {touche(o.keyUse), tient ? "Serrer fort" : "Attraper" + (prise > 0 ? "  " + (int) Math.ceil(prise) + " s" : "")},
-                {touche(o.keyShift), vol > 0 ? "En vol : encore " + (int) Math.ceil(vol) + " s" : "Nuage de sable" + (nuage > 0 ? "  " + (int) Math.ceil(nuage) + " s" : "")},
-                {"", vol > 0 ? touche(o.keyJump) + " : monter, " + touche(o.keyShift) + " : descendre (2 fois : quitter)" : ""},
+                {touche(o.keyAttack), tient ? "Jeter" : "Bras d'Ichibi"},
+                {touche(o.keyUse), tient ? "Serrer" : PanneauPouvoir.recharge("Attraper", prise)},
+                {touche(o.keyShift), vol > 0 ? "Nuage  " + (int) Math.ceil(vol) + " s" : PanneauPouvoir.recharge("Nuage de sable", nuage)},
+                {touche(o.keyJump) + " / " + touche(o.keyShift), vol > 0 ? "Monter / descendre (2× : quitter)" : ""},
         };
-        boolean[] gris = {false, !tient && prise > 0, vol <= 0 && nuage > 0, false};
-        int nombre = vol > 0 ? 4 : 3;
+        boolean[] gris = {false, !tient && prise > 0, vol <= 0 && nuage > 0};
         String titre = "Ichibi";
         int teinte = 0xFFD6BA96;
-        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26, ph = 22 + nombre * 13;
-        int x = 6, y = g.guiHeight() / 2 - ph / 2;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int k = 0; k < nombre; k++) {
-            int ly = y + 21 + k * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[k][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[k][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[k][1], x + 18 + largeurTouche, ly, gris[k] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        PanneauPouvoir.dessiner(g, font, titre, teinte, lignes, gris);
     }
 
     /** Le sable qui tombe du bras (et qui tourbillonne autour de lui pendant qu'il monte, à l'éveil). */
@@ -801,6 +827,10 @@ public final class ClientIchibi {
                 return;
             }
             event.setCanceled(true);
+            if (i.prise >= 0 && moi.level().getEntity(i.prise) != null) {
+                // il tient quelqu'un : le bras est tendu jusqu'à lui, dans le monde (voir brasTendu)
+                return;
+            }
             modeles();
             PoseStack ps = event.getPoseStack();
             float coup = event.getSwingProgress(), equipe = event.getEquipProgress(), racine = Mth.sqrt(coup);
@@ -829,7 +859,9 @@ public final class ClientIchibi {
             if (ICHIS.isEmpty() || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES || Minecraft.getInstance().level == null) {
                 return;
             }
-            nuages(event.getPoseStack(), event.getCamera().getPosition(), event.getPartialTick().getGameTimeDeltaPartialTick(false));
+            float partiel = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+            nuages(event.getPoseStack(), event.getCamera().getPosition(), partiel);
+            brasTendu(event.getPoseStack(), event.getCamera(), partiel);
         }
 
         private Evenements() {

@@ -659,27 +659,12 @@ public final class ClientHachibi4 {
             gris[1] = b.charge >= 0 || dama > 0;
             gris[2] = queues > 0;
             gris[3] = encre > 0;
-            lignes = new String[][] {{Clavier.gauche(), "Poings (droite, gauche…)"},
+            lignes = new String[][] {{Clavier.gauche(), "Poings"},
                     {Clavier.droite(), b.charge >= 0 ? "Bijuu Dama (charge…)" : dama > 0 ? String.format("Bijuu Dama (%.0f s)", Math.ceil(dama)) : "Bijuu Dama"},
                     {Clavier.accroupi(), queues > 0 ? String.format("Coup des 8 queues (%.0f s)", Math.ceil(queues)) : "Coup des 8 queues"},
                     {Clavier.accroupi() + " + " + Clavier.droite(), encre > 0 ? String.format("Encre (%.0f s)", Math.ceil(encre)) : "Encre"}};
         }
-        Font font = mc.font;
-        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26, ph = 22 + lignes.length * 13, x = 6, y = hh / 2 - ph / 2, teinte = 0xFFFF5A3C;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        fr.cabane.client.pouvoir.PanneauPouvoir.dessiner(g, mc.font, titre, 0xFFFF5A3C, lignes, gris);
     }
 
     /** Ce qui reste de la recharge (en secondes) d'une attaque faite à ce moment-là. */

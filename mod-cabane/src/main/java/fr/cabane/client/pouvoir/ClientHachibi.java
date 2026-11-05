@@ -803,13 +803,26 @@ public final class ClientHachibi {
             ClientPoulpe.balayage(ClientPoulpe.tampon(buffers), ps.last(), lumiere, tb);
         }
         if (h.prise >= 0 && mc.level.getEntity(h.prise) instanceof net.minecraft.world.entity.Entity proie) {
-            Vec3 d = proie.getPosition(partiel).add(0, proie.getBbHeight() * 0.5, 0).subtract(pied);
             double a = Math.toRadians(lacet);
-            Vec3 vers = new Vec3(d.x * Math.cos(a) + d.z * Math.sin(a), d.y, -d.x * Math.sin(a) + d.z * Math.cos(a)).scale(1 / echelle);
+            Vec3 vers = corps(proie.getPosition(partiel).add(0, proie.getBbHeight() * 0.5, 0).subtract(pied), a, echelle);
+            // à la première personne, depuis le bas du dos elle passerait juste devant ses yeux (et cacherait sa prise) :
+            // elle part d'en bas à droite de la vue, comme une main
+            Vec3 base = ClientPoulpe.base(ClientPoulpe.PRISE);
+            if (joueur == mc.player && mc.options.getCameraType().isFirstPerson()) {
+                net.minecraft.client.Camera vue = mc.gameRenderer.getMainCamera();
+                Vector3f d = new Vector3f(vue.getLookVector()).mul(0.1F).add(new Vector3f(vue.getLeftVector()).mul(-0.55F))
+                        .add(new Vector3f(vue.getUpVector()).mul(-0.55F));
+                base = corps(camera.add(d.x, d.y, d.z).subtract(pied), a, echelle);
+            }
             double serre = h.serre < 0 ? 0 : Math.max(0, 1 - secondes(h.serre) / 0.35);
-            ClientPoulpe.saisie(ClientPoulpe.tampon(buffers), ps.last(), lumiere, vers, secondes(h.priseDebut) / 0.3, serre);
+            ClientPoulpe.saisie(ClientPoulpe.tampon(buffers), ps.last(), lumiere, base, vers, secondes(h.priseDebut) / 0.3, serre);
         }
         ps.popPose();
+    }
+
+    /** Un écart dans le monde (depuis ses pieds), ramené dans le repère de son corps tourné de a (en pixels du modèle). */
+    private static Vec3 corps(Vec3 d, double a, float echelle) {
+        return new Vec3(d.x * Math.cos(a) + d.z * Math.sin(a), d.y, -d.x * Math.sin(a) + d.z * Math.cos(a)).scale(1 / echelle);
     }
 
     private static final float[] NOIR = {0.03F, 0.02F, 0.05F};
@@ -911,7 +924,7 @@ public final class ClientHachibi {
             if (h.forme == 1) {
                 titre = "HACHIBI 2  ·  MANTEAU";
                 String course = h.course >= 0 ? String.format("Course (%.0f s)", Math.ceil(Hachibi.DUREE_COURSE / 20.0 - secondes(h.course)))
-                        : rechargeCourse > 0 ? String.format("Course (recharge %.0f s)", Math.ceil(rechargeCourse)) : "Course";
+                        : rechargeCourse > 0 ? String.format("Course (%.0f s)", Math.ceil(rechargeCourse)) : "Course";
                 gris[1] = h.course < 0 && rechargeCourse > 0;
                 lignes = new String[][]{{Clavier.gauche(), "Griffe"}, {Clavier.accroupi(), course}, {eveil, suite}};
             } else if (h.forme <= 3) {
@@ -941,7 +954,7 @@ public final class ClientHachibi {
                     // Hachibi 4 : la touche de l'ulti, juste avant l'Éveil
                     String[][] avec = java.util.Arrays.copyOf(lignes, lignes.length + 1);
                     avec[lignes.length] = avec[lignes.length - 1];
-                    avec[lignes.length - 1] = new String[]{Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "Ulti : le Hachibi entier"};
+                    avec[lignes.length - 1] = new String[]{Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "Hachibi géant"};
                     lignes = avec;
                     gris = java.util.Arrays.copyOf(gris, 6);
                 }
@@ -963,27 +976,7 @@ public final class ClientHachibi {
             lignes = new String[][]{{Clavier.gauche(), "Griffe"}, {Clavier.droite(), bete}, {Clavier.accroupi(), course},
                     {ClientSusano.EVEIL.getTranslatedKeyMessage().getString(), "Rendormir"}};
         }
-        Font font = mc.font;
-        int largeurTouche = 0;
-        int largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26;
-        int ph = 22 + lignes.length * 13;
-        int x = 6;
-        int y = hh / 2 - ph / 2;
-        int teinte = 0xFFFF5A3C;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        PanneauPouvoir.dessiner(g, mc.font, titre, 0xFFFF5A3C, lignes, gris);
     }
 
     // ================================================================ branchements

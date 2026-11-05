@@ -54,8 +54,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.joml.Vector3f;
 
 /**
- * Le pouvoir Foudre, d'après les maquettes de docs/foudre. Deux listes blanches : « foudre » (le niveau 1 seulement) et
- * « foudre2 » (la touche Éveil passe au niveau 1, puis au niveau 2). Éveillé, la foudre lui tombe dessus et des éclairs
+ * Le pouvoir Foudre, d'après les maquettes de docs/foudre. Trois listes blanches : « foudre » (le niveau 1 seulement),
+ * « foudre2 » (la touche Éveil passe au niveau 1, puis au niveau 2) et « foudre3 » (jusqu'au niveau 3, qui a l'ultime :
+ * l'orage, voir {@link Orage} ; pour l'instant le niveau 3 se joue comme le niveau 2). Éveillé, la foudre lui tombe dessus et des éclairs
  * courent sur lui (voir {@link ClientFoudre}) ; il va plus vite et il est protégé comme par du fer (deux fois au niveau 2).
  * <ul>
  * <li>clic gauche : toute arme frappe plus fort et électrise (un peu plus de dégâts, la cible ralentit) ;</li>
@@ -74,6 +75,8 @@ public final class Foudre {
     public static final String NOM = "foudre";
     /** Avec le niveau 2 (l'aura bleue, le Kirin). */
     public static final String NOM2 = "foudre2";
+    /** Jusqu'au niveau 3, avec l'ultime (l'orage). */
+    public static final String NOM3 = "foudre3";
 
     public static final int RECHARGE_CHAINE = 8 * 20;
     public static final int RECHARGE_PAS = 15 * 20;
@@ -107,14 +110,19 @@ public final class Foudre {
     /** Les dégâts du Kirin au centre : de 6 (lâché tout de suite) à 16 (la barre pleine) ; la moitié au bord. */
     private static final float KIRIN_MIN = 6;
     private static final float KIRIN_MAX = 16;
-    private static final double[] VITESSE = {0, 0.2, 0.4};
+    private static final double[] VITESSE = {0, 0.2, 0.4, 0.6};
+    /** Le niveau 3 (la Foudre 3) : toute arme +6, et un choc de +3 qui saute sur un autre. */
+    private static final float BONUS_3 = 6;
+    private static final float CHOC_3 = 3;
+    private static final double RAYON_PAS_3 = 3;
+    private static final float DEGATS_PAS_3 = 7;
 
-    private static final ResourceKey<DamageType> FOUDRE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("foudre"));
-    private static final ResourceKey<DamageType> KIRIN = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("kirin"));
+    static final ResourceKey<DamageType> FOUDRE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("foudre"));
+    static final ResourceKey<DamageType> KIRIN = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("kirin"));
     private static final ResourceLocation VITE = Cabane.id("foudre_vitesse");
 
     public static boolean est(String pouvoir) {
-        return NOM.equals(pouvoir) || NOM2.equals(pouvoir);
+        return NOM.equals(pouvoir) || NOM2.equals(pouvoir) || NOM3.equals(pouvoir);
     }
 
     /** Qui est éveillé (et à quel niveau), quand son clic droit et son pas seront prêts (ticks du serveur). */
@@ -288,6 +296,8 @@ public final class Foudre {
             son(joueur.serverLevel(), joueur.position(), SoundEvents.BEACON_DEACTIVATE, 0.8F, 1.6F);
         }
         annuler(joueur, false);
+        Orage.endormir(joueur);
+        Foudre3.endormir(joueur);
         vitesse(joueur, 0);
         // le repos (1 ou 2 minutes) dure plus que les recharges : au réveil, tout est prêt
         PRET_DROIT.remove(joueur.getUUID());
@@ -301,7 +311,7 @@ public final class Foudre {
         }
         a.removeModifier(VITE);
         if (niveau > 0) {
-            a.addTransientModifier(new AttributeModifier(VITE, VITESSE[Math.min(2, niveau)], AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+            a.addTransientModifier(new AttributeModifier(VITE, VITESSE[Math.min(3, niveau)], AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         }
     }
 
@@ -310,7 +320,7 @@ public final class Foudre {
     }
 
     /** Son niveau en ce moment : 0 endormi, 1, 2 (l'aura bleue, le Kirin). */
-    private static int niveau(ServerPlayer joueur) {
+    static int niveau(ServerPlayer joueur) {
         return eveille(joueur) ? EVEILLES.get(joueur.getUUID()) : 0;
     }
 
@@ -318,11 +328,11 @@ public final class Foudre {
         monde.playSound(null, ou.x, ou.y, ou.z, son, SoundSource.PLAYERS, volume, hauteur);
     }
 
-    private static DamageSource source(ServerPlayer joueur, ResourceKey<DamageType> type) {
+    static DamageSource source(ServerPlayer joueur, ResourceKey<DamageType> type) {
         return new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(type), joueur);
     }
 
-    private static void blesser(LivingEntity cible, DamageSource source, float degats) {
+    static void blesser(LivingEntity cible, DamageSource source, float degats) {
         dansPouvoir = true;
         try {
             cible.hurt(source, degats);
@@ -386,7 +396,8 @@ public final class Foudre {
 
     /** Il lève la main : le Kirin commence à se charger au-dessus de là où il vise (40 blocs au plus, posé au sol). */
     private static void leverLaMain(ServerPlayer joueur) {
-        if (niveau(joueur) < 2 || CHARGES.containsKey(joueur.getUUID()) || !pret(PRET_DROIT, joueur)) {
+        // au niveau 3, le clic droit est au guépard et à l'oiseau-tonnerre (Foudre3)
+        if (niveau(joueur) != 2 || CHARGES.containsKey(joueur.getUUID()) || !pret(PRET_DROIT, joueur)) {
             return;
         }
         ServerLevel monde = joueur.serverLevel();
@@ -482,7 +493,9 @@ public final class Foudre {
 
     private static void pas(ServerPlayer joueur) {
         int niveau = niveau(joueur);
-        if (niveau == 0 || CHARGES.containsKey(joueur.getUUID()) || !pret(PRET_PAS, joueur)) {
+        boolean trois = niveau >= 3;
+        // au niveau 3 : trois charges (une revient toutes les 2 s) au lieu de la recharge
+        if (niveau == 0 || CHARGES.containsKey(joueur.getUUID()) || (trois ? !Foudre3.chargeTp(joueur) : !pret(PRET_PAS, joueur))) {
             return;
         }
         ServerLevel monde = joueur.serverLevel();
@@ -519,7 +532,11 @@ public final class Foudre {
             return;
         }
         int maintenant = joueur.server.getTickCount();
-        PRET_PAS.put(joueur.getUUID(), maintenant + (fort ? RECHARGE_PAS_2 : RECHARGE_PAS));
+        if (trois) {
+            Foudre3.utiliserCharge(joueur);
+        } else {
+            PRET_PAS.put(joueur.getUUID(), maintenant + (fort ? RECHARGE_PAS_2 : RECHARGE_PAS));
+        }
         // le bruit des téléportations de Minato, avec un éclair en plus
         son(monde, depart, CabaneSons.MINATO_FLASH.get(), 1F, 1F);
         joueur.stopRiding();
@@ -529,18 +546,22 @@ public final class Foudre {
         joueur.fallDistance = 0;
         SANS_CHUTE.put(joueur.getUUID(), maintenant);
         envoyer(monde, new Saut(joueur.getUUID(), v(depart), v(pieds), fort), depart, pieds);
+        if (trois) {
+            // le gros trait qui reste là où il est passé : ceux qu'il traverse prennent un choc
+            Foudre3.trait(joueur, depart, pieds);
+        }
         son(monde, pieds, CabaneSons.MINATO_FLASH.get(), 1F, 1F);
         son(monde, pieds, SoundEvents.LIGHTNING_BOLT_IMPACT, fort ? 2.2F : 1.6F, 0.9F);
         son(monde, pieds, SoundEvents.LIGHTNING_BOLT_THUNDER, fort ? 1.6F : 1F, 1.4F);
         // la foudre qui tombe là où il arrive
-        double rayon = fort ? RAYON_PAS_2 : RAYON_PAS;
+        double rayon = trois ? RAYON_PAS_3 : fort ? RAYON_PAS_2 : RAYON_PAS;
         for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, joueur.getBoundingBox().inflate(rayon, 2, rayon),
                 e -> Pouvoirs.cible(joueur, e) && !e.isSpectator())) {
             Vec3 loinDeLui = e.position().subtract(pieds);
             if (loinDeLui.horizontalDistance() > rayon) {
                 continue;
             }
-            blesser(e, source(joueur, FOUDRE), fort ? DEGATS_PAS_2 : DEGATS_PAS);
+            blesser(e, source(joueur, FOUDRE), trois ? DEGATS_PAS_3 : fort ? DEGATS_PAS_2 : DEGATS_PAS);
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, fort ? 60 : 40, fort ? 1 : 0));
             Vec3 dehors = loinDeLui.horizontalDistanceSqr() < 0.01 ? Vec3.ZERO : new Vec3(loinDeLui.x, 0, loinDeLui.z).normalize();
             e.setDeltaMovement(dehors.x * 0.5, 0.3, dehors.z * 0.5);
@@ -583,7 +604,7 @@ public final class Foudre {
 
     @SubscribeEvent
     public static void chute(LivingFallEvent event) {
-        if (event.getEntity() instanceof ServerPlayer joueur && SANS_CHUTE.containsKey(joueur.getUUID())) {
+        if (event.getEntity() instanceof ServerPlayer joueur && (SANS_CHUTE.containsKey(joueur.getUUID()) || niveau(joueur) >= 3)) {
             event.setCanceled(true);
         }
     }
@@ -600,8 +621,11 @@ public final class Foudre {
             return;
         }
         LivingEntity cible = event.getEntity();
-        boolean fort = niveau(joueur) >= 2;
-        event.setAmount(event.getAmount() + (fort ? BONUS_2 + CHOC_2 : BONUS + CHOC));
+        boolean fort = niveau(joueur) >= 2, trois = niveau(joueur) >= 3;
+        event.setAmount(event.getAmount() + (trois ? BONUS_3 + CHOC_3 : fort ? BONUS_2 + CHOC_2 : BONUS + CHOC));
+        if (trois) {
+            Foudre3.sauter(joueur, cible);
+        }
         cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, fort ? 60 : 40, fort ? 2 : 0));
         ServerLevel monde = joueur.serverLevel();
         son(monde, cible.position(), CabaneSons.FOUDRE_ZAP.get(), fort ? 1.1F : 0.8F, fort ? 0.8F : 1.1F);

@@ -1842,6 +1842,52 @@ public class HubBuilder {
         }
     }
 
+    /**
+     * Ce qui est à vendre dans le village (pour la protection des bâtiments : un lot acheté se modifie librement).
+     * Chaque lot : {x0, z0, x1, z1, x de la borne, z de la borne}, autour du centre. Les mêmes valeurs que
+     * maisons(), maisonsTranquilles(), les commerces et quartiers() : à changer ensemble.
+     */
+    public static List<int[]> lotsAVendre() {
+        List<int[]> lots = new ArrayList<>();
+        // les maisons de la rue (u -5..5, v -4..7 avec le jardin) et le chantier (v -2..7)
+        for (int[] m : new int[][] {{25, -7, -1}, {36, -7, -1}, {25, 7, 1}, {36, 7, 1}}) {
+            lots.add(lot(m[0] - 5, m[1] + m[2] * -4, m[0] + 5, m[1] + m[2] * 7, m[0] + 3, m[1] - 3 * m[2]));
+        }
+        lots.add(lot(47 - 5, -7 + 2, 47 + 5, -7 - 7, 47 + 4, -7 + 2));
+        lots.add(new int[] {43, 7, 51, 13, 47, 10});
+        // les deux chaumières (u -6..6, v -5..8)
+        for (int[] m : new int[][] {{-36, 47, 1}, {37, 47, 1}}) {
+            lots.add(lot(m[0] - 6, m[1] - 5 * m[2], m[0] + 6, m[1] + 8 * m[2], m[0] + 2, m[1] - 5 * m[2]));
+        }
+        // les terrains des commerces
+        for (int[] t : new int[][] {{-44, -40, -32, -26}, {32, -40, 44, -26}, {-54, 18, -40, 30}}) {
+            lots.add(new int[] {t[0], t[1], t[2], t[3], (t[0] + t[2]) / 2, t[3]});
+        }
+        // la couronne des terrains à bâtir
+        int places = 26;
+        for (int k = 0; k < places; k++) {
+            double a = k * Math.PI * 2 / places;
+            double versAllee = Math.abs(Math.IEEEremainder(a - Math.PI / 4, Math.PI / 2));
+            double versSud = Math.abs(Math.IEEEremainder(a - Math.PI / 2, Math.PI * 2));
+            if (versAllee < 0.12 || versSud < 0.16) {
+                continue;
+            }
+            int tx = (int) Math.round(Math.cos(a) * RAYON_TERRAINS);
+            int tz = (int) Math.round(Math.sin(a) * RAYON_TERRAINS);
+            lots.add(new int[] {tx - 5, tz - 5, tx + 5, tz + 5, tx, tz});
+        }
+        return lots;
+    }
+
+    private static int[] lot(int xa, int za, int xb, int zb, int bx, int bz) {
+        return new int[] {Math.min(xa, xb), Math.min(za, zb), Math.max(xa, xb), Math.max(za, zb), bx, bz};
+    }
+
+    /** Le rayon du village (la palissade). */
+    public static int rayon() {
+        return RAYON;
+    }
+
     /** Un grand terrain pour un commerce : bordure de gravier, poteaux à lanterne, borne à vendre. */
     private void terrainCommercial(int x0, int z0, int x1, int z1) {
         for (int x = x0; x <= x1; x++) {

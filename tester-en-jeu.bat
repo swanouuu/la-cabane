@@ -11,6 +11,9 @@ rem le fichier de captures automatiques de Claude ne doit pas se lancer pendant 
 del /q "mod-cabane\run\cabane-photos.txt" 2>nul
 rem le pack prive (voix, bruitages, Kurama...) : le meme que dans SakaiMod.zip
 node outils\pack-voix-test.mjs
+rem nos emotes (outils\emotes.mjs) : les memes que dans le pack
+if not exist "mod-cabane\run\emotes" mkdir "mod-cabane\run\emotes"
+copy /y "pack\emotes\*.json" "mod-cabane\run\emotes\" >nul
 echo === Minecraft de test : tous les mods du pack + la derniere version de SakaiMod ===
 echo (la premiere fois, compter 1 a 2 minutes de chargement)
 call mod-cabane\gradlew.bat -p mod-cabane runClient --no-configuration-cache

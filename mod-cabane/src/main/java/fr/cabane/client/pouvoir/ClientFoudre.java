@@ -89,7 +89,7 @@ public final class ClientFoudre {
 
     private static final List<Chaine> CHAINES = new ArrayList<>();
 
-    private record Saut(Vec3 de, Vec3 a, boolean fort, long debut) {
+    private record Saut(Vec3 de, Vec3 a, boolean fort, boolean trois, long debut) {
     }
 
     private static final List<Saut> SAUTS = new ArrayList<>();
@@ -138,6 +138,8 @@ public final class ClientFoudre {
     // ================================================================ ce que dit le serveur
 
     public static void recevoir(Pouvoirs.Etat p) {
+        // la Foudre 3 au niveau 3 : la tenue bleue (voir ClientTenueFoudre)
+        ClientTenueFoudre.etat(p.joueur(), p.eveille() && Foudre.NOM3.equals(p.pouvoir()) && p.niveau() >= 3, p.annonce());
         Eveil avant = EVEILLES.get(p.joueur());
         Minecraft mc = Minecraft.getInstance();
         boolean moi = mc.player != null && p.joueur().equals(mc.player.getUUID());
@@ -156,11 +158,13 @@ public final class ClientFoudre {
                 pretDroit = 0;
                 pretPas = 0;
                 tenu = false;
+                ClientBetes.endormi();
             }
         }
     }
 
     public static void oublier(UUID joueur) {
+        ClientTenueFoudre.oublier(joueur);
         EVEILLES.remove(joueur);
         FRAPPES.remove(joueur);
     }
@@ -171,7 +175,8 @@ public final class ClientFoudre {
 
     public static void saut(Foudre.Saut p) {
         Vec3 a = vec(p.a());
-        SAUTS.add(new Saut(vec(p.de()), a, p.fort(), System.nanoTime()));
+        Eveil qui = EVEILLES.get(p.joueur());
+        SAUTS.add(new Saut(vec(p.de()), a, p.fort(), qui != null && qui.niveau() >= 3, System.nanoTime()));
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.position().distanceTo(a) < 12) {
             secouer(p.fort() ? 0.8F : 0.5F);
@@ -254,6 +259,7 @@ public final class ClientFoudre {
 
     /** Pour le Kirin, il lève la main droite tout droit vers le ciel ; au lâcher, il la baisse vers la zone. */
     public static void poser(PlayerModel<?> modele, Player joueur) {
+        ClientBetes.poser(modele, joueur);
         Kirin k = KIRINS.get(joueur.getUUID());
         if (k == null) {
             return;
@@ -357,7 +363,7 @@ public final class ClientFoudre {
 
     // ================================================================ dessiner des éclairs
 
-    private static final class Types extends RenderType {
+    static final class Types extends RenderType {
         /** Le cœur des éclairs, le nuage, les voiles : translucides (visibles aussi en plein jour), visibles des deux côtés. */
         static final RenderType VOILE = create("cabane_foudre_voile", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144,
                 false, true, CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setWriteMaskState(COLOR_WRITE)
@@ -382,7 +388,7 @@ public final class ClientFoudre {
         c.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(col[0], col[1], col[2], a);
     }
 
-    private static void bande(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, Vec3 o, float[] col, float al) {
+    static void bande(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, Vec3 o, float[] col, float al) {
         sommet(c, m, a.add(o), col, al);
         sommet(c, m, b.add(o), col, al);
         sommet(c, m, b.subtract(o), col, al);
@@ -390,7 +396,7 @@ public final class ClientFoudre {
     }
 
     /** Une lueur douce de part et d'autre du segment : pleine au milieu, rien au bord. */
-    private static void degrade(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, Vec3 o, float[] col, float al) {
+    static void degrade(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, Vec3 o, float[] col, float al) {
         for (Vec3 cote : new Vec3[]{o, o.scale(-1)}) {
             sommet(c, m, a, col, al);
             sommet(c, m, b, col, al);
@@ -465,7 +471,7 @@ public final class ClientFoudre {
      * à un autre tout près ; libres qui s'échappent dans l'air ; sol qui descendent jusqu'au sol. Ils changent douze fois
      * par seconde.
      */
-    private static void crepite(VertexConsumer c, Matrix4f m, Vec3 pieds, double r, double h, int n, int libres, int sol, long graine, double e, float alpha) {
+    static void crepite(VertexConsumer c, Matrix4f m, Vec3 pieds, double r, double h, int n, int libres, int sol, long graine, double e, float alpha) {
         long tranche = System.nanoTime() / 83_000_000L;
         Random rnd = new Random(tranche * 7919 + graine);
         for (int i = 0; i < n + libres + sol; i++) {
@@ -786,7 +792,7 @@ public final class ClientFoudre {
             boolean fort = en.getValue().niveau() >= 2;
             Long frappe = FRAPPES.get(en.getKey());
             if (frappe != null) {
-                // la transformation (la charge, la cage : voir ClientTransfoFoudre)
+                // la transformation (la charge, la cage, l'orage et la colonne : voir ClientTransfoFoudre)
                 double t = secondes(frappe);
                 int niveau = en.getValue().niveau();
                 if (t < ClientTransfoFoudre.fin(niveau)) {
@@ -818,9 +824,19 @@ public final class ClientFoudre {
         for (Saut s : SAUTS) {
             double t = secondes(s.debut());
             Vec3 de = s.de().subtract(cam), a = s.a().subtract(cam);
-            float fin = (float) Math.max(0, 1 - t / 0.6);
+            float fin = (float) Math.max(0, 1 - t / (s.trois() ? 1.0 : 0.6));
             for (int i = 0; i < 3; i++) {
-                eclair(c, m, de.add(0, 0.4 + i * 0.6, 0), a.add(0, 0.4 + i * 0.6, 0), s.debut() + i, i == 1 ? 0.06 : 0.035, fin, 3, CIEL);
+                eclair(c, m, de.add(0, 0.4 + i * 0.6, 0), a.add(0, 0.4 + i * 0.6, 0), s.debut() + i + (s.trois() ? (long) (t * 12) * 7 : 0), i == 1 ? 0.06 : 0.035, fin, 3, CIEL);
+            }
+            if (s.trois()) {
+                // le niveau 3 : un gros trait de foudre qui reste là où il est passé, qui crépite, des éclairs au sol
+                eclair(c, m, de.add(0, 1, 0), a.add(0, 1, 0), s.debut() * 5 + (long) (t * 12), 0.16, fin, 8, CIEL);
+                Random r = new Random(s.debut() + (long) (t * 12));
+                for (int i = 0; i < 6; i++) {
+                    Vec3 p = de.lerp(a, r.nextDouble());
+                    eclair(c, m, p.add(0, 1, 0), p.add(r.nextGaussian() * 1.5, 0.05, r.nextGaussian() * 1.5), r.nextLong(), 0.04, fin, 1, CIEL);
+                }
+                anneau(c, m, de.add(0, 0.06, 0), 3 * Math.min(1, t / 0.3), 1, BLANC, 0.7F * fin);
             }
             if (t < 0.4) {
                 eclair(c, m, a.add(2, 40, -1.5), a, s.debut() * 3 + (long) (t * 15), s.fort() ? 0.18 : 0.13, (float) (1 - t / 0.4), 6, CIEL);
@@ -831,6 +847,9 @@ public final class ClientFoudre {
         for (Map.Entry<UUID, Kirin> en : KIRINS.entrySet()) {
             dessinerKirin(c, m, en.getKey(), en.getValue(), cam);
         }
+        // l'ultime de la Foudre 3 : l'orage ; ses bêtes : le guépard, l'oiseau-tonnerre
+        ClientOrage.dessiner(c, m, cam, partiel);
+        ClientBetes.dessiner(c, m, cam, partiel);
     }
 
     /** Les membres du joueur, et leurs pavés (en pixels, dans le repère de chacun) : tête, corps, bras droit, bras gauche, jambes. */
@@ -1002,6 +1021,7 @@ public final class ClientFoudre {
         if (enCharge(k)) {
             barre(g, mc.font, charge(k));
         }
+        ClientBetes.barre(g, mc.font);
     }
 
     /** Le panneau, avec les touches de ce joueur (voir Clavier). */
@@ -1009,31 +1029,24 @@ public final class ClientFoudre {
         long maintenant = System.nanoTime();
         double droit = Math.max(0, (pretDroit - maintenant) / 1e9), pas = Math.max(0, (pretPas - maintenant) / 1e9);
         boolean fort = e.niveau() >= 2;
+        boolean trois = Foudre.NOM3.equals(e.pouvoir());
+        String eveil = !fort && (Foudre.NOM2.equals(e.pouvoir()) || trois) ? "Niveau 2" : trois && e.niveau() == 2 ? "Niveau 3" : "Rendormir";
         String[][] lignes = {
-                {Clavier.gauche(), fort ? "Arme +4 dégâts, gros choc" : "Arme +2 dégâts, choc électrique"},
-                {Clavier.droite(), (fort ? "Kirin (maintenir, puis lâcher)" : "Éclair en chaîne") + (droit > 0 ? "  " + (int) Math.ceil(droit) + " s" : "")},
-                {Clavier.accroupi(), (fort ? "Pas de l'éclair, 50 blocs" : "Pas de l'éclair, 25 blocs") + (pas > 0 ? "  " + (int) Math.ceil(pas) + " s" : "")},
-                {Clavier.nom(ClientSusano.EVEIL), Foudre.NOM2.equals(e.pouvoir()) && !fort ? "Niveau 2 : l'aura bleue, le Kirin" : "Rendormir"},
+                {Clavier.gauche(), fort ? "Gros choc" : "Choc électrique"},
+                {fort ? Clavier.droite() + " tenu" : Clavier.droite(), PanneauPouvoir.recharge(fort ? "Kirin" : "Éclair en chaîne", droit)},
+                {Clavier.accroupi(), PanneauPouvoir.recharge("Pas de l'éclair", pas)},
+                {Clavier.nom(ClientSusano.EVEIL), eveil},
         };
-        boolean[] gris = {false, droit > 0, pas > 0, false};
-        String titre = "Foudre" + (fort ? "  ·  niveau 2" : "");
+        boolean[] gris = {false, droit > 0, pas > 0, false, false};
+        if (e.niveau() >= 3) {
+            String[][] l3 = ClientBetes.lignes();
+            lignes = new String[][]{l3[0], l3[1], l3[2], l3[3], {Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "L'Orage"},
+                    {Clavier.nom(ClientSusano.EVEIL), "Rendormir"}};
+            gris = new boolean[]{false, false, false, false, false, false};
+        }
+        String titre = "Foudre" + (fort ? "  ·  niv. " + e.niveau() : "");
         int teinte = 0xFF8CD8FF;
-        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26, ph = 22 + lignes.length * 13;
-        int x = 6, y = g.guiHeight() / 2 - ph / 2;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        PanneauPouvoir.dessiner(g, font, titre, teinte, lignes, gris);
     }
 
     /** La barre du Kirin, au-dessus de la barre d'objets : plus elle est pleine, plus il fera mal. */
@@ -1092,6 +1105,7 @@ public final class ClientFoudre {
                 SAUTS.clear();
                 CHOCS.clear();
                 KIRINS.clear();
+                ClientBetes.vider();
                 tenu = false;
                 return;
             }
@@ -1104,7 +1118,13 @@ public final class ClientFoudre {
             }
             // s'accroupir (l'appui, pas le maintien) : le pas de l'éclair
             boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretPas && !enCharge(KIRINS.get(mc.player.getUUID()))) {
+            if (moi != null && moi.niveau() >= 3) {
+                // le niveau 3 : un appui sur le clic droit (le guépard) ou tenu (l'oiseau) ; le TP a trois charges
+                ClientBetes.tick(mc);
+                if (accroupi && !accroupiAvant && mc.screen == null && !ClientBetes.enCharge() && ClientBetes.prendreCharge()) {
+                    PacketDistributor.sendToServer(new Foudre.Pas());
+                }
+            } else if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretPas && !enCharge(KIRINS.get(mc.player.getUUID()))) {
                 pretPas = maintenant + (moi.niveau() >= 2 ? Foudre.RECHARGE_PAS_2 : Foudre.RECHARGE_PAS) * 50_000_000L;
                 PacketDistributor.sendToServer(new Foudre.Pas());
             }
@@ -1138,7 +1158,8 @@ public final class ClientFoudre {
             }
             FRAPPES.values().removeIf(t -> (maintenant - t) / 1e9 > 5);
             CHAINES.removeIf(ch -> secondes(ch.debut()) > 0.5);
-            SAUTS.removeIf(s -> secondes(s.debut()) > 0.7);
+            SAUTS.removeIf(s -> secondes(s.debut()) > (s.trois() ? 1.1 : 0.7));
+            ClientBetes.nettoyer();
             CHOCS.values().removeIf(ch -> secondes(ch.debut()) > (ch.fort() ? 0.9 : 0.5));
             for (Map.Entry<UUID, Kirin> e : KIRINS.entrySet()) {
                 tickKirin(mc, e.getKey(), e.getValue());
@@ -1191,6 +1212,10 @@ public final class ClientFoudre {
             event.setCanceled(true);
             event.setSwingHand(false);
             long maintenant = System.nanoTime();
+            if (moi.niveau() >= 3) {
+                ClientBetes.appui();
+                return;
+            }
             if (moi.niveau() >= 2) {
                 if (!tenu && maintenant >= pretDroit && !enCharge(KIRINS.get(mc.player.getUUID()))) {
                     tenu = true;
@@ -1209,7 +1234,7 @@ public final class ClientFoudre {
         @SubscribeEvent
         public static void immobile(MovementInputUpdateEvent event) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || !enCharge(KIRINS.get(mc.player.getUUID()))) {
+            if (mc.player == null || !enCharge(KIRINS.get(mc.player.getUUID())) && !ClientBetes.enCharge()) {
                 return;
             }
             event.getInput().leftImpulse = 0;
@@ -1242,7 +1267,7 @@ public final class ClientFoudre {
         public static void monde(RenderLevelStageEvent event) {
             Minecraft mc = Minecraft.getInstance();
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || mc.level == null
-                    || EVEILLES.isEmpty() && CHAINES.isEmpty() && SAUTS.isEmpty() && CHOCS.isEmpty() && KIRINS.isEmpty()) {
+                    || EVEILLES.isEmpty() && CHAINES.isEmpty() && SAUTS.isEmpty() && CHOCS.isEmpty() && KIRINS.isEmpty() && !ClientOrage.actif() && !ClientBetes.actif()) {
                 return;
             }
             dessiner(event.getPoseStack(), event.getCamera().getPosition(), event.getPartialTick().getGameTimeDeltaPartialTick(false));

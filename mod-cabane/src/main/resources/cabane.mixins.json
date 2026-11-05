@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "fr.cabane.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["ChunkGeneratorMixin"],
+  "mixins": ["ChunkGeneratorMixin", "FireBlockMixin"],
   "client": ["AbstractClientPlayerMixin", "CameraMixin", "PlayerModelMixin", "MinecraftMixin", "EntityMixin", "CapeLayerMixin", "LivingEntityRendererMixin"],
   "injectors": {
     "defaultRequire": 1

@@ -51,9 +51,9 @@
 	]
 	quest.0D3F2FBF63AD6E94.title: "Les brutes à la hache"
 	quest.0DC04F56329BC588.quest_desc: [
-		"Trouvez un avant-poste des Pillards. Dans leurs coffres, de l'or… frappé du sceau de la Mairie ?"
+		"Trouvez un avant-poste des Pillards. Fouillez leurs coffres : d'où vient tout cet or ?"
 		""
-		"Comment des pillards peuvent-ils être payés par le Président ? Il faudra fouiller la Mairie."
+		"Regardez bien les pièces. Quelqu'un, quelque part, les paie."
 	]
 	quest.0DC04F56329BC588.title: "L'avant-poste"
 	quest.0ED2F75EB32984DE.quest_desc: [

@@ -959,36 +959,20 @@ public final class ClientFruit {
             panneau3(g, font, glace, jet, choc);
             return;
         }
-        String gauche = fort ? (glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse")
-                : glace ? "Arme +2 dégâts, ralentit" : "Arme +2 dégâts, enflamme";
+        String gauche = glace ? "Coup glacé" : "Coup de lave";
         String droit = fort ? (glace ? "Grande flèche de glace" : "Grand poing de magma") : glace ? "Jet de glace" : "Jet de lave";
         String accroupi = fort ? (glace ? "Faisan de glace" : "Pluie de météores") : glace ? "Ère glaciaire" : "Éruption";
         String[][] lignes = {
                 {Clavier.gauche(), gauche},
-                {Clavier.droite(), droit + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
-                {Clavier.accroupi(), accroupi + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
-                {Clavier.nom(ClientSusano.EVEIL), (Fruit.deuxieme(sorte) || Fruit.troisieme(sorte)) && !fort ? "Niveau 2 : la moitié du corps"
-                        : Fruit.troisieme(sorte) ? "Niveau 3 : tout le corps" : "Rendormir"},
+                {Clavier.droite(), PanneauPouvoir.recharge(droit, jet)},
+                {Clavier.accroupi(), PanneauPouvoir.recharge(accroupi, choc)},
+                {Clavier.nom(ClientSusano.EVEIL), (Fruit.deuxieme(sorte) || Fruit.troisieme(sorte)) && !fort ? "Niveau 2"
+                        : Fruit.troisieme(sorte) ? "Niveau 3" : "Rendormir"},
         };
         boolean[] gris = {false, jet > 0, choc > 0, false};
-        String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + (fort ? "  ·  niveau 2" : "");
+        String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + (fort ? "  ·  niv. 2" : "");
         int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
-        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26, ph = 22 + lignes.length * 13;
-        int x = 6, y = g.guiHeight() / 2 - ph / 2;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        PanneauPouvoir.dessiner(g, font, titre, teinte, lignes, gris);
     }
 
     /**
@@ -999,42 +983,22 @@ public final class ClientFruit {
     private static void panneau3(GuiGraphics g, Font font, boolean glace, double jet, double choc) {
         double dragon = ClientFruit3.attenteDragon(), ultime = ClientFruit3.attenteUltime();
         boolean prete = ClientFruit3.ultimePrete();
-        String ulti = prete ? (glace ? "Ultime : le Hyoton (une fois)" : "Ultime : le soleil de magma (une fois)")
-                : ClientFruit3.ultimeFaite() ? "Ultime : déjà faite pendant cet éveil" : "Ultime : encore " + (int) Math.ceil(ultime / 60) + " min";
+        String nomUlti = glace ? "Hyoton" : "Soleil de magma";
+        String ulti = prete ? nomUlti : ClientFruit3.ultimeFaite() ? nomUlti + " (faite)" : nomUlti + "  " + (int) Math.ceil(ultime / 60) + " min";
         String[][] lignes = {
-                {Clavier.gauche(), ClientFruit3.monte() ? (ClientFruit3.tient() ? "Il le tient dans sa gueule" : "Attraper (la gueule)")
-                        : glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse"},
-                {Clavier.droite(), (glace ? "Grande flèche de glace" : "Grand poing de magma") + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
+                {Clavier.gauche(), ClientFruit3.monte() ? (ClientFruit3.tient() ? "Il le tient dans sa gueule" : "Attraper (la gueule)") : glace ? "Coup glacé" : "Coup de lave"},
+                {Clavier.droite(), PanneauPouvoir.recharge(glace ? "Grande flèche de glace" : "Grand poing de magma", jet)},
                 ClientFruit3.monte()
-                        ? new String[]{Clavier.droite(), "Foncer  " + (int) Math.ceil(ClientFruit3.restantMonte()) + " s"}
-                        : new String[]{Clavier.droite() + " maintenu", (glace ? "Dragon de glace : tu montes dessus" : "Dragon de lave : tu montes dessus")
-                                + (dragon > 0 ? "  " + (int) Math.ceil(dragon) + " s" : "")},
-                {Clavier.accroupi(), (glace ? "Capsule de glace : enferme ceux qui sont autour" : "Chien de l'enfer : il mord et emporte")
-                        + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
+                        ? new String[]{Clavier.droite(), "Foncer" + "  " + (int) Math.ceil(ClientFruit3.restantMonte()) + " s"}
+                        : new String[]{Clavier.droite() + " tenu", PanneauPouvoir.recharge(glace ? "Dragon de glace" : "Dragon de lave", dragon)},
+                {Clavier.accroupi(), PanneauPouvoir.recharge(glace ? "Capsule de glace" : "Chien de l'enfer", choc)},
                 {Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), ulti},
                 {Clavier.nom(ClientSusano.EVEIL), "Rendormir"},
         };
         boolean[] gris = {false, jet > 0, dragon > 0 && !ClientFruit3.monte(), choc > 0 || ClientFruit3.monte(), !prete, false};
-        String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + "  ·  niveau 3";
+        String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + "  ·  niv. 3";
         int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
-        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26, ph = 22 + lignes.length * 13;
-        int x = 6, y = g.guiHeight() / 2 - ph / 2;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            if (!lignes[i][0].isEmpty()) {
-                g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-                g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            }
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        PanneauPouvoir.dessiner(g, font, titre, teinte, lignes, gris);
     }
 
     // ================================================================ dessins dans le monde

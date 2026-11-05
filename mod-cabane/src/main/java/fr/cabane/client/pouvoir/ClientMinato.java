@@ -443,50 +443,30 @@ public final class ClientMinato {
         double reste = pret < 0 ? 0 : -secondes(pret);
         boolean vol = LAMES.containsKey(moi) && !LAMES.get(moi).plante;
         String kunai = kurama ? (reste > 0 ? String.format("Bijuu Dama (%.0f s)", Math.ceil(reste)) : "Bijuu Dama")
-                : vol ? "Kunai (en vol…)" : reste > 0 ? String.format("Kunai (%.0f s)", Math.ceil(reste)) : "Lancer le kunai";
+                : vol ? "Kunai (en vol)" : reste > 0 ? String.format("Kunai (%.0f s)", Math.ceil(reste)) : "Kunai";
         String titre = kurama ? "MINATO  ·  MODE KURAMA" : "MINATO  ·  ÉCLAIR JAUNE";
         Marque m = MARQUES.get(moi);
-        String marque = m == null ? "Aucun kunai posé" : m.type() == 2 ? "Rejoindre " + m.nom() : "Revenir au kunai";
+        String marque = m == null ? "" : m.type() == 2 ? "TP sur " + m.nom() : "TP à la marque";
         // le kunai lancé à la main : en vol ou planté, on y va ; sinon on en lance un (après la recharge)
         Marque lance = LANCES.get(moi);
         boolean envol = ENVOLS.containsKey(moi);
         double resteJet = pretJet < 0 ? 0 : -secondes(pretJet);
-        String jet = envol ? "Attraper le kunai en vol" : lance != null ? (lance.type() == 2 ? "Rejoindre " + lance.nom() : "Aller au kunai lancé")
-                : resteJet > 0 ? String.format("Lancer un kunai (%.0f s)", Math.ceil(resteJet)) : "Lancer un kunai";
+        String jet = envol ? "Rattraper le kunai" : lance != null ? (lance.type() == 2 ? "TP sur " + lance.nom() : "TP au kunai")
+                : resteJet > 0 ? String.format("Kunai lancé (%.0f s)", Math.ceil(resteJet)) : "Kunai lancé";
         double resteEclair = pretEclair < 0 ? 0 : -secondes(pretEclair);
         String eveil = ClientSusano.EVEIL.getTranslatedKeyMessage().getString();
         // Minato 2 au niveau 1 : la touche Éveil donne le mode Kurama
         boolean monte = !kurama && Minecraft.getInstance().getConnection() != null && minato2;
         String[][] lignes = kurama
-                ? new String[][] {{Clavier.gauche(), "Frapper (TP autour)"}, {Clavier.droite(), kunai},
-                        {Clavier.accroupi() + " + " + Clavier.droite(), resteEclair > 0 ? String.format("TP où tu regardes (%.0f s)", Math.ceil(resteEclair)) : "TP où tu regardes"},
+                ? new String[][] {{Clavier.gauche(), "Coup éclair"}, {Clavier.droite(), kunai},
+                        {Clavier.accroupi() + " + " + Clavier.droite(), resteEclair > 0 ? String.format("TP (%.0f s)", Math.ceil(resteEclair)) : "TP"},
                         {Clavier.accroupi() + " + " + Clavier.gauche(), jet}, {Clavier.nom(ClientSharingan.SUSANO), m == null ? "Planter un kunai" : marque}, {eveil, "Rendormir"}}
-                : new String[][] {{Clavier.gauche(), "Frapper au kunai"}, {Clavier.droite(), kunai}, {Clavier.accroupi() + " + " + Clavier.gauche(), jet},
+                : new String[][] {{Clavier.gauche(), "Coup de kunai"}, {Clavier.droite(), kunai}, {Clavier.accroupi() + " + " + Clavier.gauche(), jet},
                         {Clavier.accroupi() + " + " + Clavier.droite(), "Poser la marque"}, {Clavier.nom(ClientSharingan.SUSANO), marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
         boolean[] gris = kurama
                 ? new boolean[] {false, reste > 0, resteEclair > 0, !envol && lance == null && resteJet > 0, false, m == null, false}
                 : new boolean[] {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, false};
-        Font font = mc.font;
-        int largeurTouche = 0;
-        int largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int pw = largeurTouche + largeurAction + 26;
-        int ph = 22 + lignes.length * 13;
-        int x = 6;
-        int y = g.guiHeight() / 2 - ph / 2;
-        int teinte = kurama ? 0xFFFF9A2A : 0xFFFFD23A;
-        g.fill(x, y, x + pw, y + ph, 0xA0000000);
-        g.fill(x, y, x + 2, y + ph, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, gris[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        PanneauPouvoir.dessiner(g, mc.font, titre, kurama ? 0xFFFF9A2A : 0xFFFFD23A, lignes, gris);
     }
 
     // ================================================================ branchements

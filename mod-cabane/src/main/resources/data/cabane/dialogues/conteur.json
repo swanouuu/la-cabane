@@ -37,37 +37,37 @@
       ]
     },
     "h2": {
-      "titre": "L'homme en costume",
+      "titre": "Les Pillards du Sud",
       "textes": [
-        "Un jour, un homme en costume est arrivé. Il parlait bien, il souriait beaucoup, il promettait tout : la prospérité, la sécurité… et en même temps, l'inverse. Le Conseil l'a écouté. Puis il a pris le titre de Président, s'est entouré d'une garde masquée, et le Conseil n'a plus jamais été réuni."
+        "Puis les Pillards sont venus du sud, des marais. Ils brûlent les récoltes, vident les greniers, et repartent avant l'aube. Toujours au bon moment, comme s'ils savaient quand venir. (Il tisonne le feu.) Enfin… les Pillards, c'est des malins, voilà tout."
       ],
       "boutons": [
         {
-          "texte": "Et ensuite ?",
+          "texte": "Et les Reliques ?",
           "vers": "h3"
         }
       ]
     },
     "h3": {
-      "titre": "Les Pillards du Sud",
+      "titre": "La nuit des Reliques",
       "textes": [
-        "Peu après, les Pillards sont arrivés du sud, des marais. Ils brûlent les récoltes, vident les greniers, et repartent avant l'aube. Le Président dit qu'il nous protège. Mais sa garde ne protège que lui. Et une nuit, les Sept Reliques ont disparu. Personne n'a rien vu. Personne n'a rien entendu."
+        "Une nuit, le comptoir de la Grande Cabane était vide. Les Sept Reliques, envolées. Pas une porte forcée, pas une trace de pas. Tout le monde a dit : « les Pillards ». Moi aussi, je l'ai dit. C'est plus simple de dire comme tout le monde."
       ],
       "boutons": [
         {
-          "texte": "Et ensuite ?",
+          "texte": "Et aujourd'hui ?",
           "vers": "h4"
         }
       ]
     },
     "h4": {
-      "titre": "La Mairie",
+      "titre": "Le village aujourd'hui",
       "textes": [
-        "Depuis, la Mairie est fermée la nuit. Certains disent qu'on entend des machines sous la terre. Et des gens disparaissent : « partis travailler à la capitale », dit le Président. Le dernier, c'est Pierre, le mari de Sylvie. Personne n'est jamais revenu de la capitale. On ne sait même pas où elle est, la capitale."
+        "Aujourd'hui, on a la garde, on a des discours le matin, on a la paix… à peu près. Le Conseil ne se réunit plus, il paraît qu'on n'en a plus besoin. Et les jeunes partent chercher du travail à la capitale. Ils écrivent pas beaucoup. (Marcel regarde un moment vers la place, puis revient à toi.) Bref. Les vieux radotent."
       ],
       "boutons": [
         {
-          "texte": "Et ensuite ?",
+          "texte": "Et vous, les gens du ciel ?",
           "vers": "h5"
         }
       ]

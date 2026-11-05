@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * La peau du joueur : celui que la marque maudite a éveillé porte la tenue de Sasuke, une espionne éveillée sa
- * combinaison, Minato 2 en mode Kurama la tenue du mode Kurama. Avant les autres mods
+ * combinaison, Minato 2 en mode Kurama la tenue du mode Kurama, la Foudre 3 la même tenue en bleu clair. Avant les autres mods
  * (Create Stuff Additions remplace la peau de certains pseudos pour leur cape, et coupe alors les suivants), et sans
  * rien toucher pour les autres joueurs.
  */
@@ -22,6 +22,8 @@ public abstract class AbstractClientPlayerMixin {
         PlayerSkin nue = ClientMaudit.peau((AbstractClientPlayer) (Object) this, skin);
         nue = fr.cabane.client.pouvoir.ClientEspionne.peau((AbstractClientPlayer) (Object) this, nue);
         nue = fr.cabane.client.pouvoir.ClientKurama.peau((AbstractClientPlayer) (Object) this, nue);
+        nue = fr.cabane.client.pouvoir.ClientTenueFoudre.peau((AbstractClientPlayer) (Object) this, nue);
+        nue = fr.cabane.client.pouvoir.ClientTenueVent.peau((AbstractClientPlayer) (Object) this, nue);
         if (nue != skin) {
             cir.setReturnValue(nue);
         }

@@ -14,6 +14,9 @@ public abstract class EntityMixin {
     private void cabane$infrarouge(CallbackInfoReturnable<Integer> cir) {
         if (ClientEspionne.infrarouge((Entity) (Object) this)) {
             cir.setReturnValue(ClientEspionne.ORANGE_INFRAROUGE);
+        } else if (fr.cabane.client.pouvoir.ClientSharingan.regardPercant((Entity) (Object) this)) {
+            // vus par le Sharingan : rouge
+            cir.setReturnValue(fr.cabane.client.pouvoir.ClientSharingan.ROUGE_REGARD);
         }
     }
 }

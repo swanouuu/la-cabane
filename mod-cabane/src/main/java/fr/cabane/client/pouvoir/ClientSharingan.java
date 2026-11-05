@@ -132,11 +132,59 @@ public final class ClientSharingan {
         }
         // une annonce : le motif s'anime depuis le début ; sinon (un joueur qui arrive) : le motif final
         YEUX.put(p.joueur(), new Yeux(p.niveau(), p.annonce() ? System.nanoTime() : System.nanoTime() - 100_000_000_000L));
+        if (p.annonce() && (avant == null || p.niveau() > avant.niveau())) {
+            sonEveil(mc, p.joueur(), p.niveau(), moi);
+        }
+    }
+
+    /**
+     * Le son de l'éveil (1 et 3 : le Sharingan, 2 : le Mangekyo) : lui l'entend, et ceux autour aussi. Ceux qui le
+     * regardent dans les yeux l'entendent déjà, calé sur l'animation en grand (sons) : pas deux fois.
+     */
+    private static void sonEveil(Minecraft mc, UUID joueur, int niveau, boolean moi) {
+        SoundEvent son = niveau == 2 ? SON_MANGEKYO : SON_EVEIL;
+        if (moi) {
+            jouer(son);
+            return;
+        }
+        boolean enGrand = regardMode == Sharingan.EVEIL && joueur.equals(regardLanceur) && ecranActif();
+        net.minecraft.world.entity.player.Player lui = mc.level == null ? null : mc.level.getPlayerByUUID(joueur);
+        if (!enGrand && lui != null) {
+            mc.level.playLocalSound(lui.getX(), lui.getEyeY(), lui.getZ(), son, net.minecraft.sounds.SoundSource.PLAYERS, 1F, 1F, false);
+        }
     }
 
     public static int niveau(UUID joueur) {
         Yeux y = YEUX.get(joueur);
         return y == null ? 0 : y.niveau();
+    }
+
+    /** Jusqu'où ses yeux voient à travers les murs : 10 blocs au Sharingan, 13 au Mangekyo, 16 au Rinnegan. */
+    public static double porteeRegard(int niveau) {
+        return 10 + 3 * (Math.min(niveau, 3) - 1);
+    }
+
+    /** Le contour des gens vus à travers les murs : rouge Sharingan (le contour lumineux, comme les lunettes des espionnes). */
+    public static final int ROUGE_REGARD = 0xE0201C;
+
+    /**
+     * Les yeux éveillés, il voit ce qui vit autour à travers les murs, pas loin (pour lui seulement) : juste un contour
+     * rouge autour de leur silhouette (le contour lumineux de Minecraft : MinecraftMixin, EntityMixin), sans aucun filtre sur l'écran. Pas ceux qu'on ne doit pas voir : un
+     * joueur invisible ou caché dans le Kamui le reste (aucun pouvoir n'en annule un autre).
+     */
+    public static boolean regardPercant(net.minecraft.world.entity.Entity e) {
+        net.minecraft.world.entity.player.Player moi = Minecraft.getInstance().player;
+        // tout ce qui vit : les joueurs, les PNJ, les mobs, les animaux (pas les supports d armure)
+        boolean cible = e instanceof net.minecraft.world.entity.LivingEntity && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand);
+        if (moi == null || e == moi || !cible || e.isSpectator() || e.isInvisible() || ClientKamui.cache(e.getUUID()) || e.level() != moi.level()) {
+            return false;
+        }
+        int n = niveau(moi.getUUID());
+        if (n <= 0) {
+            return false;
+        }
+        double r = porteeRegard(n);
+        return e.distanceToSqr(moi) < r * r;
     }
 
     /** L'image de l'atlas pour cet éveil à ce moment (la dernière une fois l'animation finie). */
@@ -216,6 +264,11 @@ public final class ClientSharingan {
         static final RenderType VOILE = create("cabane_sharingan_voile", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144, false, true,
                 CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setWriteMaskState(COLOR_WRITE).setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setCullState(NO_CULL).createCompositeState(false));
+        /** Le contour vu à travers les murs : des traits rouges, toujours devant (sans test de profondeur). */
+        static final RenderType TRAVERS = create("cabane_sharingan_travers", DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 4096, false, false,
+                CompositeState.builder().setShaderState(RENDERTYPE_LINES_SHADER).setLineState(new LineStateShard(java.util.OptionalDouble.of(3.0)))
+                        .setLayeringState(VIEW_OFFSET_Z_LAYERING).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setWriteMaskState(COLOR_WRITE)
+                        .setDepthTestState(NO_DEPTH_TEST).setCullState(NO_CULL).createCompositeState(false));
         static final RenderType PLEIN = create("cabane_sharingan_plein", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144, false, false,
                 CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setCullState(NO_CULL).setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setDepthTestState(LEQUAL_DEPTH_TEST).createCompositeState(false));
@@ -446,6 +499,7 @@ public final class ClientSharingan {
             }
         }
         while (KAMUI.consumeClick()) {
+            // (L ouvre aussi les progrès : avec le Mangekyo, l'écran ne s'ouvre pas, voir ecranOuvert)
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_KAMUI));
             }
@@ -506,12 +560,12 @@ public final class ClientSharingan {
             return new String[0][];
         }
         List<String[]> l = new java.util.ArrayList<>();
-        l.add(new String[]{Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "Tsukuyomi (regarde-le dans les yeux)"});
+        l.add(new String[]{Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "Tsukuyomi"});
         if (y >= 2) {
-            l.add(new String[]{Clavier.nom(KAMUI), ClientKamui.cache(mc.player.getUUID()) ? "Ressortir du Kamui" : "Kamui (sur lui ; sur toi : te cacher)"});
+            l.add(new String[]{Clavier.nom(KAMUI), ClientKamui.cache(mc.player.getUUID()) ? "Sortir du Kamui" : "Kamui (sur lui / sur toi)"});
         }
         if (y >= 3) {
-            l.add(new String[]{Clavier.nom(METEORITE), meteoriteFaite ? "Météorite : déjà faite pendant cet éveil" : "Météorite (une fois)"});
+            l.add(new String[]{Clavier.nom(METEORITE), meteoriteFaite ? "Chute de météorite (faite)" : "Chute de météorite"});
         }
         return l.toArray(new String[0][]);
     }
@@ -522,7 +576,7 @@ public final class ClientSharingan {
         int y = mc.player == null ? 0 : niveau(mc.player.getUUID());
         int max = Math.min(y, maxLocal >= 3 && parfaitPossible ? 4 : Math.max(y, 1));
         String texte = niveauSusano >= 4 ? "Redevenir le chevalier" : niveauSusano >= max ? (niveauSusano == 0 ? "Susano" : "Ranger le Susano")
-                : niveauSusano == 0 ? "Susano niveau 1" : niveauSusano == 3 ? "Susano parfait (une fois)" : "Susano niveau " + (niveauSusano + 1);
+                : niveauSusano == 0 ? "Susano niv. 1" : niveauSusano == 3 ? "Susano parfait" : "Susano niv. " + (niveauSusano + 1);
         return new String[]{Clavier.nom(SUSANO), texte};
     }
 
@@ -547,24 +601,8 @@ public final class ClientSharingan {
         List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(lignes(0)));
         l.add(ligneSusano(0, false));
         l.add(ligneEveil());
-        String titre = NOMS_YEUX[Math.min(3, y)] + "  ·  NIVEAU " + y;
-        net.minecraft.client.gui.Font font = mc.font;
-        int largeurTouche = 0, largeurAction = font.width(titre) - 10;
-        for (String[] ligne : l) {
-            largeurTouche = Math.max(largeurTouche, font.width(ligne[0]));
-            largeurAction = Math.max(largeurAction, font.width(ligne[1]));
-        }
-        int w = largeurTouche + largeurAction + 26, h = 22 + l.size() * 13, x = 6, y0 = g.guiHeight() / 2 - h / 2;
-        int teinte = y >= 3 ? 0xFFC8B0FF : 0xFFFF5A50;
-        g.fill(x, y0, x + w, y0 + h, 0xA0000000);
-        g.fill(x, y0, x + 2, y0 + h, teinte);
-        g.drawString(font, titre, x + 8, y0 + 6, teinte, true);
-        for (int i = 0; i < l.size(); i++) {
-            int ly = y0 + 21 + i * 13;
-            g.fill(x + 7, ly - 2, x + 11 + font.width(l.get(i)[0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, l.get(i)[0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, l.get(i)[1], x + 18 + largeurTouche, ly, 0xFFEDEDED, true);
-        }
+        String titre = NOMS_YEUX[Math.min(3, y)] + "  ·  NIV. " + y;
+        PanneauPouvoir.dessiner(g, mc.font, titre, y >= 3 ? 0xFFC8B0FF : 0xFFFF5A50, l.toArray(new String[0][]), null);
     }
 
     // ================================================================ branchements
@@ -611,6 +649,23 @@ public final class ClientSharingan {
                 return;
             }
             touches(mc);
+        }
+
+        /**
+         * Les touches du Sharingan partagent leur lettre avec Minecraft (L : les progrès) : quand les yeux peuvent s'en
+         * servir, c'est la technique qui part et l'écran ne s'ouvre pas.
+         */
+        @SubscribeEvent
+        public static void ecranOuvert(net.neoforged.neoforge.client.event.ScreenEvent.Opening event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null || mc.screen != null || event.getNewScreen() == null) {
+                return;
+            }
+            int n = niveau(mc.player.getUUID());
+            boolean kamui = n >= 2 && KAMUI.isDown() && event.getNewScreen() instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
+            if (kamui) {
+                event.setCanceled(true);
+            }
         }
 
         private Evenements() {

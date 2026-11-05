@@ -170,7 +170,7 @@ public final class ClientKurama {
     }
 
     /** Le skin du mode Kurama envoyé par l'utilisateur (64 × 64, en ABGR), lu une fois. */
-    private static int[] tenue() {
+    static int[] tenue() {
         if (tenue == null) {
             try (var flux = Minecraft.getInstance().getResourceManager().open(TENUE); NativeImage image = NativeImage.read(flux)) {
                 int[] px = new int[64 * 64];
@@ -187,10 +187,10 @@ public final class ClientKurama {
 
     // ---- où est chaque pixel d'une peau (les parties de PlayerModel, au repos)
 
-    private static final byte TETE = 0, CORPS = 1, BRAS = 2, JAMBE = 3;
+    static final byte TETE = 0, CORPS = 1, BRAS = 2, JAMBE = 3;
     /** La hauteur du milieu de chaque pixel (en pixels de peau, 0 aux pieds), NaN s'il ne sert à rien. */
-    private static final float[] HAUTEUR = new float[64 * 64];
-    private static final byte[] PARTIE = new byte[64 * 64];
+    static final float[] HAUTEUR = new float[64 * 64];
+    static final byte[] PARTIE = new byte[64 * 64];
     private static final boolean[] COUCHE_1 = new boolean[64 * 64];
 
     static {
@@ -319,7 +319,7 @@ public final class ClientKurama {
     }
 
     /** La peau du mode Kurama jusqu'à la hauteur h (en pixels de peau) ; au-dessus, la peau du joueur telle quelle. */
-    private static int[] composer(int[] base, int[] kcm, int h) {
+    static int[] composer(int[] base, int[] kcm, int h) {
         int[] px = base.clone();
         int peau = teintePeau(base);
         for (int i = 0; i < px.length; i++) {

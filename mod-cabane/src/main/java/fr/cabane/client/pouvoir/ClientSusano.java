@@ -187,7 +187,19 @@ public final class ClientSusano {
         } else {
             TRANSFORMES.remove(p.joueur());
         }
-        // Hachibi, la marque maudite, Minato, les fruits du démon, Ichibi et la foudre ont leur propre dessin
+        // Hachibi, la marque maudite, Minato, les fruits du démon, Ichibi, la foudre et le vent ont leur propre dessin
+        if (fr.cabane.pouvoir.Vent.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.oublier(p.joueur());
+            ClientMinato.oublier(p.joueur());
+            ClientFruit.oublier(p.joueur());
+            ClientIchibi.oublier(p.joueur());
+            ClientFoudre.oublier(p.joueur());
+            ClientVent.recevoir(p);
+            return;
+        }
+        ClientVent.oublier(p.joueur());
         if (fr.cabane.pouvoir.Foudre.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());
@@ -1197,18 +1209,18 @@ public final class ClientSusano {
         boolean parfait = s.niveau >= 4;
         boolean versParfait = s.niveau == 3 && fr.cabane.pouvoir.Susano4.est(s.pouvoir);
         String[][] lignes = parfait ? new String[][]{
-                {Clavier.gauche(), "Épées : lumière, puis flammes noires"},
+                {Clavier.gauche(), "Épées"},
                 {Clavier.droite(), ClientSusano4.rechargePluie() > 0 ? String.format("Pluie d'Amaterasu (%.0f s)", Math.ceil(ClientSusano4.rechargePluie())) : "Pluie d'Amaterasu"},
-                {Clavier.accroupi(), ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce (et descendre)"},
-                {mc.options.keyJump.getTranslatedKeyMessage().getString(), "Voler (lentement)"},
-                {EVEIL.getTranslatedKeyMessage().getString(), String.format("Redevenir le chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
+                {Clavier.accroupi(), ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce"},
+                {mc.options.keyJump.getTranslatedKeyMessage().getString(), "Voler"},
+                {EVEIL.getTranslatedKeyMessage().getString(), String.format("Chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
                 : new String[][]{
-                {Clavier.gauche(), chevalier ? "Épée (gauche, droite)" : s.tient ? "Jeter" : grand ? "Frappe (gauche, droite)" : "Frappe"},
-                {Clavier.droite(), chevalier ? (rechargeArc > 0 ? String.format("Arc, flammes noires (%.0f s)", Math.ceil(rechargeArc)) : "Arc, flammes noires")
+                {Clavier.gauche(), chevalier ? "Épée" : s.tient ? "Jeter" : "Frappe"},
+                {Clavier.droite(), chevalier ? (rechargeArc > 0 ? String.format("Arc noir (%.0f s)", Math.ceil(rechargeArc)) : "Arc noir")
                         : s.tient ? (grand ? "Écraser au sol" : "Lâcher") : rechargePrise > 0 ? String.format("Attraper (%.0f s)", Math.ceil(rechargePrise)) : "Attraper"},
-                {Clavier.accroupi(), chevalier ? (recharge > 0 ? String.format("Grand coup, flammes noires (%.0f s)", Math.ceil(recharge)) : "Grand coup, flammes noires")
-                        : recharge > 0 ? String.format("Charge (%.1f s)", recharge) : "Charge"},
-                {EVEIL.getTranslatedKeyMessage().getString(), versParfait ? "Susano parfait (une fois)" : plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
+                {Clavier.accroupi(), chevalier ? (recharge > 0 ? String.format("Grand coup (%.0f s)", Math.ceil(recharge)) : "Grand coup")
+                        : recharge > 0 ? String.format("Charge (%.0f s)", Math.ceil(recharge)) : "Charge"},
+                {EVEIL.getTranslatedKeyMessage().getString(), versParfait ? "Susano parfait" : plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
         // le Susano (les yeux) : ses techniques (Tsukuyomi, Kamui, météorite), la touche du Susano, puis l'éveil des yeux
         if (fr.cabane.pouvoir.Sharingan.est(s.pouvoir)) {
             java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(lignes).subList(0, lignes.length - 1));
@@ -1218,29 +1230,9 @@ public final class ClientSusano {
             lignes = l.toArray(new String[0][]);
         }
         Font font = mc.font;
-        String titre = parfait ? "SUSANO PARFAIT  ·  NIVEAU 4" : chevalier ? "SUSANO  ·  NIVEAU 3" : grand ? "SUSANO  ·  NIVEAU 2" : "SUSANO";
-        int largeurTouche = 0;
-        int largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int w = largeurTouche + largeurAction + 26;
-        int h = 22 + lignes.length * 13;
-        int x = 6;
-        int y = g.guiHeight() / 2 - h / 2;
-        int teinte = 0xFF000000 | (s.couleur == Couleur.NOIR ? 0xFFFFFF : s.couleur.contour);
-        g.fill(x, y, x + w, y + h, 0xA0000000);
-        g.fill(x, y, x + 2, y + h, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            boolean grise = i == 2 && recharge > 0 || i == 1 && rechargePrise > 0;
-            // la touche, dans un petit cadre
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, grise ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        String titre = parfait ? "SUSANO PARFAIT" : chevalier ? "SUSANO  ·  NIV. 3" : grand ? "SUSANO  ·  NIV. 2" : "SUSANO";
+        PanneauPouvoir.dessiner(g, font, titre, 0xFF000000 | (s.couleur == Couleur.NOIR ? 0xFFFFFF : s.couleur.contour), lignes,
+                new boolean[]{false, rechargePrise > 0, recharge > 0});
     }
 
     // ================================================================ branchements

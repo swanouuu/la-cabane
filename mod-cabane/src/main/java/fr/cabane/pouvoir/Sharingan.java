@@ -63,9 +63,40 @@ public final class Sharingan {
 
     /** Ses yeux changent : tout le monde le sait (pour les dessiner) ; ceux qui le regardent dans les yeux voient l'éveil en grand. */
     static void envoyerYeux(ServerPlayer joueur, Pouvoirs.Donnees.Elu elu, int niveau, boolean annonce) {
-        PacketDistributor.sendToAllPlayers(new Yeux(joueur.getUUID(), niveau, Pouvoirs.maxYeux(elu), annonce));
+        // d'abord l'éveil en grand chez ceux qui le regardent : leur son est calé dessus, ils n'entendent pas l'autre
         if (annonce && niveau > 0) {
             eveiller(joueur, niveau);
+        }
+        PacketDistributor.sendToAllPlayers(new Yeux(joueur.getUUID(), niveau, Pouvoirs.maxYeux(elu), annonce));
+        bonus(joueur, niveau);
+    }
+
+    /**
+     * Les yeux éveillés donnent un peu de force et de vitesse : moins que la marque maudite (+1,5/+3/+5 de force,
+     * +20/+40 % de vitesse) et que les autres pouvoirs, mais ça se sent.
+     */
+    private static final double[] FORCE_YEUX = {0, 0.5, 1, 1.5};
+    private static final double[] VITESSE_YEUX = {0, 0.05, 0.08, 0.1};
+    private static final net.minecraft.resources.ResourceLocation FORCE = Cabane.id("sharingan_force");
+    private static final net.minecraft.resources.ResourceLocation VITESSE = Cabane.id("sharingan_vitesse");
+
+    static void bonus(ServerPlayer joueur, int niveau) {
+        int n = Math.max(0, Math.min(3, niveau));
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE, FORCE, FORCE_YEUX[n],
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE);
+        modif(joueur, net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, VITESSE, VITESSE_YEUX[n],
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+    }
+
+    private static void modif(ServerPlayer joueur, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribut,
+                              net.minecraft.resources.ResourceLocation id, double valeur, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op) {
+        net.minecraft.world.entity.ai.attributes.AttributeInstance a = joueur.getAttribute(attribut);
+        if (a == null) {
+            return;
+        }
+        a.removeModifier(id);
+        if (valeur != 0) {
+            a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, valeur, op));
         }
     }
 
@@ -197,6 +228,7 @@ public final class Sharingan {
 
     /** Son pouvoir s'endort : le Tsukuyomi qu'il tient se défait (la météorite, elle, va jusqu'au bout). */
     static void endormir(ServerPlayer joueur) {
+        bonus(joueur, 0);
         Genjutsu.finirPour(joueur);
         Kamui.endormir(joueur);
         Meteorite.oublierEveil(joueur);
