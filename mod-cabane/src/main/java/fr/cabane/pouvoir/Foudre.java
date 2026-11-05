@@ -279,8 +279,8 @@ public final class Foudre {
     static void eveiller(ServerPlayer joueur, int niveau) {
         EVEILLES.put(joueur.getUUID(), niveau);
         vitesse(joueur, niveau);
-        son(joueur.serverLevel(), joueur.position(), SoundEvents.LIGHTNING_BOLT_IMPACT, 1.4F, niveau >= 2 ? 0.7F : 1F);
-        son(joueur.serverLevel(), joueur.position(), SoundEvents.LIGHTNING_BOLT_THUNDER, niveau >= 2 ? 1.2F : 0.8F, 1.3F);
+        // le coup de tonnerre vient plus tard, au moment où la foudre tombe (ClientTransfoFoudre) ; ici, ça se charge
+        son(joueur.serverLevel(), joueur.position(), SoundEvents.BEACON_ACTIVATE, 0.9F, 1.8F);
     }
 
     static void endormir(ServerPlayer joueur) {

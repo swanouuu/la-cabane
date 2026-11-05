@@ -106,12 +106,12 @@ public final class ClientFruit {
     private static final double DUREE_ONDE = 1.7;
     private static final double DUREE_REPAS = Fruit.DUREE_REPAS / 20.0;
     /** En secondes : la main qui se change, puis la moitié du corps ; et le retour, plus rapide. */
-    private static final double MONTEE_MAIN = 1.1;
-    private static final double MONTEE_CORPS = 1.9;
+    private static final double MONTEE_MAIN = ClientTransfoFruit.duree(1);
+    private static final double MONTEE_CORPS = ClientTransfoFruit.duree(2);
     private static final double DESCENTE_MAIN = 0.8;
     private static final double DESCENTE_CORPS = 1.2;
     /** Le niveau 3 : la matière finit de prendre le corps, puis le casque se forme. */
-    private static final double MONTEE_3 = 1.6;
+    private static final double MONTEE_3 = ClientTransfoFruit.duree(3);
     private static final double DESCENTE_3 = 1.0;
 
     private static ResourceLocation[] etapes(String nom, int images) {
@@ -1220,6 +1220,15 @@ public final class ClientFruit {
                 }
             }
         }
+        // et autour d'eux, la transformation elle-même (les cristaux, le cocon, le bloc, le geyser, le volcan, le dragon)
+        for (Map.Entry<UUID, Transfo> en : TRANSFOS.entrySet()) {
+            Transfo tr = en.getValue();
+            Player qui = mc.level.getPlayerByUUID(en.getKey());
+            if (tr.monte() && qui != null && !qui.isInvisible()) {
+                boolean g = glace(tr.sorte);
+                ClientTransfoFruit.dessiner(lueur, m, cam, qui, g, tr.a, secondes(tr.debut), tr.graine, partiel, main(qui, g, partiel));
+            }
+        }
         // les ères glaciaires : le sol qui gèle, et des pics de glace qui jaillissent tout autour
         for (Onde o : ONDES) {
             if (!o.glace()) {
@@ -1561,6 +1570,9 @@ public final class ClientFruit {
      */
     private static void particulesTransfo(Minecraft mc, Player j, Transfo tr) {
         boolean glace = glace(tr.sorte);
+        if (tr.monte()) {
+            ClientTransfoFruit.tick(mc, j, glace, tr.a, secondes(tr.debut));
+        }
         double e = etendue(j.getUUID()), t = secondes(tr.debut);
         Vec3 main = main(j, glace, 1);
         if (tr.monte() && e < tr.a) {

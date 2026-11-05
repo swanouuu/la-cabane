@@ -71,8 +71,8 @@ public final class ClientFoudre {
     private static final double CHARGE = Foudre.CHARGE_KIRIN / 20.0;
     /** Le nuage du Kirin, au-dessus de la zone. */
     private static final double HAUT_NUAGE = 34;
-    private static final float[] CIEL = {0.55F, 0.85F, 1F};
-    private static final float[] BLANC = {1F, 1F, 1F};
+    static final float[] CIEL = {0.55F, 0.85F, 1F};
+    static final float[] BLANC = {1F, 1F, 1F};
     private static final float[] ROUGE = {1F, 0.15F, 0.1F};
 
     /** Les éveillés : leur liste blanche et leur niveau. */
@@ -126,7 +126,7 @@ public final class ClientFoudre {
         return (System.nanoTime() - depuis) / 1e9;
     }
 
-    private static double lisse(double x) {
+    static double lisse(double x) {
         x = Mth.clamp(x, 0, 1);
         return x * x * (3 - 2 * x);
     }
@@ -245,7 +245,7 @@ public final class ClientFoudre {
         return k.lache >= 0 ? k.charge : (float) Math.min(1, secondes(k.debut) / CHARGE);
     }
 
-    private static void secouer(float force) {
+    static void secouer(float force) {
         secousse = System.nanoTime();
         forceSecousse = Math.max(forceSecousse, force);
     }
@@ -376,9 +376,9 @@ public final class ClientFoudre {
      * On dessine tout deux fois : d'abord le translucide (0 : les cœurs, le nuage, les voiles), puis la lumière (1 : la
      * lueur des éclairs), chacun dans son tampon. Les éclairs changent au même rythme dans les deux passes.
      */
-    private static int passe;
+    static int passe;
 
-    private static void sommet(VertexConsumer c, Matrix4f m, Vec3 p, float[] col, float a) {
+    static void sommet(VertexConsumer c, Matrix4f m, Vec3 p, float[] col, float a) {
         c.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(col[0], col[1], col[2], a);
     }
 
@@ -400,7 +400,7 @@ public final class ClientFoudre {
     }
 
     /** Une ligne brisée de A à B : le milieu de chaque morceau poussé de côté, puis encore, et encore. */
-    private static List<Vec3> zigzag(Vec3 a, Vec3 b, long graine, double tordu, int niveaux) {
+    static List<Vec3> zigzag(Vec3 a, Vec3 b, long graine, double tordu, int niveaux) {
         List<Vec3> pts = new ArrayList<>(List.of(a, b));
         Vec3 d = b.subtract(a);
         if (d.lengthSqr() < 1e-6) {
@@ -428,7 +428,7 @@ public final class ClientFoudre {
      * Un éclair le long de pts (relatifs à la caméra, qui est à l'origine), face à l'œil : un cœur blanc et un léger halo
      * de la couleur (passe 0), puis une lueur qui s'ajoute (passe 1).
      */
-    private static void trait(VertexConsumer c, Matrix4f m, List<Vec3> pts, double e, float alpha, float[] couleur) {
+    static void trait(VertexConsumer c, Matrix4f m, List<Vec3> pts, double e, float alpha, float[] couleur) {
         for (int i = 0; i + 1 < pts.size(); i++) {
             Vec3 a = pts.get(i), b = pts.get(i + 1);
             Vec3 cote = b.subtract(a).cross(a.add(b).scale(0.5));
@@ -446,7 +446,7 @@ public final class ClientFoudre {
     }
 
     /** Un éclair de A à B, avec quelques branches. */
-    private static List<Vec3> eclair(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, long graine, double e, float alpha, int branches, float[] couleur) {
+    static List<Vec3> eclair(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, long graine, double e, float alpha, int branches, float[] couleur) {
         List<Vec3> pts = zigzag(a, b, graine, 0.24, 4);
         trait(c, m, pts, e, alpha, couleur);
         Random r = new Random(graine * 7 + 3);
@@ -504,7 +504,7 @@ public final class ClientFoudre {
     }
 
     /** Un anneau au sol (la zone du Kirin, l'onde de la foudre qui tombe). */
-    private static void anneau(VertexConsumer c, Matrix4f m, Vec3 centre, double rayon, double epaisseur, float[] col, float alpha) {
+    static void anneau(VertexConsumer c, Matrix4f m, Vec3 centre, double rayon, double epaisseur, float[] col, float alpha) {
         // il brille aussi (la passe de lumière), un peu moins
         alpha *= passe == 0 ? 1 : 0.6F;
         int n = 64;
@@ -518,7 +518,7 @@ public final class ClientFoudre {
     }
 
     /** Un dôme de lumière : la moitié d'une boule, plus vive sur les bords. */
-    private static void dome(VertexConsumer c, Matrix4f m, Vec3 centre, double r, float alpha) {
+    static void dome(VertexConsumer c, Matrix4f m, Vec3 centre, double r, float alpha) {
         // un voile, puis de la lumière par-dessus
         alpha *= passe == 0 ? 1 : 0.8F;
         int lat = 10, lon = 24;
@@ -786,11 +786,11 @@ public final class ClientFoudre {
             boolean fort = en.getValue().niveau() >= 2;
             Long frappe = FRAPPES.get(en.getKey());
             if (frappe != null) {
+                // la transformation (la charge, la cage : voir ClientTransfoFoudre)
                 double t = secondes(frappe);
-                if (t < 0.7) {
-                    Vec3 tete = pieds.add(0, j.getBbHeight(), 0);
-                    eclair(c, m, tete.add(3, 45, -2), tete, j.getId() * 31L + (long) (t * 12), fort ? 0.16 : 0.12, (float) (1 - t / 0.7), 6, CIEL);
-                    anneau(c, m, pieds.add(0, 0.05, 0), 0.5 + t * 5, 1, BLANC, (float) (0.6 * (1 - t / 0.7)));
+                int niveau = en.getValue().niveau();
+                if (t < ClientTransfoFoudre.fin(niveau)) {
+                    ClientTransfoFoudre.dessiner(c, m, j, pieds, niveau, t, partiel);
                 }
             }
         }
@@ -956,7 +956,7 @@ public final class ClientFoudre {
             PlayerModel<AbstractClientPlayer> modele = getParentModel();
             if (e.niveau() >= 2) {
                 Long frappe = FRAPPES.get(joueur.getUUID());
-                float monte = frappe == null ? 1 : (float) lisse(secondes(frappe) / 0.5);
+                float monte = frappe == null ? 1 : (float) ClientTransfoFoudre.aura(secondes(frappe), e.niveau());
                 float vacille = 0.85F + 0.15F * Mth.sin(age * 0.45F);
                 boolean fin = joueur.getSkin().model() == PlayerSkin.Model.SLIM;
                 VertexConsumer aura = buffers.getBuffer(RenderType.entityTranslucentEmissive(ClientHachibi.MANTEAU));
@@ -1128,7 +1128,15 @@ public final class ClientFoudre {
                             j.getZ() + HASARD.nextGaussian() * 0.22, HASARD.nextGaussian() * 0.02, 0.02, HASARD.nextGaussian() * 0.02);
                 }
             }
-            FRAPPES.values().removeIf(t -> (maintenant - t) / 1e9 > 2);
+            // la transformation : ses sons, ses étincelles (voir ClientTransfoFoudre)
+            for (Map.Entry<UUID, Long> e : FRAPPES.entrySet()) {
+                Player j = mc.level.getPlayerByUUID(e.getKey());
+                Eveil ev = EVEILLES.get(e.getKey());
+                if (j != null && ev != null && !j.isInvisible() && j.distanceTo(mc.player) < 64) {
+                    ClientTransfoFoudre.tick(mc, j, ev.niveau(), secondes(e.getValue()));
+                }
+            }
+            FRAPPES.values().removeIf(t -> (maintenant - t) / 1e9 > 5);
             CHAINES.removeIf(ch -> secondes(ch.debut()) > 0.5);
             SAUTS.removeIf(s -> secondes(s.debut()) > 0.7);
             CHOCS.values().removeIf(ch -> secondes(ch.debut()) > (ch.fort() ? 0.9 : 0.5));
