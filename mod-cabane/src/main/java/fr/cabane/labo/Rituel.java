@@ -103,7 +103,9 @@ public final class Rituel {
                                         .then(Commands.argument("spectateur", EntityArgument.player()).executes(ctx -> lancer(ctx.getSource(), List.of(
                                                 EntityArgument.getPlayer(ctx, "scelleur"), EntityArgument.getPlayer(ctx, "scientifique"),
                                                 EntityArgument.getPlayer(ctx, "allonge"), EntityArgument.getPlayer(ctx, "spectateur")))))))));
+        // la marque sur soi : seulement ceux qui portent une bête (Hachibi, Ichibi, Minato) ; sur un autre joueur : l'hôte
         event.getDispatcher().register(Commands.literal("jinchuriki")
+                .requires(s -> Labo.hote(s) || s.getPlayer() != null && fr.cabane.pouvoir.Jinchuriki.porteUneBete(s.getPlayer()))
                 .executes(ctx -> marque(ctx.getSource().getPlayerOrException()))
                 .then(Commands.argument("joueur", EntityArgument.player()).requires(Labo::hote)
                         .executes(ctx -> marque(EntityArgument.getPlayer(ctx, "joueur")))));
