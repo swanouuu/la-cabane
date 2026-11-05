@@ -1,10 +1,13 @@
 package fr.cabane.client.pouvoir;
 
-import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import fr.cabane.Cabane;
 import fr.cabane.pouvoir.Maudit;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -33,9 +36,10 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Ce que le niveau 2 de la marque ajoute au corps, d'après les maquettes validées (docs/marque-forme2) : deux mains
- * géantes palmées dans le dos (l'aile dessinée par l'utilisateur, épaisse comme une main, un peu recourbée vers
- * l'arrière), la grosse touffe de cheveux gris, et le haut de Sasuke qui pend à la taille. Les ailes battent un peu tout
+ * Ce que le niveau 2 de la marque ajoute au corps, d'après les maquettes validées (docs/marque-forme2, puis
+ * docs/marque3/apercu pour les ailes) : deux mains géantes en cubes dans le dos (palmées, griffues, le dos de la main
+ * bossu et cornu vers l'avant, la paume creusée vers l'arrière, de la couleur de la peau), la grosse touffe de cheveux
+ * gris, et le haut de Sasuke qui pend à la taille. Les ailes battent un peu tout
  * le temps, plus quand il marche, s'ouvrent quand il plane, et donnent un grand coup quand il s'envole.
  * <p>
  * Pour soi : accroupi au sol, le coup d'ailes ; en l'air, on plane (accroupi, on pique) ; le clic droit lance le Chidori.
@@ -44,289 +48,93 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * personnage vers +x.
  */
 public final class ClientMarque2 {
-    private static final ResourceLocation AILE = Cabane.id("textures/marque/aile.png");
+    private static final ResourceLocation MAIN = Cabane.id("marque/main.bin");
     private static final ResourceLocation BLANC = Cabane.id("textures/marque/blanc.png");
 
-    // ================================================================ l'aile : le maillage
+    // ================================================================ l'aile : la main en cubes
 
-    /** L'aile : 192 × 192 texels, 6 par pixel du modèle, à 40 points de l'image d'origine par pixel. */
-    private static final int N = 192;
-    private static final int R = 6;
-    /** Le maillage est 3 fois plus gros que les texels (la texture découpe le contour au texel près). */
-    private static final int C = 3;
-    private static final int G = N / C;
-    /** Le poignet (accroché au dos) et le creux de la paume, en pixels du modèle dans l'image (x vers l'extérieur, y vers le haut). */
-    private static final double[] RACINE = versAile(1150, 720);
-    private static final double[] PAUME = versAile(950, 640);
     /**
-     * L'épaisseur : une demi-épaisseur de BORD sur le pourtour, qui monte doucement jusqu'à BORD + BOSSE à ARRONDI du
-     * bord, la plus forte à la paume et 40 % moindre au bout des doigts ; plus fine contre le dos (pour laisser voir la
-     * tête). Les déchirures ne creusent pas le volume.
+     * L'aile : une main géante en cubes, palmée, validée dans l'aperçu docs/marque3/apercu (2026-11-03) et calculée
+     * d'avance par docs/marque3/apercu/construire.mjs dans assets/cabane/marque/main.bin. Ses coordonnées : x vers
+     * l'extérieur, y vers le haut, z vers l'avant du joueur, en pixels de la main (avant ECHELLE).
      */
-    private static final double BORD = 0.3, BOSSE = 1.6, ARRONDI = 3.5;
-    /** L'aile est 1,3 fois plus grande que l'image, un peu relevée, et se recourbe vers l'arrière loin du poignet. */
-    private static final double ECHELLE = 1.3, PENCHE = 0.12, COURBE = 0.005;
+    static final float ECHELLE = 0.68F;
+    /** Posée comme dans l'aperçu : la main un peu relevée, et reculée derrière le dos (rien ne passe devant le ventre). */
+    static final float RELEVE = 0.18F, RECUL = -2.6F;
 
-    private static double[] versAile(double x, double y) {
-        return new double[]{(1194 - x) / 40, (1250 - y) / 40};
-    }
-
-    /** Le maillage d'une aile, dans son repère (u vers l'extérieur, v vers le haut, n vers l'avant) : x, y, z, u, v, nx, ny, nz par sommet. */
-    private static float[] maillage;
+    /** Par face : 4 coins (x, y, z), leurs 4 couleurs (r, g, b, l'ombre des coins comprise) et la normale de la face. */
+    private static float[] coins;
+    private static byte[] couleurs;
+    private static float[] normales;
     private static boolean essaye;
 
-    private static float[] maillage() {
+    private static boolean charger() {
         if (!essaye) {
             essaye = true;
-            try (var flux = Minecraft.getInstance().getResourceManager().open(AILE); NativeImage image = NativeImage.read(flux)) {
-                maillage = construire(image);
-            } catch (java.io.IOException | RuntimeException e) {
-                Cabane.LOGGER.warn("Marque maudite : aile illisible", e);
-            }
-        }
-        return maillage;
-    }
-
-    /** Le maillage, à partir de la texture : ses deux faces bombées, et la tranche tout autour (et autour des trous). */
-    private static float[] construire(NativeImage image) {
-        if (image.getWidth() != N || image.getHeight() != N) {
-            throw new IllegalStateException("aile de " + image.getWidth() + " × " + image.getHeight());
-        }
-        // plein[x][y], y vers le haut (la ligne 0 de l'image est le haut de l'aile)
-        boolean[] plein = new boolean[N * N];
-        int sombre = -1;
-        double plusSombre = Double.MAX_VALUE;
-        for (int y = 0; y < N; y++) {
-            for (int x = 0; x < N; x++) {
-                int c = image.getPixelRGBA(x, N - 1 - y);
-                if ((c >>> 24) > 0) {
-                    plein[y * N + x] = true;
-                    double l = (c & 255) * 0.3 + (c >> 8 & 255) * 0.59 + (c >> 16 & 255) * 0.11;
-                    if (l < plusSombre) {
-                        plusSombre = l;
-                        sombre = y * N + x;
+            try (var flux = new DataInputStream(new BufferedInputStream(Minecraft.getInstance().getResourceManager().open(MAIN)))) {
+                int n = flux.readInt();
+                float[] c = new float[n * 12], nor = new float[n * 3];
+                byte[] col = new byte[n * 12];
+                for (int f = 0; f < n; f++) {
+                    for (int k = 0; k < 12; k++) {
+                        c[f * 12 + k] = flux.readFloat();
+                    }
+                    flux.readFully(col, f * 12, 12);
+                    for (int k = 0; k < 3; k++) {
+                        nor[f * 3 + k] = flux.readFloat();
                     }
                 }
+                coins = c;
+                couleurs = col;
+                normales = nor;
+                Cabane.LOGGER.info("Marque maudite : main de {} faces", n);
+            } catch (IOException | RuntimeException e) {
+                Cabane.LOGGER.warn("Marque maudite : main illisible", e);
             }
         }
-        float[] epais = epaisseur(plein);
-        // la tranche prend la couleur du texel le plus sombre (le trait)
-        float tu = (sombre % N + 0.5F) / N, tv = (N - 1 - sombre / N + 0.5F) / N;
-        int[] compte = new int[G * G];
-        for (int y = 0; y < N; y++) {
-            for (int x = 0; x < N; x++) {
-                if (plein[y * N + x]) {
-                    compte[(y / C) * G + x / C]++;
-                }
-            }
-        }
-        // les coins de la grille, devant (1) et derrière (0), dans le repère de l'aile
-        float[][] coins = new float[2][(G + 1) * (G + 1) * 3];
-        for (int j = 0; j <= G; j++) {
-            for (int i = 0; i <= G; i++) {
-                double a = (i * C / (double) R - RACINE[0]) * ECHELLE, b = (j * C / (double) R - RACINE[1]) * ECHELLE;
-                double du = a * Math.cos(PENCHE) - b * Math.sin(PENCHE), dv = a * Math.sin(PENCHE) + b * Math.cos(PENCHE);
-                double h = -COURBE * (0.6 * du * du + dv * dv);
-                double e = epais[(j * C) * (N + 1) + i * C] * ECHELLE;
-                int k = (j * (G + 1) + i) * 3;
-                for (int f = 0; f < 2; f++) {
-                    coins[f][k] = (float) du;
-                    coins[f][k + 1] = (float) dv;
-                    coins[f][k + 2] = (float) (h + (f == 1 ? e : -e));
-                }
-            }
-        }
-        List<float[]> sommets = new ArrayList<>();
-        for (int j = 0; j < G; j++) {
-            for (int i = 0; i < G; i++) {
-                if (compte[j * G + i] == 0) {
-                    continue;
-                }
-                int[] q = {j * (G + 1) + i, j * (G + 1) + i + 1, (j + 1) * (G + 1) + i + 1, (j + 1) * (G + 1) + i};
-                float[][] uv = {{i, j}, {i + 1, j}, {i + 1, j + 1}, {i, j + 1}};
-                for (int f = 0; f < 2; f++) {
-                    float[][] p = new float[4][];
-                    for (int c = 0; c < 4; c++) {
-                        p[c] = point(coins[f], q[c]);
-                    }
-                    float[] n = normale(p);
-                    if ((n[2] < 0) == (f == 1)) {
-                        n = new float[]{-n[0], -n[1], -n[2]};
-                    }
-                    for (int c = 0; c < 4; c++) {
-                        sommets.add(new float[]{p[c][0], p[c][1], p[c][2], uv[c][0] * C / (float) N, 1 - uv[c][1] * C / (float) N, n[0], n[1], n[2]});
-                    }
-                }
-                // la tranche, là où la case voisine est (presque) vide
-                if (compte[j * G + i] < 4) {
-                    continue;
-                }
-                int[][] cotes = {{0, -1, 0, 1}, {1, 0, 1, 2}, {0, 1, 2, 3}, {-1, 0, 3, 0}};
-                for (int[] cote : cotes) {
-                    int ni = i + cote[0], nj = j + cote[1];
-                    if (ni >= 0 && nj >= 0 && ni < G && nj < G && compte[nj * G + ni] >= 4) {
-                        continue;
-                    }
-                    float[][] p = {point(coins[1], q[cote[2]]), point(coins[1], q[cote[3]]), point(coins[0], q[cote[3]]), point(coins[0], q[cote[2]])};
-                    float[] n = normale(p);
-                    if (n[0] * cote[0] + n[1] * cote[1] < 0) {
-                        n = new float[]{-n[0], -n[1], -n[2]};
-                    }
-                    for (float[] s : p) {
-                        sommets.add(new float[]{s[0], s[1], s[2], tu, tv, n[0], n[1], n[2]});
-                    }
-                }
-            }
-        }
-        float[] m = new float[sommets.size() * 8];
-        for (int k = 0; k < sommets.size(); k++) {
-            System.arraycopy(sommets.get(k), 0, m, k * 8, 8);
-        }
-        Cabane.LOGGER.info("Marque maudite : aile de {} faces", sommets.size() / 4);
-        return m;
-    }
-
-    private static float[] point(float[] coins, int k) {
-        return new float[]{coins[k * 3], coins[k * 3 + 1], coins[k * 3 + 2]};
-    }
-
-    private static float[] normale(float[][] p) {
-        float ax = p[2][0] - p[0][0], ay = p[2][1] - p[0][1], az = p[2][2] - p[0][2];
-        float bx = p[3][0] - p[1][0], by = p[3][1] - p[1][1], bz = p[3][2] - p[1][2];
-        float nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
-        float l = Mth.sqrt(nx * nx + ny * ny + nz * nz);
-        return l < 1e-6F ? new float[]{0, 0, 1} : new float[]{nx / l, ny / l, nz / l};
-    }
-
-    /** La demi-épaisseur de l'aile en chaque coin de texel ((N + 1)², y vers le haut), comme dans les maquettes. */
-    private static float[] epaisseur(boolean[] plein) {
-        // le vide qu'on atteint depuis le bord : le dehors (le reste du vide, ce sont les déchirures, comptées pleines)
-        boolean[] dehors = new boolean[N * N];
-        List<int[]> pile = new ArrayList<>();
-        for (int i = 0; i < N; i++) {
-            pile.add(new int[]{i, 0});
-            pile.add(new int[]{i, N - 1});
-            pile.add(new int[]{0, i});
-            pile.add(new int[]{N - 1, i});
-        }
-        while (!pile.isEmpty()) {
-            int[] p = pile.remove(pile.size() - 1);
-            int x = p[0], y = p[1];
-            if (x < 0 || y < 0 || x >= N || y >= N || dehors[y * N + x] || plein[y * N + x]) {
-                continue;
-            }
-            dehors[y * N + x] = true;
-            pile.add(new int[]{x + 1, y});
-            pile.add(new int[]{x - 1, y});
-            pile.add(new int[]{x, y + 1});
-            pile.add(new int[]{x, y - 1});
-        }
-        // la distance au dehors, en texels (deux passes)
-        float[] d = new float[N * N];
-        float r2 = (float) Math.sqrt(2);
-        for (int i = 0; i < N * N; i++) {
-            d[i] = dehors[i] ? 0 : 1e9F;
-        }
-        for (int y = 0; y < N; y++) {
-            for (int x = 0; x < N; x++) {
-                if (d[y * N + x] > 0) {
-                    d[y * N + x] = Math.min(d[y * N + x], Math.min(Math.min(dist(d, x - 1, y) + 1, dist(d, x, y - 1) + 1),
-                            Math.min(dist(d, x - 1, y - 1) + r2, dist(d, x + 1, y - 1) + r2)));
-                }
-            }
-        }
-        for (int y = N - 1; y >= 0; y--) {
-            for (int x = N - 1; x >= 0; x--) {
-                if (d[y * N + x] > 0) {
-                    d[y * N + x] = Math.min(d[y * N + x], Math.min(Math.min(dist(d, x + 1, y) + 1, dist(d, x, y + 1) + 1),
-                            Math.min(dist(d, x + 1, y + 1) + r2, dist(d, x - 1, y + 1) + r2)));
-                }
-            }
-        }
-        float[] e = new float[N * N];
-        for (int y = 0; y < N; y++) {
-            for (int x = 0; x < N; x++) {
-                int i = y * N + x;
-                if (d[i] == 0) {
-                    e[i] = (float) BORD;
-                    continue;
-                }
-                double a = (x + 0.5) / R, b = (y + 0.5) / R;
-                double k = Math.min(1, d[i] / R / ARRONDI);
-                double paume = 1 - 0.4 * Math.min(1, Math.hypot(a - PAUME[0], b - PAUME[1]) / 18);
-                double dos = Math.min(1, 0.3 + a / 6.7);
-                e[i] = (float) ((BORD + BOSSE * Math.sin(k * Math.PI / 2) * paume) * dos);
-            }
-        }
-        // lissée : trois flous en boîte d'un pixel du modèle de rayon
-        for (int passe = 0; passe < 3; passe++) {
-            for (int axe = 0; axe < 2; axe++) {
-                float[] f = new float[N * N];
-                for (int y = 0; y < N; y++) {
-                    for (int x = 0; x < N; x++) {
-                        float s = 0;
-                        for (int j = -R; j <= R; j++) {
-                            int nx = x + (axe == 0 ? j : 0), ny = y + (axe == 1 ? j : 0);
-                            s += nx < 0 || ny < 0 || nx >= N || ny >= N ? (float) BORD : e[ny * N + nx];
-                        }
-                        f[y * N + x] = s / (2 * R + 1);
-                    }
-                }
-                e = f;
-            }
-        }
-        for (int i = 0; i < N * N; i++) {
-            if (dehors[i]) {
-                e[i] = Math.min(e[i], (float) BORD);
-            }
-        }
-        float[] coins = new float[(N + 1) * (N + 1)];
-        for (int y = 0; y <= N; y++) {
-            for (int x = 0; x <= N; x++) {
-                coins[y * (N + 1) + x] = (val(e, x - 1, y - 1) + val(e, x, y - 1) + val(e, x - 1, y) + val(e, x, y)) / 4;
-            }
-        }
-        return coins;
-    }
-
-    private static float dist(float[] d, int x, int y) {
-        return x < 0 || y < 0 || x >= N || y >= N ? 0 : d[y * N + x];
-    }
-
-    private static float val(float[] e, int x, int y) {
-        return x < 0 || y < 0 || x >= N || y >= N ? (float) BORD : e[y * N + x];
+        return coins != null;
     }
 
     // ================================================================ le dessin
 
-    /** Les deux ailes : k de 0 (rien) à 1 (dépliées), battement l'angle dont elles s'ouvrent ou se referment. */
-    private static void ailes(PoseStack ps, MultiBufferSource buffers, int lumiere, int recouvre, float k, float battement) {
-        float[] m = maillage();
-        if (m == null || k <= 0.01F) {
+    /**
+     * Les deux ailes : k de 0 (rien) à 1 (dépliées), battement l'angle dont elles s'ouvrent ou se referment. Au niveau 3
+     * (t3 ≥ 0), l'aile gauche est celle de {@link ClientMarque3} : elle se fissure et devient les serpents.
+     */
+    private static void ailes(PoseStack ps, MultiBufferSource buffers, int lumiere, int recouvre, float k, float battement, AbstractClientPlayer joueur,
+            double t3, float partiel) {
+        if (k <= 0.01F || !charger()) {
             return;
         }
-        VertexConsumer c = buffers.getBuffer(RenderType.entityCutoutNoCull(AILE));
-        PoseStack.Pose pose = ps.last();
+        VertexConsumer c = buffers.getBuffer(RenderType.entityCutoutNoCull(BLANC));
         for (int s = -1; s <= 1; s += 2) {
-            float th = 0.3F + battement;
-            Vec3 u = new Vec3(s * Mth.cos(th), 0.04, -Mth.sin(th)).normalize();
-            Vec3 v = new Vec3(0, Mth.cos(0.12F), -Mth.sin(0.12F));
-            v = v.subtract(u.scale(u.dot(v))).normalize();
-            Vec3 n = u.cross(v);
-            if (n.z < 0) {
-                n = n.scale(-1);
+            // accrochée en haut du dos, de part et d'autre de la colonne ; ouvertes en V vers l'arrière, un peu penchées en
+            // arrière. L'aile droite est la gauche en miroir : ses x changent de signe, et ses rotations autour de y et z
+            // aussi (sans échelle négative)
+            ps.pushPose();
+            ps.translate(s * 2.4F, 21.5F, -3F);
+            ps.scale(ECHELLE * k, ECHELLE * k, ECHELLE * k);
+            ps.mulPose(Axis.YP.rotation(s * (0.3F + battement)));
+            ps.mulPose(Axis.XP.rotation(-0.12F));
+            ps.translate(0, 0, RECUL);
+            ps.mulPose(Axis.ZP.rotation(s * RELEVE));
+            if (s == 1 && t3 >= 0) {
+                ClientMarque3.aileGauche(c, ps.last(), joueur, t3, 0.3F + battement, partiel, lumiere, recouvre);
+            } else {
+                main(c, ps.last(), lumiere, recouvre, s);
             }
-            double rx = s * 2.4, ry = 21.5, rz = -2.8;
-            for (int i = 0; i < m.length; i += 8) {
-                double x = m[i] * k, y = m[i + 1] * k, z = m[i + 2] * k;
-                float px = (float) (rx + u.x * x + v.x * y + n.x * z);
-                float py = (float) (ry + u.y * x + v.y * y + n.y * z);
-                float pz = (float) (rz + u.z * x + v.z * y + n.z * z);
-                float nx = (float) (u.x * m[i + 5] + v.x * m[i + 6] + n.x * m[i + 7]);
-                float ny = (float) (u.y * m[i + 5] + v.y * m[i + 6] + n.y * m[i + 7]);
-                float nz = (float) (u.z * m[i + 5] + v.z * m[i + 6] + n.z * m[i + 7]);
-                c.addVertex(pose, px, py, pz).setColor(255, 255, 255, 255).setUv(m[i + 3], m[i + 4]).setOverlay(recouvre).setLight(lumiere)
-                        .setNormal(pose, nx, ny, nz);
+            ps.popPose();
+        }
+    }
+
+    /** La main, face par face, avec la couleur de chaque coin ; sx = -1 : la main en miroir (l'aile droite). */
+    static void main(VertexConsumer c, PoseStack.Pose pose, int lumiere, int recouvre, int sx) {
+        for (int f = 0, n = normales.length / 3; f < n; f++) {
+            float nx = sx * normales[f * 3], ny = normales[f * 3 + 1], nz = normales[f * 3 + 2];
+            for (int q = 0; q < 4; q++) {
+                int i = f * 12 + q * 3;
+                c.addVertex(pose, sx * coins[i], coins[i + 1], coins[i + 2]).setColor(couleurs[i] & 255, couleurs[i + 1] & 255, couleurs[i + 2] & 255, 255)
+                        .setUv(0.5F, 0.5F).setOverlay(recouvre).setLight(lumiere).setNormal(pose, nx, ny, nz);
             }
         }
     }
@@ -455,16 +263,33 @@ public final class ClientMarque2 {
     }
 
     /**
-     * L'angle des ailes : un petit battement tout le temps, plus ample et plus vif quand il marche ; ouvertes quand il
-     * plane ; et le grand coup d'ailes (elles balaient vers l'avant puis reviennent).
+     * Pour chaque marqué : où en est son battement (la phase avance à son rythme : quand il se met à marcher ou s'arrête,
+     * le rythme change sans que les ailes sautent), l'angle lissé, et le temps du dernier calcul.
      */
-    private static float battement(AbstractClientPlayer joueur, ClientMaudit.Forme2 f, float partiel) {
+    private static final java.util.Map<java.util.UUID, float[]> BATTEMENTS = new java.util.HashMap<>();
+
+    /**
+     * L'angle des ailes : un petit battement tout le temps, plus ample et plus vif quand il marche ; ouvertes quand il
+     * plane ; et le grand coup d'ailes (elles balaient vers l'avant puis reviennent). Le passage de l'un à l'autre est
+     * lissé (sinon les ailes tressautent quand il démarre, s'arrête ou saute).
+     */
+    static float battement(AbstractClientPlayer joueur, ClientMaudit.Forme2 f, float partiel) {
         float t = (joueur.tickCount + partiel) / 20F;
-        float marche = Math.min(1, joueur.walkAnimation.speed(partiel) * 1.5F);
-        float a = (0.06F + 0.14F * marche) * Mth.sin(t * Mth.TWO_PI * (1.1F + 0.9F * marche));
-        if (!joueur.onGround() && joueur.getDeltaMovement().y < 0 && !joueur.isInWater()) {
-            a = -0.22F + 0.05F * Mth.sin(t * Mth.TWO_PI * 0.6F);
+        float[] b = BATTEMENTS.computeIfAbsent(joueur.getUUID(), k -> new float[]{0, Float.NaN, t});
+        float dt = t - b[2];
+        if (dt < 0 || dt > 0.5F) {
+            dt = 0;
         }
+        b[2] = t;
+        float marche = Math.min(1, joueur.walkAnimation.speed(partiel) * 1.5F);
+        b[0] = (b[0] + dt * Mth.TWO_PI * (1.1F + 0.9F * marche)) % (Mth.TWO_PI * 100);
+        float voulu = (0.06F + 0.14F * marche) * Mth.sin(b[0]);
+        if (!joueur.onGround() && joueur.getDeltaMovement().y < 0 && !joueur.isInWater() && !joueur.getAbilities().flying) {
+            voulu = -0.22F + 0.05F * Mth.sin(t * Mth.TWO_PI * 0.6F);
+        }
+        // l'angle rejoint doucement l'angle voulu (en un dixième de seconde environ)
+        b[1] = Float.isNaN(b[1]) ? voulu : b[1] + (voulu - b[1]) * Math.min(1, dt * 10);
+        float a = b[1];
         if (f.battement() >= 0) {
             double tau = (System.nanoTime() - f.battement()) / 1e9;
             if (tau < 0.6) {
@@ -492,7 +317,7 @@ public final class ClientMarque2 {
             ps.pushPose();
             m.body.translateAndRotate(ps);
             versMaquette(ps);
-            ailes(ps, buffers, lumiere, recouvre, f.ailes(), battement(joueur, f, partiel));
+            ailes(ps, buffers, lumiere, recouvre, f.ailes(), battement(joueur, f, partiel), joueur, f.t3(), partiel);
             if (f.torseNu()) {
                 hautPendant(ps, buffers, lumiere, recouvre);
             }
@@ -537,42 +362,34 @@ public final class ClientMarque2 {
         String eveil = ClientSusano.EVEIL.getTranslatedKeyMessage().getString();
         String[][] lignes;
         boolean[] grises;
-        if (e.niveau() >= 2) {
+        if (e.niveau() >= 3) {
+            boolean tient = ClientMarque3.tient(mc.player.getUUID());
+            double serpents = ClientMarque3.rechargeSerpents(), avale = ClientMarque3.rechargeAvale(), vol = ClientMarque3.vol(),
+                    volRecharge = ClientMarque3.rechargeVol(), ulti = ClientSerpentGeant.recharge();
+            lignes = new String[][]{
+                    {Clavier.gauche(), tient ? "Jeter" : "Coups boostés"},
+                    {Clavier.droite(), tient ? "Croquer" : serpents > 0 ? String.format("Serpents (%.0f s)", Math.ceil(serpents)) : "Serpents"},
+                    {Clavier.accroupi() + " + " + Clavier.droite(), avale > 0 ? String.format("Avaler (%.0f s)", Math.ceil(avale)) : "Avaler"},
+                    {Clavier.accroupi(), vol > 0 ? String.format("Vol (%.0f s)", Math.ceil(vol))
+                            : volRecharge > 0 ? String.format("Bond et vol (%.0f s)", Math.ceil(volRecharge)) : "Bond et vol"},
+                    {"2× " + Clavier.accroupi(), vol > 0 ? "Retomber" : ""},
+                    {Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), ulti > 0 && !ClientSerpentGeant.enCours() ? String.format("Grand serpent (%.0f s)", Math.ceil(ulti)) : "Grand serpent"},
+                    {eveil, "Rendormir"}};
+            grises = new boolean[]{false, !tient && serpents > 0, avale > 0, vol <= 0 && volRecharge > 0, false, ulti > 0, false};
+        } else if (e.niveau() >= 2) {
             double chidori = ClientChidori.recharge(), envol = rechargeEnvol();
             lignes = new String[][]{
                     {Clavier.droite(), chidori > 0 ? String.format("Chidori (%.0f s)", Math.ceil(chidori)) : "Chidori"},
-                    {Clavier.accroupi() + " au sol", envol > 0 ? String.format("Envol (%.0f s)", Math.ceil(envol)) : "Envol"},
-                    {"En l'air", "Planer"},
-                    {Clavier.accroupi() + " en l'air", "Piquer"},
-                    {eveil, "Rendormir"}};
-            grises = new boolean[]{chidori > 0, envol > 0, false, false, false};
+                    {Clavier.accroupi(), envol > 0 ? String.format("Envol (%.0f s)", Math.ceil(envol)) : "Envol / piqué"},
+                    {eveil, e.trois() ? "Niveau 3" : "Rendormir"}};
+            grises = new boolean[]{chidori > 0, envol > 0, false};
         } else {
             lignes = new String[][]{{eveil, e.deux() ? "Niveau 2" : "Rendormir"}};
             grises = new boolean[]{false};
         }
         Font font = mc.font;
-        String titre = e.niveau() >= 2 ? "MARQUE MAUDITE  ·  NIVEAU 2" : "MARQUE MAUDITE";
-        int largeurTouche = 0;
-        int largeurAction = font.width(titre) - 10;
-        for (String[] l : lignes) {
-            largeurTouche = Math.max(largeurTouche, font.width(l[0]));
-            largeurAction = Math.max(largeurAction, font.width(l[1]));
-        }
-        int w = largeurTouche + largeurAction + 26;
-        int h = 22 + lignes.length * 13;
-        int x = 6;
-        int y = g.guiHeight() / 2 - h / 2;
-        int teinte = 0xFFB070F0;
-        g.fill(x, y, x + w, y + h, 0xA0000000);
-        g.fill(x, y, x + 2, y + h, teinte);
-        g.drawString(font, titre, x + 8, y + 6, teinte, true);
-        for (int i = 0; i < lignes.length; i++) {
-            int ly = y + 21 + i * 13;
-            // la touche, dans un petit cadre
-            g.fill(x + 7, ly - 2, x + 11 + font.width(lignes[i][0]), ly + 9, 0x40FFFFFF);
-            g.drawString(font, lignes[i][0], x + 9, ly, 0xFFFFFFFF, false);
-            g.drawString(font, lignes[i][1], x + 18 + largeurTouche, ly, grises[i] ? 0xFF7A7A7A : 0xFFEDEDED, true);
-        }
+        String titre = e.niveau() >= 2 ? "MARQUE MAUDITE  ·  NIV. " + e.niveau() : "MARQUE MAUDITE";
+        PanneauPouvoir.dessiner(g, font, titre, 0xFFB070F0, lignes, grises);
     }
 
     // ================================================================ les événements
@@ -610,7 +427,7 @@ public final class ClientMarque2 {
             if (moi == null || mc.level == null) {
                 return;
             }
-            boolean ailes = ClientMaudit.ailesSorties(moi.getUUID()) && !ClientChidori.enCours(moi);
+            boolean ailes = ClientMaudit.ailesSorties(moi.getUUID()) && !ClientChidori.enCours(moi) && !ClientMaudit.niveau3(moi.getUUID());
             boolean accroupi = mc.options.keyShift.isDown();
             if (ailes && accroupi && !accroupiAvant && moi.onGround() && mc.screen == null && rechargeEnvol() <= 0) {
                 PacketDistributor.sendToServer(new Maudit.Envol());
@@ -644,7 +461,7 @@ public final class ClientMarque2 {
         @SubscribeEvent
         public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
             Minecraft mc = Minecraft.getInstance();
-            if (!event.isUseItem() || mc.player == null || !ClientMaudit.ailesSorties(mc.player.getUUID())) {
+            if (!event.isUseItem() || mc.player == null || !ClientMaudit.ailesSorties(mc.player.getUUID()) || ClientMaudit.niveau3(mc.player.getUUID())) {
                 return;
             }
             event.setCanceled(true);

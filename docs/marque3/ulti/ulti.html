@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ulti de la marque 3</title>
+<!--
+  Aperçu 3D de l'ulti de la marque maudite 3 : l'invocation du serpent géant (le grand serpent violet d'Orochimaru).
+  Il saute, plaque les mains au sol (le sceau s'étale), pouf : un énorme serpent violet en cubes se dresse, lui debout
+  sur sa tête. Le serpent siffle, prend son élan et fonce droit devant, gueule ouverte : des blocs volent (le sol reste intact), les blocs
+  volent, les arbres, les joueurs et la maison devant sont projetés. Impact, puis il disparaît en fumée.
+  Tout est en blocs (1 unité = 1 bloc). Servi par serveur.mjs (port 8769) ; « Planche » enregistre planche-ulti.png.
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #9ec6ea; color: #f4f0fa; font: 14px system-ui, sans-serif; }
+  #ui { position: fixed; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  #ui span { align-self: center; margin: 0 2px 0 10px; text-shadow: 0 1px 3px #000a; }
+  button { background: #2a2636e0; color: #ece6f4; border: 1px solid #4b4262; border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; }
+  button.on { background: #5c2c88; border-color: #a467da; }
+  #bas { position: fixed; left: 10px; right: 10px; bottom: 10px; display: flex; gap: 10px; align-items: center; }
+  #bas input { flex: 1; accent-color: #a467da; }
+  #phase { min-width: 240px; font-weight: 600; text-shadow: 0 1px 3px #000c; }
+  #charge { position: fixed; inset: 0; display: grid; place-items: center; font-size: 18px; pointer-events: none; text-shadow: 0 1px 3px #000c; }
+</style>
+</head>
+<body>
+<div id="charge">Construction du serpent…</div>
+<div id="ui"></div>
+<div id="bas"><span id="phase"></span><input id="curseur" type="range" min="0" max="13" step="0.05" value="0"></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { hache, plus, fois, croix, norme, lin } from '../apercu/main-voxel.mjs';
+import { LH, CHARN, LB, largeur, hMach, rayon, construireSerpent } from './serpent.mjs';
+
+// ------------------------------------------------------------------ petits outils
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lisse = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+const lerp = (a, b, k) => a + (b - a) * k;
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const lerpV = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+const C = (r, g, b) => [r / 255, g / 255, b / 255];
+const mixC = (a, b, k) => lerpV(a, b, clamp(k, 0, 1));
+/** Une valeur qui suit des clés [temps, valeur], adoucie entre deux clés. */
+function cles(T, L) {
+  if (T <= L[0][0]) return L[0][1];
+  for (let i = 1; i < L.length; i++) if (T < L[i][0]) return lerp(L[i - 1][1], L[i][1], lisse((T - L[i - 1][0]) / (L[i][0] - L[i - 1][0])));
+  return L[L.length - 1][1];
+}
+function graine(s) { return () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+let A = graine(7);
+const al = (a, b) => a + (b - a) * A();
+
+// ------------------------------------------------------------------ le déroulé (secondes)
+const T_SAUT = 0.15, T_POSE = 1.0, T_POUF = 2.25, T_SIFFLE = 3.0, T_ELAN = 4.3, T_CHARGE = 5.0, DUREE_CHARGE = 4.2;
+const T_IMPACT = T_CHARGE + DUREE_CHARGE, T_DISPARAIT = T_IMPACT + 0.55, T_FIN = 13;
+const PHASES = [[0, '1. Il saute'], [T_POSE, '2. Les mains au sol : le sceau'], [T_POUF, '3. Pouf ! L\'invocation'], [T_SIFFLE, '4. Le serpent se dresse et siffle'], [T_ELAN, '5. L\'élan'], [T_CHARGE, '6. La charge : tout vole devant lui'], [T_IMPACT, '7. L\'impact'], [T_DISPARAIT, '8. Il disparaît en fumée']];
+
+// la forme du serpent : serpent.mjs (le même module sert à l'export pour le jeu)
+// ------------------------------------------------------------------ le chemin : la queue enroulée, il se dresse, puis la charge
+const PAS_CHEMIN = 0.2;
+const CHEMIN = (() => {
+  const pts = [];
+  const N = 26;
+  for (let j = 0; j <= N; j++) {
+    const k = j / N, phi = Math.PI / 2 - (1 - k) * 7.6, r = lerp(5.5, 15, k);
+    pts.push([r * Math.cos(phi), lerp(1.0, 3.6, k), -21 + r * Math.sin(phi)]);
+  }
+  pts.push([-4.5, 5.5, -5.5], [-3.5, 11, -4.5], [-1.5, 16.5, -3], [0, 20.2, 0], [0, 21.2, 3.8]);
+  const iCou = pts.length;
+  pts.push([0, 21, 7]);
+  pts.push([0, 17.5, 15], [0, 9.5, 24], [0, 4.2, 34], [2.5, 3.3, 46], [-4.5, 3.3, 61], [4.5, 3.3, 76], [-4.5, 3.3, 91], [3.5, 3.3, 106], [-1.5, 3.3, 119], [0, 3.3, 131], [0, 3.3, 143], [0, 3.3, 160], [0, 3.3, 185]);
+  // Catmull-Rom, puis rééchantillonné à pas régulier
+  const dense = [];
+  const sub_ = 30;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const P0 = pts[Math.max(0, i - 1)], P1 = pts[i], P2 = pts[i + 1], P3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let j = 0; j < sub_; j++) {
+      const t = j / sub_, t2 = t * t, t3 = t2 * t;
+      dense.push([0, 1, 2].map((c) => 0.5 * (2 * P1[c] + (-P0[c] + P2[c]) * t + (2 * P0[c] - 5 * P1[c] + 4 * P2[c] - P3[c]) * t2 + (-P0[c] + 3 * P1[c] - 3 * P2[c] + P3[c]) * t3)));
+    }
+  }
+  dense.push(pts[pts.length - 1]);
+  const cum = [0];
+  for (let i = 1; i < dense.length; i++) cum.push(cum[i - 1] + Math.hypot(...sub(dense[i], dense[i - 1])));
+  const dCou = cum[iCou * sub_], total = cum[cum.length - 1];
+  const n = Math.floor(total / PAS_CHEMIN) + 1;
+  const P = new Float32Array(n * 3), T = new Float32Array(n * 3), U = new Float32Array(n * 3);
+  let j = 0;
+  for (let i = 0; i < n; i++) {
+    const d = i * PAS_CHEMIN;
+    while (j + 2 < cum.length && cum[j + 1] < d) j++;
+    const k = clamp((d - cum[j]) / (cum[j + 1] - cum[j]), 0, 1);
+    P.set(lerpV(dense[j], dense[j + 1], k), i * 3);
+  }
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - 2), b = Math.min(n - 1, i + 2);
+    const t = norme([P[b * 3] - P[a * 3], P[b * 3 + 1] - P[a * 3 + 1], P[b * 3 + 2] - P[a * 3 + 2]]);
+    T.set(t, i * 3);
+    // le dos vers le ciel ; quand il se dresse, le ventre regarde vers l'avant
+    const v = [0, 1, -0.08];
+    U.set(norme(sub(v, mul(t, dot(v, t)))), i * 3);
+  }
+  // le dos lissé (pas de saut brusque quand il se dresse)
+  const U2 = new Float32Array(U);
+  for (let i = 0; i < n; i++) {
+    let s = [0, 0, 0];
+    for (let o = -6; o <= 6; o++) { const q = clamp(i + o, 0, n - 1); s = add(s, [U[q * 3], U[q * 3 + 1], U[q * 3 + 2]]); }
+    const t = [T[i * 3], T[i * 3 + 1], T[i * 3 + 2]];
+    U2.set(norme(sub(s, mul(t, dot(s, t)))), i * 3);
+  }
+  const dMin = -dCou;
+  let dFin = 0;
+  for (let i = Math.round(dCou / PAS_CHEMIN); i < n; i++) if (P[i * 3 + 2] >= 131) { dFin = i * PAS_CHEMIN + dMin; break; }
+  return { n, P, T, U: U2, dMin, dFin };
+})();
+function chemin(d) {
+  const f = clamp((d - CHEMIN.dMin) / PAS_CHEMIN, 0, CHEMIN.n - 1.001), i = Math.floor(f), k = f - i;
+  const g = (X) => [lerp(X[i * 3], X[i * 3 + 3], k), lerp(X[i * 3 + 1], X[i * 3 + 4], k), lerp(X[i * 3 + 2], X[i * 3 + 5], k)];
+  return { p: g(CHEMIN.P), t: norme(g(CHEMIN.T)), u: norme(g(CHEMIN.U)) };
+}
+
+// ------------------------------------------------------------------ le mouvement du serpent (fonctions du temps T)
+const RAMPE = 0.35, FREIN = 0.7;
+const VMAX = CHEMIN.dFin / (DUREE_CHARGE - RAMPE / 2 - FREIN / 2);
+function distTete(T) {
+  const u = T - T_CHARGE, D = DUREE_CHARGE;
+  if (u <= 0) return 0;
+  if (u >= D) return CHEMIN.dFin;
+  if (u < RAMPE) return (VMAX * u * u) / (2 * RAMPE);
+  let d = (VMAX * RAMPE) / 2;
+  if (u < D - FREIN) return d + VMAX * (u - RAMPE);
+  d += VMAX * (D - FREIN - RAMPE);
+  const w = u - (D - FREIN);
+  return d + VMAX * (w - (w * w) / (2 * FREIN));
+}
+const vitesseTete = (T) => (distTete(T + 0.01) - distTete(T - 0.01)) / 0.02;
+const ELAN = (T) => cles(T, [[T_ELAN, 0], [T_CHARGE - 0.05, 1], [T_CHARGE + 0.22, 0]]);
+const BALANCE = (T) => cles(T, [[T_POUF, 1], [T_ELAN, 1], [T_CHARGE, 0]]);
+/** Le décalage de la partie dressée : il se balance en sifflant, puis recule la tête pour prendre son élan. */
+function deplacement(s, T) {
+  let d = [0, 0, 0];
+  const e = ELAN(T);
+  if (e > 0 && s < 32) d = add(d, mul([0, 3.5, -8], e * (1 - s / 32) ** 2));
+  const b = BALANCE(T);
+  if (b > 0 && s < 40) { const g = b * (1 - s / 40) ** 1.5; d = add(d, [Math.sin(T * 1.7 - s * 0.12) * 1.6 * g, Math.sin(T * 1.1 - s * 0.1) * 0.6 * g, 0]); }
+  return d;
+}
+const OUVERTURE = (T) => cles(T, [[T_SIFFLE, 0], [T_SIFFLE + 0.35, 1], [T_SIFFLE + 0.9, 0.85], [T_SIFFLE + 1.2, 0.12], [T_ELAN, 0.12], [T_ELAN + 0.45, 0.8], [T_CHARGE, 1], [T_IMPACT - 0.12, 1], [T_IMPACT + 0.06, 0], [99, 0]]);
+const INCLINE = (T) => cles(T, [[T_POUF, 0.1], [T_SIFFLE, -0.22], [T_ELAN, -0.1], [T_CHARGE, 0.45], [T_CHARGE + 0.35, 0], [T_IMPACT, -0.04], [T_IMPACT + 0.1, -0.14], [99, -0.14]]);
+const LANGUE_SORT = (T) => (T > T_SIFFLE + 0.1 && T < T_ELAN ? Math.max(0, Math.sin((T - T_SIFFLE) * 7.5)) ** 3 : 0);
+
+/** Le repère de la tête : le cou (p), l'avant (t), le dessus (u), le côté (c), la gueule. */
+function cadreTete(T) {
+  const d = distTete(T), f = chemin(d), a = INCLINE(T);
+  const t = norme(add(mul(f.t, Math.cos(a)), mul(f.u, Math.sin(a))));
+  const u = norme(sub(mul(f.u, Math.cos(a)), mul(f.t, Math.sin(a))));
+  return { p: add(f.p, deplacement(0, T)), t, u, c: norme(croix(t, u)), d, ouv: OUVERTURE(T), v: vitesseTete(T) };
+}
+const ANGLE_CRANE = (o) => 0.32 * o, ANGLE_MACH = (o) => -1.0 * o;
+/** Un point du crâne (repère de la tête) dans le monde. */
+function craneVersMonde(K, q) {
+  const a = ANGLE_CRANE(K.ouv), x = q[0] - CHARN, y = q[1];
+  const xr = CHARN + x * Math.cos(a) - y * Math.sin(a), yr = x * Math.sin(a) + y * Math.cos(a);
+  return add(K.p, add(add(mul(K.t, xr), mul(K.u, yr)), mul(K.c, q[2])));
+}
+const SIEGE = [6.6, 3.2, 0];
+
+// ------------------------------------------------------------------ la scène
+const rendu = new THREE.WebGLRenderer({ antialias: true, stencil: true });
+rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const CIEL = new THREE.Color(0x9ec6ea);
+scene.background = CIEL;
+scene.fog = new THREE.Fog(0x9ec6ea, 110, 330);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1200);
+camera.position.set(40, 22, 50);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.target.set(0, 10, 20);
+controles.enableDamping = true;
+const SOLEIL = norme([-0.5, 1, 0.42]);
+scene.add(new THREE.HemisphereLight(0xeaf2ff, 0x5a5048, 1.25));
+const lumSoleil = new THREE.DirectionalLight(0xfff4e4, 1.9);
+lumSoleil.position.set(...mul(SOLEIL, 100));
+scene.add(lumSoleil);
+
+// les blocs (terrain, arbres, maison, débris) : un cube, une texture de pixels calculée dans le shader selon le genre
+// genres : 0 herbe, 1 terre, 2 pierre, 3 bûche, 4 feuilles, 5 planches, 6 pierres taillées, 7 terre retournée
+const matBloc = new THREE.ShaderMaterial({
+  uniforms: { soleil: { value: new THREE.Vector3(...SOLEIL) }, ciel: { value: new THREE.Color(0x9ec6ea) } },
+  vertexShader: `attribute float genre; varying vec3 vL; varying vec3 vNL; varying vec3 vN; varying float vG; varying float vD; varying float vH;
+    void main(){ vec3 sc = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
+      vL = (position + 0.5) * sc; vH = sc.y; vNL = normal; vN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal); vG = genre;
+      vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0); vD = -mv.z; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform vec3 soleil; uniform vec3 ciel; varying vec3 vL; varying vec3 vNL; varying vec3 vN; varying float vG; varying float vD; varying float vH;
+    float h1(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+    void main(){
+      vec3 q = floor(vL * 8.0 + 0.001); float n = h1(q);
+      float haut = step(0.5, vNL.y), bas = step(0.5, -vNL.y), dHaut = vH - vL.y; int g = int(vG + 0.5); vec3 c;
+      vec3 terre = vec3(0.53, 0.38, 0.26) * (0.8 + 0.32 * n);
+      if (g == 0) { vec3 herbe = vec3(0.40, 0.63, 0.25) * (0.84 + 0.3 * n); c = haut > 0.5 ? herbe : (bas < 0.5 && dHaut < 0.19 + 0.13 * h1(vec3(q.x, 0.0, q.z) + 7.0) ? herbe : terre); }
+      else if (g == 1) c = terre;
+      else if (g == 2) c = vec3(0.5) * (0.78 + 0.32 * n);
+      else if (g == 3) { if (abs(vNL.y) > 0.5) { float r = length(fract(vL.xz) - 0.5); c = vec3(0.64, 0.51, 0.31) * (0.82 + 0.18 * step(0.5, fract(r * 7.0))); } else c = vec3(0.37, 0.27, 0.16) * (0.72 + 0.4 * h1(vec3(q.x + q.z, 0.0, 3.0))); }
+      else if (g == 4) c = vec3(0.21, 0.45, 0.15) * (0.55 + 0.65 * n);
+      else if (g == 5) { float l = step(0.86, fract(vL.y * 2.0)); c = vec3(0.69, 0.54, 0.33) * (0.88 + 0.15 * n) * (1.0 - 0.32 * l); }
+      else if (g == 6) c = vec3(0.47) * (0.62 + 0.55 * h1(floor(vL * 4.0 + 0.001)));
+      else c = mix(vec3(0.40, 0.28, 0.19), vec3(0.46), step(0.86, n)) * (0.72 + 0.3 * n);
+      float face = haut > 0.5 ? 1.0 : bas > 0.5 ? 0.5 : (abs(vNL.x) > 0.5 ? 0.8 : 0.66);
+      vec3 col = pow(c, vec3(2.2)) * (0.5 + 0.7 * max(dot(vN, soleil), 0.0)) * face * 1.12;
+      col = mix(col, pow(ciel, vec3(2.2)), clamp((vD - 110.0) / 220.0, 0.0, 1.0));
+      gl_FragColor = vec4(col, 1.0); }`,
+});
+function blocs(n, genres) {
+  const g = new THREE.BoxGeometry(1, 1, 1);
+  const attr = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
+  attr.setUsage(THREE.DynamicDrawUsage);
+  if (genres) attr.array.set(genres);
+  g.setAttribute('genre', attr);
+  const m = new THREE.InstancedMesh(g, matBloc, n);
+  m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  m.frustumCulled = false;
+  return m;
+}
+
+// les ombres : chaque objet aplati sur le sol dans la direction du soleil (le pochoir évite qu'elles se superposent)
+const matOmbre = new THREE.MeshBasicMaterial({
+  color: 0x1a1426, transparent: true, opacity: 0.34, depthWrite: false,
+  stencilWrite: true, stencilRef: 0, stencilFunc: THREE.EqualStencilFunc, stencilZPass: THREE.IncrementStencilOp,
+  polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+});
+const APLATIR = new THREE.Matrix4().set(1, -SOLEIL[0] / SOLEIL[1], 0, (SOLEIL[0] / SOLEIL[1]) * 0.04, 0, 0, 0, 0.04, 0, -SOLEIL[2] / SOLEIL[1], 1, (SOLEIL[2] / SOLEIL[1]) * 0.04, 0, 0, 0, 1);
+const ombres = [];
+function ombreDe(m) {
+  const o = new THREE.InstancedMesh(m.geometry, matOmbre, m.count);
+  o.instanceMatrix = m.instanceMatrix;
+  o.matrixAutoUpdate = false;
+  o.frustumCulled = false;
+  o.renderOrder = 1;
+  scene.add(o);
+  ombres.push([o, m]);
+  return o;
+}
+
+// ------------------------------------------------------------------ le terrain : des colonnes de 4 blocs de haut
+const X0 = -50, X1 = 50, Z0 = -50, Z1 = 186, NX = X1 - X0, NZ = Z1 - Z0;
+const haut = new Int8Array(NX * NZ), genreSol = new Uint8Array(NX * NZ);
+const sol = blocs(NX * NZ);
+scene.add(sol);
+const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3();
+function majColonne(i) {
+  m4.makeScale(1, 4, 1).setPosition(X0 + (i % NX) + 0.5, haut[i] - 2, Z0 + Math.floor(i / NX) + 0.5);
+  sol.setMatrixAt(i, m4);
+  sol.geometry.attributes.genre.array[i] = genreSol[i];
+}
+const colonne = (x, z) => { const ix = Math.floor(x) - X0, iz = Math.floor(z) - Z0; return ix < 0 || iz < 0 || ix >= NX || iz >= NZ ? -1 : iz * NX + ix; };
+const hauteurSol = (x, z) => { const i = colonne(x, z); return i < 0 ? 0 : haut[i]; };
+// au-delà, une grande prairie plate (un cadre autour du terrain, pour ne pas couvrir la tranchée)
+{
+  const mat = new THREE.MeshBasicMaterial({ color: '#70b043' }), L = 700;
+  for (const [x0, z0, x1, z1] of [[X0 - L, Z0 - L, X1 + L, Z0], [X0 - L, Z1, X1 + L, Z1 + L], [X0 - L, Z0, X0, Z1], [X1, Z0, X1 + L, Z1]]) {
+    const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0);
+    g.rotateX(-Math.PI / 2);
+    const m = new THREE.Mesh(g, mat);
+    m.position.set((x0 + x1) / 2, -0.001, (z0 + z1) / 2);
+    scene.add(m);
+  }
+}
+
+// les fissures du sol : une grande image posée sur le terrain
+const FIS = document.createElement('canvas');
+FIS.width = NX * 8;
+FIS.height = NZ * 8;
+const fctx = FIS.getContext('2d');
+const texFis = new THREE.CanvasTexture(FIS);
+texFis.colorSpace = THREE.SRGBColorSpace;
+{
+  const g = new THREE.PlaneGeometry(NX, NZ);
+  g.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: texFis, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  m.position.set((X0 + X1) / 2, 0.02, (Z0 + Z1) / 2);
+  scene.add(m);
+}
+let fisChange = false;
+function fissure(x, z, dx, dz, long, epais) {
+  fctx.strokeStyle = 'rgba(28,16,24,0.92)';
+  fctx.lineCap = 'round';
+  let px = x, pz = z;
+  fctx.lineWidth = epais;
+  fctx.beginPath();
+  fctx.moveTo((px - X0) * 8, (pz - Z0) * 8);
+  for (let l = 0; l < long; l += 0.9) {
+    const a = Math.atan2(dz, dx) + al(-0.6, 0.6);
+    px += Math.cos(a) * 0.9;
+    pz += Math.sin(a) * 0.9;
+    fctx.lineTo((px - X0) * 8, (pz - Z0) * 8);
+    if (A() < 0.12 && long - l > 3) { fctx.stroke(); fissure(px, pz, dx + al(-0.8, 0.8), dz + al(-0.8, 0.8), (long - l) * 0.5, Math.max(1, epais * 0.6)); fctx.lineWidth = epais; fctx.beginPath(); fctx.moveTo((px - X0) * 8, (pz - Z0) * 8); }
+  }
+  fctx.stroke();
+  fisChange = true;
+}
+
+// le sceau d'invocation : des traits d'encre noire qui partent des mains, avec des signes, et une lueur violette
+const SCEAU = document.createElement('canvas');
+SCEAU.width = SCEAU.height = 1024;
+{
+  const c = SCEAU.getContext('2d'), R = graine(3), m = 512;
+  c.translate(m, m);
+  c.strokeStyle = '#000';
+  c.fillStyle = '#000';
+  c.shadowColor = '#b04cff';
+  c.shadowBlur = 14;
+  c.lineCap = 'round';
+  c.lineWidth = 9;
+  c.beginPath(); c.arc(0, 0, 60, 0, 7); c.stroke();
+  c.lineWidth = 4;
+  c.beginPath(); c.arc(0, 0, 84, 0, 7); c.stroke();
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; c.save(); c.rotate(a); c.fillRect(64, -5, 14, 10); c.restore(); }
+  const signe = (x, y, a, t) => {
+    c.save(); c.translate(x, y); c.rotate(a);
+    c.lineWidth = 4;
+    for (let k = 0; k < 4; k++) {
+      c.beginPath();
+      const ax = (R() - 0.5) * t, ay = (R() - 0.5) * t;
+      c.moveTo(ax, ay);
+      c.lineTo(ax + (R() < 0.5 ? (R() - 0.5) * t * 1.4 : 0), ay + (R() < 0.5 ? 0 : (R() - 0.5) * t * 1.4));
+      c.stroke();
+    }
+    c.restore();
+  };
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + (R() - 0.5) * 0.3;
+    c.lineWidth = 7;
+    c.beginPath();
+    let r = 86, x = Math.cos(a) * r, y = Math.sin(a) * r;
+    c.moveTo(x, y);
+    while (r < 470) { r += 30; const b = a + (R() - 0.5) * 0.06; x = Math.cos(b) * r; y = Math.sin(b) * r; c.lineTo(x, y); }
+    c.stroke();
+    for (let r2 = 120; r2 < 460; r2 += 34) { const d = R() < 0.5 ? 1 : -1; signe(Math.cos(a) * r2 - Math.sin(a) * 20 * d, Math.sin(a) * r2 + Math.cos(a) * 20 * d, a, 22); }
+  }
+  for (let i = 0; i < 26; i++) { const a = R() * 7, r2 = 100 + R() * 40; signe(Math.cos(a) * r2, Math.sin(a) * r2, a + 1.57, 16); }
+}
+const texSceau = new THREE.CanvasTexture(SCEAU);
+const matSceau = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
+  uniforms: { carte: { value: texSceau }, rayon: { value: 0 }, force: { value: 1 }, temps: { value: 0 } },
+  vertexShader: 'varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D carte; uniform float rayon; uniform float force; uniform float temps; varying vec2 vU;
+    void main(){ float d = length(vU - 0.5); if (d > rayon) discard; vec4 t = texture2D(carte, vU);
+      float encre = 1.0 - smoothstep(0.05, 0.3, t.r + t.g + t.b); float halo = t.a * (1.0 - encre);
+      float front = smoothstep(0.035, 0.0, abs(d - rayon)) * step(rayon, 0.49);
+      vec3 violet = vec3(1.6, 0.45, 2.6) * (0.75 + 0.25 * sin(temps * 9.0 - d * 40.0));
+      vec3 col = mix(violet * halo, vec3(0.0), encre * t.a) + violet * front * t.a;
+      gl_FragColor = vec4(col, max(t.a * encre, halo * 0.8 + front * t.a) * force); }`,
+});
+const sceau = new THREE.Mesh(new THREE.PlaneGeometry(34, 34).rotateX(-Math.PI / 2), matSceau);
+sceau.position.set(0, 0.04, 1.0);
+scene.add(sceau);
+
+// ------------------------------------------------------------------ les arbres, la maison (des blocs qu'on peut casser)
+const MONDE = [];
+function arbre(x, z, h) {
+  for (let y = 0; y < h; y++) MONDE.push([x, y, z, 3]);
+  for (let y = h - 3; y <= h + 1; y++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+    const r = Math.abs(dx) + Math.abs(dz) + (y - h + 1) * 0.9;
+    if ((dx || dz || y >= h) && r < 3.6 && hache(x + dx, y, z + dz) > 0.08) MONDE.push([x + dx, y, z + dz, 4]);
+  }
+}
+for (const [x, z, h] of [[2, 58, 6], [-4, 98, 5], [3, 112, 6], [-17, 26, 6], [17, 40, 5], [-18, 82, 6], [19, 104, 6], [-16, 150, 5], [20, 156, 6], [-15, 6, 5], [14, 10, 6], [-24, 120, 6], [26, 72, 5]]) arbre(x, z, h);
+// la maison : murs de pierres taillées en bas, planches au-dessus, une porte, des fenêtres, un toit en gradins
+for (let y = 0; y < 5; y++) for (let x = -4; x <= 4; x++) for (let z = 146; z <= 154; z++) {
+  const bord = x === -4 || x === 4 || z === 146 || z === 154;
+  if (!bord) continue;
+  if (z === 146 && x === 0 && y < 2) continue;
+  if ((x === -4 || x === 4) && (z === 149 || z === 151) && y === 2) continue;
+  MONDE.push([x, y, z, y === 0 || ((x === -4 || x === 4) && (z === 146 || z === 154)) ? 6 : 5]);
+}
+for (let k = 0; k < 4; k++) for (let x = -5 + k; x <= 5 - k; x++) for (let z = 145 + k; z <= 155 - k; z++) if (k === 3 || x === -5 + k || x === 5 - k || z === 145 + k || z === 155 - k) MONDE.push([x, 5 + k, z, 5]);
+const monde = blocs(MONDE.length, MONDE.map((b) => b[3]));
+scene.add(monde);
+const vivant = new Uint8Array(MONDE.length);
+
+// ------------------------------------------------------------------ les débris : des blocs qui volent, roulent et retombent
+const ND = 6000;
+const debris = blocs(ND);
+scene.add(debris);
+ombreDe(debris);
+const DB = { repos: new Float32Array(ND), p: new Float32Array(ND * 3), v: new Float32Array(ND * 3), r: new Float32Array(ND * 3), w: new Float32Array(ND * 3), t: new Float32Array(ND), actif: new Uint8Array(ND), pose: new Uint8Array(ND), prochain: 0 };
+function lancer(p, v, genre, taille) {
+  const i = DB.prochain;
+  DB.prochain = (DB.prochain + 1) % ND;
+  DB.p.set(p, i * 3);
+  DB.v.set(v, i * 3);
+  DB.r.set([al(0, 6), al(0, 6), al(0, 6)], i * 3);
+  DB.w.set([al(-12, 12), al(-12, 12), al(-12, 12)], i * 3);
+  DB.t[i] = taille;
+  DB.actif[i] = 1;
+  DB.pose[i] = 0;
+  DB.repos[i] = 0;
+  debris.geometry.attributes.genre.array[i] = genre;
+}
+function poserDebris(i) {
+  const t = DB.actif[i] ? DB.t[i] * clamp(1 - (DB.repos[i] - 2) / 0.6, 0, 1) : 0;
+  e4.set(DB.r[i * 3], DB.r[i * 3 + 1], DB.r[i * 3 + 2]);
+  q4.setFromEuler(e4);
+  m4.compose(v4.set(DB.p[i * 3], DB.p[i * 3 + 1], DB.p[i * 3 + 2]), q4, s4.set(t, t, t));
+  debris.setMatrixAt(i, m4);
+}
+function pasDebris(dt) {
+  for (let i = 0; i < ND; i++) {
+    if (!DB.actif[i]) continue;
+    if (DB.pose[i]) { DB.repos[i] += dt; if (DB.repos[i] > 2.7) DB.actif[i] = 0; continue; }
+    const o = i * 3;
+    DB.v[o + 1] -= 32 * dt;
+    for (let k = 0; k < 3; k++) { DB.p[o + k] += DB.v[o + k] * dt; DB.r[o + k] += DB.w[o + k] * dt; }
+    const bas = hauteurSol(DB.p[o], DB.p[o + 2]) + DB.t[i] / 2;
+    if (DB.p[o + 1] < bas) {
+      DB.p[o + 1] = bas;
+      DB.v[o + 1] = -DB.v[o + 1] * 0.28;
+      DB.v[o] *= 0.55; DB.v[o + 2] *= 0.55;
+      for (let k = 0; k < 3; k++) DB.w[o + k] *= 0.5;
+      if (Math.abs(DB.v[o + 1]) < 2.2 && Math.hypot(DB.v[o], DB.v[o + 2]) < 1.5) { DB.pose[i] = 1; DB.r[o] = Math.round(DB.r[o] / (Math.PI / 2)) * (Math.PI / 2); DB.r[o + 2] = Math.round(DB.r[o + 2] / (Math.PI / 2)) * (Math.PI / 2); }
+    }
+  }
+}
+
+// ------------------------------------------------------------------ fumée, poussière, lueurs
+function systeme(N, additif) {
+  const S = { N, p: new Float32Array(N * 3), v: new Float32Array(N * 3), age: new Float32Array(N).fill(1e9), vie: new Float32Array(N).fill(1), t0: new Float32Array(N), t1: new Float32Array(N), a0: new Float32Array(N), freine: new Float32Array(N), monte: new Float32Array(N), taille: new Float32Array(N), alpha: new Float32Array(N), coul: new Float32Array(N * 3), prochain: 0 };
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(S.p, 3));
+  g.setAttribute('taille', new THREE.BufferAttribute(S.taille, 1));
+  g.setAttribute('alpha', new THREE.BufferAttribute(S.alpha, 1));
+  g.setAttribute('couleur', new THREE.BufferAttribute(S.coul, 3));
+  S.mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: additif ? THREE.AdditiveBlending : THREE.NormalBlending,
+    uniforms: { echelle: { value: 600 } },
+    vertexShader: 'uniform float echelle; attribute float taille; attribute float alpha; attribute vec3 couleur; varying float vA; varying vec3 vC; void main(){ vA = alpha; vC = couleur; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = taille * echelle / max(-mv.z, 0.5); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: additif
+      ? 'varying float vA; varying vec3 vC; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; if (r > 1.0) discard; float a = pow(1.0 - r, 1.6) * vA; gl_FragColor = vec4(vC * a, a); }'
+      : 'varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float r = length(c) * 2.0; if (r > 1.0) discard; float a = (1.0 - smoothstep(0.45, 1.0, r)) * vA; gl_FragColor = vec4(vC * (1.05 - 0.3 * r + 0.25 * (-c.y)), a); }',
+  });
+  S.pts = new THREE.Points(g, S.mat);
+  S.pts.frustumCulled = false;
+  S.g = g;
+  scene.add(S.pts);
+  S.emettre = (p, v, vie, t0, t1, a0, coul, freine = 1.5, monte = 0) => {
+    const i = S.prochain;
+    S.prochain = (S.prochain + 1) % N;
+    S.p.set(p, i * 3); S.v.set(v, i * 3); S.coul.set(coul, i * 3);
+    Object.assign(S, {});
+    S.age[i] = 0; S.vie[i] = vie; S.t0[i] = t0; S.t1[i] = t1; S.a0[i] = a0; S.freine[i] = freine; S.monte[i] = monte;
+  };
+  S.pas = (dt) => {
+    for (let i = 0; i < N; i++) {
+      if (S.age[i] > S.vie[i]) { S.alpha[i] = 0; continue; }
+      S.age[i] += dt;
+      const k = S.age[i] / S.vie[i], f = Math.exp(-S.freine[i] * dt), o = i * 3;
+      S.v[o] *= f; S.v[o + 2] *= f; S.v[o + 1] = S.v[o + 1] * f + S.monte[i] * dt;
+      for (let c = 0; c < 3; c++) S.p[o + c] += S.v[o + c] * dt;
+      S.taille[i] = lerp(S.t0[i], S.t1[i], 1 - (1 - Math.min(1, k)) ** 2);
+      S.alpha[i] = k > 1 ? 0 : S.a0[i] * Math.min(1, k / 0.07) * (1 - k) ** 1.3;
+    }
+  };
+  S.vider = () => { S.age.fill(1e9); S.alpha.fill(0); };
+  S.maj = () => { for (const n of ['position', 'taille', 'alpha', 'couleur']) g.attributes[n].needsUpdate = true; };
+  return S;
+}
+const fumee = systeme(7000, false);
+const lueurs = systeme(2500, true);
+const FUMEE = C(236, 232, 240).map((v) => v ** 2.2), POUSSIERE = C(150, 124, 98).map((v) => v ** 2.2), VIOLET = [1.1, 0.35, 1.9];
+
+// les ondes de choc (des anneaux plats qui s'élargissent)
+const ondes = [];
+const matOnde = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+function onde(p, rmax, duree, couleur) {
+  const m = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 64).rotateX(-Math.PI / 2), matOnde.clone());
+  m.material.color.setRGB(...couleur);
+  m.position.set(...p);
+  scene.add(m);
+  ondes.push({ m, age: 0, rmax, duree });
+}
+
+// ------------------------------------------------------------------ les joueurs devant (des cibles)
+const CIBLES = [[-1, 52], [3.5, 74], [-9.5, 86], [0.5, 100], [9, 118], [-0.5, 141], [-12, 64]];
+function steve(chemise) {
+  const g = new THREE.Group();
+  const boite = (w, h, d, x, y, z, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color: c })); m.position.set(x, y, z); g.add(m); return m; };
+  boite(0.5, 0.5, 0.5, 0, 0.75, 0, 0xc89a72);
+  boite(0.5, 0.75, 0.25, 0, 0.125, 0, chemise);
+  boite(0.25, 0.75, 0.25, -0.375, 0.125, 0, 0xc89a72);
+  boite(0.25, 0.75, 0.25, 0.375, 0.125, 0, 0xc89a72);
+  boite(0.24, 0.75, 0.25, -0.125, -0.625, 0, 0x3a3f9a);
+  boite(0.24, 0.75, 0.25, 0.125, -0.625, 0, 0x3a3f9a);
+  boite(0.12, 0.08, 0.02, -0.12, 0.8, 0.26, 0x2a2a5a);
+  boite(0.12, 0.08, 0.02, 0.12, 0.8, 0.26, 0x2a2a5a);
+  scene.add(g);
+  return g;
+}
+const cibles = CIBLES.map(([x, z], i) => ({ x, z, g: steve([0x16a3a3, 0xb03030, 0x2f8f2f, 0xd8a020, 0x6050c0, 0xd06aa0, 0x404040][i]) }));
+// les dégâts qui montent au-dessus de la tête
+function texteDegats(n) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const x = c.getContext('2d');
+  x.font = 'bold 84px system-ui';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.lineWidth = 12;
+  x.strokeStyle = '#2a0008';
+  x.strokeText('-' + n, 128, 64);
+  x.fillStyle = '#ff3048';
+  x.fillText('-' + n, 128, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false }));
+  s.scale.set(4, 2, 1);
+  s.renderOrder = 5;
+  return s;
+}
+const textes = [];
+
+// ------------------------------------------------------------------ le marqué (forme 2 de la marque : sa peau, ses cheveux, son haut noué à la taille)
+const PARTIES = {
+  tete: [[-4, 24, -4, 4, 32, 4], [0, 0], [32, 0], 0.5],
+  corps: [[-4, 12, -2, 4, 24, 2], [16, 16], [16, 32], 0.25],
+  bd: [[-8, 12, -2, -4, 24, 2], [40, 16], [40, 32], 0.25],
+  bg: [[4, 12, -2, 8, 24, 2], [32, 48], [48, 48], 0.25],
+  jd: [[-4, 0, -2, 0, 12, 2], [0, 16], [0, 32], 0.25],
+  jg: [[0, 0, -2, 4, 12, 2], [16, 48], [0, 48], 0.25],
+};
+function boitePeau(b, uv, gonfle) {
+  const [x0, y0, z0, x1, y1, z1] = b;
+  const w = x1 - x0, h = y1 - y0, d = z1 - z0, [u, v] = uv;
+  const X0_ = x0 - gonfle, Y0_ = y0 - gonfle, Z0_ = z0 - gonfle, X1_ = x1 + gonfle, Y1_ = y1 + gonfle, Z1_ = z1 + gonfle;
+  const sx = (X1_ - X0_) / w, sy = (Y1_ - Y0_) / h, sz = (Z1_ - Z0_) / d;
+  const faces = [
+    [u + d, v + d, w, h, [X0_, Y1_, Z1_], [sx, 0, 0], [0, -sy, 0]],
+    [u + d + w + d, v + d, w, h, [X1_, Y1_, Z0_], [-sx, 0, 0], [0, -sy, 0]],
+    [u, v + d, d, h, [X0_, Y1_, Z0_], [0, 0, sz], [0, -sy, 0]],
+    [u + d + w, v + d, d, h, [X1_, Y1_, Z1_], [0, 0, -sz], [0, -sy, 0]],
+    [u + d, v, w, d, [X0_, Y1_, Z0_], [sx, 0, 0], [0, 0, sz]],
+    [u + d + w, v, w, d, [X0_, Y0_, Z1_], [sx, 0, 0], [0, 0, -sz]],
+  ];
+  const pos = [], uvs = [];
+  for (const [tu, tv, tw, th, O, U, V] of faces) {
+    const c = [O, plus(O, fois(U, tw)), plus(plus(O, fois(U, tw)), fois(V, th)), plus(O, fois(V, th))];
+    const t = [[tu, tv], [tu + tw, tv], [tu + tw, tv + th], [tu, tv + th]];
+    for (const q of [0, 2, 1, 0, 3, 2]) { pos.push(...c[q]); uvs.push(t[q][0] / 64, 1 - t[q][1] / 64); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.computeVertexNormals();
+  return g;
+}
+const texPeau = new THREE.TextureLoader().load('../apercu/peau-forme2.png');
+texPeau.magFilter = texPeau.minFilter = THREE.NearestFilter;
+texPeau.colorSpace = THREE.SRGBColorSpace;
+const matPeau = new THREE.MeshLambertMaterial({ map: texPeau, alphaTest: 0.5, side: THREE.DoubleSide });
+const joueur = new THREE.Group();
+joueur.matrixAutoUpdate = false;
+scene.add(joueur);
+const os = {};
+{
+  const pivot = (nom, parent, p) => { const g = new THREE.Group(); g.position.set(...p); parent.add(g); os[nom] = g; return g; };
+  const hanches = pivot('hanches', joueur, [0, 12, 0]);
+  const torse = pivot('torse', hanches, [0, 0, 0]);
+  const tete = pivot('tete', torse, [0, 12, 0]);
+  const bd = pivot('bd', torse, [-6, 10, 0]), bg = pivot('bg', torse, [6, 10, 0]);
+  const jd = pivot('jd', hanches, [-2, 0, 0]), jg = pivot('jg', hanches, [2, 0, 0]);
+  const monter = (parent, cle, decal) => {
+    const [b, uv, uv2, g] = PARTIES[cle];
+    const w = new THREE.Group();
+    w.position.set(...decal);
+    w.add(new THREE.Mesh(boitePeau(b, uv, 0), matPeau), new THREE.Mesh(boitePeau(b, uv2, g), matPeau));
+    parent.add(w);
+    return w;
+  };
+  const wt = monter(tete, 'tete', [0, -24, 0]);
+  monter(torse, 'corps', [0, -12, 0]);
+  monter(bd, 'bd', [6, -22, 0]);
+  monter(bg, 'bg', [-6, -22, 0]);
+  monter(jd, 'jd', [2, -12, 0]);
+  monter(jg, 'jg', [-2, -12, 0]);
+  // les cheveux : la grosse touffe gris-bleu en pointes
+  const CHEVEUX = [150, 160, 182], m = [];
+  for (const y of [31.2, 28.8, 26.4]) for (const x of [-3.5, -1.2, 1.2, 3.5]) m.push({ b: [x, y, -4.2], d: [x * 0.16, -0.8 - (31.2 - y) * 0.04, -0.6], l: 9 + (31.2 - y) * 0.5, w: 3.6 });
+  for (const sx of [-1, 1]) for (const [y, zz] of [[31.2, -2.6], [31.2, 0.4], [28.8, -3.2], [28.8, -0.8], [26.6, -2.4], [26.6, 0.6]]) m.push({ b: [sx * 4.2, y, zz], d: [sx * 0.8, -0.5, -0.5], l: 6.5, w: 3.4 });
+  for (const x of [-3.2, 0, 3.2]) for (const zz of [-2.8, 0.2, 3]) m.push({ b: [x, 32.1, zz], d: [x * 0.2, 0.5, -0.85], l: 5.5 + (3 - zz) * 0.45, w: 3.6 });
+  for (const x of [-3.2, -1.1, 1.1, 3.2]) m.push({ b: [x, 31.6, 4.1], d: [x * 0.15, -0.55, 0.8], l: 2.8, w: 2.8 });
+  const pos = [], col = [];
+  m.forEach((h, i) => {
+    const hz = hache(i, 7, 13), d = norme(h.d), l = h.l * (0.85 + 0.3 * hz);
+    let e1 = croix(d, [0, 1, 0]);
+    if (Math.hypot(...e1) < 0.2) e1 = croix(d, [1, 0, 0]);
+    e1 = norme(e1);
+    const e2 = croix(d, e1);
+    const base = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, c]) => plus(h.b, plus(fois(e1, (a * h.w) / 2), fois(e2, (c * h.w) / 2))));
+    const pointe = plus(h.b, fois(d, l));
+    const c = CHEVEUX.map((v) => lin(v * (0.82 + 0.28 * hz)));
+    for (let k = 0; k < 4; k++) { pos.push(...base[k], ...base[(k + 1) % 4], ...pointe); col.push(...c, ...c, ...c.map((v) => v * 0.8)); }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  wt.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide })));
+}
+const POSES = {
+  debout: { y: 0, torse: 0, tete: 0, bg: [0, -0.06], bd: [0, 0.06], jg: 0, jd: 0 },
+  accroupi: { y: -2.5, torse: 0.4, tete: -0.3, bg: [0.8, -0.15], bd: [0.8, 0.15], jg: -0.6, jd: -0.6 },
+  saut: { y: 0, torse: 0.05, tete: -0.1, bg: [-2.7, -0.3], bd: [-2.7, 0.3], jg: -0.9, jd: 0.45 },
+  invoque: { y: -6.5, torse: 0.95, tete: -0.75, bg: [-1.5, -0.12], bd: [-1.5, 0.12], jg: -1.2, jd: 1.25 },
+  fier: { y: 0, torse: -0.05, tete: 0.1, bg: [0.25, -0.35], bd: [0.25, 0.35], jg: -0.12, jd: 0.12 },
+  surf: { y: -2.5, torse: 0.4, tete: -0.35, bg: [-1.3, -0.5], bd: [0.6, 0.8], jg: -0.5, jd: 0.55 },
+  chute: { y: 0, torse: -0.1, tete: 0.2, bg: [-2.8, -0.5], bd: [-2.8, 0.5], jg: -0.3, jd: 0.3 },
+};
+const melangePose = (a, b, k) => ({ y: lerp(a.y, b.y, k), torse: lerp(a.torse, b.torse, k), tete: lerp(a.tete, b.tete, k), bg: [lerp(a.bg[0], b.bg[0], k), lerp(a.bg[1], b.bg[1], k)], bd: [lerp(a.bd[0], b.bd[0], k), lerp(a.bd[1], b.bd[1], k)], jg: lerp(a.jg, b.jg, k), jd: lerp(a.jd, b.jd, k) });
+function appliquerPose(P) {
+  os.hanches.position.y = 12 + P.y;
+  os.torse.rotation.x = P.torse;
+  os.tete.rotation.x = P.tete;
+  os.bg.rotation.set(P.bg[0], 0, P.bg[1]);
+  os.bd.rotation.set(P.bd[0], 0, P.bd[1]);
+  os.jg.rotation.x = P.jg;
+  os.jd.rotation.x = P.jd;
+}
+/** Où est le marqué à l'instant T, et dans quelle pose (tout dépend seulement de T). */
+function etatJoueur(T) {
+  const S = POSES;
+  if (T < T_POUF + 0.12) {
+    let P, y = 0;
+    if (T < T_SAUT) P = S.debout;
+    else if (T < T_SAUT + 0.2) P = melangePose(S.debout, S.accroupi, (T - T_SAUT) / 0.2);
+    else if (T < T_POSE - 0.15) { const k = (T - T_SAUT - 0.2) / (T_POSE - 0.15 - T_SAUT - 0.2); P = melangePose(S.accroupi, S.saut, Math.min(1, k * 3)); y = 2.6 * 4 * k * (1 - k) + 0.6 * k; }
+    else if (T < T_POSE) { const k = (T - T_POSE + 0.15) / 0.15; P = melangePose(S.saut, S.invoque, k); y = 0.6 * (1 - k); }
+    else P = melangePose(S.invoque, { ...S.invoque, y: -7.5 }, Math.max(0, 1 - (T - T_POSE) / 0.2));
+    return { P, p: [0, y, 0], t: [0, 0, 1], u: [0, 1, 0] };
+  }
+  if (T < T_DISPARAIT) {
+    const K = cadreTete(T), a = ANGLE_CRANE(K.ouv);
+    const t = norme(add(mul(K.t, Math.cos(a)), mul(K.u, Math.sin(a)))), u = norme(sub(mul(K.u, Math.cos(a)), mul(K.t, Math.sin(a))));
+    let P = T < T_POUF + 0.8 ? melangePose(S.invoque, S.fier, (T - T_POUF - 0.12) / 0.68) : S.fier;
+    if (T > T_ELAN) P = melangePose(S.fier, S.surf, (T - T_ELAN) / 0.4);
+    return { P, p: craneVersMonde(K, SIEGE), t, u };
+  }
+  // il retombe quand le serpent disparaît
+  const K = cadreTete(T_DISPARAIT), p0 = craneVersMonde(K, SIEGE), w = T - T_DISPARAIT;
+  const fond = hauteurSol(p0[0], p0[2] + 4 * w);
+  const y = p0[1] + 9 * w - 16 * w * w;
+  if (y > fond) return { P: S.chute, p: [p0[0], y, p0[2] + 4 * w], t: [0, 0, 1], u: [0, 1, 0] };
+  const tSol = (9 + Math.sqrt(81 + 64 * (p0[1] - fond))) / 32, k = (w - tSol) / 0.5;
+  return { P: k < 1 ? melangePose(S.invoque, S.fier, lisse(k)) : S.fier, p: [p0[0], fond, p0[2] + 4 * tSol], t: [0, 0, 1], u: [0, 1, 0], atterri: tSol };
+}
+function poserJoueur(T) {
+  const J = etatJoueur(T);
+  appliquerPose(J.P);
+  const z = J.t, y = J.u, x = croix(y, z), k = 1 / 16;
+  joueur.matrix.set(x[0] * k, y[0] * k, z[0] * k, J.p[0], x[1] * k, y[1] * k, z[1] * k, J.p[1], x[2] * k, y[2] * k, z[2] * k, J.p[2], 0, 0, 0, 1);
+  joueur.matrixWorldNeedsUpdate = true;
+  return J;
+}
+
+// ------------------------------------------------------------------ le serpent : les maillages
+const matSerpent = new THREE.MeshLambertMaterial({ color: 0xffffff });
+const matYeux = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+const serpent = new THREE.Group();
+scene.add(serpent);
+const teteG = new THREE.Group();
+teteG.matrixAutoUpdate = false;
+serpent.add(teteG);
+const craneG = new THREE.Group(), machG = new THREE.Group(), langueG = new THREE.Group();
+craneG.position.x = machG.position.x = CHARN;
+teteG.add(craneG, machG);
+machG.add(langueG);
+langueG.position.set(3 - CHARN, -0.3, 0);
+let SP = null, corpsM = null;
+const cube = new THREE.BoxGeometry(1, 1, 1);
+function instances(liste, p, mat, decal, filtre) {
+  const idx = [];
+  for (let i = 0; i < liste.reg.length; i++) if (filtre(liste.reg[i], i)) idx.push(i);
+  const m = new THREE.InstancedMesh(cube, mat, idx.length);
+  m.frustumCulled = false;
+  const c = new THREE.Color();
+  idx.forEach((i, j) => {
+    m4.makeScale(p * 1.02, p * 1.02, p * 1.02).setPosition(liste.pos[i * 3] + decal[0], liste.pos[i * 3 + 1] + decal[1], liste.pos[i * 3 + 2] + decal[2]);
+    m.setMatrixAt(j, m4);
+    const yeux = mat === matYeux;
+    c.setRGB(liste.col[i * 3] ** 2.2 * (yeux ? 2.2 : 1), liste.col[i * 3 + 1] ** 2.2 * (yeux ? 2.2 : 1), liste.col[i * 3 + 2] ** 2.2 * (yeux ? 2.2 : 1));
+    m.setColorAt(j, c);
+  });
+  return m;
+}
+function monterSerpent(p) {
+  for (const [o] of ombres.splice(1)) scene.remove(o);
+  for (const g of [craneG, machG, langueG]) for (const c of [...g.children]) if (c.isInstancedMesh) { g.remove(c); c.dispose(); }
+  if (corpsM) { serpent.remove(corpsM); corpsM.dispose(); }
+  SP = construireSerpent(p);
+  const d = [-CHARN, 0, 0];
+  const crane = instances(SP.crane, p, matSerpent, d, (r, i) => r !== 2 || SP.crane.col[i * 3] < 0.2);
+  craneG.add(crane, instances(SP.crane, p, matYeux, d, (r, i) => r === 2 && SP.crane.col[i * 3] >= 0.2));
+  const mach = instances(SP.machoire, p, matSerpent, d, () => true);
+  machG.add(mach);
+  langueG.add(instances(SP.langue, Math.min(p, 0.25), matSerpent, [-0.0, 0, 0], () => true));
+  const B = SP.corps;
+  corpsM = new THREE.InstancedMesh(cube, matSerpent, B.n);
+  corpsM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  corpsM.frustumCulled = false;
+  const c = new THREE.Color();
+  for (let i = 0; i < B.n; i++) { c.setRGB(B.col[i * 3] ** 2.2, B.col[i * 3 + 1] ** 2.2, B.col[i * 3 + 2] ** 2.2); corpsM.setColorAt(i, c); }
+  serpent.add(corpsM);
+  ombreDe(corpsM);
+  ombreDe(crane);
+  ombreDe(mach);
+  console.log('serpent', p, 'corps', B.n, 'crâne', SP.crane.reg.length, 'mâchoire', SP.machoire.reg.length);
+}
+function poserSerpent(T) {
+  const K = cadreTete(T);
+  serpent.visible = T >= T_POUF + 0.12 && T < T_DISPARAIT + 0.08;
+  if (!serpent.visible) return K;
+  teteG.matrix.set(K.t[0], K.u[0], K.c[0], K.p[0], K.t[1], K.u[1], K.c[1], K.p[1], K.t[2], K.u[2], K.c[2], K.p[2], 0, 0, 0, 1);
+  teteG.matrixWorldNeedsUpdate = true;
+  craneG.rotation.z = ANGLE_CRANE(K.ouv);
+  machG.rotation.z = ANGLE_MACH(K.ouv);
+  const ls = LANGUE_SORT(T);
+  langueG.position.x = 3 - CHARN - 9 + 11 * ls * Math.min(1, K.ouv * 3 + 0.4);
+  langueG.visible = ls > 0.02;
+  // le corps : chaque anneau suit le chemin, un peu derrière la tête
+  const B = SP.corps, M = corpsM.instanceMatrix.array, p = SP.p * 1.14;
+  for (const [s, debut, fin] of B.anneaux) {
+    const f = chemin(K.d - s + 1.2), D = deplacement(s, T);
+    const c = norme(croix(f.t, f.u)), o = add(f.p, D);
+    for (let i = debut; i < fin; i++) {
+      const a = B.A[i], b = B.B[i], w = i * 16;
+      M[w] = c[0] * p; M[w + 1] = c[1] * p; M[w + 2] = c[2] * p; M[w + 3] = 0;
+      M[w + 4] = f.u[0] * p; M[w + 5] = f.u[1] * p; M[w + 6] = f.u[2] * p; M[w + 7] = 0;
+      M[w + 8] = f.t[0] * p; M[w + 9] = f.t[1] * p; M[w + 10] = f.t[2] * p; M[w + 11] = 0;
+      M[w + 12] = o[0] + f.u[0] * a + c[0] * b; M[w + 13] = o[1] + f.u[1] * a + c[1] * b; M[w + 14] = o[2] + f.u[2] * a + c[2] * b; M[w + 15] = 1;
+    }
+  }
+  corpsM.instanceMatrix.needsUpdate = true;
+  return K;
+}
+
+// ------------------------------------------------------------------ la simulation (le sol, les débris, les cibles, la fumée)
+let T = 0;
+const touchees = new Set();
+let derniereFissure = 0;
+function reinitialiser() {
+  A = graine(7);
+  T = 0;
+  haut.fill(0);
+  genreSol.fill(0);
+  for (let i = 0; i < NX * NZ; i++) majColonne(i);
+  sol.instanceMatrix.needsUpdate = true;
+  sol.geometry.attributes.genre.needsUpdate = true;
+  vivant.fill(1);
+  souffle.fill(0);
+  MONDE.forEach((b, i) => { m4.makeTranslation(b[0] + 0.5, b[1] + 0.5, b[2] + 0.5); monde.setMatrixAt(i, m4); });
+  monde.instanceMatrix.needsUpdate = true;
+  DB.actif.fill(0);
+  DB.prochain = 0;
+  for (let i = 0; i < ND; i++) poserDebris(i);
+  debris.instanceMatrix.needsUpdate = true;
+  fumee.vider();
+  lueurs.vider();
+  for (const o of ondes.splice(0)) scene.remove(o.m);
+  for (const t of textes.splice(0)) scene.remove(t.s);
+  fctx.clearRect(0, 0, FIS.width, FIS.height);
+  texFis.needsUpdate = true;
+  touchees.clear();
+  for (const c of cibles) { Object.assign(c, { vol: null, pos: [c.x, 0, c.z], rot: [0, Math.PI, 0] }); c.g.rotation.set(0, Math.PI, 0); c.g.position.set(c.x, 1.0, c.z); }
+  derniereFissure = 0;
+}
+/**
+ * Fait voler des copies des blocs de la colonne i (le sol, lui, ne bouge pas : c'est un effet, comme en jeu).
+ * n copies, une seule fois par colonne et par passage.
+ */
+const souffle = new Uint8Array(NX * NZ);
+function creuser(i, n, dir, K, fort) {
+  if (souffle[i]) return;
+  souffle[i] = 1;
+  const x = X0 + (i % NX) + 0.5, z = Z0 + Math.floor(i / NX) + 0.5;
+  for (let k = 0; k < n; k++) {
+    if (A() < 0.7) {
+      const g = k === 0 ? 0 : k > 2 ? 2 : 1;
+      lancer([x + al(-0.3, 0.3), 0.5 + k * 0.3, z + al(-0.3, 0.3)], add(add(mul(K.c, dir * al(4, 15)), [0, al(9, 24) * fort, 0]), mul(K.t, K.v * al(0.25, 0.75))), g, A() < 0.15 ? al(1.2, 1.6) : al(0.55, 1));
+    }
+  }
+  if (A() < 0.35) fumee.emettre([x, 0.5, z], [dir * K.c[0] * al(3, 8), al(2, 6), dir * K.c[2] * al(3, 8) + K.t[2] * K.v * 0.2], al(1.0, 2.0), al(2, 3), al(6, 10), 0.4, POUSSIERE, 1.6, 0.8);
+}
+function casserMonde(test, vitesse) {
+  for (let i = 0; i < MONDE.length; i++) {
+    if (!vivant[i]) continue;
+    const b = MONDE[i], c = [b[0] + 0.5, b[1] + 0.5, b[2] + 0.5], v = test(c);
+    if (!v) continue;
+    vivant[i] = 0;
+    if (A() < 0.5) lancer(c, v, b[3], al(0.8, 1.05));
+  }
+}
+function toucher(cible, degats, v) {
+  if (touchees.has(cible)) return;
+  touchees.add(cible);
+  cible.vol = { v, w: [al(-8, 8), al(-6, 6), al(-8, 8)], rebonds: 0 };
+  const s = texteDegats(degats);
+  scene.add(s);
+  textes.push({ s, age: 0, p: add(cible.pos, [0, 3, 0]) });
+}
+/** La pose d'un point dans le repère de la tête (x vers l'avant, y vers le haut, z sur le côté). */
+const versTete = (K, w) => { const d = sub(w, K.p); return [dot(d, K.t), dot(d, K.u), dot(d, K.c)]; };
+const evenement = (avant, apres, t) => avant < t && apres >= t;
+
+function pas(dt) {
+  const avant = T;
+  T += dt;
+  // les mains au sol : un petit nuage, quelques blocs qui sautent
+  if (evenement(avant, T, T_POSE)) {
+    for (let i = 0; i < 26; i++) { const a = al(0, 7); fumee.emettre([Math.cos(a) * 0.8, 0.3, 1 + Math.sin(a) * 0.8], [Math.cos(a) * al(5, 9), al(0.5, 2), Math.sin(a) * al(5, 9)], al(0.8, 1.4), 0.8, 2.6, 0.5, POUSSIERE, 3); }
+    onde([0, 0.08, 1], 9, 0.5, VIOLET.map((v) => v * 0.8));
+  }
+  // pouf : l'invocation
+  if (evenement(avant, T, T_POUF)) {
+    for (let i = 0; i < 900; i++) {
+      const a = al(0, 7), b = Math.acos(al(-0.3, 1)), r = al(0, 1) ** 0.5;
+      const d = [Math.sin(b) * Math.cos(a), Math.cos(b), Math.sin(b) * Math.sin(a)];
+      const c = [0, 12, -6];
+      fumee.emettre(add(c, mul([d[0] * 16, d[1] * 12, d[2] * 18], r)), mul(d, al(12, 34)), al(0.8, 1.6), al(5, 9), al(12, 19), al(0.7, 0.9), FUMEE.map((v) => v * al(0.82, 1)), 2.6, al(0.5, 2));
+    }
+    for (let i = 0; i < 240; i++) { const a = al(0, 7); fumee.emettre([Math.cos(a) * al(8, 20), 0.5, -6 + Math.sin(a) * al(8, 20)], [Math.cos(a) * al(14, 30), al(0, 3), Math.sin(a) * al(14, 30)], al(0.9, 1.8), 4, 10, 0.6, FUMEE, 2.2); }
+    for (let i = 0; i < 150; i++) { const a = al(0, 7), r = al(9, 22); const p = [Math.cos(a) * r, 0.5, -6 + Math.sin(a) * r]; lancer(p, [Math.cos(a) * al(6, 18), al(10, 26), Math.sin(a) * al(6, 18)], A() < 0.6 ? 0 : 1, al(0.6, 1.2)); }
+    onde([0, 0.1, -6], 48, 0.9, [1, 0.9, 1.1]);
+    onde([0, 0.12, -6], 30, 0.7, VIOLET);
+  }
+  // la charge : il laboure le sol sous sa tête, fait voler les blocs, les arbres, la maison, les joueurs
+  const K = cadreTete(T);
+  if (T > T_CHARGE && T < T_IMPACT + 0.05) {
+    for (let x = -1; x <= LH; x += 0.7) {
+      const ang = ANGLE_MACH(K.ouv), bas = -hMach(x) - Math.max(0, x - CHARN) * Math.sin(-ang) * 0.9;
+      const ctr = add(K.p, mul(K.t, x)), yb = ctr[1] + bas * K.u[1];
+      if (yb > 1.6) continue;
+      const hw = largeur(x) + 0.8;
+      for (let l = -hw - 2.5; l <= hw + 2.5; l += 0.6) {
+        const w = add(ctr, mul(K.c, l)), i = colonne(w[0], w[2]);
+        if (i < 0) continue;
+        const dir = Math.sign(l) || 1;
+        if (Math.abs(l) <= hw) creuser(i, Math.max(1, Math.round(clamp(-yb + 1.4, 1, 3.5) * (1 - 0.45 * (l / hw) ** 4))), dir, K, 1);
+        else if (!souffle[i] && A() < 0.25) { souffle[i] = 1; lancer([w[0], 0.6, w[2]], [K.c[0] * dir * al(3, 8), al(6, 14), K.c[2] * dir * al(3, 8)], 0, al(0.5, 0.9)); }
+      }
+    }
+    // les arbres et la maison
+    casserMonde((c) => {
+      const q = versTete(K, c);
+      if (q[0] < -2 || q[0] > LH + 1.5 || Math.abs(q[2]) > largeur(clamp(q[0], 0, LH)) + 1.8) return null;
+      const s = Math.sign(q[2]) || 1;
+      return add(add(mul(K.c, s * al(4, 14)), [0, al(12, 28), 0]), mul(K.t, K.v * al(0.5, 1.1)));
+    });
+    // les joueurs : la tête les envoie en l'air (28), le souffle sur les côtés les repousse (12)
+    for (const c of cibles) {
+      if (touchees.has(c)) continue;
+      const q = versTete(K, add(c.pos, [0, 1, 0]));
+      if (q[0] < -3 || q[0] > LH + 1.5) continue;
+      const w = largeur(clamp(q[0], 0, LH)), s = Math.sign(q[2]) || 1;
+      if (Math.abs(q[2]) < w + 1.5) toucher(c, 28, add(add(mul(K.c, s * al(5, 10)), [0, 24, 0]), mul(K.t, K.v * 0.8)));
+      else if (Math.abs(q[2]) < w + 6) toucher(c, 12, add(mul(K.c, s * 16), [0, 9, 0]));
+    }
+    // la poussière derrière la tête et la lueur violette sur le dos
+    if (K.v > 5) {
+      for (let k = 0; k < 4; k++) { const s = A() < 0.5 ? -1 : 1, b = add(add(K.p, mul(K.t, al(0, 12))), mul(K.c, s * al(4, 9))); fumee.emettre([b[0], al(0.5, 3), b[2]], add(mul(K.c, s * al(3, 9)), [0, al(2, 6), 0]), al(1.1, 2.1), al(3, 5), al(8, 13), 0.45, POUSSIERE.map((v) => v * al(0.85, 1.1)), 1.4, 1); }
+    }
+  }
+  // l'impact : la tête frappe le sol devant, tout autour vole (le sol reste intact)
+  if (evenement(avant, T, T_IMPACT)) souffle.fill(0);
+  if (evenement(avant, T, T_IMPACT)) {
+    const tip = add(K.p, mul(K.t, LH)), ctr = [tip[0], 0, tip[2] - 2];
+    for (let dx = -10; dx <= 10; dx++) for (let dz = -9; dz <= 11; dz++) {
+      const r = Math.hypot(dx, dz * 0.9);
+      if (r > 10) continue;
+      const i = colonne(ctr[0] + dx, ctr[2] + dz);
+      if (i < 0) continue;
+      const d = Math.round(3 * (1 - (r / 10) ** 2)) + 1;
+      const dir = { c: norme([dx || 0.1, 0, dz]), t: [0, 0, 1], v: 6 };
+      creuser(i, d, 1, dir, 1.3);
+    }
+    vivant.fill(1);
+    casserMonde((c) => { const d = sub(c, ctr); const r = Math.hypot(d[0], d[2]); if (r > 13) return null; const n = norme([d[0], 0, d[2]]); return add(mul(n, al(8, 22)), [0, al(14, 30), al(2, 10)]); });
+    for (let i = 0; i < 260; i++) { const a = al(0, 7), r = al(0, 9); fumee.emettre([ctr[0] + Math.cos(a) * r, al(0.5, 4), ctr[2] + Math.sin(a) * r], [Math.cos(a) * al(10, 26), al(4, 16), Math.sin(a) * al(10, 26)], al(1.3, 2.4), al(4, 7), al(11, 17), 0.65, POUSSIERE.map((v) => v * al(0.9, 1.25)), 2.2, 1.2); }
+    onde([ctr[0], 0.15, ctr[2]], 40, 0.8, [1, 0.85, 0.7]);
+    for (const c of cibles) { const d = sub(c.pos, ctr); if (Math.hypot(d[0], d[2]) < 9) toucher(c, 18, add(mul(norme([d[0], 0, d[2] || 1]), 14), [0, 18, 0])); }
+  }
+  // il disparaît en fumée : des nuages tout le long du corps
+  if (evenement(avant, T, T_DISPARAIT)) {
+    for (let s = -2; s < LB + LH; s += 0.9) {
+      const f = s < 0 ? null : chemin(K.d - s);
+      const p = s < 0 ? add(K.p, mul(K.t, -s * 6)) : f.p, R = s < 0 ? 5 : rayon(s);
+      for (let k = 0; k < 2; k++) fumee.emettre(add(p, [al(-R, R), al(-R * 0.5, R), al(-R, R)]), [al(-6, 6), al(2, 10), al(-6, 6)], al(1.0, 1.9), R * 1.2, R * 2.4 + 3, 0.75, FUMEE.map((v) => v * al(0.85, 1)), 2.4, 1);
+    }
+  }
+  // le marqué retombe au sol
+  const J = etatJoueur(T);
+  if (J.atterri && evenement(avant - T_DISPARAIT, T - T_DISPARAIT, J.atterri)) {
+    for (let i = 0; i < 20; i++) { const a = al(0, 7); fumee.emettre([J.p[0] + Math.cos(a), J.p[1] + 0.3, J.p[2] + Math.sin(a)], [Math.cos(a) * 6, 1, Math.sin(a) * 6], 1.2, 1, 3, 0.5, POUSSIERE, 3); }
+  }
+  // l'aura violette du marqué
+  if (A() < 0.9) { const b = add(J.p, [al(-0.7, 0.7), al(0, 2), al(-0.7, 0.7)]); lueurs.emettre(b, [al(-0.4, 0.4), al(1.5, 3.5), al(-0.4, 0.4)], al(0.5, 1), 0.7, 0.2, 0.7, VIOLET, 0.5); }
+  // les cibles qui volent
+  for (const c of cibles) {
+    if (!c.vol || c.vol.pose) continue;
+    c.vol.v[1] -= 32 * dt;
+    c.pos = add(c.pos, mul(c.vol.v, dt));
+    c.rot = add(c.rot, mul(c.vol.w, dt));
+    const fond = hauteurSol(c.pos[0], c.pos[2]);
+    if (c.pos[1] < fond && c.vol.v[1] < 0) {
+      c.pos[1] = fond;
+      c.vol.v = [c.vol.v[0] * 0.4, -c.vol.v[1] * 0.3, c.vol.v[2] * 0.4];
+      c.vol.w = mul(c.vol.w, 0.4);
+      if (++c.vol.rebonds > 2) { c.vol.pose = true; c.rot = [Math.PI / 2, c.rot[1], 0]; c.pos[1] = fond + 0.25; }
+    }
+  }
+  for (const t of textes) t.age += dt;
+  for (const o of ondes) o.age += dt;
+  pasDebris(dt);
+  fumee.pas(dt);
+  lueurs.pas(dt);
+}
+/** Montre l'image de l'instant T (sans faire avancer la simulation). */
+function poser() {
+  poserSerpent(T);
+  poserJoueur(T);
+  for (let i = 0; i < ND; i++) poserDebris(i);
+  debris.instanceMatrix.needsUpdate = true;
+  debris.geometry.attributes.genre.needsUpdate = true;
+  for (const c of cibles) { c.g.position.set(c.pos[0], c.pos[1] + 1.0, c.pos[2]); c.g.rotation.set(...c.rot); }
+  for (const t of textes) { t.s.position.set(t.p[0], t.p[1] + t.age * 2.5, t.p[2]); t.s.material.opacity = clamp(2 - t.age, 0, 1); t.s.visible = t.age < 2; }
+  for (const o of ondes) { const k = o.age / o.duree; o.m.visible = k < 1; o.m.scale.setScalar(1 + o.rmax * (1 - (1 - Math.min(1, k)) ** 3)); o.m.material.opacity = (1 - k) * 0.9; }
+  fumee.maj();
+  lueurs.maj();
+  if (fisChange) { texFis.needsUpdate = true; fisChange = false; }
+  matSceau.uniforms.rayon.value = T < T_POSE ? 0 : 0.5 * lisse((T - T_POSE) / 0.9);
+  matSceau.uniforms.force.value = T < T_POUF ? 1 : Math.max(0.25, 1 - (T - T_POUF) / 2.5);
+  matSceau.uniforms.temps.value = T;
+  scene.updateMatrixWorld();
+  for (const [o, m] of ombres) { o.matrix.multiplyMatrices(APLATIR, m.matrixWorld); o.matrixWorld.copy(o.matrix); o.visible = m.visible && (m !== corpsM || serpent.visible) && m.parent.visible !== false && (m === debris || serpent.visible); }
+}
+
+// ------------------------------------------------------------------ la caméra « cinéma »
+function cameraCinema(T) {
+  const K = cadreTete(T);
+  const tete = add(K.p, mul(K.t, 8));
+  let pos, cible;
+  if (T < T_POSE) { const y = etatJoueur(T).p[1]; pos = lerpV([6, 2.2, 9], [4.6, 1.8, 7.6], T / T_POSE); pos[1] += y * 0.6; cible = [0, 1.2 + y, 0]; }
+  else if (T < T_POUF) { const k = (T - T_POSE) / (T_POUF - T_POSE); pos = lerpV([3.4, 3.6, 7], [9, 10, 17], lisse(k)); cible = lerpV([0, 0.3, 1.5], [0, 1, 0], k); }
+  else if (T < T_ELAN) { const k = (T - T_POUF) / (T_ELAN - T_POUF); pos = lerpV([34, 9, 46], [44, 17, 54], lisse(k)); cible = lerpV([0, 12, -4], [0, 16, 4], lisse(k)); }
+  else if (T < T_CHARGE + 0.1) { pos = [30, 20, 34]; cible = lerpV([0, 18, 6], tete, 0.5); }
+  else if (T < T_CHARGE + 2.2) { pos = add(tete, [46, 22, -26]); cible = add(tete, [0, 0, 6]); }
+  else if (T < T_DISPARAIT + 0.4) { pos = [-44, 13, 170]; cible = lerpV(add(tete, [0, 3, 0]), [0, 4, 148], 0.35); }
+  else { const k = (T - T_DISPARAIT - 0.4) / 3; pos = lerpV([34, 13, 178], [38, 46, 190], lisse(k)); cible = lerpV([0, 2, 145], [0, 0, 112], lisse(k)); }
+  // la caméra tremble pendant la charge et à l'impact
+  const sec = T > T_CHARGE && T < T_IMPACT ? 0.18 : 0, choc = Math.max(0, 1 - Math.abs(T - T_IMPACT) / 0.5) * 0.7 + Math.max(0, 1 - Math.abs(T - T_POUF) / 0.4) * 0.4;
+  const a = sec + choc;
+  if (a > 0) pos = add(pos, [Math.sin(T * 71) * a, Math.sin(T * 53 + 1) * a, Math.sin(T * 61 + 2) * a]);
+  return { pos, cible };
+}
+
+// ------------------------------------------------------------------ le rendu : le halo (les yeux, le sceau, l'aura)
+const cible2 = new THREE.WebGLRenderTarget(innerWidth * rendu.getPixelRatio(), innerHeight * rendu.getPixelRatio(), { type: THREE.HalfFloatType, stencilBuffer: true });
+const composeur = new EffectComposer(rendu, cible2);
+composeur.addPass(new RenderPass(scene, camera));
+const halo = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.45, 0.9);
+composeur.addPass(halo);
+composeur.addPass(new OutputPass());
+function majEchelle(h) { const e = h / 2 / Math.tan((camera.fov * Math.PI) / 360); fumee.mat.uniforms.echelle.value = lueurs.mat.uniforms.echelle.value = e; }
+majEchelle(innerHeight * rendu.getPixelRatio());
+
+// ------------------------------------------------------------------ les boutons
+const reglages = { lecture: true, vitesse: 1, cinema: true, pas: 0.25, boucle: true };
+const ui = document.getElementById('ui');
+function bouton(texte, action, actif) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  const maj = () => actif && b.classList.toggle('on', actif());
+  b.onclick = () => { action(); for (const f of majs) f(); };
+  majs.push(maj);
+  maj();
+  ui.appendChild(b);
+  return b;
+}
+const majs = [];
+const etiquette = (t) => { const s = document.createElement('span'); s.textContent = t; ui.appendChild(s); };
+bouton('↺ Rejouer', () => { reinitialiser(); reglages.lecture = true; });
+bouton('Pause', () => (reglages.lecture = !reglages.lecture), () => !reglages.lecture);
+etiquette('Vitesse');
+for (const v of [1, 0.5, 0.25]) bouton('×' + v, () => (reglages.vitesse = v), () => reglages.vitesse === v);
+etiquette('Caméra');
+bouton('Cinéma', () => (reglages.cinema = true), () => reglages.cinema);
+bouton('Libre', () => { reglages.cinema = false; }, () => !reglages.cinema);
+etiquette('Cubes');
+bouton('¼ de bloc', () => { reglages.pas = 0.25; refaire(); }, () => reglages.pas === 0.25);
+bouton('½ bloc', () => { reglages.pas = 0.5; refaire(); }, () => reglages.pas === 0.5);
+etiquette('Planche');
+bouton('Faire la planche', () => planche());
+const curseur = document.getElementById('curseur'), phase = document.getElementById('phase');
+curseur.max = T_FIN;
+curseur.onchange = () => { aller(+curseur.value); reglages.lecture = false; for (const f of majs) f(); };
+function refaire() {
+  document.getElementById('charge').style.display = 'grid';
+  setTimeout(() => { monterSerpent(reglages.pas); document.getElementById('charge').style.display = 'none'; }, 30);
+}
+/** Va à l'instant t : on rejoue tout depuis le début, à pas fixe. */
+function aller(t) {
+  reinitialiser();
+  while (T < t - 1e-6) pas(Math.min(1 / 60, t - T));
+  poser();
+}
+
+// ------------------------------------------------------------------ la planche (les maquettes)
+const VIGNETTES = [
+  [0.62, '1. Le saut', 'Il saute en l\'air, l\'aura violette autour de lui.'],
+  [1.45, '2. Les mains au sol', 'Il plaque les deux mains : le sceau d\'invocation s\'étale, noir et violet.'],
+  [2.55, '3. Pouf !', 'Une énorme fumée blanche, l\'onde de choc fait voler les blocs autour.'],
+  [3.45, '4. Le serpent géant', 'Le grand serpent violet se dresse, lui debout sur la tête. Il siffle.'],
+  [4.92, '5. L\'élan', 'La tête recule, la gueule s\'ouvre en grand.'],
+  [6.6, '6. La charge', 'Il fonce droit devant, gueule ouverte, sur 130 blocs : les blocs volent.'],
+  [8.5, '7. Tout y passe', 'Arbres, joueurs, maisons : tout ce qui est devant vole en l\'air.'],
+  [T_IMPACT + 0.25, '8. L\'impact', 'Gros choc à la fin, une gerbe de blocs, puis il disparaît en fumée.'],
+];
+async function planche() {
+  const L = 720, H = 405, M = 22, cols = 4;
+  const W = cols * L + (cols + 1) * M, HT = 130, HL = H + 84, HS = 330;
+  const can = document.createElement('canvas');
+  can.width = W;
+  can.height = HT + 2 * HL + M + HS + M;
+  const x = can.getContext('2d');
+  x.fillStyle = '#17131f';
+  x.fillRect(0, 0, can.width, can.height);
+  const ancien = { lecture: reglages.lecture, cinema: reglages.cinema, w: innerWidth, h: innerHeight, pr: rendu.getPixelRatio() };
+  reglages.lecture = false;
+  rendu.setPixelRatio(1);
+  rendu.setSize(L, H, false);
+  composeur.setPixelRatio(1);
+  composeur.setSize(L, H);
+  camera.aspect = L / H;
+  camera.updateProjectionMatrix();
+  majEchelle(H);
+  for (let n = 0; n < VIGNETTES.length; n++) {
+    const [t, titre, texte] = VIGNETTES[n];
+    aller(t);
+    const c = cameraCinema(t);
+    camera.position.set(...c.pos);
+    camera.lookAt(...c.cible);
+    composeur.render();
+    const cx = M + (n % cols) * (L + M), cy = HT + Math.floor(n / cols) * HL;
+    x.drawImage(rendu.domElement, cx, cy, L, H);
+    x.strokeStyle = '#6b3d96';
+    x.lineWidth = 3;
+    x.strokeRect(cx, cy, L, H);
+    x.fillStyle = '#e9d8ff';
+    x.font = 'bold 30px system-ui';
+    x.fillText(titre, cx, cy + H + 36);
+    x.fillStyle = '#b8a9c9';
+    x.font = '21px system-ui';
+    x.fillText(texte, cx, cy + H + 66);
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  x.fillStyle = '#f2e8ff';
+  x.font = 'bold 54px system-ui';
+  x.fillText('Marque maudite 3 — l\'ulti : l\'invocation du serpent géant', M, 72);
+  x.fillStyle = '#b8a9c9';
+  x.font = '26px system-ui';
+  x.fillText('Touche J, une fois par forme niveau 3 · serpent violet de 117 blocs (tête 17 blocs, corps 10 blocs de large), en cubes de ¼ de bloc', M, 112);
+  const sy = HT + 2 * HL + M;
+  x.fillStyle = '#221b2e';
+  x.fillRect(M, sy, W - 2 * M, HS);
+  x.fillStyle = '#e9d8ff';
+  x.font = 'bold 32px system-ui';
+  x.fillText('Ce que je propose (à valider)', M + 24, sy + 48);
+  x.font = '24px system-ui';
+  x.fillStyle = '#d8cce6';
+  const lignes = [
+    'Lancement : 1 s (saut, mains au sol, sceau). Le serpent apparaît là où il regarde, lui debout sur la tête ; il reste dessus pendant la charge.',
+    'Charge : 4 s, en ligne droite (elle suit un peu la visée), environ 130 blocs, gueule ouverte.',
+    'Dégâts : la tête 28 + envoyé en l\'air · le souffle sur les côtés (6 blocs) 12 + repoussé · l\'impact final 18 sur 9 blocs. Chacun est touché une seule fois par la charge.',
+    'Le sol : rien n’est cassé. Les blocs qui volent sont des copies (un effet), elles retombent et disparaissent ; la map et le village restent intacts.',
+    'Recharge : une fois par forme niveau 3, puis 5 min. Il prend les coups comme un joueur normal pendant l\'ulti (pas de contre-pouvoir).',
+    'Fin : le serpent disparaît dans un pouf de fumée, il retombe au sol sans dégâts de chute.',
+  ];
+  lignes.forEach((l, i) => x.fillText('• ' + l, M + 24, sy + 96 + i * 38));
+  // on remet l'écran comme avant
+  rendu.setPixelRatio(ancien.pr);
+  rendu.setSize(innerWidth, innerHeight);
+  composeur.setPixelRatio(ancien.pr);
+  composeur.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  majEchelle(innerHeight * ancien.pr);
+  reglages.lecture = ancien.lecture;
+  const blob = await new Promise((r) => can.toBlob(r, 'image/png'));
+  const rep = await fetch('/enregistrer?nom=planche-ulti.png', { method: 'POST', body: blob });
+  console.log('planche', rep.status);
+  return rep.status;
+}
+
+// ------------------------------------------------------------------ la boucle
+const horloge = new THREE.Clock();
+function image() {
+  requestAnimationFrame(image);
+  const dt = Math.min(0.05, horloge.getDelta());
+  if (reglages.lecture) {
+    let reste = dt * reglages.vitesse;
+    while (reste > 1e-6) { const d = Math.min(1 / 60, reste); pas(d); reste -= d; }
+    if (T > T_FIN) { if (reglages.boucle) reinitialiser(); else reglages.lecture = false; }
+  }
+  poser();
+  if (reglages.cinema) {
+    const c = cameraCinema(T);
+    camera.position.set(...c.pos);
+    camera.lookAt(...c.cible);
+    controles.target.set(...c.cible);
+  } else controles.update();
+  const flash = Math.max(0, 1 - Math.abs(T - T_POUF - 0.05) / 0.3) + Math.max(0, 1 - Math.abs(T - T_IMPACT) / 0.3) * 0.6;
+  halo.strength = 0.5 + 1.2 * flash;
+  curseur.value = T;
+  phase.textContent = PHASES.filter(([t]) => T >= t).pop()[1];
+  composeur.render();
+}
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  rendu.setSize(innerWidth, innerHeight);
+  composeur.setSize(innerWidth, innerHeight);
+  majEchelle(innerHeight * rendu.getPixelRatio());
+});
+monterSerpent(reglages.pas);
+reinitialiser();
+document.getElementById('charge').style.display = 'none';
+image();
+window.apercu = {
+  aller: (t) => { reglages.lecture = false; aller(t); for (const f of majs) f(); },
+  // pour les captures : va à t et dessine tout de suite (même si l'onglet est en arrière-plan)
+  rendre: (t, pos, cible) => {
+    reglages.lecture = false;
+    aller(t);
+    const c = cameraCinema(t);
+    camera.position.set(...(pos ?? c.pos));
+    camera.lookAt(...(cible ?? c.cible));
+    if (pos) { reglages.cinema = false; controles.target.set(...cible); }
+    composeur.render();
+    for (const f of majs) f();
+  },
+  // une capture enregistrée dans ulti/ (marche même quand le panneau est caché) ; sansFumee pour voir à travers
+  photo: async (t, nom, pos, cible, sansFumee) => {
+    fumee.pts.visible = !sansFumee;
+    window.apercu.rendre(t, pos, cible);
+    const blob = await new Promise((r) => rendu.domElement.toBlob(r, 'image/png'));
+    fumee.pts.visible = true;
+    return (await fetch('/enregistrer?nom=' + nom + '.png', { method: 'POST', body: blob })).status;
+  },
+  jouer: () => { reglages.lecture = true; },
+  libre: (pos, cible) => { reglages.cinema = false; camera.position.set(...pos); controles.target.set(...cible); controles.update(); for (const f of majs) f(); },
+  // le sceau pour le mod (512 px) : enregistré dans ulti/sceau.png, à copier dans assets/cabane/textures/marque/
+  sceau: async () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 512;
+    c.getContext('2d').drawImage(SCEAU, 0, 0, 512, 512);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+    return (await fetch('/enregistrer?nom=sceau.png', { method: 'POST', body: blob })).status;
+  },
+  planche, reglages, cadreTete, CHEMIN,
+};
+</script>
+</body>
+</html>

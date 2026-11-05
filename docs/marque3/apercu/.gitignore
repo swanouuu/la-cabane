@@ -1,0 +1,2 @@
+# les cubes précalculés (node construire.mjs les refait ; sans eux, la page les calcule)
+*.bin

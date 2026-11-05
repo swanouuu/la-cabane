@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ailes de la marque</title>
+<!--
+  Aperçu 3D des nouvelles ailes de la marque maudite : deux mains géantes en cubes, d'après le modèle de l'utilisateur
+  (main ouverte, dos bossu avec des cornes, doigts noueux et palmés, griffes en crochet, dos plat), de la couleur de
+  la peau du skin de la forme 2. Les cubes viennent de main-voxel.mjs : calculés d'avance par « node construire.mjs »
+  (main-fins.bin, main-jeu.bin, main-gros.bin), sinon calculés dans la page.
+  À ouvrir par un petit serveur local (le navigateur intégré ne lit pas les pages file://).
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #16141d; color: #ece6f4; font: 14px system-ui, sans-serif; }
+  body.clair { background: #dcdbe4; color: #1d1b24; }
+  #ui { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  #ui span { align-self: center; opacity: .7; margin: 0 4px 0 10px; }
+  button { background: #2a2636; color: #ece6f4; border: 1px solid #4b4262; border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; }
+  button.on { background: #5c2c88; border-color: #a467da; }
+  body.clair button { background: #f2f1f6; color: #1d1b24; border-color: #b8b2c8; }
+  body.clair button.on { background: #b98ae0; border-color: #7d45b0; }
+  #aide { position: fixed; bottom: 12px; left: 12px; opacity: .65; }
+  #charge { position: fixed; inset: 0; display: grid; place-items: center; font-size: 18px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="charge">Construction des ailes…</div>
+<div id="ui"></div>
+<div id="aide">Glisser : tourner · molette : zoomer · clic droit : déplacer</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { hache, plus, fois, croix, norme, lin, construireMain, construireSerpent, longueurAnneau, depuisBinaire, SERPENTS, axes, repos, poseDoigt, ECHELLE, PAS_FIN, PAS_JEU } from './main-voxel.mjs';
+const Y = [0, 1, 0], Z = [0, 0, 1];
+
+
+// ------------------------------------------------------------------ la scène
+const rendu = new THREE.WebGLRenderer({ antialias: true });
+rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 2000);
+camera.position.set(-26, 28, 78);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.target.set(0, 22, 0);
+controles.enableDamping = true;
+controles.update();
+
+scene.add(new THREE.HemisphereLight(0xfff6ee, 0x4a4050, 1.6));
+const soleil = new THREE.DirectionalLight(0xffffff, 1.8);
+soleil.position.set(-40, 80, 60);
+scene.add(soleil);
+const contre = new THREE.DirectionalLight(0xf2e6ff, 1.2);
+contre.position.set(50, 30, -70);
+scene.add(contre);
+
+// le sol : une grille d'un bloc (16 pixels)
+const grille = new THREE.GridHelper(160, 10, 0x4b4262, 0x2c2838);
+scene.add(grille);
+
+// ------------------------------------------------------------------ le marqué de la forme 2 (sa peau, ses cheveux, son haut noué à la taille)
+const PARTIES = [
+  [[-4, 24, -4, 4, 32, 4], [0, 0], [32, 0], 0.5],
+  [[-4, 12, -2, 4, 24, 2], [16, 16], [16, 32], 0.25],
+  [[-8, 12, -2, -4, 24, 2], [40, 16], [40, 32], 0.25],
+  [[4, 12, -2, 8, 24, 2], [32, 48], [48, 48], 0.25],
+  [[-4, 0, -2, 0, 12, 2], [0, 16], [0, 32], 0.25],
+  [[0, 0, -2, 4, 12, 2], [16, 48], [0, 48], 0.25],
+];
+function boite(b, uv, gonfle) {
+  const [x0, y0, z0, x1, y1, z1] = b;
+  const w = x1 - x0, h = y1 - y0, d = z1 - z0, [u, v] = uv;
+  const X0 = x0 - gonfle, Y0 = y0 - gonfle, Z0 = z0 - gonfle, X1 = x1 + gonfle, Y1 = y1 + gonfle, Z1 = z1 + gonfle;
+  const sx = (X1 - X0) / w, sy = (Y1 - Y0) / h, sz = (Z1 - Z0) / d;
+  const faces = [
+    [u + d, v + d, w, h, [X0, Y1, Z1], [sx, 0, 0], [0, -sy, 0]],
+    [u + d + w + d, v + d, w, h, [X1, Y1, Z0], [-sx, 0, 0], [0, -sy, 0]],
+    [u, v + d, d, h, [X0, Y1, Z0], [0, 0, sz], [0, -sy, 0]],
+    [u + d + w, v + d, d, h, [X1, Y1, Z1], [0, 0, -sz], [0, -sy, 0]],
+    [u + d, v, w, d, [X0, Y1, Z0], [sx, 0, 0], [0, 0, sz]],
+    [u + d + w, v, w, d, [X0, Y0, Z1], [sx, 0, 0], [0, 0, -sz]],
+  ];
+  const pos = [], uvs = [];
+  for (const [tu, tv, tw, th, O, U, V] of faces) {
+    const c = [O, plus(O, fois(U, tw)), plus(plus(O, fois(U, tw)), fois(V, th)), plus(O, fois(V, th))];
+    const t = [[tu, tv], [tu + tw, tv], [tu + tw, tv + th], [tu, tv + th]];
+    for (const q of [0, 2, 1, 0, 3, 2]) { pos.push(...c[q]); uvs.push(t[q][0] / 64, 1 - t[q][1] / 64); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.computeVertexNormals();
+  return g;
+}
+const joueur = new THREE.Group();
+scene.add(joueur);
+const texPeau = new THREE.TextureLoader().load('peau-forme2.png');
+texPeau.magFilter = texPeau.minFilter = THREE.NearestFilter;
+texPeau.colorSpace = THREE.SRGBColorSpace;
+const matPeau = new THREE.MeshLambertMaterial({ map: texPeau, alphaTest: 0.5, side: THREE.DoubleSide });
+for (const [b, uv, uv2, g] of PARTIES) {
+  joueur.add(new THREE.Mesh(boite(b, uv, 0), matPeau));
+  joueur.add(new THREE.Mesh(boite(b, uv2, g), matPeau));
+}
+// les cheveux : la grosse touffe gris-bleu de la forme 2 (des mèches en pointe)
+{
+  const CHEVEUX = [150, 160, 182];
+  const m = [];
+  for (const y of [31.2, 28.8, 26.4]) for (const x of [-3.5, -1.2, 1.2, 3.5]) m.push({ b: [x, y, -4.2], d: [x * 0.16, -0.8 - (31.2 - y) * 0.04, -0.6], l: 9 + (31.2 - y) * 0.5, w: 3.6 });
+  for (const sx of [-1, 1]) for (const [y, zz] of [[31.2, -2.6], [31.2, 0.4], [28.8, -3.2], [28.8, -0.8], [26.6, -2.4], [26.6, 0.6]]) m.push({ b: [sx * 4.2, y, zz], d: [sx * 0.8, -0.5, -0.5], l: 6.5, w: 3.4 });
+  for (const x of [-3.2, 0, 3.2]) for (const zz of [-2.8, 0.2, 3]) m.push({ b: [x, 32.1, zz], d: [x * 0.2, 0.5, -0.85], l: 5.5 + (3 - zz) * 0.45, w: 3.6 });
+  for (const x of [-3.2, -1.1, 1.1, 3.2]) m.push({ b: [x, 31.6, 4.1], d: [x * 0.15, -0.55, 0.8], l: 2.8, w: 2.8 });
+  const pos = [], col = [];
+  m.forEach((h, i) => {
+    const hasard = hache(i, 7, 13);
+    const d = norme(h.d), l = h.l * (0.85 + 0.3 * hasard);
+    let e1 = croix(d, [0, 1, 0]);
+    if (Math.hypot(...e1) < 0.2) e1 = croix(d, [1, 0, 0]);
+    e1 = norme(e1);
+    const e2 = croix(d, e1);
+    const base = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, c]) => plus(h.b, plus(fois(e1, a * h.w / 2), fois(e2, c * h.w / 2))));
+    const pointe = plus(h.b, fois(d, l));
+    const c = CHEVEUX.map((v) => lin(v * (0.82 + 0.28 * hasard)));
+    for (let k = 0; k < 4; k++) { pos.push(...base[k], ...base[(k + 1) % 4], ...pointe); col.push(...c, ...c, ...c.map((v) => v * 0.8)); }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  joueur.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide })));
+}
+// le haut de Sasuke, enlevé : roulé à la taille, il pend dans le dos et sur les côtés
+{
+  const HAUT = [178, 170, 198], pas = 0.5;
+  const pos = [], col = [];
+  const quad = (q, c) => { for (const k of [0, 1, 2, 0, 2, 3]) { pos.push(...q[k]); col.push(...c.map(lin)); } };
+  const pli = (i) => 0.8 + 0.28 * (0.5 + 0.5 * Math.sin(i * 1.9 + 0.7)) + 0.06 * hache(i, 2, 8);
+  const pan = (debut, fin, sortie, bas, graine) => {
+    const n = Math.round(Math.hypot(fin[0] - debut[0], fin[1] - debut[1]) / pas);
+    for (let i = 0; i < n; i++) {
+      const a = [debut[0] + ((fin[0] - debut[0]) * i) / n, debut[1] + ((fin[1] - debut[1]) * i) / n];
+      const b = [debut[0] + ((fin[0] - debut[0]) * (i + 1)) / n, debut[1] + ((fin[1] - debut[1]) * (i + 1)) / n];
+      const fond = bas + 1.4 * hache(i, graine, 4) - (i % 3 === 1 ? 0.6 : 0);
+      for (let y = 14.2; y > 12.4; y -= pas) {
+        const r = 0.35 + 0.25 * Math.sin(((14.2 - y) / 1.8) * Math.PI);
+        const p = (q, yy) => [q[0] + sortie[0] * r, yy, q[1] + sortie[1] * r];
+        quad([p(a, y), p(b, y), p(b, y - pas), p(a, y - pas)], HAUT.map((v) => v * pli(i + graine) * (y > 13.6 ? 1.08 : 0.92)));
+      }
+      for (let y = 12.4; y > fond; y -= pas) {
+        const y1 = Math.max(fond, y - pas);
+        const r0 = 0.3 + (12.4 - y) * 0.14, r1 = 0.3 + (12.4 - y1) * 0.14;
+        const p = (q, yy, r) => [q[0] + sortie[0] * r, yy, q[1] + sortie[1] * r];
+        quad([p(a, y, r0), p(b, y, r0), p(b, y1, r1), p(a, y1, r1)], HAUT.map((v) => v * pli(i + graine) * (y1 - fond < 0.6 ? 0.82 : 1)));
+      }
+    }
+  };
+  pan([4.25, -2.25], [-4.25, -2.25], [0, -1], 5.2, 1);
+  pan([-4.25, -2.25], [-4.25, 2.25], [-1, 0], 6.2, 2);
+  pan([4.25, 2.25], [4.25, -2.25], [1, 0], 6.2, 3);
+  pan([-4.25, 2.25], [-1.6, 2.25], [0, 1], 7.8, 4);
+  pan([1.6, 2.25], [4.25, 2.25], [0, 1], 7.8, 5);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  joueur.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
+}
+
+// ------------------------------------------------------------------ les ailes
+const matAile = new THREE.MeshLambertMaterial({ vertexColors: true });
+const matLueur = new THREE.ShaderMaterial({
+  // posée sur les faces de la peau, juste devant
+  polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+  uniforms: { temps: { value: 0 }, force: { value: 1 } },
+  vertexShader: 'attribute float dist; varying float vD; void main(){ vD = dist; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform float temps; uniform float force; varying float vD; void main(){ float p = 0.5 + 0.5 * sin(vD * 0.32 - temps * 3.4); p = p * p; vec3 c = mix(vec3(0.09, 0.02, 0.14), vec3(1.05, 0.32, 1.75), p * force + 0.08); gl_FragColor = vec4(c, 1.0); }',
+});
+
+// les fissures de la transformation : elles s'étendent depuis le poignet (portee), noires et violettes, et palpitent
+const matFissure = new THREE.ShaderMaterial({
+  polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+  uniforms: { temps: { value: 0 }, portee: { value: 0 } },
+  vertexShader: 'attribute float dist; varying float vD; void main(){ vD = dist; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform float temps; uniform float portee; varying float vD; void main(){ if (vD > portee) discard; float p = 0.55 + 0.45 * sin(temps * 11.0 + vD * 0.7); gl_FragColor = vec4(mix(vec3(0.06, 0.0, 0.1), vec3(1.3, 0.4, 2.2), p), 1.0); }',
+});
+
+let pieces = null;
+/** La finesse des cubes : fins (l'aperçu), jeu (celle du mod), gros (un pixel Minecraft). */
+const PAS = { fins: PAS_FIN, jeu: PAS_JEU, gros: 1 / ECHELLE };
+/**
+ * Les cubes d'une pièce : main, paume (la main sans doigts), fissures (la main fissurée), anneau et tete (les serpents).
+ * Calculés d'avance par construire.mjs (nom-finesse.bin), sinon calculés ici.
+ */
+async function charger(nom, cubes) {
+  try {
+    const r = await fetch(nom + '-' + cubes + '.bin', { cache: 'no-store' });
+    if (r.ok) return depuisBinaire(await r.arrayBuffer());
+  } catch {}
+  const pas = PAS[cubes];
+  if (nom === 'main') return construireMain(pas);
+  if (nom === 'paume') return construireMain(pas, { doigts: false });
+  if (nom === 'fissures') return construireMain(pas, { fissures: true });
+  return construireSerpent(pas)[nom];
+}
+function geometrie(m) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(m.pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(m.nor, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(m.col, 3));
+  const lueur = new THREE.BufferGeometry();
+  lueur.setAttribute('position', new THREE.BufferAttribute(m.gpos, 3));
+  lueur.setAttribute('dist', new THREE.BufferAttribute(m.gdist, 1));
+  const surface = [];
+  for (let i = 0; i < m.surface.length; i += 3) surface.push([m.surface[i], m.surface[i + 1], m.surface[i + 2]]);
+  return { g, lueur, surface };
+}
+async function chargerTout(cubes) {
+  const noms = ['main', 'fissures', 'anneau', 'tete'];
+  const ms = await Promise.all(noms.map((n) => charger(n, cubes)));
+  const p = { longAnneau: longueurAnneau(PAS[cubes]) };
+  noms.forEach((n, i) => (p[n] = n === 'anneau' || n === 'tete' ? ms[i] : geometrie(ms[i])));
+  return p;
+}
+
+// ------------------------------------------------------------------ les serpents
+// Un serpent suit une courbe (quatre points de contrôle, dans le repère de la main) : des anneaux de cubes enfilés depuis
+// la tête vers la racine (le dernier, enfoncé dans la paume, ne se voit pas), la tête rigide au bout. Le dos regarde
+// vers l'avant à la racine et tourne doucement pour que la tête ait le dessus en haut.
+const MAX_ANNEAUX = 48, NC = 64;
+const moinsV = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const scalV = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const melange = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+const projeter = (v, t) => { const p = moinsV(v, fois(t, scalV(v, t))); return Math.hypot(...p) < 1e-4 ? null : norme(p); };
+const tournerV = (v, n, a) => { const c = Math.cos(a), si = Math.sin(a), k = croix(n, v), d = scalV(n, v); return [0, 1, 2].map((i) => v[i] * c + k[i] * si + n[i] * d * (1 - c)); };
+
+function courbe([a, b, c, d]) {
+  const pts = [], tan = [], cum = [0], dos = [];
+  for (let i = 0; i <= NC; i++) {
+    const t = i / NC, m = 1 - t;
+    pts.push([0, 1, 2].map((k) => m * m * m * a[k] + 3 * m * m * t * b[k] + 3 * m * t * t * c[k] + t * t * t * d[k]));
+    tan.push(norme([0, 1, 2].map((k) => 3 * m * m * (b[k] - a[k]) + 6 * m * t * (c[k] - b[k]) + 3 * t * t * (d[k] - c[k]))));
+    if (i > 0) cum.push(cum[i - 1] + Math.hypot(...moinsV(pts[i], pts[i - 1])));
+  }
+  let u = projeter([0, 0, 1], tan[0]) ?? projeter([0, 1, 0], tan[0]);
+  for (let i = 0; i <= NC; i++) { if (i > 0) u = projeter(u, tan[i]) ?? u; dos.push(u); }
+  const voulu = projeter([0, 1, 0], tan[NC]);
+  if (voulu) {
+    const fin = dos[NC], angle = Math.atan2(scalV(croix(fin, voulu), tan[NC]), scalV(fin, voulu));
+    for (let i = 0; i <= NC; i++) dos[i] = tournerV(dos[i], tan[i], (angle * cum[i]) / cum[NC]);
+  }
+  return { pts, tan, dos, cum, L: cum[NC] };
+}
+/** Le repère de la courbe à la distance a de la racine (au-delà des bouts, dans le prolongement). */
+function surCourbe(C, a) {
+  if (a <= 0) return { p: plus(C.pts[0], fois(C.tan[0], a)), t: C.tan[0], u: C.dos[0] };
+  if (a >= C.L) return { p: plus(C.pts[NC], fois(C.tan[NC], a - C.L)), t: C.tan[NC], u: C.dos[NC] };
+  let lo = 0, hi = NC;
+  while (hi - lo > 1) { const mi = (lo + hi) >> 1; if (C.cum[mi] <= a) lo = mi; else hi = mi; }
+  const k = (a - C.cum[lo]) / (C.cum[hi] - C.cum[lo]);
+  return { p: melange(C.pts[lo], C.pts[hi], k), t: norme(melange(C.tan[lo], C.tan[hi], k)), u: norme(melange(C.dos[lo], C.dos[hi], k)) };
+}
+
+function creerSerpent() {
+  const A = pieces.anneau, T = pieces.tete;
+  const nA = A.pos.length / 3, nT = T.pos.length / 3, n = nT + MAX_ANNEAUX * nA;
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+  col.set(T.col, 0);
+  for (let k = 0; k < MAX_ANNEAUX; k++) col.set(A.col, (nT + k * nA) * 3);
+  // les x distincts de l'anneau : un repère par x et par anneau suffit
+  const xs = [...new Set(Array.from({ length: nA }, (_, v) => Math.round(A.pos[v * 3] * 1000)))].sort((a, b) => a - b);
+  const xi = new Int16Array(nA).map((_, v) => xs.indexOf(Math.round(A.pos[v * 3] * 1000)));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mesh = new THREE.Mesh(g, matAile);
+  mesh.frustumCulled = false;
+  return { mesh, g, pos, nor, nA, nT, xs: xs.map((x) => x / 1000), xi };
+}
+/** Pose le serpent S le long de la courbe de points de contrôle P ; la tête à l'échelle et. */
+function poserSerpent(S, P, et = 1) {
+  const C = courbe(P), la = pieces.longAnneau, A = pieces.anneau, T = pieces.tete;
+  const n = Math.min(MAX_ANNEAUX, Math.ceil(C.L / la) + 1);
+  const { pos, nor } = S;
+  const f = surCourbe(C, C.L), cote = croix(f.t, f.u);
+  for (let v = 0; v < S.nT; v++) {
+    const x = T.pos[v * 3] * et, y = T.pos[v * 3 + 1] * et, z = T.pos[v * 3 + 2] * et;
+    const nx = T.nor[v * 3], ny = T.nor[v * 3 + 1], nz = T.nor[v * 3 + 2];
+    for (let k = 0; k < 3; k++) {
+      pos[v * 3 + k] = f.p[k] + f.t[k] * x + f.u[k] * y + cote[k] * z;
+      nor[v * 3 + k] = f.t[k] * nx + f.u[k] * ny + cote[k] * nz;
+    }
+  }
+  const reperes = S.xs.map(() => null);
+  for (let a = 0; a < n; a++) {
+    const debut = C.L - (a + 1) * la;
+    S.xs.forEach((x, i) => { const r = surCourbe(C, debut + x); r.c = croix(r.t, r.u); reperes[i] = r; });
+    const o = S.nT + a * S.nA;
+    for (let v = 0; v < S.nA; v++) {
+      const r = reperes[S.xi[v]], y = A.pos[v * 3 + 1], z = A.pos[v * 3 + 2];
+      const nx = A.nor[v * 3], ny = A.nor[v * 3 + 1], nz = A.nor[v * 3 + 2], w = (o + v) * 3;
+      for (let k = 0; k < 3; k++) {
+        pos[w + k] = r.p[k] + r.u[k] * y + r.c[k] * z;
+        nor[w + k] = r.t[k] * nx + r.u[k] * ny + r.c[k] * nz;
+      }
+    }
+  }
+  S.g.setDrawRange(0, S.nT + n * S.nA);
+  S.g.attributes.position.needsUpdate = true;
+  S.g.attributes.normal.needsUpdate = true;
+}
+
+/**
+ * Les 7 serpents prennent toute la place de l'aile (plus de paume) : ils sortent du dos en faisceau, s'ouvrent en
+ * éventail comme des doigts et vont aussi loin que la main de l'autre côté. Pour chacun : l'angle (degrés, depuis
+ * l'extérieur vers le haut), la longueur. Ils ondulent chacun à son rythme, la tête monte et descend un peu, et les
+ * têtes regardent vers l'avant.
+ */
+/** La pose « attaque » : vers une cible dans le monde (en pixels), convertie dans le repère de la main. */
+const CIBLES = SERPENTS.map((_, i) => new THREE.Vector3(4 + (i - 3) * 3.4, 15 + 4 * Math.sin(i * 1.7), 118 + 6 * Math.cos(i)));
+function poseAttaque(i, main) {
+  const { d, R } = axes(i);
+  const c = main.worldToLocal(CIBLES[i].clone()), W = [c.x, c.y, c.z];
+  const vers = norme(moinsV(W, R)), loin = Math.hypot(...moinsV(W, R));
+  const P3 = moinsV(W, fois(vers, 9));
+  return [R, plus(plus(R, fois(d, 8)), plus(fois(Z, 10), fois(Y, 4))), plus(moinsV(P3, fois(vers, loin * 0.4)), fois(Y, 8)), P3];
+}
+const melangePose = (a, b, k) => a.map((p, j) => melange(p, b[j], k));
+const doux = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+
+const ailes = [];
+const groupeAiles = new THREE.Group();
+scene.add(groupeAiles);
+/**
+ * Monte les deux ailes sur le dos : l'aile gauche, et la droite en miroir. L'aile gauche a aussi la main fissurée, la
+ * paume seule et les 7 serpents, montrés selon le niveau et la transformation.
+ */
+function monterAiles() {
+  groupeAiles.clear();
+  ailes.length = 0;
+  for (const s of [1, -1]) {
+    const racine = new THREE.Group();
+    racine.position.set(s * 2.4, 21.5, -3);
+    racine.scale.set(s * ECHELLE, ECHELLE, ECHELLE);
+    const pivot = new THREE.Group();
+    pivot.rotation.order = 'YXZ';
+    racine.add(pivot);
+    const main = new THREE.Group();
+    main.rotation.z = 0.18;
+    main.position.z = -2.6;
+    pivot.add(main);
+    const mMain = new THREE.Mesh(pieces.main.g, matAile);
+    const lueur = new THREE.Mesh(pieces.main.lueur, matLueur);
+    main.add(mMain, lueur);
+    const aile = { s, pivot, main, lueur, mMain, objets: [{ o: mMain, surface: pieces.main.surface }] };
+    if (s === 1) {
+      aile.mFissures = new THREE.Mesh(pieces.fissures.g, matAile);
+      aile.mFentes = new THREE.Mesh(pieces.fissures.lueur, matFissure);
+      aile.serpents = SERPENTS.map(() => creerSerpent());
+      main.add(aile.mFissures, aile.mFentes, ...aile.serpents.map((x) => x.mesh));
+    }
+    groupeAiles.add(racine);
+    ailes.push(aile);
+  }
+  const tout = ailes.flatMap((a) => [a.mMain, a.mFissures, ...(a.serpents ?? []).map((x) => x.mesh)].filter(Boolean));
+  contour.selectedObjects = tout;
+  aura.selectedObjects = tout;
+}
+
+/** L'aile gauche à l'instant t : niveau 2, niveau 3, ou la transformation en cours (tau : secondes depuis son début). */
+function animerAileGauche(a, t) {
+  const tau = transfo == null ? null : t - transfo;
+  const etape = reglages.niveau === 2 && tau == null ? 'main' : tau == null || tau >= 1.7 ? 'serpents' : tau >= 0.6 ? 'fissures' : 'main';
+  a.mMain.visible = etape === 'main';
+  a.mFissures.visible = a.mFentes.visible = etape === 'fissures';
+  for (const S of a.serpents) S.mesh.visible = etape === 'serpents';
+  if (etape === 'fissures') matFissure.uniforms.portee.value = ((tau - 0.6) / 1.1) * 60;
+  if (etape !== 'serpents') return;
+  const pousse = tau == null ? 1 : doux((tau - 1.7) / 1.5), tete = tau == null ? 1 : 0.55 + 0.45 * doux((tau - 1.7) / 0.8);
+  const ta = attaque == null ? null : t - attaque;
+  a.serpents.forEach((S, i) => {
+    let P = repos(i, t);
+    if (pousse < 1) P = melangePose(poseDoigt(i), P, pousse);
+    if (ta != null) {
+      const x = ta - 0.06 * i;
+      const k = x < 0 ? 0 : x < 0.28 ? 1 - (1 - x / 0.28) ** 3 : x < 0.5 ? 1 : 1 - doux((x - 0.5) / 0.5);
+      if (k > 0) P = melangePose(P, poseAttaque(i, a.main), k);
+    }
+    poserSerpent(S, P, tete);
+  });
+}
+
+// ------------------------------------------------------------------ l'aura : le contour qui pulse, la lueur, les flammèches
+const composeur = new EffectComposer(rendu);
+composeur.addPass(new RenderPass(scene, camera));
+const taille = new THREE.Vector2(innerWidth, innerHeight);
+// un trait d'encre brun foncé autour des ailes (comme le trait du dessin), puis un halo violet qui respire
+const contour = new OutlinePass(taille, scene, camera);
+Object.assign(contour, { edgeStrength: 6, edgeGlow: 0, edgeThickness: 1, pulsePeriod: 0 });
+contour.visibleEdgeColor.set(0x2a1414);
+contour.hiddenEdgeColor.set(0x000000);
+composeur.addPass(contour);
+const aura = new OutlinePass(taille, scene, camera);
+Object.assign(aura, { edgeStrength: 2.6, edgeGlow: 1.1, edgeThickness: 2.6, pulsePeriod: 2.6 });
+aura.visibleEdgeColor.set(0x9b3cff);
+// rien à travers le corps : le contour ne se voit que là où l'aile est visible
+aura.hiddenEdgeColor.set(0x000000);
+composeur.addPass(aura);
+const halo = new UnrealBloomPass(taille, 0.55, 0.4, 0.92);
+composeur.addPass(halo);
+composeur.addPass(new OutputPass());
+
+const NB = 320;
+const flamme = {
+  pos: new Float32Array(NB * 3), vit: new Float32Array(NB * 3), age: new Float32Array(NB).fill(9), vie: new Float32Array(NB).fill(1),
+  taille: new Float32Array(NB), alpha: new Float32Array(NB),
+};
+const geoFlammes = new THREE.BufferGeometry();
+geoFlammes.setAttribute('position', new THREE.BufferAttribute(flamme.pos, 3));
+geoFlammes.setAttribute('taille', new THREE.BufferAttribute(flamme.taille, 1));
+geoFlammes.setAttribute('alpha', new THREE.BufferAttribute(flamme.alpha, 1));
+const flammes = new THREE.Points(geoFlammes, new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: 'attribute float taille; attribute float alpha; varying float vA; void main(){ vA = alpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = taille * (420.0 / -mv.z); gl_Position = projectionMatrix * mv; }',
+  fragmentShader: 'varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float r = length(c); if (r > 0.5) discard; float a = pow(1.0 - r * 2.0, 1.6) * vA; gl_FragColor = vec4(vec3(0.75, 0.25, 1.35) * a, a); }',
+}));
+flammes.frustumCulled = false;
+scene.add(flammes);
+const v3 = new THREE.Vector3();
+function relancer(i) {
+  const aile = ailes[Math.floor(Math.random() * ailes.length)];
+  const o = aile.objets[Math.floor(Math.random() * aile.objets.length)];
+  if (!o.surface.length) return;
+  const p = o.surface[Math.floor(Math.random() * o.surface.length)];
+  v3.set(...p).applyMatrix4(o.o.matrixWorld);
+  flamme.pos.set([v3.x, v3.y, v3.z], i * 3);
+  flamme.vit.set([(Math.random() - 0.5) * 3, 5 + Math.random() * 7, (Math.random() - 0.5) * 3], i * 3);
+  flamme.age[i] = 0;
+  flamme.vie[i] = 0.9 + Math.random() * 1.1;
+  flamme.taille[i] = 2.2 + Math.random() * 3.2;
+}
+
+// ------------------------------------------------------------------ les boutons
+const reglages = { battement: true, aura: false, cubes: 'fins', clair: false, niveau: 2 };
+const etat = (window.etat = {});
+/** Le début (horloge, secondes) de la transformation en cours, et de l'attaque en cours. */
+let transfo = null, attaque = null;
+// la cible de l'attaque : un joueur loin devant, tourné vers nous
+const cible = joueur.clone();
+cible.position.set(6, 0, 124);
+cible.rotation.y = Math.PI;
+cible.visible = false;
+scene.add(cible);
+const ui = document.getElementById('ui');
+function bouton(texte, action, actif) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (actif !== undefined) b.classList.toggle('on', actif());
+  b.onclick = () => { action(); if (actif !== undefined) b.classList.toggle('on', actif()); };
+  ui.appendChild(b);
+  return b;
+}
+const etiquette = (t) => { const s = document.createElement('span'); s.textContent = t; ui.appendChild(s); };
+const vue = (p) => { camera.position.set(...p); controles.target.set(0, 22, 0); controles.update(); };
+etiquette('Vue');
+bouton('Face', () => vue([-26, 28, 78]));
+bouton('Dos', () => vue([24, 32, -80]));
+bouton('Côté', () => vue([84, 28, 6]));
+bouton('De près', () => vue([-34, 34, 36]));
+etiquette('Marque');
+const bNiveaux = [2, 3].map((n) => [n, bouton('Niveau ' + n, () => { reglages.niveau = n; transfo = attaque = etat.figer = null; majNiveaux(); }, () => reglages.niveau === n)]);
+const majNiveaux = () => { for (const [n, b] of bNiveaux) b.classList.toggle('on', reglages.niveau === n); };
+bouton('Transformation 2 → 3', () => { reglages.niveau = 3; attaque = etat.figer = null; transfo = horloge.elapsedTime; majNiveaux(); vue([-10, 30, 92]); });
+bouton('Attaque', () => { reglages.niveau = 3; transfo = etat.figer = null; attaque = horloge.elapsedTime; majNiveaux(); camera.position.set(-14, 70, -50); controles.target.set(8, 14, 80); controles.update(); });
+etiquette('Animation');
+bouton('Battement', () => (reglages.battement = !reglages.battement), () => reglages.battement);
+bouton('Aura', () => (reglages.aura = !reglages.aura), () => reglages.aura);
+etiquette('Cubes');
+const bCubes = [['fins', 'Fins'], ['jeu', 'Jeu (½ pixel)'], ['gros', 'Gros (1 pixel)']].map(([c, t]) => [c, bouton(t, () => { reglages.cubes = c; refaire(); }, () => reglages.cubes === c)]);
+etiquette('Fond');
+bouton('Clair', () => { reglages.clair = !reglages.clair; document.body.classList.toggle('clair', reglages.clair); scene.background = new THREE.Color(reglages.clair ? 0xdcdbe4 : 0x16141d); }, () => reglages.clair);
+scene.background = new THREE.Color(0x16141d);
+
+function refaire() {
+  for (const [c, b] of bCubes) b.classList.toggle('on', reglages.cubes === c);
+  document.getElementById('charge').style.display = 'grid';
+  setTimeout(async () => {
+    const t0 = performance.now();
+    pieces = await chargerTout(reglages.cubes);
+    monterAiles();
+    document.getElementById('charge').style.display = 'none';
+    console.log('ailes', Math.round(performance.now() - t0), 'ms');
+  }, 30);
+}
+refaire();
+
+// ------------------------------------------------------------------ l'animation
+const horloge = new THREE.Clock();
+function image() {
+  requestAnimationFrame(image);
+  const dt = Math.min(0.05, horloge.getDelta()), t = horloge.elapsedTime;
+  for (const a of ailes) {
+    const batt = reglages.battement ? 0.12 * Math.sin(t * 2 * Math.PI * 0.8) : 0;
+    a.pivot.rotation.set(-0.12, 0.3 + batt, 0);
+    a.main.rotation.z = 0.18 + (reglages.battement ? 0.05 * Math.sin(t * 1.3) : 0);
+  }
+  // pour regarder une image de la transformation ou de l'attaque : etat.figer = { transfo: secondes } ou { attaque: secondes }
+  if (etat.figer?.transfo != null) transfo = t - etat.figer.transfo;
+  if (etat.figer?.attaque != null) attaque = t - etat.figer.attaque;
+  if (transfo != null && t - transfo > 4) transfo = null;
+  if (attaque != null && t - attaque > 1.6) attaque = null;
+  cible.visible = attaque != null;
+  scene.updateMatrixWorld();
+  for (const a of ailes) if (a.serpents) animerAileGauche(a, t);
+  matFissure.uniforms.temps.value = t;
+  // l'éclair violet quand la main se change en serpents
+  const eclair = transfo == null ? 0 : Math.max(0, 1 - Math.abs(t - transfo - 1.75) / 0.35);
+  matLueur.uniforms.temps.value = t;
+  matLueur.uniforms.force.value = reglages.aura ? 1 : 0.25;
+  aura.enabled = reglages.aura || eclair > 0;
+  halo.enabled = reglages.aura || eclair > 0;
+  halo.strength = 0.55 + 1.6 * eclair;
+  for (const a of ailes) a.lueur.visible = reglages.aura;
+  flammes.visible = reglages.aura;
+  if (reglages.aura && ailes.length) {
+    scene.updateMatrixWorld();
+    for (let i = 0; i < NB; i++) {
+      flamme.age[i] += dt;
+      if (flamme.age[i] > flamme.vie[i]) relancer(i);
+      const k = flamme.age[i] / flamme.vie[i];
+      for (let c = 0; c < 3; c++) flamme.pos[i * 3 + c] += flamme.vit[i * 3 + c] * dt;
+      flamme.alpha[i] = Math.sin(Math.PI * k) * 0.55;
+    }
+    geoFlammes.attributes.position.needsUpdate = true;
+    geoFlammes.attributes.alpha.needsUpdate = true;
+    geoFlammes.attributes.taille.needsUpdate = true;
+  }
+  controles.update();
+  composeur.render();
+}
+image();
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  rendu.setSize(innerWidth, innerHeight);
+  composeur.setSize(innerWidth, innerHeight);
+});
+Object.assign(etat, { reglages, camera, controles, ailes, groupeAiles });
+</script>
+</body>
+</html>

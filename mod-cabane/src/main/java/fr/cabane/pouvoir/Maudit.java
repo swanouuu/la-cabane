@@ -58,25 +58,33 @@ import org.joml.Vector3f;
  * géantes jaillissent de son dos. Tout est doublé : la vitesse, l'armure (Protection IV), les dégâts. Accroupi au sol, un
  * grand coup d'ailes le lance en l'air ; il plane ensuite (dessin et vol côté client), et ne prend plus de dégâts de
  * chute. Le clic droit lance le Chidori sur ce qu'il vise ({@link #chidori}).
+ * <p>
+ * Avec « marque3 », la touche Éveil passe ensuite au niveau 3 : l'aile gauche devient sept serpents ({@link Marque3}) ;
+ * il encaisse et frappe encore plus fort (l'armure du chevalier vient de {@link Pouvoirs}).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Maudit {
     public static final String NOM = "marque";
     public static final String NOM2 = "marque2";
+    public static final String NOM3 = "marque3";
 
-    /** Ce qui reste des dégâts : Protection II sur les quatre pièces (32 % en moins), Protection IV au niveau 2 (64 %). */
-    private static final float[] PROTECTION = {1, 0.68F, 0.36F};
-    private static final double[] VITESSE_BONUS = {0, 0.2, 0.4};
-    private static final double[] FORCE_BONUS = {0, 1.5, 3};
+    /**
+     * Ce qui reste des dégâts : Protection II sur les quatre pièces (32 % en moins), Protection IV au niveau 2 (64 %), et
+     * au niveau 3 Protection IV aussi (son armure, celle du chevalier, fait le reste).
+     */
+    private static final float[] PROTECTION = {1, 0.68F, 0.36F, 0.36F};
+    private static final double[] VITESSE_BONUS = {0, 0.2, 0.4, 0.4};
+    /** Les coups boostés : au niveau 3, comme les pouvoirs de niveau 3 (voir l'équilibrage par niveau). */
+    private static final double[] FORCE_BONUS = {0, 1.5, 3, 5};
 
     private static final ResourceLocation VITESSE = Cabane.id("marque_vitesse");
     private static final ResourceLocation FORCE = Cabane.id("marque_force");
     /** Qui est marqué, et à quel niveau. */
     private static final Map<UUID, Integer> MARQUES = new HashMap<>();
 
-    /** La marque maudite, de l'une ou l'autre liste. */
+    /** La marque maudite, de l'une des trois listes. */
     public static boolean est(String pouvoir) {
-        return pouvoir.equals(NOM) || pouvoir.equals(NOM2);
+        return pouvoir.equals(NOM) || pouvoir.equals(NOM2) || pouvoir.equals(NOM3);
     }
 
     static int niveau(ServerPlayer joueur) {
@@ -84,6 +92,9 @@ public final class Maudit {
     }
 
     static void eveiller(ServerPlayer joueur, int niveau) {
+        if (niveau >= 3 && MARQUES.getOrDefault(joueur.getUUID(), 0) < 3) {
+            Marque3.eveiller(joueur);
+        }
         MARQUES.put(joueur.getUUID(), niveau);
         modif(joueur, Attributes.MOVEMENT_SPEED, VITESSE, VITESSE_BONUS[niveau], AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
         modif(joueur, Attributes.ATTACK_DAMAGE, FORCE, FORCE_BONUS[niveau], AttributeModifier.Operation.ADD_VALUE);
@@ -91,6 +102,7 @@ public final class Maudit {
 
     static void endormir(ServerPlayer joueur) {
         MARQUES.remove(joueur.getUUID());
+        Marque3.endormir(joueur);
         modif(joueur, Attributes.MOVEMENT_SPEED, VITESSE, 0, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
         modif(joueur, Attributes.ATTACK_DAMAGE, FORCE, 0, AttributeModifier.Operation.ADD_VALUE);
         Scene s = SCENES.get(joueur.getUUID());

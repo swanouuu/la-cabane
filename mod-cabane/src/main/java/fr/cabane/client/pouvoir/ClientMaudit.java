@@ -122,6 +122,9 @@ public final class ClientMaudit {
         double t2Precedent = -1;
         /** Son dernier grand coup d'ailes (-1 : aucun). */
         long battement = -1;
+        /** Le passage au niveau 3, les serpents (-1 s'il n'y est pas). */
+        long debut3 = -1;
+        double t3Precedent = -1;
         /** Sa liste blanche (« marque » ou « marque2 »). */
         String pouvoir = Maudit.NOM;
     }
@@ -167,11 +170,19 @@ public final class ClientMaudit {
             m.pouvoir = p.pouvoir();
             if (p.niveau() >= 2 && m.niveau < 2) {
                 m.niveau = 2;
-                m.debut2 = maintenant - (p.annonce() ? 0 : 20_000_000_000L);
-                m.t2Precedent = p.annonce() ? -1 : 20;
+                // tout droit au niveau 3 (un joueur qui arrive) : le niveau 2 est passé depuis longtemps
+                m.debut2 = maintenant - (p.annonce() && p.niveau() == 2 ? 0 : 20_000_000_000L);
+                m.t2Precedent = m.debut2 == maintenant ? -1 : 20;
             } else if (p.niveau() < 2) {
                 m.niveau = 1;
                 m.debut2 = -1;
+            }
+            if (p.niveau() >= 3 && m.debut3 < 0) {
+                m.niveau = 3;
+                m.debut3 = maintenant - (p.annonce() ? 0 : 20_000_000_000L);
+                m.t3Precedent = p.annonce() ? -1 : 20;
+            } else if (p.niveau() < 3) {
+                m.debut3 = -1;
             }
         } else if (m != null) {
             if (!p.annonce()) {
@@ -223,7 +234,7 @@ public final class ClientMaudit {
      * Où en est la forme 2 d'un joueur : t2 (secondes depuis le passage), les ailes et les cheveux (de 0 à 1, les ailes
      * dépassent un peu en jaillissant), s'il est torse nu, son dernier coup d'ailes. Null s'il n'est pas au niveau 2.
      */
-    record Forme2(double t2, float ailes, float cheveux, boolean torseNu, long battement) {
+    record Forme2(double t2, float ailes, float cheveux, boolean torseNu, long battement, double t3) {
     }
 
     static Forme2 forme2(UUID joueur) {
@@ -235,14 +246,15 @@ public final class ClientMaudit {
         float retrait = m.fin < 0 ? 1 : 1 - (float) Mth.clamp(secondes(m.fin) / RETRAIT, 0, 1);
         double sortie = (t2 - AILES) / AILES_DUREE;
         float ailes = sortie <= 0 ? 0 : sortie >= 1 ? 1 : (float) (1 - Math.pow(1 - sortie, 3) + 0.08 * Math.sin(sortie * Math.PI));
-        return new Forme2(t2, ailes * retrait, (float) lisse((t2 - CHEVEUX) / CHEVEUX_DUREE) * retrait, t2 >= DECHIRE, m.battement);
+        return new Forme2(t2, ailes * retrait, (float) lisse((t2 - CHEVEUX) / CHEVEUX_DUREE) * retrait, t2 >= DECHIRE, m.battement,
+                m.debut3 >= 0 && m.fin < 0 ? secondes(m.debut3) : -1);
     }
 
     /**
      * Pour le panneau des touches : le niveau du joueur (0 s'il n'est pas marqué, ou pas encore visiblement), s'il peut
-     * passer au niveau 2, et s'il a fini de se transformer.
+     * passer au niveau 2, au niveau 3, et s'il a fini de se transformer.
      */
-    record Etat(int niveau, boolean deux, boolean pret) {
+    record Etat(int niveau, boolean deux, boolean trois, boolean pret) {
     }
 
     static Etat etat(UUID joueur) {
@@ -250,7 +262,23 @@ public final class ClientMaudit {
         if (m == null || m.fin >= 0 || secondes(m.debut) < SCEAU_SEUL) {
             return null;
         }
-        return new Etat(m.niveau, m.pouvoir.equals(Maudit.NOM2), m.niveau < 2 || ailesSorties(joueur));
+        boolean pret = m.niveau < 2 || ailesSorties(joueur) && (m.debut3 < 0 || secondes(m.debut3) >= SERPENTS_PRETS);
+        return new Etat(m.niveau, m.pouvoir.equals(Maudit.NOM2) || m.pouvoir.equals(Maudit.NOM3), m.pouvoir.equals(Maudit.NOM3), pret);
+    }
+
+    /** Les serpents ont fini de sortir (les temps de ClientMarque3) : il peut s'en servir. */
+    static final double SERPENTS_PRETS = 3.3;
+
+    /** Ce joueur est-il éveillé au niveau 3, serpents sortis ? */
+    static boolean serpents(UUID joueur) {
+        Marque m = MARQUES.get(joueur);
+        return m != null && m.fin < 0 && m.debut3 >= 0 && secondes(m.debut3) >= SERPENTS_PRETS;
+    }
+
+    /** Ce joueur est-il au niveau 3 (les serpents sortent ou sont sortis) ? */
+    static boolean niveau3(UUID joueur) {
+        Marque m = MARQUES.get(joueur);
+        return m != null && m.fin < 0 && m.debut3 >= 0;
     }
 
     /** Ce joueur est-il éveillé au niveau 2, ailes sorties (pour planer, s'envoler, lancer le Chidori) ? */
@@ -284,6 +312,11 @@ public final class ClientMaudit {
         if (m.niveau >= 2 && m.debut2 >= 0) {
             double t2 = secondes(m.debut2);
             force = t2 < AURA_FORTE ? 1 + 0.6F * (float) lisse(t2 / 0.6) : (float) Mth.lerp(lisse((t2 - AURA_FORTE) / (AURA_LEGERE - AURA_FORTE)), 1.6, 0.25);
+        }
+        if (m.debut3 >= 0) {
+            // le passage au niveau 3 : l'aura explose quand les serpents sortent, puis redevient légère
+            double t3 = secondes(m.debut3);
+            force = t3 < 3.4 ? 1 + 1.2F * (float) lisse(t3 / 1.7) : (float) Mth.lerp(lisse((t3 - 3.4) / 1.2), 2.2, 0.25);
         }
         if (m.fin >= 0) {
             force *= 1 - (float) Mth.clamp(secondes(m.fin) / RETRAIT, 0, 1);
@@ -1187,6 +1220,9 @@ public final class ClientMaudit {
                 if (m.niveau >= 2 && m.debut2 >= 0) {
                     niveau2(mc, joueur, m);
                 }
+                if (m.debut3 >= 0) {
+                    niveau3(mc, joueur, m);
+                }
                 if (aura(m) > 0.1F && HASARD.nextInt(3) == 0) {
                     mc.level.addParticle(new DustParticleOptions(new Vector3f(AURA[0], AURA[1], AURA[2]), 0.9F), joueur.getX() + aleat(0.45),
                             joueur.getY() + HASARD.nextDouble() * 1.9, joueur.getZ() + aleat(0.45), 0, 0.04, 0);
@@ -1235,6 +1271,54 @@ public final class ClientMaudit {
                     double lx = cote * (0.4 + loin), lz = -0.5 - HASARD.nextDouble() * 0.6;
                     mc.level.addParticle(violet, joueur.getX() + lx * Mth.cos(lacet) - lz * Mth.sin(lacet), joueur.getY() + 1 + HASARD.nextDouble() * 1.8,
                             joueur.getZ() + lx * Mth.sin(lacet) + lz * Mth.cos(lacet), 0, 0.03, 0);
+                }
+            }
+        }
+
+        /**
+         * Les sons et les éclats du passage au niveau 3 : l'aile se fissure (le cœur, les craquements), puis elle éclate en
+         * serpents dans une explosion d'aura violette tout autour de lui, et ils sifflent.
+         */
+        private static void niveau3(Minecraft mc, AbstractClientPlayer joueur, Marque m) {
+            double t3 = secondes(m.debut3), avant = m.t3Precedent;
+            m.t3Precedent = t3;
+            if (avant < 0 && t3 >= 0) {
+                son(joueur, SoundEvents.WARDEN_HEARTBEAT, 1.4F, 0.6F);
+            }
+            if (avant < 0.6 && t3 >= 0.6) {
+                son(joueur, SoundEvents.DEEPSLATE_BREAK, 1.2F, 0.6F);
+                son(joueur, SoundEvents.SCULK_SHRIEKER_SHRIEK, 0.5F, 0.5F);
+            }
+            if (avant < 1.2 && t3 >= 1.2) {
+                son(joueur, SoundEvents.BASALT_BREAK, 1.2F, 0.5F);
+            }
+            if (avant < 1.7 && t3 >= 1.7) {
+                son(joueur, SoundEvents.GENERIC_EXPLODE.value(), 0.8F, 0.6F);
+                son(joueur, SoundEvents.EVOKER_PREPARE_SUMMON, 1.2F, 0.5F);
+                son(joueur, SoundEvents.CAT_HISS, 1.4F, 0.5F);
+                // l'explosion d'aura : une sphère de chakra violet qui part dans tous les sens, et des éclats de portail
+                DustParticleOptions gros = new DustParticleOptions(new Vector3f(AURA[0], AURA[1], AURA[2]), 3F);
+                DustParticleOptions fin = new DustParticleOptions(new Vector3f(0.75F, 0.35F, 1F), 1.4F);
+                for (int i = 0; i < 70; i++) {
+                    double a = HASARD.nextDouble() * Math.PI * 2, b = Math.acos(HASARD.nextDouble() * 2 - 1), v = 0.25 + HASARD.nextDouble() * 0.55;
+                    double dx = Math.sin(b) * Math.cos(a), dy = Math.cos(b), dz = Math.sin(b) * Math.sin(a);
+                    mc.level.addParticle(i % 3 == 0 ? fin : gros, joueur.getX() + dx * 0.4, joueur.getY() + 1.2 + dy * 0.4, joueur.getZ() + dz * 0.4,
+                            dx * v, dy * v, dz * v);
+                }
+                for (int i = 0; i < 16; i++) {
+                    mc.level.addParticle(ParticleTypes.REVERSE_PORTAL, joueur.getX() + aleat(1.5), joueur.getY() + 0.3 + HASARD.nextDouble() * 2.4,
+                            joueur.getZ() + aleat(1.5), aleat(0.4), 0.1, aleat(0.4));
+                    mc.level.addParticle(ParticleTypes.WITCH, joueur.getX() + aleat(2), joueur.getY() + HASARD.nextDouble() * 2.8, joueur.getZ() + aleat(2), 0, 0.2, 0);
+                }
+            }
+            if (avant < 3.2 && t3 >= 3.2) {
+                son(joueur, SoundEvents.CAT_HISS, 1.2F, 0.7F);
+            }
+            // pendant le passage, l'aura déborde : des volutes violettes montent tout autour
+            if (t3 > 0.6 && t3 < 3.6 && HASARD.nextInt(3) == 0) {
+                for (int i = 0; i < 1; i++) {
+                    mc.level.addParticle(new DustParticleOptions(new Vector3f(AURA[0], AURA[1], AURA[2]), 1.6F), joueur.getX() + aleat(1.2),
+                            joueur.getY() + HASARD.nextDouble() * 2.4, joueur.getZ() + aleat(1.2), 0, 0.08, 0);
                 }
             }
         }

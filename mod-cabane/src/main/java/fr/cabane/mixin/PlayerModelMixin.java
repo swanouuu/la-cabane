@@ -31,6 +31,8 @@ public abstract class PlayerModelMixin {
             // le Susano : le bras levé vers la météorite ; dans le Tsukuyomi, la cible en croix et les clones l'arme pointée
             fr.cabane.client.pouvoir.ClientMeteorite.poser((PlayerModel<?>) (Object) this, joueur);
             fr.cabane.client.pouvoir.ClientGenjutsu.poser((PlayerModel<?>) (Object) this, joueur);
+            // la marque 3 : le saut, les mains au sol pour le sceau, les bras écartés sur le grand serpent
+            fr.cabane.client.pouvoir.ClientSerpentGeant.poser((PlayerModel<?>) (Object) this, joueur);
         }
     }
 }
