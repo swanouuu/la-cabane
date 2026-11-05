@@ -13,11 +13,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.Camera;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -27,16 +30,25 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -345,7 +357,7 @@ public final class ClientFruit3 {
      * regarde le dessus de sa tête (null : le ciel).
      */
     private static void serpent(PoseStack ps, MultiBufferSource.BufferSource buffers, Vec3 cam, List<Vec3> pts, double R, boolean glace, boolean sortie,
-            Vec3 haut, double t) {
+            Vec3 haut, double t, boolean selle, Vec3 nez) {
         int n = pts.size();
         if (n < 2) {
             return;
@@ -357,6 +369,7 @@ public final class ClientFruit3 {
         VertexConsumer c = buffers.getBuffer(peau);
         PoseStack.Pose pose = ps.last();
         List<Vec3[]> cretes = new ArrayList<>();
+        double depuisNuque = 0;
         for (int i = 0; i < n - 1; i++) {
             double u = i / (double) (n - 1), r = rayon(R, u, sortie);
             Vec3 a = pts.get(i), b = pts.get(i + 1), f = a.subtract(b);
@@ -369,11 +382,17 @@ public final class ClientFruit3 {
             Vec3 o = a.add(b).scale(0.5).subtract(cam);
             anneau(c, pose, o, rep[0], rep[1], f, r, r * 0.74, len * 0.64, glace, i);
             anneau(c, pose, o, rep[0], rep[1], f, r * 0.74, r, len * 0.6, glace, i + 50);
+            double milieu = depuisNuque + len / 2;
+            depuisNuque += len;
+            // la nuque reste libre : il y est assis
+            if (selle && milieu > Fruit3.SELLE - 1.6 && milieu < Fruit3.SELLE + 1.1) {
+                continue;
+            }
             cretes.add(new Vec3[]{o.add(rep[1].scale(r * 0.9)), rep[1].add(f.scale(-0.55)), new Vec3(r, i, 0), rep[0]});
         }
         Maillage tete = glace ? teteGlace : teteLave;
         if (tete != null) {
-            Vec3 f0 = pts.get(0).subtract(pts.get(1)).normalize();
+            Vec3 f0 = nez != null ? nez : pts.get(0).subtract(pts.get(1)).normalize();
             double k = R * 0.42;
             Vec3 o = pts.get(0).add(f0.scale(3.4 * k)).subtract(cam);
             Vec3[] rep = repere(f0, haut);
@@ -433,30 +452,66 @@ public final class ClientFruit3 {
         }
     }
 
-    // ================================================================ le dragon guidé
+    // ================================================================ le dragon chevauché
 
-    private static final double R_DRAGON = 1.0, LONGUEUR_DRAGON = 24;
+    private static final double R_DRAGON = 1.0, LONGUEUR_DRAGON = Fruit3.LONGUEUR_DRAGON;
 
-    /** Un dragon en vol : à qui il est, et le chemin de sa tête (de la main jusqu'à maintenant), tick après tick. */
+    /** Un dragon en vol : à qui il est, le chemin de sa nuque (de la main jusqu'à maintenant), sa route, qui il tient. */
     private static final class Dragon3 {
         final UUID joueur;
         final boolean glace;
         final List<Vec3> chemin = new ArrayList<>();
+        Vec3 dir;
+        Vec3 nuque;
+        Vec3 dirAvant;
+        int etat;
+        int victime = -1;
         long maj;
 
-        Dragon3(UUID joueur, boolean glace) {
+        Dragon3(UUID joueur, boolean glace, Vec3 dir) {
             this.joueur = joueur;
             this.glace = glace;
+            this.dir = dir;
+            this.dirAvant = dir;
         }
     }
 
     private static final Map<Integer, Dragon3> DRAGONS = new HashMap<>();
 
-    /** Là où un dragon a explosé : une boule de feu (ou une gerbe de glace) qui dure deux secondes. */
-    private record Eclatement(Vec3 pos, boolean glace, long debut) {
+    /** Là où un dragon a explosé : une boule de feu (ou une gerbe de glace) qui dure deux secondes ; « sol » : contre le sol. */
+    private record Eclatement(Vec3 pos, boolean glace, long debut, boolean sol, double taille) {
     }
 
     private static final List<Eclatement> ECLATEMENTS = new ArrayList<>();
+
+    /** Le dragon qu'on monte soi-même (-1 : aucun) : sa route, ce qu'il fait, depuis quand, sur qui il fonce. */
+    private static int monDragon = -1;
+    private static Vec3 maRoute = new Vec3(0, 0, 1);
+    private static double maVitesse = Fruit3.VITESSE_MONTE;
+    private static int monMode, maCible = -1, aEnvoyer, cibleAEnvoyer = -1;
+    private static long debutMonte, debutMode;
+    private static CameraType vueAvant;
+
+    /** Est-on sur son dragon ? */
+    static boolean monte() {
+        return monDragon >= 0 && DRAGONS.containsKey(monDragon);
+    }
+
+    /** Combien de secondes de vol il reste sur son dragon. */
+    static double restantMonte() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level == null ? 0 : Math.max(0, (Fruit3.DUREE_MONTE - (mc.level.getGameTime() - debutMonte)) / 20.0);
+    }
+
+    /** Tient-il quelqu'un dans sa gueule ? */
+    static boolean tient() {
+        Dragon3 d = DRAGONS.get(monDragon);
+        return d != null && d.victime >= 0;
+    }
+
+    private static Vec3 main(Player j) {
+        return j.getEyePosition().add(j.getLookAngle().scale(0.4)).add(0, -0.45, 0);
+    }
 
     public static void dragon(Fruit3.Dragon p) {
         Minecraft mc = Minecraft.getInstance();
@@ -464,32 +519,56 @@ public final class ClientFruit3 {
             return;
         }
         Vec3 tete = vec(p.tete());
-        if (p.etat() == 1) {
+        boolean moi = mc.player != null && p.joueur().equals(mc.player.getUUID());
+        if (p.etat() >= Fruit3.EXPLOSION) {
             DRAGONS.remove(p.id());
-            ECLATEMENTS.add(new Eclatement(tete, p.glace(), System.nanoTime()));
-            ClientFruit.secouer(tete, 1.3F, 30);
+            ECLATEMENTS.add(new Eclatement(tete, p.glace(), System.nanoTime(), p.etat() == Fruit3.IMPACT, 2));
+            ClientFruit.secouer(tete, 1.6F, 45);
             gerbeParticules(mc, tete, p.glace());
+            if (moi || p.id() == monDragon) {
+                finMonte(mc);
+            }
             return;
         }
         Dragon3 d = DRAGONS.get(p.id());
         if (d == null) {
-            d = new Dragon3(p.joueur(), p.glace());
+            d = new Dragon3(p.joueur(), p.glace(), vec(p.dir()));
             Player j = mc.level.getPlayerByUUID(p.joueur());
             // il sort de sa main : le bout de la queue y reste accroché tant que le corps n'est pas sorti
-            d.chemin.add(j != null ? j.getEyePosition().add(j.getLookAngle().scale(0.4)).add(0, -0.45, 0) : tete);
+            d.chemin.add(j != null ? main(j) : tete);
             DRAGONS.put(p.id(), d);
-        }
-        d.chemin.add(tete);
-        d.maj = mc.level.getGameTime();
-        // on ne garde que ce qu'il faut pour le corps
-        double l = 0;
-        for (int i = d.chemin.size() - 1; i > 0; i--) {
-            l += d.chemin.get(i).distanceTo(d.chemin.get(i - 1));
-            if (l > LONGUEUR_DRAGON + 4 && i > 1) {
-                d.chemin.subList(0, i - 1).clear();
-                break;
+            if (moi) {
+                monDragon = p.id();
+                maRoute = vec(p.dir());
+                maVitesse = Fruit3.VITESSE_MONTE;
+                monMode = Fruit3.VOL;
+                maCible = -1;
+                aEnvoyer = 0;
+                debutMonte = mc.level.getGameTime();
+                pretDragon = Long.MAX_VALUE;
             }
         }
+        d.nuque = tete;
+        d.etat = p.etat();
+        d.victime = p.victime();
+        d.maj = mc.level.getGameTime();
+        if (!moi) {
+            d.dirAvant = d.dir;
+            d.dir = vec(p.dir());
+        } else if (monMode == Fruit3.PRISE && p.victime() >= 0) {
+            // la gueule l'a pris : il revient à son vol
+            monMode = Fruit3.VOL;
+            maCible = -1;
+        }
+    }
+
+    /** Son dragon a explosé : la recharge commence, la vue revient (au tick suivant). */
+    private static void finMonte(Minecraft mc) {
+        monDragon = -1;
+        monMode = Fruit3.VOL;
+        maCible = -1;
+        aEnvoyer = 0;
+        pretDragon = System.nanoTime() + Fruit3.RECHARGE_DRAGON * 50_000_000L;
     }
 
     /** Les points du corps, de la tête (un peu en avance, le paquet suivant arrive) vers la queue, tous les « pas ». */
@@ -504,11 +583,12 @@ public final class ClientFruit3 {
         double reste = pas, fait = 0;
         for (int i = 1; i < brut.size() && fait < max; i++) {
             Vec3 a = brut.get(i - 1), b = brut.get(i);
+            Vec3 avant = i >= 2 ? brut.get(i - 2) : a, apres = i + 1 < brut.size() ? brut.get(i + 1) : b;
             double l = a.distanceTo(b), s = 0;
             while (l - s >= reste && fait < max) {
                 s += reste;
                 fait += pas;
-                pts.add(a.lerp(b, s / l));
+                pts.add(l < 1e-6 ? a : courbe(avant, a, b, apres, s / l));
                 reste = pas;
             }
             reste -= l - s;
@@ -517,6 +597,161 @@ public final class ClientFruit3 {
             pts.add(brut.get(brut.size() - 1));
         }
         return pts;
+    }
+
+    /** Entre b et c, sur la courbe douce qui passe par a, b, c, d (Catmull-Rom), à u de 0 à 1. */
+    private static Vec3 courbe(Vec3 a, Vec3 b, Vec3 c, Vec3 d, double u) {
+        double u2 = u * u, u3 = u2 * u;
+        return b.scale(2).add(c.subtract(a).scale(u)).add(a.scale(2).subtract(b.scale(5)).add(c.scale(4)).subtract(d).scale(u2))
+                .add(b.scale(3).subtract(a).subtract(c.scale(3)).add(d).scale(u3)).scale(0.5);
+    }
+
+    /** Tourne a vers b d'au plus max (en radians), autour de l'axe a × b. */
+    private static Vec3 tourner(Vec3 a, Vec3 b, double max) {
+        double angle = Math.acos(Mth.clamp(a.dot(b), -1, 1));
+        if (angle <= max) {
+            return b;
+        }
+        Vec3 axe = a.cross(b);
+        if (axe.lengthSqr() < 1e-8) {
+            axe = Math.abs(a.y) < 0.9 ? a.cross(new Vec3(0, 1, 0)) : a.cross(new Vec3(1, 0, 0));
+        }
+        axe = axe.normalize();
+        double c = Math.cos(max), s = Math.sin(max);
+        return a.scale(c).add(axe.cross(a).scale(s)).add(axe.scale(axe.dot(a) * (1 - c))).normalize();
+    }
+
+    /** Un bloc plein à moins de h sous ce point ? */
+    private static boolean solSous(Minecraft mc, Vec3 p, double h) {
+        return mc.level.clip(new ClipContext(p, p.subtract(0, h, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mc.player)).getType()
+                != HitResult.Type.MISS;
+    }
+
+    /**
+     * Au début du tick, sur son dragon : c'est son jeu qui le fait voler (le serveur suit). La route vire vers son regard
+     * (vers sa cible quand la gueule va la prendre), remonte quand elle rase le sol (sauf quand il fonce) ; puis on dit au
+     * serveur vers où il va, et son clic droit s'il y en a eu un.
+     */
+    private static void piloter(Minecraft mc) {
+        LocalPlayer p = mc.player;
+        long maintenant = mc.level.getGameTime();
+        Vec3 regard = p.getLookAngle(), but = regard;
+        double vitesse = mc.options.keySprint.isDown() ? Fruit3.VITESSE_MONTE_COURSE : Fruit3.VITESSE_MONTE, virage = Fruit3.VIRAGE;
+        if (maintenant - debutMonte < 12) {
+            // il décolle : le dragon l'emporte vers le haut
+            but = new Vec3(regard.x, Math.max(0.5, regard.y), regard.z).normalize();
+        }
+        if (monMode == Fruit3.PRISE) {
+            Entity c = mc.level.getEntity(maCible);
+            if (c == null || !c.isAlive() || maintenant - debutMode > Fruit3.DUREE_PRISE) {
+                monMode = Fruit3.VOL;
+                maCible = -1;
+            } else {
+                // la gueule va droit sur lui (même au sol : la route ne remonte pas pendant qu'elle plonge)
+                Vec3 vers = c.getBoundingBox().getCenter().subtract(Fruit3.gueule(Fruit3.nuque(p.position(), maRoute), maRoute));
+                if (vers.lengthSqr() > 0.01) {
+                    but = vers.normalize();
+                }
+                vitesse = Fruit3.VITESSE_PRISE;
+                virage = Math.toRadians(12);
+            }
+        }
+        if (monMode == Fruit3.FONCE) {
+            vitesse = Fruit3.VITESSE_FONCE;
+            virage = Fruit3.VIRAGE_FONCE;
+        } else if (monMode == Fruit3.VOL && but.y < 0.25 && (solSous(mc, p.position(), 1.6) || solSous(mc, Fruit3.centreTete(Fruit3.nuque(p.position(), maRoute), maRoute), 3.4))) {
+            // il rase le sol : il remonte un peu (il n'explose que s'il fonce)
+            but = new Vec3(but.x, 0.25, but.z).normalize();
+        }
+        double ecart = Math.acos(Mth.clamp(maRoute.dot(but), -1, 1));
+        maRoute = tourner(maRoute, but, Math.min(virage, Math.max(Math.toRadians(0.4), ecart * 0.22)));
+        maVitesse += (vitesse - maVitesse) * 0.18;
+        p.setDeltaMovement(maRoute.scale(maVitesse));
+        p.fallDistance = 0;
+        PacketDistributor.sendToServer(new Fruit3.Pilote(new Vector3f((float) maRoute.x, (float) maRoute.y, (float) maRoute.z), aEnvoyer, cibleAEnvoyer));
+        aEnvoyer = 0;
+        cibleAEnvoyer = -1;
+    }
+
+    /** Sur son dragon, au clic gauche : la gueule va prendre celui qu'il vise (s'il ne tient encore personne). */
+    private static void attraper(Minecraft mc) {
+        LocalPlayer p = mc.player;
+        Dragon3 d = DRAGONS.get(monDragon);
+        if (d == null || monMode != Fruit3.VOL || d.victime >= 0) {
+            return;
+        }
+        p.swing(ClientFruit.mainDuFruit(p, d.glace));
+        long maintenant = mc.level.getGameTime();
+        {
+            // en vol, viser pile est dur : celui qui est le plus près du centre de l'écran, à moins de 8°, et qu'on voit
+            Vec3 oeil = p.getEyePosition(), regard = p.getLookAngle();
+            Entity vise = null;
+            double mieux = Math.cos(Math.toRadians(8));
+            for (Entity e : mc.level.getEntities(p, p.getBoundingBox().inflate(Fruit3.PORTEE_PRISE),
+                    e -> e instanceof LivingEntity && e.isAlive() && !e.isSpectator() && e.getId() != d.victime)) {
+                Vec3 c = e.getBoundingBox().getCenter(), vers = c.subtract(oeil);
+                double l = vers.length();
+                if (l < 1 || l > Fruit3.PORTEE_PRISE) {
+                    continue;
+                }
+                double cos = vers.scale(1 / l).dot(regard);
+                if (cos > mieux && mc.level.clip(new ClipContext(oeil, c, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p)).getType() == HitResult.Type.MISS) {
+                    mieux = cos;
+                    vise = e;
+                }
+            }
+            if (vise != null) {
+                monMode = Fruit3.PRISE;
+                maCible = vise.getId();
+                debutMode = maintenant;
+                aEnvoyer = Fruit3.PRISE;
+                cibleAEnvoyer = maCible;
+            }
+        }
+    }
+
+    /** Sur son dragon, au clic droit : il fonce là où il regarde (et explose dès que sa tête touche quelque chose). */
+    private static void foncer(Minecraft mc) {
+        Dragon3 d = DRAGONS.get(monDragon);
+        if (d == null || monMode == Fruit3.FONCE) {
+            return;
+        }
+        mc.player.swing(ClientFruit.mainDuFruit(mc.player, d.glace));
+        monMode = Fruit3.FONCE;
+        debutMode = mc.level.getGameTime();
+        aEnvoyer = Fruit3.FONCE;
+        maCible = -1;
+    }
+
+    /** À la fin du tick : chaque dragon prend la nuque de celui qui le monte ; celui qu'il tient reste dans sa gueule. */
+    private static void suivre(Minecraft mc) {
+        for (Map.Entry<Integer, Dragon3> e : DRAGONS.entrySet()) {
+            Dragon3 d = e.getValue();
+            if (e.getKey() == monDragon) {
+                d.dirAvant = d.dir;
+                d.dir = maRoute;
+            }
+            Player j = mc.level.getPlayerByUUID(d.joueur);
+            Vec3 n = j != null ? Fruit3.nuque(j.position(), d.dir) : d.nuque;
+            if (n == null) {
+                continue;
+            }
+            d.chemin.add(n);
+            double l = 0;
+            for (int i = d.chemin.size() - 1; i > 0; i--) {
+                l += d.chemin.get(i).distanceTo(d.chemin.get(i - 1));
+                if (l > LONGUEUR_DRAGON + 4 && i > 1) {
+                    d.chemin.subList(0, i - 1).clear();
+                    break;
+                }
+            }
+            // la victime : là où la gueule est chez nous (le serveur la place aussi, mais un tick plus tôt)
+            Entity v = d.victime >= 0 ? mc.level.getEntity(d.victime) : null;
+            if (v != null && v != mc.player && j != null) {
+                Vec3 g = Fruit3.gueule(n, d.dir);
+                v.setPos(g.x, g.y - v.getBbHeight() * 0.5, g.z);
+            }
+        }
     }
 
     // ================================================================ les attaques ultimes
@@ -615,10 +850,7 @@ public final class ClientFruit3 {
     /** Il s'endort : au prochain éveil, l'ultime pourra repartir (après sa recharge). */
     static void endormi() {
         ultimeFaite = false;
-        if (envoye) {
-            PacketDistributor.sendToServer(new Fruit3.Serpent(false));
-            envoye = false;
-        }
+        envoye = false;
     }
 
     // ---------------------------------------------------------------- la glace : le Hyoton
@@ -774,7 +1006,7 @@ public final class ClientFruit3 {
                 pts.add(bezier(a0, a1, a2, a3, Math.max(0, w - q / 8.0 * Math.min(w, 0.85))));
             }
             if (w > 0.04) {
-                serpent(ps, buffers, cam, pts, 1.75, true, false, null, t);
+                serpent(ps, buffers, cam, pts, 1.75, true, false, null, t, false, null);
             }
         }
     }
@@ -1109,41 +1341,48 @@ public final class ClientFruit3 {
     // ---------------------------------------------------------------- l'explosion du dragon guidé
 
     private static void eclatement(MultiBufferSource.BufferSource buffers, Matrix4f m, Vec3 cam, Eclatement e) {
-        double t = (System.nanoTime() - e.debut()) / 1e9, g = sortie(entre(t, 0, 0.25)), fin = 1 - entre(t, 1.2, 2);
+        double t = (System.nanoTime() - e.debut()) / 1e9, g = sortie(entre(t, 0, 0.25)), fin = 1 - entre(t, 1.3, 2.4), E = e.taille();
+        if (fin <= 0) {
+            return;
+        }
         Vec3 p = e.pos();
         VertexConsumer v = buffers.getBuffer(Types.PLEIN);
         if (e.glace()) {
             for (int q = 0; q < 30; q++) {
                 Vec3 d = new Vec3(hache(q, 1, 392) - 0.5, Math.abs(hache(q, 2, 392) - 0.35), hache(q, 3, 392) - 0.5).normalize();
-                cristal(v, m, p.add(d.scale(0.6)).subtract(cam), d, (2.9 + 2.3 * hache(q, 4, 392)) * g * fin, 0.45 + 0.25 * hache(q, 5, 392));
+                cristal(v, m, p.add(d.scale(0.6 * E)).subtract(cam), d, (2.9 + 2.3 * hache(q, 4, 392)) * g * fin * E, (0.45 + 0.25 * hache(q, 5, 392)) * E);
+                Vec3 d2 = new Vec3(hache(q, 6, 392) - 0.5, hache(q, 7, 392) - 0.5, hache(q, 8, 392) - 0.5).normalize();
+                cristal(v, m, p.add(d2.scale(0.6 * E)).subtract(cam), d2.scale(-1), (2 + 1.6 * hache(q, 9, 392)) * g * fin * E, 0.4 * E);
             }
-            for (int q = 0; q < 22; q++) {
-                double a = q / 22.0 * Math.PI * 2;
-                cristal(v, m, p.add(Math.cos(a) * 4.6, -1.2, Math.sin(a) * 4.6).subtract(cam), new Vec3(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6),
-                        (0.9 + hache(q, 1, 390)) * 1.6 * g * fin, 0.4);
+            for (int q = 0; q < (e.sol() ? 32 : 0); q++) {
+                double a = q / 32.0 * Math.PI * 2;
+                cristal(v, m, p.add(Math.cos(a) * 4.6 * E * g, -0.4, Math.sin(a) * 4.6 * E * g).subtract(cam), new Vec3(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6),
+                        (0.9 + hache(q, 1, 390)) * 1.6 * g * fin, 0.5);
             }
         } else {
-            for (int q = 0; q < 140; q++) {
+            for (int q = 0; q < 220; q++) {
                 Vec3 d = new Vec3(hache(q, 1, 391) - 0.5, hache(q, 2, 391) - 0.5, hache(q, 3, 391) - 0.5).normalize();
                 double k = Math.cbrt(hache(q, 4, 391));
-                cube(v, m, p.add(d.scale(2.9 * k * g)).subtract(cam), (0.22 + 0.15 * hache(q, 5, 391)) * fin, q, feu(k * 0.8 + 0.4 * entre(t, 0.3, 1.8)), 1);
+                cube(v, m, p.add(d.scale(2.9 * k * g * E)).subtract(cam), (0.22 + 0.15 * hache(q, 5, 391)) * fin * E, q, feu(k * 0.8 + 0.4 * entre(t, 0.3, 1.8)), 1);
             }
             double s = t * 1.2;
-            for (int q = 0; q < 24; q++) {
+            for (int q = 0; q < 40; q++) {
                 double a = hache(q, 1, 393) * Math.PI * 2, vit = 6 + 6 * hache(q, 2, 393), up = 5 + 6 * hache(q, 3, 393);
-                Vec3 c = p.add(Math.cos(a) * vit * s, up * s - 9 * s * s, Math.sin(a) * vit * s);
+                Vec3 c = p.add(Math.cos(a) * vit * s * E, (up * s - 9 * s * s) * E, Math.sin(a) * vit * s * E);
                 cube(v, m, c.subtract(cam), 0.2 * fin, q + t * 4, hache(q, 4, 393) < 0.5 ? LAVE_O : CROUTE_R, 1);
             }
         }
         buffers.endBatch(Types.PLEIN);
         if (!e.glace()) {
             VertexConsumer f = buffers.getBuffer(Types.VOILE);
-            for (int q = 0; q < 24; q++) {
-                double a = q / 24.0 * Math.PI * 2;
-                flamme(f, m, p.add(Math.cos(a) * 4.6, -1.2, Math.sin(a) * 4.6).subtract(cam), new Vec3(Math.cos(a) * 0.35, 1, Math.sin(a) * 0.35),
-                        (0.6 + 0.8 * hache(q, 1, 394)) * 1.5 * g * fin, 0.35);
-                Vec3 d = new Vec3(hache(q, 2, 394) - 0.5, Math.abs(hache(q, 3, 394) - 0.3), hache(q, 4, 394) - 0.5).normalize();
-                flamme(f, m, p.add(d.scale(2.4 * g)).subtract(cam), d, (1 + 1.2 * hache(q, 5, 394)) * fin * g, 0.45);
+            for (int q = 0; q < 32; q++) {
+                double a = q / 32.0 * Math.PI * 2;
+                if (e.sol()) {
+                    flamme(f, m, p.add(Math.cos(a) * 4.6 * E * g, -0.4, Math.sin(a) * 4.6 * E * g).subtract(cam), new Vec3(Math.cos(a) * 0.35, 1, Math.sin(a) * 0.35),
+                            (0.6 + 0.8 * hache(q, 1, 394)) * 2 * g * fin, 0.5);
+                }
+                Vec3 d = new Vec3(hache(q, 2, 394) - 0.5, hache(q, 3, 394) - 0.5, hache(q, 4, 394) - 0.5).normalize();
+                flamme(f, m, p.add(d.scale(2.4 * g * E)).subtract(cam), d, (1 + 1.2 * hache(q, 5, 394)) * fin * g * E, 0.45 * E);
             }
             buffers.endBatch(Types.VOILE);
         }
@@ -1238,7 +1477,7 @@ public final class ClientFruit3 {
                 c.morsure = vec(p.point());
                 c.tMorsure = c.t(mc, 0);
                 // la morsure : une gerbe de feu là où la gueule se referme
-                ECLATEMENTS.add(new Eclatement(c.morsure, false, System.nanoTime()));
+                ECLATEMENTS.add(new Eclatement(c.morsure, false, System.nanoTime(), false, 1));
                 gerbeParticules(mc, c.morsure, false);
                 ClientFruit.secouer(c.morsure, 1.2F, 30);
             }
@@ -1456,10 +1695,25 @@ public final class ClientFruit3 {
         double t = maintenant + partiel;
         for (Map.Entry<Integer, Dragon3> e : DRAGONS.entrySet()) {
             Dragon3 d = e.getValue();
+            Player j = mc.level.getPlayerByUUID(d.joueur);
             int n = d.chemin.size();
-            Vec3 last = d.chemin.get(n - 1), prev = n > 1 ? d.chemin.get(n - 2) : last;
-            Vec3 tete = last.add(last.subtract(prev).scale(Math.min(1, maintenant - d.maj + partiel)));
-            serpent(ps, buffers, cam, colonne(d.chemin, tete, R_DRAGON * 0.55, LONGUEUR_DRAGON), R_DRAGON, d.glace, true, null, t / 20);
+            Vec3 tete, nez;
+            List<Vec3> chemin = d.chemin;
+            if (j != null) {
+                // entre deux ticks : la route et la nuque glissent avec lui. Le dernier point du chemin est celui de la fin
+                // du tick, où il n'est pas encore : le corps part du précédent (sinon la tête se retourne à chaque image)
+                nez = d.dirAvant.lerp(d.dir, partiel);
+                nez = nez.lengthSqr() < 1e-4 ? d.dir : nez.normalize();
+                tete = Fruit3.nuque(j.getPosition(partiel), nez);
+                if (n > 1) {
+                    chemin = d.chemin.subList(0, n - 1);
+                }
+            } else {
+                Vec3 last = d.chemin.get(n - 1), prev = n > 1 ? d.chemin.get(n - 2) : last;
+                tete = last.add(last.subtract(prev).scale(Math.min(1, maintenant - d.maj + partiel)));
+                nez = d.dir;
+            }
+            serpent(ps, buffers, cam, colonne(chemin, tete, R_DRAGON * 0.55, LONGUEUR_DRAGON), R_DRAGON, d.glace, true, null, t / 20, true, nez);
         }
         for (Eclatement e : ECLATEMENTS) {
             eclatement(buffers, ps.last().pose(), cam, e);
@@ -1516,28 +1770,34 @@ public final class ClientFruit3 {
 
     private static void clicDroit(Minecraft mc) {
         String moi = ClientFruit.sorte(mc.player.getUUID());
-        if (moi == null || ClientFruit.niveau(mc.player.getUUID()) < 3 || mc.screen != null) {
-            if (envoye) {
-                PacketDistributor.sendToServer(new Fruit3.Serpent(false));
-                envoye = false;
+        boolean appuye = mc.options.keyUse.isDown();
+        if (monte()) {
+            // sur son dragon, les clics sont à lui (voir aussi Evenements.clic) : le clic droit, il fonce ; le tir du niveau 2 attend
+            if (appuye && !appuyeAvant && mc.screen == null) {
+                foncer(mc);
             }
+            appuyeAvant = appuye;
+            envoye = true;
+            return;
+        }
+        if (moi == null || ClientFruit.niveau(mc.player.getUUID()) < 3 || mc.screen != null) {
+            envoye = false;
             appuyeAvant = false;
             return;
         }
-        boolean appuye = mc.options.keyUse.isDown();
         long maintenant = mc.level.getGameTime();
         if (appuye && !appuyeAvant) {
             debutAppui = maintenant;
         }
         if (appuye && !envoye && maintenant - debutAppui >= Fruit3.APPUI_DRAGON && System.nanoTime() >= pretDragon) {
+            // le dragon sort et il monte dessus (le serveur répond par le premier paquet Dragon)
             PacketDistributor.sendToServer(new Fruit3.Serpent(true));
             envoye = true;
-            pretDragon = System.nanoTime() + (Fruit3.RECHARGE_DRAGON + 100) * 50_000_000L;
+            pretDragon = System.nanoTime() + 20 * 50_000_000L;
             mc.player.swing(ClientFruit.mainDuFruit(mc.player, Fruit.glace(moi)));
         }
         if (!appuye && appuyeAvant) {
             if (envoye) {
-                PacketDistributor.sendToServer(new Fruit3.Serpent(false));
                 envoye = false;
             } else if (maintenant - debutAppui < Fruit3.APPUI_DRAGON && System.nanoTime() >= ClientFruit.pretJet) {
                 ClientFruit.pretJet = System.nanoTime() + Fruit.RECHARGE_JET_2 * 50_000_000L;
@@ -1706,10 +1966,30 @@ public final class ClientFruit3 {
         }
         for (Dragon3 d : DRAGONS.values()) {
             if (d.joueur.equals(joueur.getUUID())) {
-                ModelPart bras = d.glace ? m.rightArm : m.leftArm;
-                bras.xRot = -Mth.HALF_PI + m.head.xRot;
-                bras.yRot = m.head.yRot;
-                bras.zRot = 0;
+                // à califourchon sur la nuque, les mains devant lui
+                m.rightLeg.xRot = -1.41F;
+                m.rightLeg.yRot = 0.31F;
+                m.rightLeg.zRot = 0.08F;
+                m.leftLeg.xRot = -1.41F;
+                m.leftLeg.yRot = -0.31F;
+                m.leftLeg.zRot = -0.08F;
+                m.rightArm.xRot = -0.95F;
+                m.rightArm.yRot = -0.18F;
+                m.rightArm.zRot = 0;
+                m.leftArm.xRot = -0.95F;
+                m.leftArm.yRot = 0.18F;
+                m.leftArm.zRot = 0;
+                copierManches(m);
+                return;
+            }
+            if (d.victime == joueur.getId()) {
+                float s = Mth.sin(joueur.tickCount * 0.7F);
+                m.rightArm.xRot = -2.6F + 0.5F * s;
+                m.rightArm.zRot = 0.3F;
+                m.leftArm.xRot = -2.6F - 0.5F * s;
+                m.leftArm.zRot = -0.3F;
+                m.rightLeg.xRot = 0.6F * s;
+                m.leftLeg.xRot = -0.6F * s;
                 copierManches(m);
                 return;
             }
@@ -1720,12 +2000,30 @@ public final class ClientFruit3 {
     private static void copierManches(PlayerModel<?> m) {
         m.leftSleeve.copyFrom(m.leftArm);
         m.rightSleeve.copyFrom(m.rightArm);
+        m.leftPants.copyFrom(m.leftLeg);
+        m.rightPants.copyFrom(m.rightLeg);
     }
 
     // ================================================================ branchements
 
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
     public static final class Evenements {
+        /** Sur son dragon : clic gauche, la gueule attrape celui qu'il vise ; clic droit, il fonce. Rien d'autre ne part. */
+        @SubscribeEvent
+        public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (!monte() || mc.level == null || mc.player == null) {
+                return;
+            }
+            event.setCanceled(true);
+            event.setSwingHand(false);
+            if (event.isAttack()) {
+                attraper(mc);
+            } else if (event.isUseItem()) {
+                foncer(mc);
+            }
+        }
+
         @SubscribeEvent
         public static void couche(RegisterGuiLayersEvent event) {
             event.registerAboveAll(Cabane.id("fruit3_eclair"), (g, delta) -> eclair(g));
@@ -1737,6 +2035,7 @@ public final class ClientFruit3 {
             if (mc.level == null || mc.player == null) {
                 DRAGONS.clear();
                 ECLATEMENTS.clear();
+                monDragon = -1;
                 ULTIMES.clear();
                 CHIENS.clear();
                 CAPSULES.clear();
@@ -1748,12 +2047,89 @@ public final class ClientFruit3 {
             long maintenant = mc.level.getGameTime();
             // un dragon dont on n'a plus de nouvelles (hors de portée) : on l'oublie
             DRAGONS.values().removeIf(d -> maintenant - d.maj > 40);
-            ECLATEMENTS.removeIf(e -> (System.nanoTime() - e.debut()) / 1e9 > 2.2);
+            if (monDragon >= 0 && !DRAGONS.containsKey(monDragon)) {
+                finMonte(mc);
+            }
+            suivre(mc);
+            // sur son dragon, la vue passe derrière lui (on rend la sienne à la fin)
+            if (monte()) {
+                if (vueAvant == null) {
+                    vueAvant = mc.options.getCameraType();
+                }
+                if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
+                    mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                }
+            } else if (vueAvant != null) {
+                mc.options.setCameraType(vueAvant);
+                vueAvant = null;
+            }
+            ECLATEMENTS.removeIf(e -> (System.nanoTime() - e.debut()) / 1e9 > 2.5);
             ULTIMES.removeIf(u -> u.t(mc, 0) > (u.glace ? 9 : (u.lance < 0 ? 14 : u.lance + 9.5)));
             CHIENS.removeIf(c -> c.t(mc, 0) > (c.tMorsure < 0 ? 3 : c.tMorsure + 1));
             CAPSULES.removeIf(x -> x.t(mc, 0) > (x.tEclat < 0 ? 5 : x.tEclat + 1.2));
             particules(mc);
             particulesAccroupi(mc);
+        }
+
+        /** Sur son dragon : c'est lui qui vole, au début de chaque tick (avant que le joueur bouge). */
+        @SubscribeEvent
+        public static void avantTick(ClientTickEvent.Pre event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level != null && mc.player != null && monte() && !mc.isPaused()) {
+                piloter(mc);
+            }
+        }
+
+        /** Sur son dragon, les touches pour marcher, sauter et s'accroupir ne font rien. */
+        @SubscribeEvent
+        public static void touches(MovementInputUpdateEvent event) {
+            if (monte()) {
+                event.getInput().leftImpulse = 0;
+                event.getInput().forwardImpulse = 0;
+                event.getInput().jumping = false;
+                event.getInput().shiftKeyDown = false;
+                event.getInput().up = false;
+                event.getInput().down = false;
+                event.getInput().left = false;
+                event.getInput().right = false;
+            }
+        }
+
+        private static java.lang.reflect.Method placerCamera;
+
+        /**
+         * Sur son dragon, la caméra (derrière lui) monte de 3 blocs : sinon elle est dans l'axe du corps et la crête cache
+         * tout. Elle garde la direction du regard (on vise toujours au centre de l'écran) et ne passe pas dans un plafond.
+         */
+        @SubscribeEvent
+        public static void cameraHaute(ViewportEvent.ComputeCameraAngles event) {
+            Minecraft mc = Minecraft.getInstance();
+            Camera c = event.getCamera();
+            if (!monte() || !c.isDetached() || mc.level == null || mc.player == null) {
+                return;
+            }
+            Vec3 p = c.getPosition(), haut = p.add(0, 3.2, 0);
+            HitResult b = mc.level.clip(new ClipContext(p, haut, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, mc.player));
+            if (b.getType() != HitResult.Type.MISS) {
+                haut = b.getLocation().subtract(0, 0.3, 0);
+            }
+            try {
+                if (placerCamera == null) {
+                    placerCamera = Camera.class.getDeclaredMethod("setPosition", Vec3.class);
+                    placerCamera.setAccessible(true);
+                }
+                placerCamera.invoke(c, haut);
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                placerCamera = null;
+            }
+        }
+
+        /** La caméra recule pour voir le dragon (sa tête devant, son corps derrière). */
+        @SubscribeEvent
+        public static void recul(CalculateDetachedCameraDistanceEvent event) {
+            if (monte()) {
+                event.setDistance(7);
+            }
         }
 
         @SubscribeEvent

@@ -23,6 +23,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -38,6 +39,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -50,9 +52,12 @@ import org.joml.Vector3f;
  * planche-ultimes.png, validés le 2026-11-03). La lave (ou la glace) prend tout le corps, sous un casque en tête de
  * dragon (voir ClientFruit3) ; le clic gauche et le clic droit court restent ceux du niveau 2. En plus :
  * <ul>
- * <li>clic droit maintenu : un dragon géant, sans pattes, sort de sa main et suit son regard tant qu'il reste appuyé
- * (5 s au plus, il avance au pas) ; qui le touche en route prend 8 ; quand il relâche (ou contre un mur), il explose :
- * 5 blocs autour, 20 au milieu, 12 au bord, tout brûle 8 s (ou gèle sur place 4 s). Recharge 20 s ;</li>
+ * <li>clic droit maintenu : un dragon géant, sans pattes, sort de sa main et il monte sur sa nuque (docs/fruits/apercu-dragon).
+ * Il le dirige du regard 30 s au plus, à la vitesse du vol du Vent 3 (c'est son jeu qui le fait voler, ClientFruit3) ; la
+ * vue passe derrière lui. Clic droit sur quelqu'un : le dragon fonce sur lui et le prend dans sa gueule (6) ; clic droit
+ * dans le vide : il fonce là où il regarde et explose dès que sa tête touche le sol, un mur ou quelqu'un ; au bout des 30 s,
+ * il explose en l'air. L'explosion : celui qui est dans la gueule prend 24, ceux qui sont à moins de 7 blocs 20 au milieu
+ * et 12 au bord ; tout brûle 8 s (ou gèle sur place 4 s). Il est éjecté et redescend sans dégâts de chute. Recharge 20 s ;</li>
  * <li>accroupi : la lave, le chien de l'enfer : une tête de chien en magma jaillit de sa main, file 18 blocs devant lui,
  * emporte qui elle touche (4) et le mord au bout (16, il brûle 6 s). La glace, la capsule : des lignes de glace filent dans
  * le sol jusqu'à ceux qui sont à moins de 12 blocs (8 au plus), des cristaux les enferment (3), et 2 s après tout éclate
@@ -69,18 +74,26 @@ import org.joml.Vector3f;
 public final class Fruit3 {
     // ================================================================ les réglages
 
+    /** Le dragon chevauché : sa recharge (après l'explosion), et combien de ticks garder le clic droit (sinon, le tir du niveau 2). */
     public static final int RECHARGE_DRAGON = 20 * 20;
-    /** Combien de ticks il faut garder le clic droit pour que ce soit le dragon (sinon, le tir du niveau 2). */
     public static final int APPUI_DRAGON = 5;
-    private static final int DUREE_DRAGON = 5 * 20;
-    private static final double VITESSE_DRAGON = 0.9;
-    /** De combien la tête peut tourner par tick pour suivre le regard (il ondule, il ne se retourne pas d'un coup). */
-    private static final double VIRAGE = Math.toRadians(11);
-    private static final double LARGEUR_DRAGON = 1.4;
-    private static final float DEGATS_CONTACT = 8;
+    /** 30 s de vol au plus ; la vitesse du vol du Vent 3 (Vent.VOL, 8,5 blocs/s), un peu plus en courant ; quand il fonce. */
+    public static final int DUREE_MONTE = 30 * 20;
+    public static final double VITESSE_MONTE = 0.45, VITESSE_MONTE_COURSE = 0.7, VITESSE_FONCE = 1.3, VITESSE_PRISE = 1.1;
+    /** De combien sa route peut tourner par tick vers le regard (il ondule, il ne se retourne pas d'un coup). */
+    public static final double VIRAGE = Math.toRadians(7), VIRAGE_FONCE = Math.toRadians(3.5);
+    public static final int DUREE_FONCE = 60, DUREE_PRISE = 40;
+    /** Jusqu'où il peut viser quelqu'un pour que la gueule aille le prendre. */
+    public static final double PORTEE_PRISE = 32;
+    /** La forme : la selle derrière la nuque, la taille de la tête (comme ClientFruit3), la longueur du corps. */
+    public static final double SELLE = 3.1, K_TETE = 0.42, LONGUEUR_DRAGON = 34;
+    /** Ce qu'il fait (le mode dans le paquet Dragon), et comment il finit. */
+    public static final int VOL = 0, PRISE = 1, FONCE = 2, EXPLOSION = 3, IMPACT = 4;
+    private static final float DEGATS_PRISE_DRAGON = 6;
+    private static final float DEGATS_AVALE = 24;
     private static final float EXPLOSION_MILIEU = 20;
     private static final float EXPLOSION_BORD = 12;
-    private static final double RAYON_DRAGON = 5;
+    private static final double RAYON_DRAGON = 7;
     private static final int GEL_DRAGON = 80;
 
     public static final int RECHARGE_ULTIME = 5 * 60 * 20;
@@ -119,7 +132,7 @@ public final class Fruit3 {
 
     // ================================================================ réseau
 
-    /** Client → serveur : il appuie (vrai) ou relâche (faux) le clic droit maintenu du dragon. */
+    /** Client → serveur : il a gardé le clic droit (vrai) : le dragon sort et il monte dessus. Faux : rien. */
     public record Serpent(boolean appuye) implements CustomPacketPayload {
         public static final Type<Serpent> TYPE = new Type<>(Cabane.id("fruit_serpent"));
         public static final StreamCodec<ByteBuf, Serpent> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, Serpent::appuye, Serpent::new);
@@ -130,15 +143,37 @@ public final class Fruit3 {
         }
     }
 
-    /** Serveur → ceux qui sont autour : où est la tête du dragon de ce joueur à ce tick (etat 0), ou il explose là (1). */
-    public record Dragon(int id, UUID joueur, boolean glace, Vector3f tete, Vector3f dir, int etat) implements CustomPacketPayload {
+    /**
+     * Serveur → ceux qui sont autour, à chaque tick : le dragon de ce joueur (sa nuque, sa route), ce qu'il fait (VOL, PRISE,
+     * FONCE) et qui il tient dans sa gueule (-1 : personne) ; ou il explose là (EXPLOSION en l'air, IMPACT contre le sol).
+     */
+    public record Dragon(int id, UUID joueur, boolean glace, int etat, Vector3f tete, Vector3f dir, int victime) implements CustomPacketPayload {
         public static final Type<Dragon> TYPE = new Type<>(Cabane.id("fruit_dragon"));
-        public static final StreamCodec<ByteBuf, Dragon> CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, Dragon::id, UUIDUtil.STREAM_CODEC, Dragon::joueur, ByteBufCodecs.BOOL, Dragon::glace,
-                ByteBufCodecs.VECTOR3F, Dragon::tete, ByteBufCodecs.VECTOR3F, Dragon::dir, ByteBufCodecs.VAR_INT, Dragon::etat, Dragon::new);
+        public static final StreamCodec<ByteBuf, Dragon> CODEC = StreamCodec.of((b, p) -> {
+            ByteBufCodecs.VAR_INT.encode(b, p.id());
+            UUIDUtil.STREAM_CODEC.encode(b, p.joueur());
+            ByteBufCodecs.BOOL.encode(b, p.glace());
+            ByteBufCodecs.VAR_INT.encode(b, p.etat());
+            ByteBufCodecs.VECTOR3F.encode(b, p.tete());
+            ByteBufCodecs.VECTOR3F.encode(b, p.dir());
+            ByteBufCodecs.VAR_INT.encode(b, p.victime() + 1);
+        }, b -> new Dragon(ByteBufCodecs.VAR_INT.decode(b), UUIDUtil.STREAM_CODEC.decode(b), ByteBufCodecs.BOOL.decode(b), ByteBufCodecs.VAR_INT.decode(b),
+                ByteBufCodecs.VECTOR3F.decode(b), ByteBufCodecs.VECTOR3F.decode(b), ByteBufCodecs.VAR_INT.decode(b) - 1));
 
         @Override
         public Type<Dragon> type() {
+            return TYPE;
+        }
+    }
+
+    /** Client → serveur, à chaque tick sur le dragon : vers où il le dirige ; et son clic droit (FONCE, ou PRISE sur « cible »). */
+    public record Pilote(Vector3f dir, int action, int cible) implements CustomPacketPayload {
+        public static final Type<Pilote> TYPE = new Type<>(Cabane.id("fruit_pilote"));
+        public static final StreamCodec<ByteBuf, Pilote> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VECTOR3F, Pilote::dir, ByteBufCodecs.VAR_INT, Pilote::action, ByteBufCodecs.VAR_INT, Pilote::cible, Pilote::new);
+
+        @Override
+        public Type<Pilote> type() {
             return TYPE;
         }
     }
@@ -204,6 +239,11 @@ public final class Fruit3 {
                         serpent(joueur, p.appuye());
                     }
                 }))
+                .playToServer(Pilote.TYPE, Pilote.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof ServerPlayer joueur) {
+                        piloter(joueur, p);
+                    }
+                }))
                 .playToServer(Ulti.TYPE, Ulti.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
                     if (ctx.player() instanceof ServerPlayer joueur && Fruit.eveille(joueur) && Fruit.niveau(joueur) >= 3) {
                         ultime(joueur, Fruit.glace(Pouvoirs.pouvoir(joueur)));
@@ -248,153 +288,308 @@ public final class Fruit3 {
                 e -> Pouvoirs.cible(joueur, e) && !e.isSpectator() && e.getBoundingBox().getCenter().distanceTo(p) < r + 0.5);
     }
 
-    // ================================================================ le dragon guidé
+    // ================================================================ le dragon chevauché
 
-    private static final class Serpent3 {
+    /** Un repère pour un nez vers f : x sur le côté, y vers le haut (autant que possible). Le même que ClientFruit3.repere. */
+    public static Vec3[] repere(Vec3 f) {
+        Vec3 x = new Vec3(0, 1, 0).cross(f);
+        if (x.lengthSqr() < 0.04) {
+            x = new Vec3(0, 0, 1).cross(f);
+        }
+        x = x.normalize();
+        return new Vec3[]{x, f.cross(x).normalize()};
+    }
+
+    /** La nuque du dragon (où commence le cou, la tête est devant) quand celui qui le monte a les pieds là et va vers dir. */
+    public static Vec3 nuque(Vec3 pieds, Vec3 dir) {
+        return pieds.subtract(repere(dir)[1].scale(0.29)).add(dir.scale(SELLE));
+    }
+
+    /** Le centre de la tête, devant la nuque. */
+    public static Vec3 centreTete(Vec3 nuque, Vec3 dir) {
+        return nuque.add(dir.scale(3.4 * K_TETE));
+    }
+
+    /** Dans la gueule ouverte, entre les deux mâchoires du modèle (jeu3.mjs). */
+    public static Vec3 gueule(Vec3 nuque, Vec3 dir) {
+        return centreTete(nuque, dir).add(repere(dir)[1].scale(-2.4 * K_TETE)).add(dir.scale(5.2 * K_TETE));
+    }
+
+    /** Les points de la tête qui touchent le sol en premier quand il plonge : le bout du museau, le bas de la mâchoire, le menton. */
+    private static Vec3[] bouts(Vec3 nuque, Vec3 dir) {
+        Vec3 o = centreTete(nuque, dir), y = repere(dir)[1];
+        return new Vec3[]{o.add(dir.scale(8 * K_TETE)), o.add(dir.scale(5 * K_TETE)).add(y.scale(-7 * K_TETE)), o.add(y.scale(-6 * K_TETE))};
+    }
+
+    private static final class Monture {
         final int id;
         final UUID joueur;
         final ServerLevel monde;
         final boolean glace;
-        final Set<Integer> touches = new HashSet<>();
-        Vec3 tete;
+        final boolean volait;
         Vec3 dir;
+        Vec3 tete;
+        Vec3[] avant;
         int age;
-        boolean lache;
+        int mode = VOL;
+        int debutMode;
+        LivingEntity cible;
+        LivingEntity victime;
 
-        Serpent3(int id, ServerPlayer joueur, boolean glace, Vec3 tete, Vec3 dir) {
+        Monture(int id, ServerPlayer joueur, boolean glace, Vec3 dir) {
             this.id = id;
             this.joueur = joueur.getUUID();
             this.monde = joueur.serverLevel();
             this.glace = glace;
-            this.tete = tete;
-            this.dir = dir.normalize();
+            this.volait = joueur.getAbilities().mayfly;
+            this.dir = dir;
+            this.tete = nuque(joueur.position(), dir);
         }
     }
 
-    private static final Map<UUID, Serpent3> SERPENTS = new HashMap<>();
+    private static final Map<UUID, Monture> MONTURES = new HashMap<>();
     private static final Map<UUID, Integer> PRET_DRAGON = new HashMap<>();
+    /** Ceux qui retombent après l'explosion (celui qui le montait, la victime) : pas de dégâts de chute jusqu'au sol. */
+    private static final Map<UUID, Integer> RETOMBENT = new HashMap<>();
     private static int prochainDragon;
 
-    /** Il appuie : le dragon sort de sa main (s'il est prêt) ; il relâche : il explose où il est. */
+    /** Le clic droit maintenu : le dragon sort de sa main et il monte dessus (s'il est prêt). */
     private static void serpent(ServerPlayer joueur, boolean appuye) {
         UUID u = joueur.getUUID();
-        if (!appuye) {
-            Serpent3 s = SERPENTS.get(u);
-            if (s != null) {
-                s.lache = true;
-            }
-            return;
-        }
         int maintenant = joueur.server.getTickCount();
-        if (Fruit.niveau(joueur) < 3 || SERPENTS.containsKey(u) || maintenant < PRET_DRAGON.getOrDefault(u, 0)) {
+        if (!appuye || Fruit.niveau(joueur) < 3 || MONTURES.containsKey(u) || maintenant < PRET_DRAGON.getOrDefault(u, 0)) {
             return;
         }
         boolean glace = Fruit.glace(Pouvoirs.pouvoir(joueur));
-        Vec3 regard = joueur.getLookAngle();
-        SERPENTS.put(u, new Serpent3(prochainDragon++, joueur, glace, Fruit.main(joueur, glace).add(regard.scale(0.5)), regard));
+        Vec3 r = joueur.getLookAngle();
+        Monture s = new Monture(prochainDragon++, joueur, glace, new Vec3(r.x, Math.max(0.45, r.y), r.z).normalize());
+        MONTURES.put(u, s);
+        // il vole sur son dragon : le serveur ne doit pas le prendre pour un tricheur qui flotte
+        if (!s.volait) {
+            joueur.getAbilities().mayfly = true;
+            joueur.onUpdateAbilities();
+        }
+        envoyer(s.monde, s.tete, new Dragon(s.id, u, glace, VOL, Fruit.v(s.tete), Fruit.v(s.dir), -1));
         Vec3 p = joueur.getEyePosition();
-        son(joueur.serverLevel(), p, SoundEvents.ENDER_DRAGON_GROWL, 1.6F, glace ? 1.5F : 1.2F);
+        son(s.monde, p, SoundEvents.ENDER_DRAGON_GROWL, 1.6F, glace ? 1.5F : 1.2F);
         if (glace) {
-            son(joueur.serverLevel(), p, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.6F, 0.5F);
-            son(joueur.serverLevel(), p, SoundEvents.POWDER_SNOW_BREAK, 1.4F, 0.5F);
+            son(s.monde, p, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.6F, 0.5F);
+            son(s.monde, p, SoundEvents.POWDER_SNOW_BREAK, 1.4F, 0.5F);
         } else {
-            son(joueur.serverLevel(), p, SoundEvents.BLAZE_SHOOT, 1.6F, 0.4F);
-            son(joueur.serverLevel(), p, SoundEvents.FIRECHARGE_USE, 1.4F, 0.5F);
+            son(s.monde, p, SoundEvents.BLAZE_SHOOT, 1.6F, 0.4F);
+            son(s.monde, p, SoundEvents.FIRECHARGE_USE, 1.4F, 0.5F);
         }
     }
 
-    /** Tourne a vers b d'au plus max (en radians), autour de l'axe a × b. */
-    private static Vec3 tourner(Vec3 a, Vec3 b, double max) {
-        double angle = Math.acos(Mth.clamp(a.dot(b), -1, 1));
-        if (angle <= max) {
-            return b;
+    /** Il pilote : vers où va son dragon (c'est son jeu qui le fait voler) ; et le clic droit, sur quelqu'un ou dans le vide. */
+    private static void piloter(ServerPlayer j, Pilote p) {
+        Monture s = MONTURES.get(j.getUUID());
+        if (s == null) {
+            return;
         }
-        Vec3 axe = a.cross(b);
-        if (axe.lengthSqr() < 1e-8) {
-            axe = Math.abs(a.y) < 0.9 ? a.cross(new Vec3(0, 1, 0)) : a.cross(new Vec3(1, 0, 0));
+        Vec3 d = new Vec3(p.dir().x, p.dir().y, p.dir().z);
+        if (d.lengthSqr() > 0.25 && d.lengthSqr() < 4) {
+            s.dir = d.normalize();
         }
-        axe = axe.normalize();
-        double c = Math.cos(max), s = Math.sin(max);
-        return a.scale(c).add(axe.cross(a).scale(s)).add(axe.scale(axe.dot(a) * (1 - c))).normalize();
+        int maintenant = j.server.getTickCount();
+        if (p.action() == FONCE && s.mode != FONCE) {
+            s.mode = FONCE;
+            s.debutMode = s.age;
+            s.cible = null;
+            son(s.monde, s.tete, SoundEvents.ENDER_DRAGON_GROWL, 2.2F, s.glace ? 1.3F : 0.9F);
+            son(s.monde, s.tete, SoundEvents.ENDER_DRAGON_FLAP, 2F, 0.6F);
+        } else if (p.action() == PRISE && s.mode == VOL && s.victime == null
+                && s.monde.getEntity(p.cible()) instanceof LivingEntity e && e.isAlive() && Pouvoirs.cible(j, e) && e.distanceTo(j) < PORTEE_PRISE + 6) {
+            s.mode = PRISE;
+            s.debutMode = s.age;
+            s.cible = e;
+            son(s.monde, s.tete, SoundEvents.ENDER_DRAGON_GROWL, 2F, s.glace ? 1.6F : 1.1F);
+        }
     }
 
-    private static void avancer(MinecraftServer server, Serpent3 s) {
+    private static void avancer(MinecraftServer server, Monture s) {
         ServerPlayer j = server.getPlayerList().getPlayer(s.joueur);
         if (j == null || j.level() != s.monde || !j.isAlive() || Fruit.niveau(j) < 3) {
-            SERPENTS.remove(s.joueur);
-            envoyer(s.monde, s.tete, new Dragon(s.id, s.joueur, s.glace, Fruit.v(s.tete), Fruit.v(s.dir), 1));
+            if (j != null && j.isAlive()) {
+                exploser(j, s, false);
+            } else {
+                MONTURES.remove(s.joueur);
+                envoyer(s.monde, s.tete, new Dragon(s.id, s.joueur, s.glace, EXPLOSION, Fruit.v(s.tete), Fruit.v(s.dir), -1));
+            }
             return;
         }
         s.age++;
-        // la tête vire vers là où il regarde, sans se retourner d'un coup
-        s.dir = tourner(s.dir, j.getLookAngle(), VIRAGE);
-        Vec3 suivant = s.tete.add(s.dir.scale(VITESSE_DRAGON));
-        HitResult bloc = s.monde.clip(new ClipContext(s.tete, suivant, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, j));
-        if (bloc instanceof BlockHitResult b && b.getType() != HitResult.Type.MISS && b.getDirection() == Direction.UP && s.dir.y > -0.6) {
-            // il frôle le sol : il remonte en rasant, il n'explose pas
-            s.dir = new Vec3(s.dir.x, Math.max(0.2, -s.dir.y * 0.5), s.dir.z).normalize();
-            suivant = s.tete.add(s.dir.scale(VITESSE_DRAGON));
-            bloc = s.monde.clip(new ClipContext(s.tete, suivant, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, j));
-        }
-        boolean mur = bloc.getType() != HitResult.Type.MISS && s.age > 2;
-        Vec3 bout = mur ? bloc.getLocation() : suivant;
-        // qui se le prend en route : 8, une fois, et il brûle (ou gèle)
-        for (LivingEntity e : s.monde.getEntitiesOfClass(LivingEntity.class, new AABB(s.tete, bout).inflate(LARGEUR_DRAGON + 1),
-                e -> Pouvoirs.cible(j, e) && !e.isSpectator())) {
-            AABB b = e.getBoundingBox().inflate(LARGEUR_DRAGON);
-            if (s.touches.contains(e.getId()) || !b.contains(s.tete) && b.clip(s.tete, bout).isEmpty()) {
-                continue;
+        j.fallDistance = 0;
+        s.tete = nuque(j.position(), s.dir);
+        Vec3 g = gueule(s.tete, s.dir);
+        // il fonce sur quelqu'un : la gueule l'attrape dès qu'elle arrive sur lui (ou il renonce au bout de 2 s)
+        if (s.mode == PRISE) {
+            LivingEntity c = s.cible;
+            if (c == null || !c.isAlive() || c.level() != s.monde || s.age - s.debutMode > DUREE_PRISE) {
+                s.mode = VOL;
+                s.cible = null;
+            } else if (c.getBoundingBox().inflate(1.4).contains(g) || c.getBoundingBox().getCenter().distanceTo(g) < 2.6) {
+                s.victime = c;
+                s.mode = VOL;
+                s.cible = null;
+                Fruit.blesser(c, Fruit.source(j, s.glace ? Fruit.GIVRE : Fruit.MAGMA), DEGATS_PRISE_DRAGON);
+                if (s.glace) {
+                    Fruit.givrer(c);
+                } else {
+                    c.igniteForSeconds(3);
+                }
+                son(s.monde, g, SoundEvents.EVOKER_FANGS_ATTACK, 2.2F, 0.5F);
+                son(s.monde, g, s.glace ? SoundEvents.GLASS_BREAK : SoundEvents.BLAZE_HURT, 1.4F, 0.6F);
             }
-            s.touches.add(e.getId());
-            Fruit.blesser(e, Fruit.source(j, s.glace ? Fruit.GIVRE : Fruit.MAGMA), DEGATS_CONTACT);
-            if (s.glace) {
-                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
-                Fruit.givrer(e);
+        }
+        // celui qu'il tient reste dans sa gueule
+        LivingEntity v = s.victime;
+        if (v != null) {
+            if (!v.isAlive() || v.level() != s.monde) {
+                s.victime = null;
             } else {
-                e.igniteForSeconds(4);
+                placer(v, g.subtract(0, v.getBbHeight() * 0.5, 0));
+                if (s.glace) {
+                    Fruit.givrer(v);
+                } else if (s.age % 20 == 0) {
+                    v.igniteForSeconds(2);
+                }
             }
         }
-        s.tete = bout;
-        // il avance au pas tant qu'il le guide
-        j.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 6, 2, false, false));
-        if (s.lache || mur || s.age >= DUREE_DRAGON) {
-            exploser(j, s);
-        } else {
-            envoyer(s.monde, s.tete, new Dragon(s.id, s.joueur, s.glace, Fruit.v(s.tete), Fruit.v(s.dir), 0));
-            if (s.age % 12 == 1) {
-                son(s.monde, s.tete, s.glace ? SoundEvents.PHANTOM_FLAP : SoundEvents.BLAZE_BURN, 1.4F, s.glace ? 0.6F : 0.5F);
+        // il fonce : il explose dès que sa tête touche un bloc (le sol, un mur) ou quelqu'un
+        if (s.mode == FONCE) {
+            Vec3[] b = bouts(s.tete, s.dir);
+            for (int i = 0; i < b.length; i++) {
+                Vec3 de = s.avant == null ? s.tete : s.avant[i];
+                BlockHitResult choc = s.monde.clip(new ClipContext(de, b[i], ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, j));
+                if (choc.getType() != HitResult.Type.MISS && s.age - s.debutMode > 1) {
+                    s.tete = choc.getLocation();
+                    exploser(j, s, true);
+                    return;
+                }
             }
+            Vec3 o = centreTete(s.tete, s.dir);
+            for (LivingEntity e : s.monde.getEntitiesOfClass(LivingEntity.class, new AABB(o, b[0]).inflate(2.2),
+                    e -> e != s.victime && Pouvoirs.cible(j, e) && !e.isSpectator())) {
+                AABB bb = e.getBoundingBox().inflate(1.2);
+                if (bb.contains(o) || bb.contains(b[0]) || bb.clip(o, b[0]).isPresent()) {
+                    s.tete = b[0];
+                    exploser(j, s, false);
+                    return;
+                }
+            }
+            s.avant = b;
+            if (s.age - s.debutMode > DUREE_FONCE) {
+                s.tete = o;
+                exploser(j, s, false);
+                return;
+            }
+        }
+        // les 30 s sont passées : il explose en l'air, là où il est
+        if (s.age >= DUREE_MONTE) {
+            s.tete = centreTete(s.tete, s.dir);
+            exploser(j, s, false);
+            return;
+        }
+        envoyer(s.monde, s.tete, new Dragon(s.id, s.joueur, s.glace, s.mode, Fruit.v(s.tete), Fruit.v(s.dir), v == null ? -1 : v.getId()));
+        if (s.age % 12 == 1) {
+            son(s.monde, s.tete, s.glace ? SoundEvents.PHANTOM_FLAP : SoundEvents.BLAZE_BURN, 1.4F, s.glace ? 0.6F : 0.5F);
+        }
+        if (s.age % 30 == 7) {
+            son(s.monde, s.tete, SoundEvents.ENDER_DRAGON_FLAP, 1.2F, 0.8F);
         }
     }
 
-    /** Le dragon explose : 5 blocs autour, 20 au milieu, 12 au bord ; tout brûle 8 s, ou gèle sur place 4 s. */
-    private static void exploser(ServerPlayer j, Serpent3 s) {
-        SERPENTS.remove(s.joueur);
-        PRET_DRAGON.put(s.joueur, j.server.getTickCount() + RECHARGE_DRAGON);
+    /**
+     * Le dragon explose (à s.tete) : celui qu'il tient prend tout (24), ceux qui sont autour (7 blocs) 20 au milieu et 12 au
+     * bord ; la lave brûle 8 s, la glace gèle sur place 4 s. Celui qui le montait est éjecté et redescend sans dégâts de chute.
+     */
+    private static void exploser(ServerPlayer j, Monture s, boolean sol) {
+        MONTURES.remove(s.joueur);
+        int maintenant = j.server.getTickCount();
+        PRET_DRAGON.put(s.joueur, maintenant + RECHARGE_DRAGON);
         Vec3 p = s.tete;
-        envoyer(s.monde, p, new Dragon(s.id, s.joueur, s.glace, Fruit.v(p), Fruit.v(s.dir), 1));
+        envoyer(s.monde, p, new Dragon(s.id, s.joueur, s.glace, sol ? IMPACT : EXPLOSION, Fruit.v(p), Fruit.v(s.dir), -1));
         if (s.glace) {
-            son(s.monde, p, SoundEvents.GLASS_BREAK, 2.4F, 0.5F);
-            son(s.monde, p, SoundEvents.AMETHYST_CLUSTER_BREAK, 2F, 0.6F);
-            son(s.monde, p, SoundEvents.POWDER_SNOW_BREAK, 2F, 0.4F);
-            son(s.monde, p, SoundEvents.GENERIC_EXPLODE.value(), 1.4F, 1.3F);
+            son(s.monde, p, SoundEvents.GLASS_BREAK, 3F, 0.5F);
+            son(s.monde, p, SoundEvents.AMETHYST_CLUSTER_BREAK, 2.4F, 0.6F);
+            son(s.monde, p, SoundEvents.POWDER_SNOW_BREAK, 2.4F, 0.4F);
+            son(s.monde, p, SoundEvents.GENERIC_EXPLODE.value(), 2F, 1.2F);
         } else {
-            son(s.monde, p, SoundEvents.GENERIC_EXPLODE.value(), 2.6F, 0.7F);
-            son(s.monde, p, SoundEvents.LAVA_EXTINGUISH, 2F, 0.5F);
-            son(s.monde, p, SoundEvents.BLAZE_SHOOT, 1.6F, 0.4F);
+            son(s.monde, p, SoundEvents.GENERIC_EXPLODE.value(), 3.2F, 0.6F);
+            son(s.monde, p, SoundEvents.LAVA_EXTINGUISH, 2.4F, 0.5F);
+            son(s.monde, p, SoundEvents.BLAZE_SHOOT, 2F, 0.4F);
+        }
+        DamageSource source = Fruit.source(j, s.glace ? Fruit.GIVRE : Fruit.MAGMA);
+        LivingEntity v = s.victime;
+        if (v != null && v.isAlive()) {
+            Fruit.blesser(v, source, DEGATS_AVALE);
+            effet(v, s.glace);
+            v.setDeltaMovement(s.dir.x * 0.6, 0.6, s.dir.z * 0.6);
+            v.hurtMarked = true;
+            RETOMBENT.put(v.getUUID(), maintenant + 15 * 20);
         }
         for (LivingEntity e : autour(j, s.monde, p, RAYON_DRAGON)) {
+            if (e == v) {
+                continue;
+            }
             double d = Math.min(1, e.getBoundingBox().getCenter().distanceTo(p) / RAYON_DRAGON);
-            Fruit.blesser(e, Fruit.source(j, s.glace ? Fruit.GIVRE : Fruit.MAGMA), (float) Mth.lerp(d, EXPLOSION_MILIEU, EXPLOSION_BORD));
-            if (s.glace) {
-                Fruit.geler(e, GEL_DRAGON);
-            } else {
-                e.igniteForSeconds(8);
+            Fruit.blesser(e, source, (float) Mth.lerp(d, EXPLOSION_MILIEU, EXPLOSION_BORD));
+            effet(e, s.glace);
+            if (!s.glace) {
                 Vec3 dehors = e.position().subtract(p).multiply(1, 0, 1);
-                Vec3 v = dehors.lengthSqr() < 0.01 ? s.dir.multiply(1, 0, 1) : dehors.normalize();
-                e.setDeltaMovement(e.getDeltaMovement().add(v.x * (1.4 - d), 0.5, v.z * (1.4 - d)));
+                Vec3 w = dehors.lengthSqr() < 0.01 ? s.dir.multiply(1, 0, 1) : dehors.normalize();
+                e.setDeltaMovement(e.getDeltaMovement().add(w.x * (1.4 - d), 0.5, w.z * (1.4 - d)));
                 e.hurtMarked = true;
             }
+        }
+        // celui qui le montait : projeté un peu en l'air, puis il redescend (sans se faire mal en tombant)
+        if (!s.volait && !j.isCreative() && !j.isSpectator()) {
+            j.getAbilities().mayfly = false;
+            j.getAbilities().flying = false;
+            j.onUpdateAbilities();
+        }
+        Vec3 recul = s.dir.multiply(1, 0, 1);
+        recul = recul.lengthSqr() < 0.01 ? Vec3.ZERO : recul.normalize().scale(-0.5);
+        j.setDeltaMovement(recul.x, 0.85, recul.z);
+        j.hurtMarked = true;
+        j.fallDistance = 0;
+        j.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, false, false));
+        RETOMBENT.put(j.getUUID(), maintenant + 15 * 20);
+    }
+
+    private static void effet(LivingEntity e, boolean glace) {
+        if (glace) {
+            Fruit.geler(e, GEL_DRAGON);
+        } else {
+            e.igniteForSeconds(8);
+        }
+    }
+
+    /** Ceux qui retombent : pas de dégâts de chute tant qu'ils ne sont pas revenus au sol. */
+    private static void retomber(MinecraftServer server, int maintenant) {
+        RETOMBENT.entrySet().removeIf(e -> {
+            Entity x = null;
+            for (ServerLevel l : server.getAllLevels()) {
+                x = l.getEntity(e.getKey());
+                if (x != null) {
+                    break;
+                }
+            }
+            if (x == null || maintenant > e.getValue()) {
+                return true;
+            }
+            x.fallDistance = 0;
+            return x.onGround() && maintenant > e.getValue() - 15 * 20 + 5;
+        });
+    }
+
+    /** Sur son dragon, ou en retombant après l'explosion : la chute ne fait rien. */
+    @SubscribeEvent
+    public static void chute(LivingFallEvent event) {
+        UUID u = event.getEntity().getUUID();
+        if (MONTURES.containsKey(u) || RETOMBENT.containsKey(u)) {
+            event.setCanceled(true);
         }
     }
 
@@ -790,9 +985,10 @@ public final class Fruit3 {
     public static void tick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
         int maintenant = server.getTickCount();
-        for (Serpent3 s : new ArrayList<>(SERPENTS.values())) {
+        for (Monture s : new ArrayList<>(MONTURES.values())) {
             avancer(server, s);
         }
+        retomber(server, maintenant);
         CHIENS.removeIf(c -> {
             ServerPlayer j = server.getPlayerList().getPlayer(c.joueur);
             return j == null || j.level() != c.monde || avancerChien(j, c, maintenant - c.debut);
@@ -828,20 +1024,26 @@ public final class Fruit3 {
         }
     }
 
-    /** Il s'endort : son dragon explose s'il en guidait un ; il pourra refaire l'ultime au prochain éveil (après sa recharge). */
+    /** Il s'endort : son dragon explose s'il en montait un ; il pourra refaire l'ultime au prochain éveil (après sa recharge). */
     static void endormir(ServerPlayer joueur) {
         FAITES.remove(joueur.getUUID());
-        Serpent3 s = SERPENTS.get(joueur.getUUID());
+        Monture s = MONTURES.get(joueur.getUUID());
         if (s != null && joueur.isAlive()) {
-            exploser(joueur, s);
+            s.tete = centreTete(s.tete, s.dir);
+            exploser(joueur, s, false);
         }
-        SERPENTS.remove(joueur.getUUID());
+        MONTURES.remove(joueur.getUUID());
     }
 
     @SubscribeEvent
     public static void deconnexion(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID u = event.getEntity().getUUID();
-        SERPENTS.remove(u);
+        Monture s = MONTURES.remove(u);
+        if (s != null && !s.volait && event.getEntity() instanceof ServerPlayer j && !j.isCreative() && !j.isSpectator()) {
+            j.getAbilities().mayfly = false;
+            j.getAbilities().flying = false;
+        }
+        RETOMBENT.remove(u);
         FAITES.remove(u);
         ULTIMES.removeIf(x -> x.joueur.equals(u));
         CHIENS.removeIf(c -> c.joueur.equals(u));
@@ -850,8 +1052,9 @@ public final class Fruit3 {
 
     @SubscribeEvent
     public static void arret(ServerStoppingEvent event) {
-        SERPENTS.clear();
+        MONTURES.clear();
         PRET_DRAGON.clear();
+        RETOMBENT.clear();
         ULTIMES.clear();
         PRET_ULTIME.clear();
         FAITES.clear();

@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Dragon chevauché</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #8fb8f0; overflow: hidden; font-family: system-ui, sans-serif; }
+  #outils { position: fixed; left: 10px; top: 8px; right: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 2; pointer-events: none; }
+  .barre { display: flex; gap: 5px; flex-wrap: wrap; pointer-events: auto; align-items: center; }
+  .barre span { color: #10203a; font-size: 12px; font-weight: 600; margin-right: 2px; text-shadow: 0 0 4px #fff8; }
+  button { background: #1c2236dd; color: #eef2ff; border: 1px solid #4a5684; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; }
+  button.actif { background: #c2501a; border-color: #ffb070; }
+  body.glace button.actif { background: #2a78c8; border-color: #a8e0ff; }
+  #legende { position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%); color: #fff; font-size: 17px; font-weight: 600;
+    background: #0a0f1ccc; padding: 8px 16px; border-radius: 8px; text-align: center; max-width: 90vw; }
+  #legende:empty { display: none; }
+  #minuteur { position: fixed; right: 14px; top: 12px; color: #fff; font-size: 14px; background: #0a0f1ccc; padding: 6px 10px; border-radius: 8px; min-width: 150px; }
+  #minuteur .jauge { height: 6px; background: #ffffff30; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+  #minuteur .plein { height: 100%; background: #ff8a30; }
+  body.glace #minuteur .plein { background: #8ad8ff; }
+  #aide { position: fixed; left: 12px; bottom: 10px; color: #10203a; font-size: 12px; text-shadow: 0 0 4px #fff8; }
+  #chrono { position: fixed; right: 14px; bottom: 10px; color: #10203a; font-size: 12px; text-shadow: 0 0 4px #fff8; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script src="donnees.js"></script>
+</head>
+<body>
+<div id="outils">
+  <div class="barre" id="fruits"><span>Fruit</span></div>
+  <div class="barre" id="scenes"><span>Scène</span></div>
+  <div class="barre" id="vues"><span>Vue</span></div>
+  <div class="barre" id="longueurs"><span>Longueur</span></div>
+</div>
+<div id="minuteur"></div>
+<div id="legende"></div>
+<div id="aide">Vue libre : clic gauche tourner · clic droit déplacer · molette zoomer · espace : pause</div>
+<div id="chrono"></div>
+<script type="module">
+// Le dragon du niveau 3 des fruits, chevauché : la même tête que dans le jeu (fruit3/tete_*.bin), le même corps
+// d'anneaux et la même crête (ClientFruit3.serpent), en plus long. Clic droit : il sort de la main et le joueur monte
+// dessus ; il vole 30 s au plus, à la vitesse du vol du Vent 3 ; clic droit sur quelqu'un : la gueule l'attrape ;
+// clic droit dans le vide : il fonce et explose ; au bout des 30 s, il explose en l'air.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ================================================================ outils
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+function hache(i, j, k) {
+  let h = (Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(k, 2147483647)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+const rgb = (r, g, b) => [r / 255, g / 255, b / 255];
+const CROUTE = rgb(40, 24, 22), CROUTE_R = rgb(96, 36, 22), LAVE_R = rgb(222, 58, 16), LAVE_O = rgb(255, 116, 20), LAVE_J = rgb(255, 216, 80),
+  CHAUD = rgb(255, 250, 214), GLACE = rgb(146, 206, 244), GLACE_C = rgb(214, 240, 255), BLANCHE = rgb(248, 252, 255), GLACE_P = rgb(90, 156, 224),
+  GLACE_V = rgb(120, 236, 255), FUMEE = rgb(128, 122, 120);
+const borne = (u) => Math.max(0, Math.min(1, u));
+const mix = (a, b, k) => { k = borne(k); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; };
+const entre = (t, a, b) => borne((t - a) / (b - a));
+const sortie = (u) => { u = borne(u); return 1 - (1 - u) ** 3; };
+const versLin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const OMBRES = [1, 0.55, 0.82, 0.82, 0.7, 0.7];
+
+/** Un lot de faces qu'on refait à chaque image (le corps, les flammes, les éclats). */
+class Lot {
+  constructor(materiau, cap) {
+    this.cap = cap; this.k = 0;
+    this.p = new Float32Array(cap * 18); this.n = new Float32Array(cap * 18); this.c = new Float32Array(cap * 24);
+    this.g = new THREE.BufferGeometry();
+    for (const [nom, tab, t] of [['position', this.p, 3], ['normal', this.n, 3], ['color', this.c, 4]]) {
+      this.g.setAttribute(nom, new THREE.BufferAttribute(tab, t).setUsage(THREE.DynamicDrawUsage));
+    }
+    this.mesh = new THREE.Mesh(this.g, materiau);
+    this.mesh.frustumCulled = false;
+  }
+  vider() { this.k = 0; }
+  quad(a, b, c, d, col, al = 1, n = null) {
+    if (this.k >= this.cap) return;
+    if (!n) n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(d, a)).normalize();
+    const r = versLin(col[0]), g = versLin(col[1]), bl = versLin(col[2]);
+    let o = this.k * 18, oc = this.k * 24;
+    for (const q of [a, b, c, a, c, d]) {
+      this.p[o] = q.x; this.p[o + 1] = q.y; this.p[o + 2] = q.z;
+      this.n[o] = n.x; this.n[o + 1] = n.y; this.n[o + 2] = n.z;
+      this.c[oc] = r; this.c[oc + 1] = g; this.c[oc + 2] = bl; this.c[oc + 3] = al;
+      o += 3; oc += 4;
+    }
+    this.k++;
+  }
+  /** Une pointe à quatre faces (GrandeFleche.pic) : la couleur « pied » au pied, « bout » à la cime. */
+  pic(base, dir, longueur, largeur, pied, bout) {
+    if (longueur < 1e-3) return;
+    const d = dir.clone().normalize();
+    const e1 = Math.abs(d.y) < 0.9 ? d.clone().cross(V(0, 1, 0)).normalize() : d.clone().cross(V(1, 0, 0)).normalize();
+    const e2 = d.clone().cross(e1).normalize();
+    const cime = base.clone().addScaledVector(d, longueur), h = largeur / 2;
+    const coins = [e1.clone().add(e2), e1.clone().sub(e2), e1.clone().negate().sub(e2), e2.clone().sub(e1)].map((v) => base.clone().addScaledVector(v, h));
+    for (let i = 0; i < 4; i++) {
+      const k = 0.85 + 0.15 * (i % 2);
+      this.tri(coins[i], coins[(i + 1) % 4], cime, pied.map((x, j) => (j < 3 ? x * k : x)), bout);
+    }
+  }
+  tri(a, b, c, ca, cb) {
+    if (this.k >= this.cap) return;
+    let o = this.k * 18, oc = this.k * 24;
+    const n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).normalize();
+    const pts = [[a, ca], [b, ca], [c, cb], [a, ca], [a, ca], [a, ca]];
+    for (const [q, col] of pts) {
+      this.p[o] = q.x; this.p[o + 1] = q.y; this.p[o + 2] = q.z;
+      this.n[o] = n.x; this.n[o + 1] = n.y; this.n[o + 2] = n.z;
+      this.c[oc] = versLin(col[0]); this.c[oc + 1] = versLin(col[1]); this.c[oc + 2] = versLin(col[2]); this.c[oc + 3] = col[3] ?? 1;
+      o += 3; oc += 4;
+    }
+    this.k++;
+  }
+  /** Un cube (tourné de « angle » autour de la verticale), chaque face un peu plus ou moins claire. */
+  cube(o, s, angle, col, al = 1) {
+    const x = V(Math.cos(angle), 0, Math.sin(angle)).multiplyScalar(s), z = V(-Math.sin(angle), 0, Math.cos(angle)).multiplyScalar(s), y = V(0, s, 0);
+    this.boite(o, x, y, z, () => col, al);
+  }
+  boite(o, x, y, z, teinte, al = 1, ombre = true) {
+    const faces = [[y, x, z], [y.clone().negate(), x, z], [x, y, z], [x.clone().negate(), y, z], [z, x, y], [z.clone().negate(), x, y]];
+    for (let f = 0; f < 6; f++) {
+      const cen = o.clone().add(faces[f][0]), u = faces[f][1], v = faces[f][2];
+      const col = teinte(f), k = ombre ? OMBRES[f] : 1;
+      this.quad(cen.clone().sub(u).sub(v), cen.clone().add(u).sub(v), cen.clone().add(u).add(v), cen.clone().sub(u).add(v),
+        [col[0] * k, col[1] * k, col[2] * k], al, faces[f][0].clone().normalize());
+    }
+  }
+  fin() {
+    this.g.setDrawRange(0, this.k * 6);
+    for (const nom of ['position', 'normal', 'color']) this.g.attributes[nom].needsUpdate = true;
+  }
+}
+
+// ================================================================ la scène
+const rendu = new THREE.WebGLRenderer({ antialias: true });
+rendu.setPixelRatio(Math.min(2, devicePixelRatio));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const CIEL = new THREE.Color(0x86b4f4);
+scene.background = CIEL;
+scene.fog = new THREE.Fog(CIEL, 90, 260);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 600);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.enableDamping = true;
+controles.enabled = false;
+scene.add(new THREE.HemisphereLight(0xdcecff, 0x6f8a52, 1.6));
+const soleil = new THREE.DirectionalLight(0xfff4e0, 1.6);
+soleil.position.set(40, 80, 25);
+scene.add(soleil);
+
+const composeur = new EffectComposer(rendu);
+composeur.addPass(new RenderPass(scene, camera));
+const lueur = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.5, 0.82);
+composeur.addPass(lueur);
+composeur.addPass(new OutputPass());
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  rendu.setSize(innerWidth, innerHeight); composeur.setSize(innerWidth, innerHeight);
+});
+
+// ---------------------------------------------------------------- le terrain : de l'herbe, des arbres, une tour
+function texturePixels(n, f) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = n;
+  const g = cv.getContext('2d');
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const c = f(i, j); g.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`; g.fillRect(i, j, 1, 1); }
+  const t = new THREE.CanvasTexture(cv); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapNearestFilter;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const herbe = texturePixels(16, (i, j) => { const h = hache(i, j, 1); return [86 + h * 30, 140 + h * 36, 58 + h * 20]; });
+herbe.repeat.set(400, 400);
+const sol = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshLambertMaterial({ map: herbe }));
+sol.rotation.x = -Math.PI / 2;
+scene.add(sol);
+const pierre = texturePixels(16, (i, j) => { const h = hache(i, j, 2); const v = 110 + h * 40 - ((i % 8 === 0 || j % 5 === 0) ? 25 : 0); return [v, v, v + 4]; });
+const tronc = texturePixels(16, (i, j) => { const h = hache(i, j, 3); return [96 + h * 20 - (i % 4 === 0 ? 20 : 0), 72 + h * 14, 44]; });
+const feuilles = texturePixels(16, (i, j) => { const h = hache(i, j, 4); return h < 0.15 ? [40, 80, 30] : [52 + h * 40, 110 + h * 50, 40]; });
+function blocs(tex, x0, y0, z0, x1, y1, z1) {
+  const t = tex.clone(); t.needsUpdate = true;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), new THREE.MeshLambertMaterial({ map: t }));
+  // une texture par bloc : on recouvre chaque face autant de fois qu'elle a de blocs
+  const uv = m.geometry.attributes.uv, pos = m.geometry.attributes.position, nor = m.geometry.attributes.normal;
+  for (let i = 0; i < uv.count; i++) {
+    const p = [pos.getX(i) + (x1 - x0) / 2, pos.getY(i) + (y1 - y0) / 2, pos.getZ(i) + (z1 - z0) / 2], n = [nor.getX(i), nor.getY(i), nor.getZ(i)];
+    const ax = Math.abs(n[0]) > 0.5 ? [2, 1] : Math.abs(n[1]) > 0.5 ? [0, 2] : [0, 1];
+    uv.setXY(i, p[ax[0]], p[ax[1]]);
+  }
+  m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  scene.add(m);
+}
+function arbre(x, z, h) {
+  blocs(tronc, x, 0, z, x + 1, h, z + 1);
+  blocs(feuilles, x - 2, h - 2, z - 2, x + 3, h, z + 3);
+  blocs(feuilles, x - 1, h, z - 1, x + 2, h + 1.5, z + 2);
+}
+const TOUR = { x: 28, z: -10, h: 8 };
+blocs(pierre, TOUR.x - 1.5, 0, TOUR.z - 1.5, TOUR.x + 1.5, TOUR.h, TOUR.z + 1.5);
+for (const [x, z, h] of [[-9, 6, 5], [8, -6, 6], [-4, 24, 5], [18, 12, 6], [40, -2, 5], [-28, 22, 6], [-8, -18, 5], [12, 36, 6], [44, 26, 5], [-30, -4, 6], [22, -28, 5], [-14, 40, 6], [52, 8, 6]]) arbre(x, z, h);
+const hauteurSol = (x, z) => (Math.abs(x - TOUR.x) < 1.6 && Math.abs(z - TOUR.z) < 1.6 ? TOUR.h : 0);
+
+// ================================================================ les modèles du jeu
+function lireBin(nom) {
+  const s = atob(window.BINS[nom]); const u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  const dv = new DataView(u.buffer); let o = 0;
+  const groupes = [];
+  for (let g = dv.getInt32(o), gi = (o += 4, 0); gi < g; gi++) {
+    const n = dv.getInt32(o); o += 4; const faces = [];
+    for (let f = 0; f < n; f++) {
+      const c = []; for (let k = 0; k < 12; k++) { c.push(dv.getFloat32(o)); o += 4; }
+      const nn = []; for (let k = 0; k < 3; k++) { nn.push(dv.getFloat32(o)); o += 4; }
+      faces.push({ c, n: nn, col: [u[o] / 255, u[o + 1] / 255, u[o + 2] / 255], em: u[o + 3] !== 0 }); o += 4;
+    }
+    groupes.push(faces);
+  }
+  return groupes;
+}
+/** Les faces d'un modèle en géométrie ; f change chaque point (le repère du jeu vers celui-ci) ; em : celles qui brillent ou les autres. */
+function geometrie(faces, f, em) {
+  const p = [], n = [], c = [];
+  for (const x of faces) {
+    if (x.em !== em) continue;
+    const q = [0, 1, 2, 3].map((i) => f(V(x.c[i * 3], x.c[i * 3 + 1], x.c[i * 3 + 2])));
+    const nn = f(V(x.n[0], x.n[1], x.n[2]), true).normalize();
+    for (const i of [0, 1, 2, 0, 2, 3]) { p.push(q[i].x, q[i].y, q[i].z); n.push(nn.x, nn.y, nn.z); c.push(versLin(x.col[0]), versLin(x.col[1]), versLin(x.col[2])); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
+  return g;
+}
+const MAT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+const MAT_LUEUR = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+function modele(faces, f) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geometrie(faces, f, false), MAT));
+  g.add(new THREE.Mesh(geometrie(faces, f, true), MAT_LUEUR));
+  return g;
+}
+const MODELES = {};
+for (const s of ['lave', 'glace']) {
+  MODELES['tete_' + s] = lireBin('tete_' + s)[0];
+  MODELES['casque_' + s] = lireBin('casque_' + s)[0];
+  MODELES['plaques_' + s] = lireBin('plaques_' + s + '_0');
+}
+
+// ---------------------------------------------------------------- les joueurs (en pixels, comme PlayerModel)
+const PEAU = rgb(196, 138, 102), CHEVEUX = rgb(62, 42, 26);
+const SORTES = {
+  lave: (partie, f, i, j) => {
+    if (partie === 'tete' && f === 4 && (j === 3 || j === 4)) return (j === 3 && (i === 1 || i === 6)) ? [1, 1, 1] : (j === 3 && (i === 2 || i === 5)) ? rgb(30, 20, 20) : PEAU;
+    if (partie === 'brasD' && j >= 7) return PEAU;
+    const h = hache(i * 3 + f, j * 7, partie.length * 31);
+    return h < 0.22 ? { c: mix(LAVE_O, LAVE_J, h / 0.22), lueur: true } : h < 0.3 ? { c: LAVE_R, lueur: true } : mix(CROUTE, CROUTE_R, hache(i, j, f + 9));
+  },
+  glace: (partie, f, i, j) => {
+    if (partie === 'tete' && f === 4 && (j === 3 || j === 4)) return (j === 3 && (i === 1 || i === 6)) ? [1, 1, 1] : (j === 3 && (i === 2 || i === 5)) ? rgb(30, 40, 70) : PEAU;
+    if (partie === 'brasG' && j >= 7) return PEAU;
+    const h = hache(i * 3 + f, j * 7, partie.length * 37);
+    return (i + j) % 5 === 0 ? BLANCHE : mix(mix(GLACE_C, GLACE, 0.4 + 0.5 * h), GLACE_P, 0.3);
+  },
+  steve: (partie, f, i, j, n = 0) => {
+    const chemises = [rgb(0, 160, 170), rgb(200, 60, 60), rgb(120, 70, 160), rgb(230, 180, 40)];
+    if (partie === 'tete') {
+      if (f === 0 || (f !== 1 && j < 2) || (f === 5 && j < 6)) return CHEVEUX;
+      if (f === 4 && j === 4 && (i === 1 || i === 2 || i === 5 || i === 6)) return (i === 1 || i === 6) ? [1, 1, 1] : rgb(60, 70, 160);
+      if (f === 4 && j === 6 && i >= 3 && i <= 4) return rgb(120, 70, 50);
+      return PEAU;
+    }
+    if (partie === 'corps') return chemises[n % 4];
+    if (partie.startsWith('bras')) return j < 4 ? chemises[n % 4] : PEAU;
+    return j >= 10 ? rgb(90, 90, 96) : rgb(50, 60, 150);
+  },
+};
+/** Les parties : pivot (px, y vers le haut, l'avant vers +z) et la boîte autour du pivot. */
+const PARTIES = {
+  tete: { pivot: [0, 24, 0], boite: [-4, 0, -4, 4, 8, 4] },
+  corps: { pivot: [0, 24, 0], boite: [-4, -12, -2, 4, 0, 2] },
+  brasD: { pivot: [-5, 22, 0], boite: [-3, -10, -2, 1, 2, 2] },
+  brasG: { pivot: [5, 22, 0], boite: [-1, -10, -2, 3, 2, 2] },
+  jambeD: { pivot: [-1.9, 12, 0], boite: [-2, -12, -2, 2, 0, 2] },
+  jambeG: { pivot: [1.9, 12, 0], boite: [-2, -12, -2, 2, 0, 2] },
+};
+const ORDRE = ['tete', 'corps', 'brasD', 'brasG', 'jambeD', 'jambeG'];
+function boitePixels(b, teinte) {
+  const [x0, y0, z0, x1, y1, z1] = b;
+  // les faces : 0 haut, 1 bas, 2 droite (-x), 3 gauche (+x), 4 devant (+z), 5 derrière ; i de gauche à droite, j de haut en bas
+  const F = [
+    { o: [x0, y1, z1], u: [1, 0, 0], v: [0, 0, -1], nu: x1 - x0, nv: z1 - z0, n: [0, 1, 0] },
+    { o: [x0, y0, z0], u: [1, 0, 0], v: [0, 0, 1], nu: x1 - x0, nv: z1 - z0, n: [0, -1, 0] },
+    { o: [x0, y1, z0], u: [0, 0, 1], v: [0, -1, 0], nu: z1 - z0, nv: y1 - y0, n: [-1, 0, 0] },
+    { o: [x1, y1, z1], u: [0, 0, -1], v: [0, -1, 0], nu: z1 - z0, nv: y1 - y0, n: [1, 0, 0] },
+    { o: [x1, y1, z1], u: [-1, 0, 0], v: [0, -1, 0], nu: x1 - x0, nv: y1 - y0, n: [0, 0, 1] },
+    { o: [x0, y1, z0], u: [1, 0, 0], v: [0, -1, 0], nu: x1 - x0, nv: y1 - y0, n: [0, 0, -1] },
+  ];
+  const sorties = { p: [], n: [], c: [] }, lueurs = { p: [], n: [], c: [] };
+  F.forEach((x, f) => {
+    for (let i = 0; i < x.nu; i++) for (let j = 0; j < x.nv; j++) {
+      let t = teinte(f, i, j), dest = sorties;
+      if (t.c) { dest = t.lueur ? lueurs : sorties; t = t.c; }
+      const P = (a, b) => [0, 1, 2].map((k) => (x.o[k] + x.u[k] * a + x.v[k] * b) / 16);
+      const q = [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)];
+      for (const k of [0, 1, 2, 0, 2, 3]) { dest.p.push(...q[k]); dest.n.push(...x.n); dest.c.push(versLin(t[0]), versLin(t[1]), versLin(t[2])); }
+    }
+  });
+  const faire = (d, m) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(d.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(d.n, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(d.c, 3)); return new THREE.Mesh(g, m); };
+  const grp = new THREE.Group(); grp.add(faire(sorties, MAT)); if (lueurs.p.length) grp.add(faire(lueurs, MAT_LUEUR));
+  return grp;
+}
+/** Du repère des pièces du jeu (pixels, y vers le bas, l'avant vers -z) à celui de la partie ici. */
+const duJeu = (p, normale) => (normale ? V(p.x, -p.y, -p.z) : V(p.x / 16, -p.y / 16, -p.z / 16));
+function joueur(sorte, n = 0) {
+  const racine = new THREE.Group(), corps = new THREE.Group(), parties = {};
+  racine.add(corps);
+  ORDRE.forEach((nom, k) => {
+    const d = PARTIES[nom], g = new THREE.Group();
+    g.position.set(d.pivot[0] / 16, d.pivot[1] / 16, d.pivot[2] / 16);
+    g.add(boitePixels(d.boite, (f, i, j) => SORTES[sorte](nom, f, i, j, n)));
+    if (sorte !== 'steve') {
+      const pl = MODELES['plaques_' + sorte][k];
+      if (pl && pl.length) g.add(modele(pl, duJeu));
+      if (nom === 'tete') g.add(modele(MODELES['casque_' + sorte], duJeu));
+    }
+    corps.add(g); parties[nom] = g;
+  });
+  scene.add(racine);
+  return { racine, corps, parties };
+}
+function poser(j, pose, t = 0) {
+  const P = j.parties;
+  for (const nom of ORDRE) P[nom].rotation.set(0, 0, 0);
+  j.corps.rotation.set(0, 0, 0); j.corps.position.set(0, 0, 0);
+  if (pose === 'lance') { P.brasD.rotation.x = -1.55; P.brasD.rotation.z = 0.1; }
+  if (pose === 'monte') {
+    j.corps.rotation.x = 0.28; j.corps.position.set(0, -0.05, 0);
+    P.jambeD.rotation.set(-1.25, 0, -0.38); P.jambeG.rotation.set(-1.25, 0, 0.38);
+    P.brasD.rotation.set(-1.05, 0, 0.18); P.brasG.rotation.set(-1.05, 0, -0.18);
+    P.tete.rotation.x = -0.25;
+  }
+  if (pose === 'pris') {
+    const s = Math.sin(t * 14);
+    P.brasD.rotation.set(-2.6 + 0.5 * s, 0, 0.3); P.brasG.rotation.set(-2.6 - 0.5 * s, 0, -0.3);
+    P.jambeD.rotation.x = 0.6 * s; P.jambeG.rotation.x = -0.6 * s;
+  }
+  if (pose === 'chute') {
+    P.brasD.rotation.set(-2.9, 0, 0.5); P.brasG.rotation.set(-2.9, 0, -0.5);
+    P.jambeD.rotation.x = 0.4 * Math.sin(t * 9); P.jambeG.rotation.x = -0.4 * Math.sin(t * 9);
+  }
+  if (pose === 'couche') {
+    P.brasD.rotation.z = 0.5; P.brasG.rotation.z = -0.5;
+  }
+}
+/** Place un joueur : ses pieds en p, son avant vers « avant », sa tête vers « haut ». */
+function placer(j, p, avant, haut = V(0, 1, 0)) {
+  const z = avant.clone().normalize(), x = haut.clone().cross(z).normalize(), y = z.clone().cross(x);
+  j.racine.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  j.racine.position.copy(p);
+}
+
+// ================================================================ le dragon (ClientFruit3.serpent)
+const R = 1.0;
+let LONGUEUR = 34;
+const TETES = { lave: modele(MODELES.tete_lave, (p) => p.clone()), glace: modele(MODELES.tete_glace, (p) => p.clone()) };
+for (const t of Object.values(TETES)) { t.matrixAutoUpdate = false; t.visible = false; scene.add(t); }
+const MAT_PLEIN = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+const MAT_VOILE = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, depthWrite: false });
+const corpsLot = new Lot(MAT, 16000), pleinLot = new Lot(MAT_PLEIN, 14000), voileLot = new Lot(MAT_VOILE, 6000);
+pleinLot.mesh.renderOrder = 1; voileLot.mesh.renderOrder = 2;
+scene.add(corpsLot.mesh, pleinLot.mesh, voileLot.mesh);
+
+function ecaille(glace, face, i, j, n) {
+  if (face === 1) return glace ? mix(BLANCHE, GLACE_C, (j + n) % 2 === 0 ? 0.6 : 0.15) : mix(LAVE_O, LAVE_J, (j + n) % 2 === 0 ? 0.8 : 0.15);
+  const h = hache(i + n * 5, j + n * 3, face + 300);
+  if (glace) { const reflet = (((i - j + n) % 4) + 4) % 4; return reflet === 0 ? BLANCHE : mix(mix(GLACE_C, GLACE, 0.5 + 0.4 * h), GLACE_P, 0.3); }
+  return h < 0.3 ? mix(LAVE_J, LAVE_O, h / 0.3) : h < 0.42 ? LAVE_R : mix(CROUTE, CROUTE_R, 0.2 + 0.5 * hache(i, j, n + 7));
+}
+function anneau(o, ax, ay, az, hx, hy, hz, glace, n) {
+  const x = ax.clone().multiplyScalar(hx), y = ay.clone().multiplyScalar(hy), z = az.clone().multiplyScalar(hz);
+  const faces = [[y, x, z], [y.clone().negate(), x, z], [x, y, z], [x.clone().negate(), y, z], [z, x, y], [z.clone().negate(), x, y]];
+  for (let f = 0; f < 6; f++) {
+    const cen = o.clone().add(faces[f][0]), u = faces[f][1], v = faces[f][2], nor = faces[f][0].clone().normalize();
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      const P = (a, b) => cen.clone().addScaledVector(u, -1 + 2 * a / 3).addScaledVector(v, -1 + 2 * b / 3);
+      corpsLot.quad(P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1), ecaille(glace, f, i, j, n), 1, nor);
+    }
+  }
+}
+function rayon(u, sortieMain) {
+  if (u < 0.15) return R * (0.82 + 0.18 * (u / 0.15));
+  const k = Math.pow((u - 0.15) / 0.85, sortieMain ? 1.4 : 1.3);
+  return R * (1 - (sortieMain ? 0.72 : 0.93) * k);
+}
+function repere(f, haut) {
+  let x = (haut ?? V(0, 1, 0)).clone().cross(f);
+  if (x.lengthSq() < 0.04) x = V(0, 0, 1).cross(f);
+  x.normalize();
+  return [x, f.clone().cross(x).normalize()];
+}
+function flamme(base, dir, longueur, largeur) {
+  voileLot.pic(base, dir, longueur, largeur, [1, 0.78, 0.22, 0.95], [1, 0.25, 0.04, 0.12]);
+  voileLot.pic(base, dir, longueur * 0.55, largeur * 0.5, [1, 0.98, 0.75, 1], [1, 0.75, 0.25, 0.4]);
+}
+const cristal = (base, dir, l, w) => pleinLot.pic(base, dir, l, w, [...GLACE, 1], [...BLANCHE, 1]);
+const K_TETE = R * 0.42;
+/** Le dragon le long de pts (de la tête à la queue) ; rend le repère de la tête (pour la gueule et la selle). */
+function serpent(pts, glace, t, monte = false) {
+  const n = pts.length;
+  for (const s of Object.values(TETES)) s.visible = false;
+  if (n < 2) return null;
+  for (let i = 0; i < n - 1; i++) {
+    const u = i / (n - 1), r = rayon(u, true);
+    const a = pts[i], b = pts[i + 1], f = a.clone().sub(b), len = f.length();
+    if (len < 1e-4) continue;
+    f.multiplyScalar(1 / len);
+    const rep = repere(f, null), o = a.clone().add(b).multiplyScalar(0.5);
+    anneau(o, rep[0], rep[1], f, r, r * 0.74, len * 0.64, glace, i);
+    anneau(o, rep[0], rep[1], f, r * 0.74, r, len * 0.6, glace, i + 50);
+    const base = o.clone().addScaledVector(rep[1], r * 0.9), dir = rep[1].clone().addScaledVector(f, -0.55);
+    // pas de crête sous celui qui est monté : la nuque reste libre
+    const dd = (i + 0.5) * R * 0.55;
+    if (monte && dd > SELLE - 1.6 && dd < SELLE + 1.1) continue;
+    if (glace) {
+      cristal(base, dir, r * (i % 2 === 1 ? 0.8 : 1.4), r * 0.5);
+      if (i % 3 === 0) for (const s of [-1, 1]) {
+        cristal(base.clone().addScaledVector(rep[0], s * r * 0.8).addScaledVector(dir, -r * 0.5), rep[0].clone().multiplyScalar(s).addScaledVector(dir, 0.6), r * 0.7, r * 0.32);
+      }
+    } else {
+      const vie = 0.8 + 0.2 * Math.sin(t * 9 + i * 1.7);
+      flamme(base, dir.clone().add(V(0, 0.3, 0)), r * (1.1 + 0.9 * hache(i, 1, 360)) * vie, r * 0.62);
+    }
+  }
+  const f0 = pts[0].clone().sub(pts[1]).normalize(), rep = repere(f0, null);
+  const o = pts[0].clone().addScaledVector(f0, 3.4 * K_TETE);
+  const tete = TETES[glace ? 'glace' : 'lave'];
+  tete.visible = true;
+  tete.matrix.makeBasis(rep[0], rep[1], f0).scale(V(K_TETE, K_TETE, K_TETE)).setPosition(o);
+  tete.matrixWorldNeedsUpdate = true;
+  return { o, x: rep[0], y: rep[1], f: f0 };
+}
+/** Dans la gueule ouverte (entre les deux mâchoires du modèle), en blocs depuis le centre de la tête. */
+const gueule = (T) => T.o.clone().addScaledVector(T.y, -2.4 * K_TETE).addScaledVector(T.f, 5.2 * K_TETE);
+
+// ================================================================ les trajets
+/**
+ * Un trajet : la tête passe par ces points (une courbe douce), à la vitesse donnée pour chaque morceau (en blocs/s) ;
+ * on peut le lire à n'importe quel moment (le corps suit le même chemin, derrière la tête).
+ */
+function trajet(def) {
+  const pts = def.points.map((a) => V(...a));
+  const courbe = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  const N = 8000, S = new Float64Array(N + 1), T = new Float64Array(N + 1), P = [courbe.getPoint(0)];
+  const sPt = [], k = pts.length - 1;
+  for (let i = 1; i <= N; i++) { P.push(courbe.getPoint(i / N)); S[i] = S[i - 1] + P[i].distanceTo(P[i - 1]); }
+  for (let i = 0; i <= k; i++) sPt.push(S[Math.round(i / k * N)]);
+  for (let i = 1; i <= N; i++) {
+    const seg = Math.min(k - 1, Math.floor((i - 0.5) / N * k));
+    T[i] = T[i - 1] + (S[i] - S[i - 1]) / def.vitesses[Math.min(seg, def.vitesses.length - 1)];
+  }
+  const tPt = sPt.map((s) => T[chercher(S, s)]);
+  return { ...def, P, S, T, sPt, tPt, duree: T[N], longueur: S[N] };
+}
+function chercher(tab, v) {
+  let a = 0, b = tab.length - 1;
+  while (b - a > 1) { const m = (a + b) >> 1; if (tab[m] <= v) a = m; else b = m; }
+  return a;
+}
+function pointA(tr, s) {
+  if (s <= 0) return tr.P[0].clone();
+  if (s >= tr.longueur) return tr.P[tr.P.length - 1].clone();
+  const i = chercher(tr.S, s), k = (s - tr.S[i]) / Math.max(1e-9, tr.S[i + 1] - tr.S[i]);
+  return tr.P[i].clone().lerp(tr.P[i + 1], k);
+}
+function sA(tr, t) {
+  if (t <= 0) return 0;
+  if (t >= tr.duree) return tr.longueur;
+  const i = chercher(tr.T, t), k = (t - tr.T[i]) / Math.max(1e-9, tr.T[i + 1] - tr.T[i]);
+  return tr.S[i] + (tr.S[i + 1] - tr.S[i]) * k;
+}
+/** Les points du corps à cet instant, tous les R×0,55 depuis la tête ; la queue reste dans la main au début. */
+function colonne(tr, s) {
+  const pts = [], pas = R * 0.55;
+  for (let d = 0; d <= LONGUEUR; d += pas) {
+    if (s - d < 0) { pts.push(tr.P[0].clone()); break; }
+    pts.push(pointA(tr, s - d));
+  }
+  return pts;
+}
+const SELLE = 3.1;
+/** La selle : SELLE blocs derrière la nuque, sur le dos ; et vers où le dragon y va. */
+function selle(tr, s) {
+  const a = pointA(tr, s - SELLE), b = pointA(tr, s - SELLE - 0.6), f = a.clone().sub(b).normalize();
+  const [x, y] = repere(f, null), r = rayon(SELLE / LONGUEUR, true);
+  return { p: a.clone().addScaledVector(y, r * 0.98 - 0.62), f, y };
+}
+function teteA(tr, s) {
+  const a = pointA(tr, s), b = pointA(tr, s - R * 0.55), f = a.clone().sub(b).normalize(), rep = repere(f, null);
+  return { o: a.clone().addScaledVector(f, 3.4 * K_TETE), x: rep[0], y: rep[1], f };
+}
+
+// ---------------------------------------------------------------- les scènes
+const MAIN = [-0.37, 1.35, 0.6];
+const VOL = 9; // blocs/s : le vol du Vent 3 (Vent.VOL) et de la marque 3
+const SCENES = {
+  tout: {
+    nom: 'Tout', points: [MAIN, [-1, 4, 7], [-1, 10, 10], [0, 15, 3], [0, 12, -8], [0, 6, -15], [0, 3.2, -8], [0, 3.2, 2], [0, 5.5, 11], [5, 10, 22],
+      [16, 14, 29], [30, 16, 26], [37, 14, 13], [33, 12.5, 1], [29, 11.6, -6], [27.6, 11.2, -13], [24, 14, -24], [10, 18, -30], [-6, 19, -22],
+      [-14, 17, -7], [-18.06, 3.2, 8.42], [-19.2, -0.7, 12.8], [-20.3, -4.6, 17.2]],
+    vitesses: [17, 17, 17, 17, 17, 14, VOL, VOL, VOL, VOL, VOL, VOL, VOL, VOL, VOL, VOL, VOL, VOL, 26, 26, 26, 26],
+    joueur: [0, 0, 0], victime: [TOUR.x, TOUR.h, TOUR.z], groupe: [[-20.5, 0, 14], [-17.5, 0, 13.5], [-19.5, 0, 10.5]],
+    fonce: 18, fin: 'impact',
+    cote: [[-38, 30, 44], [8, 8, -2]],
+  },
+  fin30: {
+    nom: 'Fin des 30 s', points: [], vitesses: [VOL], deja: true, victimeDansGueule: true, fin: 'air', cote: [[-34, 26, 36], [0, 20, 0]],
+  },
+  pose: {
+    nom: 'Pose', points: [], vitesses: [VOL], deja: true, pose: true, cote: [[-22, 18, 22], [0, 10, 0]],
+  },
+};
+// la fin des 30 s : il tourne en l'air avec quelqu'un dans la gueule, puis le temps est fini
+for (let i = 0; i <= 15; i++) {
+  const a = i / 13 * Math.PI * 2;
+  SCENES.fin30.points.push([Math.cos(a) * 18, 18 + 3 * Math.sin(a * 1.5), Math.sin(a) * 18]);
+}
+SCENES.fin30.debut = 6;
+// la pose : un grand S au-dessus de l'herbe
+for (let i = 0; i <= 12; i++) { const u = i / 12; SCENES.pose.points.push([Math.sin(u * Math.PI * 2.2) * 7, 6 + u * 6, -26 + u * 42]); }
+
+let sorte = 'lave', nomScene = 'tout', tr, vue = 'suivre', t = 0, pause = false;
+const ACTEURS = {};
+function preparer() {
+  for (const a of Object.values(ACTEURS).flat()) a?.racine && scene.remove(a.racine);
+  const def = SCENES[nomScene];
+  tr = trajet(def);
+  tr.t0 = def.debut != null ? tr.tPt[def.debut] : 0;
+  if (def.pose) tr.t0 = tr.duree;
+  // les acteurs : celui qui a le fruit, la victime, le groupe en bas
+  ACTEURS.lanceur = joueur(sorte);
+  ACTEURS.victime = def.victime || def.victimeDansGueule ? joueur('steve', 0) : null;
+  ACTEURS.groupe = (def.groupe ?? []).map((g, i) => joueur('steve', i + 1));
+  // quand il monte : la selle passe au plus près de lui
+  tr.tMonte = def.deja ? -1 : 0;
+  if (!def.deja) {
+    let best = 1e9;
+    for (let tt = 0.5; tt < tr.duree; tt += 1 / 120) {
+      const d = selle(tr, sA(tr, tt)).p.distanceTo(V(...def.joueur));
+      if (d < best) { best = d; tr.tMonte = tt; }
+      if (best < 6 && d > best + 8) break;
+    }
+  }
+  // quand la gueule attrape la victime
+  tr.tPrise = def.victimeDansGueule ? -1 : null;
+  if (def.victime) {
+    let best = 1e9;
+    for (let tt = tr.tMonte + 1; tt < tr.duree; tt += 1 / 120) {
+      const d = gueule(teteA(tr, sA(tr, tt))).distanceTo(V(...def.victime).add(V(0, 0.9, 0)));
+      if (d < best) { best = d; tr.tPrise = tt; }
+    }
+  }
+  tr.tFonce = def.fonce != null ? tr.tPt[def.fonce] : null;
+  // il fonce : dès que sa tête touche le sol, il explose là (le bout du museau ou le bas de la mâchoire)
+  tr.tFin = tr.duree; tr.impact = null;
+  if (def.fin === 'impact') {
+    for (let tt = tr.tFonce ?? 0; tt < tr.duree; tt += 1 / 240) {
+      const H = teteA(tr, sA(tr, tt));
+      const bouts = [H.o.clone().addScaledVector(H.f, 8 * K_TETE), H.o.clone().addScaledVector(H.f, 5 * K_TETE).addScaledVector(H.y, -7 * K_TETE),
+        H.o.clone().addScaledVector(H.y, -6 * K_TETE)];
+      const bas = bouts.reduce((a, b) => (b.y < a.y ? b : a));
+      if (bas.y <= hauteurSol(bas.x, bas.z) + 0.05) { tr.tFin = tt; tr.impact = bas.setY(hauteurSol(bas.x, bas.z) + 0.4); break; }
+    }
+  }
+  t = tr.t0;
+  ECLATS.length = 0; DEBRIS.length = 0; BRAISES.length = 0; CHIFFRES.forEach((c) => scene.remove(c.sprite)); CHIFFRES.length = 0;
+  explose = null; touches.clear();
+  if (vue === 'libre') libre();
+}
+
+// ================================================================ effets : braises, éclats, chiffres
+const BRAISES = [], DEBRIS = [], ECLATS = [], CHIFFRES = [];
+let explose = null;
+const touches = new Set();
+function feu(k) {
+  return k < 0.25 ? mix(CHAUD, LAVE_J, k / 0.25) : k < 0.55 ? mix(LAVE_J, LAVE_O, (k - 0.25) / 0.3) : k < 0.85 ? mix(LAVE_O, LAVE_R, (k - 0.55) / 0.3)
+    : k < 1.1 ? mix(LAVE_R, CROUTE_R, (k - 0.85) / 0.25) : mix(CROUTE_R, FUMEE, (k - 1.1) / 0.4);
+}
+function chiffre(p, texte, couleur) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96;
+  const g = cv.getContext('2d'); g.font = 'bold 64px system-ui'; g.textAlign = 'center'; g.lineWidth = 8; g.strokeStyle = '#000a';
+  g.strokeText(texte, 128, 70); g.fillStyle = couleur; g.fillText(texte, 128, 70);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  sp.scale.set(3.2, 1.2, 1); sp.position.copy(p); sp.renderOrder = 5; scene.add(sp);
+  CHIFFRES.push({ sprite: sp, debut: t, p: p.clone() });
+}
+function eclatement(p, age, glace, sol) {
+  // plus grosse qu'avant (le dragon est plus grand), mais loin d'un ulti
+  const g = sortie(entre(age, 0, 0.25)), fin = 1 - entre(age, 1.3, 2.4), E = 2.1;
+  if (fin <= 0) return;
+  // l'éclair du milieu : une boule blanche qui gonfle et s'éteint
+  if (age < 0.3) {
+    flash.visible = true;
+    flash.position.copy(p);
+    flash.scale.setScalar(E * (1 + 8 * age));
+    flash.material.color.set(glace ? 0xeaf8ff : 0xfff0c0);
+    flash.material.opacity = 0.85 * (1 - age / 0.3);
+  }
+  // au sol : un anneau de flammes (ou de cristaux) qui s'ouvre
+  if (sol) {
+    const ar = sortie(entre(age, 0, 0.5)) * 4.6 * E;
+    for (let q = 0; q < 32; q++) {
+      const a = q / 32 * Math.PI * 2, b = V(p.x + Math.cos(a) * ar, sol.y, p.z + Math.sin(a) * ar);
+      if (glace) cristal(b, V(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6), (0.9 + hache(q, 1, 390)) * 1.6 * g * fin, 0.5);
+      else flamme(b, V(Math.cos(a) * 0.35, 1, Math.sin(a) * 0.35), (0.6 + 0.8 * hache(q, 1, 394)) * 2 * g * fin, 0.5);
+    }
+  }
+  if (glace) {
+    for (let q = 0; q < 40; q++) {
+      const d = V(hache(q, 1, 392) - 0.5, Math.abs(hache(q, 2, 392) - 0.35), hache(q, 3, 392) - 0.5).normalize();
+      cristal(p.clone().addScaledVector(d, 0.6 * E), d, (2.9 + 2.3 * hache(q, 4, 392)) * g * fin * E, (0.45 + 0.25 * hache(q, 5, 392)) * E);
+      const e = V(hache(q, 6, 392) - 0.5, hache(q, 7, 392) - 0.5, hache(q, 8, 392) - 0.5).normalize();
+      cristal(p.clone().addScaledVector(e, 0.6 * E), e.negate(), (2.0 + 1.6 * hache(q, 9, 392)) * g * fin * E, 0.4 * E);
+    }
+    for (let q = 0; q < 70; q++) {
+      const d = V(hache(q, 1, 395) - 0.5, hache(q, 2, 395) - 0.5, hache(q, 3, 395) - 0.5).normalize(), s = age * 9 * (0.6 + 0.6 * hache(q, 4, 395));
+      pleinLot.cube(p.clone().addScaledVector(d, s).add(V(0, -6 * age * age, 0)), 0.16 * fin, q + age * 5, hache(q, 5, 395) < 0.5 ? BLANCHE : GLACE_V);
+    }
+    const anneauR = sortie(entre(age, 0, 0.6)) * 7 * E;
+    for (let q = 0; q < 36; q++) {
+      const a = q / 36 * Math.PI * 2;
+      voileLot.quad(p.clone().add(V(Math.cos(a) * anneauR, 0, Math.sin(a) * anneauR)), p.clone().add(V(Math.cos(a + 0.18) * anneauR, 0, Math.sin(a + 0.18) * anneauR)),
+        p.clone().add(V(Math.cos(a + 0.18) * anneauR * 0.8, 0, Math.sin(a + 0.18) * anneauR * 0.8)), p.clone().add(V(Math.cos(a) * anneauR * 0.8, 0, Math.sin(a) * anneauR * 0.8)), GLACE_C, 0.6 * fin);
+    }
+  } else {
+    for (let q = 0; q < 220; q++) {
+      const d = V(hache(q, 1, 391) - 0.5, hache(q, 2, 391) - 0.5, hache(q, 3, 391) - 0.5).normalize();
+      const k = Math.cbrt(hache(q, 4, 391));
+      pleinLot.cube(p.clone().addScaledVector(d, 2.9 * k * g * E), (0.22 + 0.15 * hache(q, 5, 391)) * fin * E, q, feu(k * 0.8 + 0.4 * entre(age, 0.3, 1.8)));
+    }
+    const s = age * 1.2;
+    for (let q = 0; q < 40; q++) {
+      const a = hache(q, 1, 393) * Math.PI * 2, vit = 6 + 6 * hache(q, 2, 393), up = 5 + 6 * hache(q, 3, 393);
+      pleinLot.cube(p.clone().add(V(Math.cos(a) * vit * s * E, (up * s - 9 * s * s) * E, Math.sin(a) * vit * s * E)), 0.22 * fin, q + age * 4, hache(q, 4, 393) < 0.5 ? LAVE_O : CROUTE_R);
+    }
+    for (let q = 0; q < 30; q++) {
+      const d = V(hache(q, 2, 394) - 0.5, hache(q, 3, 394) - 0.5, hache(q, 4, 394) - 0.5).normalize();
+      flamme(p.clone().addScaledVector(d, 2.4 * g * E), d, (1 + 1.2 * hache(q, 5, 394)) * fin * g * E, 0.45 * E);
+    }
+    // de la fumée qui monte
+    for (let q = 0; q < 30; q++) {
+      const d = V(hache(q, 1, 396) - 0.5, hache(q, 2, 396) * 0.5, hache(q, 3, 396) - 0.5).normalize(), a = entre(age, 0.4, 2.2);
+      voileLot.cube(p.clone().addScaledVector(d, 4 * a * E).add(V(0, 3 * a, 0)), (0.5 + 0.9 * a) * E, q, FUMEE, 0.5 * (1 - a));
+    }
+  }
+}
+const flash = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
+flash.renderOrder = 3; flash.visible = false; scene.add(flash);
+function particules(dt, pts, glace) {
+  if (pts && !pause) {
+    for (let q = 0; q < 2; q++) {
+      const i = Math.floor(Math.random() * pts.length), r = rayon(i / pts.length, true);
+      const d = V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+      BRAISES.push({ p: pts[i].clone().addScaledVector(d, r), v: d.multiplyScalar(0.6).add(V(0, glace ? -0.5 : 1.2, 0)), vie: 0, max: 0.8 + Math.random(),
+        c: glace ? (Math.random() < 0.5 ? BLANCHE : GLACE_V) : (Math.random() < 0.5 ? LAVE_J : LAVE_O), s: 0.035 + Math.random() * 0.04 });
+    }
+  }
+  for (const l of [BRAISES, DEBRIS]) {
+    for (let i = l.length - 1; i >= 0; i--) {
+      const b = l[i];
+      if (!pause) { b.vie += dt; b.p.addScaledVector(b.v, dt); if (b.g) b.v.y -= b.g * dt; if (b.p.y < 0.1) { b.p.y = 0.1; b.v.multiplyScalar(0.4); } }
+      if (b.vie > b.max) { l.splice(i, 1); continue; }
+      pleinLot.cube(b.p, b.s * (1 - b.vie / b.max * 0.5), b.vie * 3 + i, b.c);
+    }
+  }
+}
+
+// ================================================================ l'animation
+let tSuiv = null;
+const camPos = V(-8, 6, -10), camVise = V(0, 2, 0);
+function libre() {
+  controles.enabled = true;
+  controles.target.copy(camVise);
+}
+const legende = document.getElementById('legende'), minuteur = document.getElementById('minuteur'), chrono = document.getElementById('chrono');
+
+function image(dt) {
+  const def = SCENES[nomScene];
+  if (!pause) t += dt;
+  corpsLot.vider(); pleinLot.vider(); voileLot.vider();
+  flash.visible = false;
+  const glace = sorte === 'glace';
+  const tFin = def.pose ? Infinity : tr.tFin;
+  const s = sA(tr, Math.min(t, tr.tFin));
+  let T = null, pts = null, texte = '';
+  const L = ACTEURS.lanceur, Vi = ACTEURS.victime;
+  const joueurP = def.joueur ? V(...def.joueur) : null;
+
+  if (t < tFin) {
+    pts = colonne(tr, s);
+    T = serpent(pts, glace, t, def.pose || def.deja || (tr.tMonte >= 0 && t >= tr.tMonte - 0.35));
+  } else {
+    for (const x of Object.values(TETES)) x.visible = false;
+    if (!explose) {
+      // il explose : là où il est (fin des 30 s), ou au bout de sa course (il a foncé)
+      const sF = sA(tr, tr.tFin), fT = teteA(tr, sF);
+      explose = { p: tr.impact ? tr.impact.clone() : fT.o.clone(), sol: tr.impact, debut: tr.tFin, selle: selle(tr, sF), gueule: gueule(fT) };
+      const corpsFin = colonne(tr, sF);
+      for (const [i, p] of corpsFin.entries()) {
+        for (let q = 0; q < 2; q++) {
+          const d = V(Math.random() - 0.5, Math.random() * 0.8, Math.random() - 0.5).normalize();
+          DEBRIS.push({ p: p.clone(), v: d.multiplyScalar(4 + Math.random() * 6), g: 14, vie: 0, max: 1.4 + Math.random(), s: 0.18 + Math.random() * 0.14,
+            c: glace ? (q % 2 ? GLACE : BLANCHE) : (q % 2 ? CROUTE : LAVE_O) });
+        }
+      }
+    }
+  }
+  const age = explose ? t - explose.debut : -1;
+  if (explose) eclatement(explose.p, age, glace, explose.sol);
+
+  // ---- celui qui a le fruit
+  if (L) {
+    if (def.pose || (tr.tMonte >= 0 && t >= tr.tMonte) || def.deja) {
+      if (!explose) {
+        const sl = selle(tr, s), k = def.deja ? 1 : sortie(entre(t, tr.tMonte - 0.35, tr.tMonte));
+        const p = joueurP && k < 1 ? joueurP.clone().lerp(sl.p, k).add(V(0, Math.sin(k * Math.PI) * 1.5, 0)) : sl.p;
+        placer(L, p, sl.f, k < 1 ? V(0, 1, 0).lerp(sl.y, k) : sl.y);
+        poser(L, 'monte');
+      } else {
+        // éjecté vers le haut, puis il redescend doucement, sans dégâts de chute
+        const a = Math.min(age, 0.6), p0 = explose.selle.p;
+        const montee = 8 * a - 6.6 * a * a, recul = explose.selle.f.clone().setY(0).normalize().multiplyScalar(-5 * a);
+        let y = p0.y + montee - Math.max(0, age - 0.6) * 2.6;
+        const p = p0.clone().add(recul); p.y = Math.max(hauteurSol(p.x, p.z), y);
+        const sur = p.y <= hauteurSol(p.x, p.z) + 0.01;
+        placer(L, p, explose.selle.f.clone().setY(0));
+        poser(L, sur ? null : 'chute', t);
+        if (!sur && Math.random() < 0.4 && !pause) BRAISES.push({ p: p.clone().add(V(Math.random() - 0.5, 0, Math.random() - 0.5)), v: V(0, 0.4, 0), vie: 0, max: 0.6, c: [1, 1, 1], s: 0.05 });
+      }
+    } else {
+      placer(L, joueurP, V(0, 0, 1));
+      poser(L, t < 0.6 ? 'lance' : null);
+    }
+  }
+  // ---- la victime
+  if (Vi) {
+    const pris = tr.tPrise != null && (tr.tPrise < 0 || t >= tr.tPrise);
+    if (pris && !explose && T) {
+      const g = gueule(T), k = tr.tPrise < 0 ? 1 : sortie(entre(t, tr.tPrise, tr.tPrise + 0.15));
+      // en travers de la gueule : sa tête d'un côté, ses pieds de l'autre
+      const pied = g.clone().addScaledVector(T.x, -0.95);
+      const debut = def.victime ? V(...def.victime) : pied;
+      placer(Vi, debut.clone().lerp(pied, k), T.y.clone().negate().lerp(V(0, 0, 1), 1 - k), V(0, 1, 0).lerp(T.x, k));
+      poser(Vi, 'pris', t);
+      if (!touches.has('prise') && tr.tPrise >= 0) { touches.add('prise'); chiffre(g.clone().add(V(0, 2, 0)), '−6', glace ? '#bfe8ff' : '#ffb060'); }
+    } else if (pris && explose) {
+      const a = age, g0 = explose.gueule;
+      const p = g0.clone().add(V(-3 * a, 7 * a - 10 * a * a, 2 * a));
+      const sol = hauteurSol(p.x, p.z);
+      if (p.y <= sol) p.y = sol;
+      const auSol = p.y <= sol + 0.01;
+      placer(Vi, p, V(0, 0, 1), auSol ? V(1, 0, 0) : V(Math.sin(a * 6), Math.cos(a * 6), 0));
+      poser(Vi, auSol ? 'couche' : 'chute', t);
+      if (!touches.has('victime')) { touches.add('victime'); chiffre(g0.clone().add(V(0, 2.5, 0)), '−24', glace ? '#bfe8ff' : '#ffb060'); }
+      if (glace && age < 4.5) pleinLot.boite(p.clone().add(auSol ? V(0, 0.4, 0) : V(0, 0.9, 0)), V(auSol ? 1.1 : 0.6, 0, 0), V(0, auSol ? 0.45 : 1.1, 0), V(0, 0, 0.6), () => GLACE_C, 1);
+    } else {
+      placer(Vi, V(...def.victime), V(-1, 0, 0.4));
+      poser(Vi, null);
+    }
+  }
+  // ---- le groupe en bas, qui se prend l'explosion
+  ACTEURS.groupe.forEach((G, i) => {
+    const p0 = V(...def.groupe[i]);
+    if (explose && def.fin === 'impact') {
+      const dehors = p0.clone().sub(explose.p).setY(0).normalize(), a = Math.min(age, 0.7);
+      const p = p0.clone().addScaledVector(dehors, 5 * a).add(V(0, Math.max(0, 5 * a - 7 * a * a), 0));
+      placer(G, p, dehors.clone().negate(), age < 0.7 ? V(0, 1, 0).addScaledVector(dehors, 0.5) : V(0, 1, 0));
+      poser(G, age < 0.7 ? 'chute' : null, t);
+      if (!touches.has('g' + i)) { touches.add('g' + i); chiffre(p0.clone().add(V(0, 2.6 + i * 0.5, 0)), '−' + [17, 15, 19][i], glace ? '#bfe8ff' : '#ffb060'); }
+      if (glace && age < 4.5) pleinLot.boite(p.clone().add(V(0, 0.95, 0)), V(0.6, 0, 0), V(0, 1.1, 0), V(0, 0, 0.6), () => GLACE_C, 1);
+    } else {
+      placer(G, p0, explose ? V(0, 0, 1) : V(Math.sin(t + i), 0, Math.cos(t + i)).add(V(1, 0, -1)));
+      poser(G, null);
+    }
+  });
+  particules(dt, explose ? null : pts, glace);
+  for (const c of CHIFFRES) {
+    const a = t - c.debut;
+    c.sprite.position.copy(c.p).add(V(0, a * 0.8, 0));
+    c.sprite.material.opacity = 1 - entre(a, 1.6, 2.4);
+  }
+  corpsLot.fin(); pleinLot.fin(); voileLot.fin();
+
+  // ---- ce qu'il se passe, en mots
+  const volDebut = def.deja ? 30 - (tr.tFin - tr.t0) : 0;
+  let vol = null;
+  if (def.pose) texte = 'Le dragon, plus long (' + LONGUEUR + ' blocs) — il est monté sur sa nuque';
+  else if (explose) {
+    texte = def.fin === 'impact' ? 'Il s\'écrase et explose : la victime et ceux autour prennent tout' : '30 s : il explose en l\'air, la victime prend tout';
+    if (age > 1.5) texte = 'Il est éjecté et redescend doucement, sans dégâts de chute';
+  } else if (!def.deja && t < tr.tMonte - 0.4) texte = 'Clic droit : le dragon sort de sa main…';
+  else if (!def.deja && t < tr.tMonte + 1.2) texte = '…et il saute dessus';
+  else if (tr.tFonce != null && t >= tr.tFonce) texte = 'Clic droit dans le vide : le dragon fonce là où il regarde';
+  else if (tr.tPrise != null && tr.tPrise >= 0 && t >= tr.tPrise - 1.6 && t < tr.tPrise + 1.8) texte = 'Clic droit sur quelqu\'un : la gueule l\'attrape';
+  else if (def.victimeDansGueule) texte = 'Il vole avec un joueur dans la gueule…';
+  else texte = 'Il dirige le dragon avec son regard (vitesse du vol du Vent 3)';
+  legende.textContent = texte;
+  if (!def.pose) {
+    const ecoule = explose ? null : def.deja ? volDebut + (t - tr.t0) : t - tr.tMonte;
+    if (ecoule != null && ecoule >= 0) vol = Math.min(30, ecoule);
+  }
+  minuteur.innerHTML = vol == null ? (explose ? 'Recharge : 20 s' : 'Clic droit : prêt') :
+    `Vol : ${vol.toFixed(1)} s / 30 s<div class="jauge"><div class="plein" style="width:${(1 - vol / 30) * 100}%"></div></div>`;
+  chrono.textContent = (pause ? '⏸ ' : '') + 't = ' + (t - tr.t0).toFixed(1) + ' s';
+
+  // ---- la caméra
+  if (vue !== 'libre') {
+    let pos, vise;
+    if (vue === 'cote') { pos = V(...def.cote[0]); vise = V(...def.cote[1]); }
+    else {
+      const centre = explose ? explose.p : T ? (L && (def.deja || t >= tr.tMonte) ? L.racine.position.clone() : T.o) : V(0, 2, 0);
+      const f = explose ? camVise.clone().sub(camPos).setY(0).normalize() : T ? (def.deja || t >= tr.tMonte ? selle(tr, s).f : T.f).clone() : V(0, 0, 1);
+      f.y *= 0.4; f.normalize();
+      if (explose) { pos = camPos.clone(); vise = explose.p.clone(); }
+      else if (!def.deja && t < tr.tMonte - 0.3) { pos = V(-5, 3.5, -7); vise = T ? T.o.clone().lerp(V(0, 1.5, 0), 0.5) : V(0, 2, 3); }
+      else { pos = centre.clone().addScaledVector(f, -9).add(V(0, 4.2, 0)); vise = centre.clone().addScaledVector(f, 8).add(V(0, 0.5, 0)); }
+    }
+    const k = 1 - Math.exp(-dt * (vue === 'cote' ? 20 : 4));
+    camPos.lerp(pos, k); camVise.lerp(vise, k);
+    if (camPos.y < 1) camPos.y = 1;
+    camera.position.copy(camPos); camera.lookAt(camVise);
+  } else controles.update();
+  composeur.render();
+
+  // la scène est finie : on recommence
+  if (!def.pose && t > tr.tFin + 5.5) preparer();
+}
+
+// ================================================================ les boutons
+function boutons(id, liste, actif, choisir) {
+  const el = document.getElementById(id);
+  const bs = liste.map(([cle, nom]) => {
+    const b = document.createElement('button'); b.textContent = nom;
+    b.onclick = () => { bs.forEach((x) => x.classList.remove('actif')); b.classList.add('actif'); choisir(cle); };
+    if (cle === actif) b.classList.add('actif');
+    el.appendChild(b); return b;
+  });
+}
+boutons('fruits', [['lave', 'Lave'], ['glace', 'Glace']], sorte, (c) => { sorte = c; document.body.classList.toggle('glace', c === 'glace'); const tt = t; preparer(); t = tt; });
+boutons('scenes', [['tout', 'Tout (monter, gueule, foncer)'], ['monter', 'Monter'], ['gueule', 'La gueule'], ['foncer', 'Foncer'], ['fin30', 'Fin des 30 s'], ['pose', 'Pose']], 'tout', (c) => {
+  if (c === 'monter' || c === 'gueule' || c === 'foncer') {
+    nomScene = 'tout'; preparer();
+    t = c === 'monter' ? 0 : c === 'gueule' ? tr.tPrise - 3.5 : tr.tFonce - 1.5;
+  } else { nomScene = c; preparer(); }
+  pause = false;
+});
+boutons('vues', [['suivre', 'Suivre'], ['cote', 'De loin'], ['libre', 'Libre']], vue, (c) => { vue = c; controles.enabled = c === 'libre'; if (c === 'libre') libre(); });
+boutons('longueurs', [[24, '24 (avant)'], [30, '30'], [34, '34'], [40, '40']], LONGUEUR, (c) => { LONGUEUR = c; });
+addEventListener('keydown', (e) => { if (e.code === 'Space') { pause = !pause; e.preventDefault(); } });
+window.apercu = { aller: (x) => { t = tr.t0 + x; }, pause: (p) => { pause = p; }, camera, controles,
+  vue: (pos, vise) => { vue = 'libre'; controles.enabled = true; camera.position.set(...pos); controles.target.set(...vise); },
+  suivre: () => { vue = 'suivre'; controles.enabled = false; },
+  rendre: (n = 30) => { for (let i = 0; i < n; i++) image(1 / 30); }, acteurs: ACTEURS, get t() { return t - tr.t0; }, get tr() { return tr; } };
+
+preparer();
+let avant = performance.now();
+rendu.setAnimationLoop(() => {
+  const maintenant = performance.now(), dt = Math.min(0.05, (maintenant - avant) / 1000);
+  avant = maintenant;
+  image(dt);
+});
+</script>
+</body>
+</html>

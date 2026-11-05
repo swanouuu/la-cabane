@@ -992,7 +992,8 @@ public final class ClientFruit {
     }
 
     /**
-     * Le panneau au niveau 3 : le clic droit court (le tir du niveau 2) et maintenu (le dragon), l'accroupi (le chien de
+     * Le panneau au niveau 3 : le clic droit court (le tir du niveau 2) et maintenu (le dragon qu'il monte ; dessus, le clic
+     * gauche attrape et le clic droit fonce), l'accroupi (le chien de
      * l'enfer ou la capsule de glace), la touche d'ulti (l'attaque ultime, une fois par éveil).
      */
     private static void panneau3(GuiGraphics g, Font font, boolean glace, double jet, double choc) {
@@ -1001,16 +1002,19 @@ public final class ClientFruit {
         String ulti = prete ? (glace ? "Ultime : le Hyoton (une fois)" : "Ultime : le soleil de magma (une fois)")
                 : ClientFruit3.ultimeFaite() ? "Ultime : déjà faite pendant cet éveil" : "Ultime : encore " + (int) Math.ceil(ultime / 60) + " min";
         String[][] lignes = {
-                {Clavier.gauche(), glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse"},
+                {Clavier.gauche(), ClientFruit3.monte() ? (ClientFruit3.tient() ? "Il le tient dans sa gueule" : "Attraper (la gueule)")
+                        : glace ? "Arme +4 dégâts, le givre s'étend" : "Arme +4 dégâts, éclabousse"},
                 {Clavier.droite(), (glace ? "Grande flèche de glace" : "Grand poing de magma") + (jet > 0 ? "  " + (int) Math.ceil(jet) + " s" : "")},
-                {Clavier.droite() + " maintenu", (glace ? "Dragon de glace : il suit ton regard" : "Dragon de lave : il suit ton regard")
-                        + (dragon > 0 ? "  " + (int) Math.ceil(dragon) + " s" : "")},
+                ClientFruit3.monte()
+                        ? new String[]{Clavier.droite(), "Foncer  " + (int) Math.ceil(ClientFruit3.restantMonte()) + " s"}
+                        : new String[]{Clavier.droite() + " maintenu", (glace ? "Dragon de glace : tu montes dessus" : "Dragon de lave : tu montes dessus")
+                                + (dragon > 0 ? "  " + (int) Math.ceil(dragon) + " s" : "")},
                 {Clavier.accroupi(), (glace ? "Capsule de glace : enferme ceux qui sont autour" : "Chien de l'enfer : il mord et emporte")
                         + (choc > 0 ? "  " + (int) Math.ceil(choc) + " s" : "")},
                 {Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), ulti},
                 {Clavier.nom(ClientSusano.EVEIL), "Rendormir"},
         };
-        boolean[] gris = {false, jet > 0, dragon > 0, choc > 0, !prete, false};
+        boolean[] gris = {false, jet > 0, dragon > 0 && !ClientFruit3.monte(), choc > 0 || ClientFruit3.monte(), !prete, false};
         String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + "  ·  niveau 3";
         int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
         int largeurTouche = 0, largeurAction = font.width(titre) - 10;
@@ -1775,7 +1779,7 @@ public final class ClientFruit {
             long maintenant = System.nanoTime();
             // s'accroupir (l'appui, pas le maintien) : l'éruption ou l'ère glaciaire, et plus fort à chaque niveau
             boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc) {
+            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc && !ClientFruit3.monte()) {
                 int niveau = niveau(mc.player.getUUID());
                 pretChoc = maintenant + (niveau >= 3 ? fr.cabane.pouvoir.Fruit3.RECHARGE_ACCROUPI : niveau >= 2 ? Fruit.RECHARGE_CHOC_2 : Fruit.RECHARGE_CHOC) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
