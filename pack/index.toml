@@ -46,11 +46,15 @@ hash = "b93a35bae2375e1e30dde7801c64a6ffee495ab3b0b64d12f348e0dc7a8cbabb"
 
 [[files]]
 file = "config/ftbquests/quests/lang/en_us.snbt"
-hash = "6d040ee9b1aabd56c7459e5fa911c37b3f5e27305f05e2b146268e3b98da90e2"
+hash = "39f2d8c2fdc0a3722329c0db07249852d5f40058cfbe564a9057ee90fbae8f8e"
 
 [[files]]
 file = "config/ftbquests/quests/lang/fr_fr.snbt"
-hash = "6d040ee9b1aabd56c7459e5fa911c37b3f5e27305f05e2b146268e3b98da90e2"
+hash = "39f2d8c2fdc0a3722329c0db07249852d5f40058cfbe564a9057ee90fbae8f8e"
+
+[[files]]
+file = "emotes/adosse_bras_croises.json"
+hash = "638563980301b4b74639f08cedb3a931d74b7f9e3ebd077adffb6c686fd7e460"
 
 [[files]]
 file = "emotes/bof.json"
@@ -58,7 +62,7 @@ hash = "fa0024b046aeda8f6aa1a31b625519d9fc83f3724165ae17699620a6978b009a"
 
 [[files]]
 file = "emotes/bras_croises.json"
-hash = "96944574d95153c9333d58d9c481fab239db6ec9cfa6f92e33e9f28b7c792ea4"
+hash = "311d79324abc25e7c7e8fd5d31935f655fe4eacb193c6542127458b0b69f19ad"
 
 [[files]]
 file = "emotes/coucou.json"
@@ -133,6 +137,10 @@ file = "emotes/salut.json"
 hash = "3a122417d4560ad8a21c457c44fb67af12a9bb0679198f940216e74bac7de48e"
 
 [[files]]
+file = "emotes/six_sept.json"
+hash = "5f94e175959614f5682f9feecfe8d3a7276fb9207e0127baf36011092ca0594e"
+
+[[files]]
 file = "emotes/t_pose.json"
 hash = "5841369a125cd907160de81dcffd2484cccd1906bd16366a4fd138f9c0df3bf6"
 
@@ -191,7 +199,7 @@ metafile = true
 
 [[files]]
 file = "mods/cabane-0.1.0.jar"
-hash = "f1e6a084c04a41ac6a945d8d88a06c3e46b03af2111b77566bd770abad1783b1"
+hash = "a842204ce20ad25d9e8bd39d646acdedcce3f87248b0fc6f66efdf18eea0e59b"
 
 [[files]]
 file = "mods/camera-mod.pw.toml"
