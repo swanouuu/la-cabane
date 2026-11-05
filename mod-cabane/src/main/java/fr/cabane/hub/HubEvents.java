@@ -97,8 +97,8 @@ public final class HubEvents {
 
     /**
      * Les PNJ qui ne font plus partie du village : Kylian, l'équipier d'un fast-food que les joueurs n'ont pas encore bâti,
-     * et le Fourgue (le marché noir), retiré pour l'instant : pour le remettre, lui trouver une place à l'écart (son ancienne,
-     * derrière la tour de guet, est maintenant le jardin d'une maison).
+     * et le Fourgue (le marché noir), qui tient maintenant boutique au cartel (CartelBuilder.gens) ; son ancienne place,
+     * derrière la tour de guet, est le jardin d'une maison.
      */
     private static final List<String> PARTIS = List.of("equipier", "fourgue");
 

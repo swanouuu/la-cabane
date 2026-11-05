@@ -355,10 +355,12 @@ export function genererPnj(ecrire) {
     ], boutons: [RETOUR, BYE("Noté")] },
   ] });
 
-  // le Fourgue, le marché noir : retiré du village pour l'instant (HubEvents.PARTIS), et personne ne parle de lui
+  // le Fourgue, le marché noir : parti du village (HubEvents.PARTIS), il tient boutique au cartel, devant un conteneur
+  // (un gars du cartel, posé par CartelBuilder avec ces tags : ce fichier ne sert que pour sa conversation)
   pnj({ fichier: "fourgue", nom: "Le Fourgue", couleur: "dark_gray", tags: ["fourgue"], dialogues: [
     { label: "default", titre: "Le Fourgue", texte: [
       "Psst. T'as pas vu de flics en venant ? … Bon. Qu'est-ce que tu veux ?",
+      "El Patrón me laisse vendre ici, tant qu'il touche sa part. Ici, au moins, les flics viennent pas.",
       "Je vends des graines. Pour le jardinage. Rien d'autre. Le jardinage.",
       "Tu ramènes la marchandise, je paye cash. Pas de questions, pas de reçu.",
       "La police de Beauvais me cherche depuis des mois. Ils cherchent mal.",

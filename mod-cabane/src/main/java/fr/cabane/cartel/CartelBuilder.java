@@ -45,7 +45,7 @@ import org.joml.Quaternionf;
  */
 final class CartelBuilder {
     /** À changer quand on modifie la construction : le repaire se reconstruit à la visite suivante. */
-    static final int VERSION = 3;
+    static final int VERSION = 4;
     /** Le y du monde qui correspond au y = 0 de la maquette (le premier bloc d'air au-dessus du sol). */
     static final int SOL = 64;
     static final Vec3 ARRIVEE = new Vec3(0.5, SOL, 52.5);
@@ -877,6 +877,15 @@ final class CartelBuilder {
         pnj("garde", -21, 1, 37, 120, CartelPnj.PORTE, "minigun", null, false);
         pnj("sicario", -20, 0, 4, 90, CartelPnj.PORTE, "ak47", null, false);
         pnj("narco", -24, 0, 10, 60, CartelPnj.CROISE, null, null, true);
+        // le Fourgue (le marché noir), devant le conteneur ouvert plein de caisses : son stock
+        CartelPnj fourgue = pnj("pnj/fourgue", -27.5, 0, -0.5, 0, CartelPnj.CROISE, null, null, false);
+        if (fourgue != null) {
+            fourgue.addTag("cabane_pnj");
+            fourgue.addTag("pnj.fourgue");
+            fourgue.addTag("fourgue");
+            fourgue.setCustomName(Component.literal("Le Fourgue").withStyle(ChatFormatting.DARK_GRAY));
+            fourgue.setCustomNameVisible(true);
+        }
         pnj("reina", 34.5, 1, -24, 270, CartelPnj.REPOS, null, null, false);
         // dans la favela, sur les toits
         int n = 0;

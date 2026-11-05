@@ -144,7 +144,9 @@ public final class ClientCartel {
 
         @Override
         public ResourceLocation getTextureLocation(CartelPnj pnj) {
-            return Cabane.id("textures/entity/cartel/" + pnj.skin() + ".png");
+            // « pnj/fourgue » : un habitant de Beauvais venu au cartel garde son skin d'habitant
+            String skin = pnj.skin();
+            return Cabane.id("textures/entity/" + (skin.contains("/") ? skin : "cartel/" + skin) + ".png");
         }
     }
 
