@@ -60,13 +60,13 @@ import net.minecraft.world.phys.AABB;
  * d'opération sur son estrade sous un scialytique éblouissant, une perceuse qui tourne au-dessus, quatre bobines Tesla
  * et quatre cuves géantes (des mutants qui flottent). Quatre ailes autour : au nord les cuves et le Sujet Zéro (un
  * Warden en cage), à l'est les cellules (chair vivante, sculk, prisonniers), à l'ouest la morgue, au sud la salle de
- * contrôle et le bureau du docteur.
+ * contrôle et le bureau du docteur. Dans les angles : la salle des rituels (nord-est) et la salle d'essai (sud-ouest).
  *
  * <p>Coordonnées relatives au centre de la salle, y = 0 étant le sol (au niveau {@link #SOL} du monde).
  */
 final class LaboBuilder {
     /** À augmenter quand on change le labo : il se reconstruit tout seul à la visite suivante. */
-    static final int VERSION = 5;
+    static final int VERSION = 6;
     static final int SOL = 64;
     static final String TAG = "cabane_labo";
     /** Les corps couchés (voir Labo.onSommeil). */
@@ -88,7 +88,7 @@ final class LaboBuilder {
     static final int HAUT_BOBINE = 8;
     /** Les lampes du plafond de la salle qui grésillent et s'éteignent par moments. */
     static final int[][] LAMPES = {{-11, 12, -11}, {11, 12, -11}, {-11, 12, 11}, {11, 12, 11}, {12, 12, 0}, {0, 12, -12},
-            {28, 9, 0}, {40, 9, 0}, {-30, 9, 0}, {-40, 9, -6}, {0, 9, -26}, {0, 9, 28}};
+            {28, 9, 0}, {40, 9, 0}, {-30, 9, 0}, {-40, 9, -6}, {0, 9, -26}, {0, 9, 28}, {-34, 8, 32}};
     /** Les cuves où l'eau fait des bulles (centre x, z, hauteur du liquide). */
     static final int[][] BULLES = {{-15, -15, 11}, {15, 15, 11}, {-10, -27, 7}, {10, -27, 7}, {-10, -39, 7}};
     /** Les gouttes qui tombent du plafond des cellules et de la morgue. */
@@ -101,6 +101,27 @@ final class LaboBuilder {
     static final int RX = 34;
     static final int RZ = -38;
     static final double RAYON_SCEAU = 8.5;
+    /**
+     * La salle d'essai (où l'on fait se battre les sujets), dans l'angle sud-ouest : ses murs vont de AX0 à AX1 et de
+     * AZ0 à AZ1, son plafond est à HAUT_AILE. On y entre par une porte du mur ouest de la grande salle.
+     */
+    static final int AX0 = -44;
+    static final int AX1 = -24;
+    static final int AZ0 = 19;
+    static final int AZ1 = 41;
+    /** Le milieu de l'arène (la paillasse y est posée). */
+    static final int CX = -34;
+    static final int CZ = 32;
+    /** La galerie des savants, au nord, au-dessus de l'entrée : son plancher, et son bord (la grille en dessous). */
+    static final int GALERIE = 5;
+    static final int GRILLE = 23;
+    /** Les deux râteliers (cinq cadres chacun, du nord au sud) contre les murs ouest et est, voir Arene. */
+    static final int RATELIER_Y = 2;
+    static final int RATELIER_Z0 = 30;
+    /** La place laissée libre au milieu de la paillasse : ce qu'on y pose est remis après chaque reconstruction. */
+    static final BlockPos PLACE_LIBRE = new BlockPos(CX, 2, CZ);
+    /** Le bouton qui lance le combat, au milieu du garde-corps de la galerie. */
+    static final BlockPos BOUTON_COMBAT = new BlockPos(CX, GALERIE + 2, GRILLE);
     /** Jusqu'où s'étend le labo (salle des rituels comprise), pour le nettoyer avant de le reconstruire. */
     static final int BORD = 56;
 
@@ -179,6 +200,7 @@ final class LaboBuilder {
                 level.getChunk(cx, cz);
             }
         }
+        List<Garde> place = garderPlaceLibre();
         nettoyer();
         coque();
         hall();
@@ -187,10 +209,42 @@ final class LaboBuilder {
         morgue();
         controle();
         rituels();
+        arene();
         for (int[] l : LAMPES) {
             lampe(l[0], l[1], l[2], Math.abs(l[0]) <= HALL && Math.abs(l[2]) <= HALL ? HAUT : HAUT_AILE);
         }
         finitions();
+        rendrePlaceLibre(place);
+    }
+
+    /** Un bloc mis de côté pendant la reconstruction (avec le contenu de son coffre, s'il en a un). */
+    private record Garde(BlockPos pos, BlockState state, CompoundTag contenu) {
+    }
+
+    /** Ce que l'hôte a posé sur la place libre de la paillasse (deux blocs de haut) : on le remettra tel quel. */
+    private List<Garde> garderPlaceLibre() {
+        List<Garde> place = new ArrayList<>();
+        for (int dy = 0; dy <= 1; dy++) {
+            BlockPos p = c.offset(PLACE_LIBRE.getX(), PLACE_LIBRE.getY() + dy, PLACE_LIBRE.getZ());
+            BlockState s = level.getBlockState(p);
+            if (!s.isAir()) {
+                var be = level.getBlockEntity(p);
+                place.add(new Garde(p, s, be == null ? null : be.saveWithFullMetadata(level.registryAccess())));
+            }
+        }
+        return place;
+    }
+
+    private void rendrePlaceLibre(List<Garde> place) {
+        for (Garde g : place) {
+            level.setBlock(g.pos(), g.state(), Block.UPDATE_ALL);
+            var be = level.getBlockEntity(g.pos());
+            if (be != null && g.contenu() != null) {
+                be.loadWithComponents(g.contenu(), level.registryAccess());
+                be.setChanged();
+                level.sendBlockUpdated(g.pos(), g.state(), g.state(), Block.UPDATE_ALL);
+            }
+        }
     }
 
     /** On repart de zéro : plus aucun bloc ni aucune entité du labo d'avant. */
@@ -639,14 +693,19 @@ final class LaboBuilder {
     private void perfusion(int x, int z, net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion> potion) {
         pose(x, 2, z, Blocks.IRON_BARS.defaultBlockState());
         pose(x, 3, z, Blocks.IRON_BARS.defaultBlockState());
+        alambic(x, 4, z, List.of(potion, potion, potion));
+    }
+
+    /** Un alambic (support d'alchimie) garni de trois fioles. */
+    private void alambic(int x, int y, int z, List<net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion>> fioles) {
         BlockState stand = Blocks.BREWING_STAND.defaultBlockState();
         for (var bouteille : BrewingStandBlock.HAS_BOTTLE) {
             stand = stand.setValue(bouteille, true);
         }
-        pose(x, 4, z, stand);
-        if (level.getBlockEntity(c.offset(x, 4, z)) instanceof BrewingStandBlockEntity be) {
+        pose(x, y, z, stand);
+        if (level.getBlockEntity(c.offset(x, y, z)) instanceof BrewingStandBlockEntity be) {
             for (int i = 0; i < 3; i++) {
-                be.setItem(i, PotionContents.createItemStack(Items.POTION, potion));
+                be.setItem(i, PotionContents.createItemStack(Items.POTION, fioles.get(i)));
             }
         }
     }
@@ -1385,6 +1444,254 @@ final class LaboBuilder {
         tag.put("brightness", lumiere);
         tag.putFloat("view_range", 4F);
         ajouter(tag, x, y, z, 0F, 0F);
+    }
+
+    // ================================================================== la salle d'essai (l'arène)
+
+    /**
+     * Une petite salle où les savants font se battre les sujets, dans l'angle sud-ouest, qu'on rejoint par une porte
+     * du mur ouest de la grande salle. En bas, l'arène : murs capitonnés, un râtelier d'armes d'entraînement de chaque
+     * côté (camp rouge à l'ouest, camp bleu à l'est) et une paillasse au milieu, dont la case centrale reste libre pour
+     * l'hôte. Au nord, au-dessus de l'entrée des sujets, la galerie des savants, ouverte sur l'arène, avec le bouton qui
+     * lance le combat (voir Arene).
+     */
+    private void arene() {
+        // la coque : sol, murs, plafond (et ses néons au-dessus de l'arène)
+        for (int x = AX0; x <= AX1; x++) {
+            for (int z = AZ0; z <= AZ1; z++) {
+                pose(x, -1, z, Blocks.POLISHED_DEEPSLATE.defaultBlockState());
+                pose(x, 0, z, solArene(x, z));
+                boolean neon = z > GRILLE && Math.abs(x - CX) % 6 == 0 && (z - CZ) % 5 == 0 && !(x == CX && z == CZ);
+                pose(x, HAUT_AILE, z, neon ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState());
+                pose(x, HAUT_AILE + 1, z, Blocks.DEEPSLATE_TILES.defaultBlockState());
+                boolean bordX = x == AX0 || x == AX1, bordZ = z == AZ0 || z == AZ1;
+                if (bordX || bordZ) {
+                    for (int y = 1; y < HAUT_AILE; y++) {
+                        pose(x, y, z, murArene(x, y, z, bordX && bordZ));
+                    }
+                }
+            }
+        }
+
+        // la porte dans le mur ouest de la grande salle, un petit passage au cadre « danger », et son nom côté salle
+        for (int z = AZ0; z <= AZ0 + 3; z++) {
+            pose(AX1 + 1, -1, z, Blocks.POLISHED_DEEPSLATE.defaultBlockState());
+            pose(AX1 + 1, 0, z, Blocks.POLISHED_DEEPSLATE.defaultBlockState());
+            for (int y = 1; y <= 4; y++) {
+                boolean ouvert = z > AZ0 && z < AZ0 + 3 && y <= 3;
+                pose(AX1 + 1, y, z, ouvert ? AIR : danger(z + y));
+            }
+            pose(AX1 + 1, 5, z, Blocks.DEEPSLATE_TILES.defaultBlockState());
+        }
+        for (int z = AZ0 + 1; z <= AZ0 + 2; z++) {
+            for (int y = 1; y <= 3; y++) {
+                pose(-HALL, y, z, AIR);
+                pose(AX1, y, z, AIR);
+            }
+            // une petite vitre de la galerie sur la grande salle
+            for (int y = GALERIE + 2; y <= GALERIE + 4; y++) {
+                pose(AX1, y, z, deco("quark:dirty_glass", Blocks.GRAY_STAINED_GLASS));
+            }
+        }
+        texte(-HALL + 1.04, 4.25, AZ0 + 2.0, Direction.EAST.toYRot(),
+                "[{\"text\":\"SALLE D'ESSAI\\n\",\"color\":\"gold\",\"bold\":true},{\"text\":\"que le meilleur gagne\",\"color\":\"gray\",\"bold\":false}]",
+                0.6F, 0, "fixed");
+
+        // sous la galerie, l'entrée des sujets, fermée côté arène par une grille (la porte au milieu) ;
+        // au-dessus, le devant de la galerie : un garde-corps de verre (on voit le sol de l'arène à travers), le
+        // pupitre du bouton au milieu, des ouvertures entre les piliers, un linteau
+        for (int x = AX0 + 1; x < AX1; x++) {
+            int dx = Math.abs(x - CX);
+            for (int z = AZ0 + 1; z <= GRILLE; z++) {
+                pose(x, GALERIE, z, Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState());
+            }
+            for (int y = 1; y < GALERIE; y++) {
+                BlockState s;
+                if (dx == 2) {
+                    s = Blocks.POLISHED_DEEPSLATE.defaultBlockState();
+                } else if (dx < 2) {
+                    s = y < GALERIE - 1 ? AIR : danger(x);
+                } else {
+                    s = Blocks.IRON_BARS.defaultBlockState();
+                }
+                pose(x, y, GRILLE, s);
+            }
+            boolean pilier = dx == 2 || dx == 6;
+            for (int y = GALERIE + 1; y < HAUT_AILE; y++) {
+                BlockState s;
+                if (pilier || y == HAUT_AILE - 1) {
+                    s = Blocks.POLISHED_DEEPSLATE.defaultBlockState();
+                } else if (y == GALERIE + 1) {
+                    s = x == CX ? Blocks.POLISHED_BLACKSTONE.defaultBlockState() : Blocks.GLASS_PANE.defaultBlockState();
+                } else {
+                    s = AIR;
+                }
+                pose(x, y, GRILLE, s);
+            }
+        }
+        texte(CX + 0.5, GALERIE - 0.75, GRILLE - 0.04, Direction.NORTH.toYRot(), "{\"text\":\"ARÈNE\",\"color\":\"red\",\"bold\":true}",
+                0.6F, 0, "fixed");
+        texte(CX + 0.5, HAUT_AILE - 0.85, GRILLE + 1.04, Direction.SOUTH.toYRot(), "{\"text\":\"OBSERVATION\",\"color\":\"gray\"}",
+                0.6F, 0, "fixed");
+
+        // l'escalier des savants, le long du mur nord ; sa trémie, bordée d'un garde-corps
+        for (int k = 0; k < GALERIE; k++) {
+            int x = AX1 - 2 - k, y = k + 1;
+            for (int dy = 1; dy < y; dy++) {
+                pose(x, dy, AZ0 + 1, Blocks.POLISHED_DEEPSLATE.defaultBlockState());
+            }
+            pose(x, y, AZ0 + 1, escalier(Blocks.POLISHED_DEEPSLATE_STAIRS, Direction.WEST));
+        }
+        for (int x = AX1 - GALERIE; x < AX1; x++) {
+            pose(x, GALERIE, AZ0 + 1, AIR);
+            pose(x, GALERIE + 1, AZ0 + 2, Blocks.POLISHED_BLACKSTONE_WALL.defaultBlockState());
+        }
+        texte(AX1 - 1.5, 3.4, AZ0 + 1.5, Direction.EAST.toYRot(), "{\"text\":\"GALERIE ↑\",\"color\":\"gold\"}", 0.5F, 0, "fixed");
+        // l'entrée des sujets : un banc, deux lanternes sous la galerie
+        for (int x = AX0 + 2; x <= AX0 + 6; x++) {
+            pose(x, 1, AZ0 + 1, escalier(Blocks.DARK_OAK_STAIRS, Direction.NORTH));
+        }
+        for (int x : new int[] {CX - 5, CX + 6}) {
+            pose(x, GALERIE - 1, GRILLE - 2, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+
+        // la galerie : le bouton du chef sur son pupitre, des chaises tournées vers l'arène, une console, le protocole
+        int g = GALERIE + 1;
+        pose(BOUTON_COMBAT.getX(), BOUTON_COMBAT.getY(), BOUTON_COMBAT.getZ(), Blocks.CRIMSON_BUTTON.defaultBlockState()
+                .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR).setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+        texte(CX + 0.5, g + 1.32, GRILLE + 0.5, Direction.NORTH.toYRot(), "{\"text\":\"COMBAT\",\"color\":\"red\",\"bold\":true}",
+                0.35F, 0, "fixed");
+        for (int x : new int[] {CX - 7, CX - 4, CX + 3}) {
+            pose(x, g, GRILLE - 2, vers(deco("handcrafted:dark_oak_chair", escalier(Blocks.DARK_OAK_STAIRS, Direction.NORTH)), Direction.SOUTH));
+        }
+        for (int x = CX - 8; x <= CX - 2; x++) {
+            pose(x, g, AZ0 + 1, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
+            int k = Math.floorMod(x - CX, 3);
+            if (k == 0) {
+                pose(x, g + 1, AZ0 + 1, vers(deco("refurbished_furniture:computer", AIR), Direction.SOUTH));
+            } else if (k == 1) {
+                pose(x, g + 1, AZ0 + 1, Blocks.LEVER.defaultBlockState().setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+            }
+        }
+        ecran(CX - 4.5, g + 2.1, AZ0 + 1.04, Direction.SOUTH.toYRot(), "alerte", 0.6F);
+        pose(AX0 + 1, g, GRILLE - 1, Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.EAST));
+        BlockPos lutrin = c.offset(AX0 + 1, g, GRILLE - 1);
+        LecternBlock.tryPlaceBook(null, level, lutrin, level.getBlockState(lutrin), protocole());
+        for (int x : new int[] {CX - 5, CX + 3}) {
+            pose(x, HAUT_AILE - 1, GRILLE - 2, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        }
+
+        // les deux râteliers : une arme de chaque sorte, à prendre d'un clic droit (voir Arene) ; les bannières du camp
+        for (boolean rouge : new boolean[] {true, false}) {
+            int x = rouge ? AX0 + 1 : AX1 - 1;
+            Direction face = rouge ? Direction.EAST : Direction.WEST;
+            ItemStack[] armes = Arene.armes(level.registryAccess(), rouge);
+            for (int k = 0; k < armes.length; k++) {
+                cadre(x, RATELIER_Y, RATELIER_Z0 + k, face, armes[k], false);
+            }
+            BlockState banniere = (rouge ? Blocks.RED_WALL_BANNER : Blocks.BLUE_WALL_BANNER).defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, face);
+            pose(x, 5, RATELIER_Z0 - 1, banniere);
+            pose(x, 5, RATELIER_Z0 + 5, banniere);
+            texte(x + 0.5 - face.getStepX() * 0.46, RATELIER_Y + 1.12, RATELIER_Z0 + 2.5, face.toYRot(),
+                    "[{\"text\":\"CAMP " + (rouge ? "ROUGE" : "BLEU") + "\\n\",\"color\":\"" + (rouge ? "red" : "blue")
+                            + "\",\"bold\":true},{\"text\":\"clic droit sur une arme pour la prendre\",\"color\":\"gray\",\"bold\":false}]",
+                    0.45F, 0, "fixed");
+        }
+
+        // la paillasse au milieu, et ce qui traîne dessus ; la case du milieu (PLACE_LIBRE), éclairée, reste vide
+        for (int x = CX - 2; x <= CX + 2; x++) {
+            for (int z = CZ - 1; z <= CZ + 1; z++) {
+                pose(x, 1, z, x == CX && z == CZ ? Blocks.SEA_LANTERN.defaultBlockState() : deco("quark:iron_plate", Blocks.IRON_BLOCK));
+            }
+        }
+        alambic(CX - 2, 2, CZ - 1, List.of(Potions.WEAKNESS, Potions.LEAPING, Potions.SLOWNESS));
+        pose(CX - 2, 2, CZ + 1, deco("supplementaries:jar", Blocks.GLASS.defaultBlockState()));
+        objetFlottant(new ItemStack(Items.SPIDER_EYE), CX - 1.5, 2.32, CZ + 1.5, 0.32F, 40F);
+        pose(CX - 1, 2, CZ + 1, Blocks.RED_CANDLE.defaultBlockState().setValue(BlockStateProperties.CANDLES, 3).setValue(BlockStateProperties.LIT, true));
+        pose(CX + 1, 2, CZ - 1, Blocks.SKELETON_SKULL.defaultBlockState().setValue(BlockStateProperties.ROTATION_16, 6));
+        pose(CX + 2, 2, CZ - 1, Blocks.WATER_CAULDRON.defaultBlockState().setValue(BlockStateProperties.LEVEL_CAULDRON, 3));
+        cadre(CX - 1, 2, CZ - 1, Direction.UP, new ItemStack(Items.BONE), true);
+        cadre(CX + 1, 2, CZ + 1, Direction.UP, new ItemStack(Items.ENDER_PEARL), true);
+        cadre(CX + 2, 2, CZ + 1, Direction.UP, new ItemStack(Items.PAPER), true);
+
+        // le nom de la salle au fond, de la lumière (invisible) au-dessus de l'arène, un peu de sang par terre
+        texte(CX + 0.5, 6.0, AZ1 - 0.04, Direction.NORTH.toYRot(),
+                "[{\"text\":\"ARÈNE D'ESSAI\\n\",\"color\":\"dark_red\",\"bold\":true},{\"text\":\"ici, on ne meurt pas : on tombe K.O.\",\"color\":\"gray\",\"bold\":false}]",
+                2.0F, 0, "fixed");
+        for (int x = CX - 6; x <= CX + 6; x += 6) {
+            for (int z = CZ - 5; z <= CZ + 5; z += 5) {
+                if (x != CX || z != CZ) {
+                    pose(x, 6, z, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 13));
+                }
+            }
+        }
+        for (int k = 0; k < 9; k++) {
+            int x = AX0 + 2 + rnd.nextInt(AX1 - AX0 - 3), z = GRILLE + 2 + rnd.nextInt(AZ1 - GRILLE - 3);
+            if (level.getBlockState(c.offset(x, 1, z)).isAir() && Math.abs(x - CX) + Math.abs(z - CZ) > 4) {
+                sang(x, 1, z);
+            }
+        }
+    }
+
+    private BlockState solArene(int x, int z) {
+        if (z <= GRILLE || x == AX0 || x == AX1 || z == AZ1) {
+            return rnd.nextFloat() < 0.3F ? Blocks.DEEPSLATE_TILES.defaultBlockState() : Blocks.POLISHED_DEEPSLATE.defaultBlockState();
+        }
+        if (z == GRILLE + 1) {
+            return danger(x);
+        }
+        // devant chaque râtelier, la zone de son camp ; une ligne au milieu, un cercle autour de la paillasse
+        boolean camp = z >= RATELIER_Z0 && z < RATELIER_Z0 + 5;
+        if (camp && x <= AX0 + 3) {
+            return Blocks.RED_CONCRETE.defaultBlockState();
+        }
+        if (camp && x >= AX1 - 3) {
+            return Blocks.BLUE_CONCRETE.defaultBlockState();
+        }
+        double d = Math.sqrt((x - CX) * (x - CX) + (z - CZ) * (z - CZ));
+        return (x == CX || (d >= 5 && d < 6) ? Blocks.WHITE_CONCRETE : Blocks.GRAY_CONCRETE).defaultBlockState();
+    }
+
+    /** Un bloc du mur de la salle d'essai : gris côté entrée et galerie, capitonné dans l'arène. */
+    private BlockState murArene(int x, int y, int z, boolean coin) {
+        if (coin) {
+            return Blocks.POLISHED_DEEPSLATE.defaultBlockState();
+        }
+        if (z <= GRILLE) {
+            return (y == 1 ? Blocks.BLACK_CONCRETE : Blocks.GRAY_CONCRETE).defaultBlockState();
+        }
+        boolean cote = x == AX0 || x == AX1;
+        if (cote && y <= 3 && z >= RATELIER_Z0 - 1 && z <= RATELIER_Z0 + 5) {
+            return Blocks.DARK_OAK_PLANKS.defaultBlockState();
+        }
+        if (Math.abs(cote ? z - CZ : x - CX) == 6) {
+            return Blocks.POLISHED_DEEPSLATE.defaultBlockState();
+        }
+        if (y <= 3) {
+            return (rnd.nextFloat() < 0.12F ? Blocks.LIGHT_GRAY_WOOL : Blocks.WHITE_WOOL).defaultBlockState();
+        }
+        if (y == 4) {
+            return deco("quark:iron_plate", Blocks.POLISHED_ANDESITE);
+        }
+        return (rnd.nextFloat() < 0.06F ? Blocks.LIGHT_GRAY_CONCRETE : Blocks.WHITE_CONCRETE).defaultBlockState();
+    }
+
+    /** Les rayures jaunes et noires. */
+    private static BlockState danger(int k) {
+        return ((k & 1) == 0 ? Blocks.YELLOW_CONCRETE : Blocks.BLACK_CONCRETE).defaultBlockState();
+    }
+
+    /** Le protocole de la salle d'essai, sur le lutrin de la galerie. */
+    private static ItemStack protocole() {
+        List<Filterable<Component>> pages = List.of(
+                "Salle d'essai\nProtocole\n\n1. Deux sujets, deux camps : rouge à l'ouest, bleu à l'est.\n\n2. Armes d'entraînement seulement : clic droit sur le râtelier.",
+                "3. Ici, personne ne meurt. À zéro, le sujet tombe K.O., puis se relève.\n\n4. Le bouton du pupitre lance le combat.\n\n5. Notez tout.\n\n— Dr. Vorace")
+                .stream().map(t -> Filterable.passThrough((Component) Component.literal(t))).toList();
+        ItemStack livre = new ItemStack(Items.WRITTEN_BOOK);
+        livre.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(Filterable.passThrough("Protocole de la salle d'essai"), "Dr. Vorace", 0, pages, true));
+        return livre;
     }
 
     // ================================================================== outils : blocs
