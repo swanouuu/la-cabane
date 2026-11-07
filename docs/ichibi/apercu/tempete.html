@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ichibi : la grande tempête</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #9cc4ec; overflow: hidden; font-family: system-ui, sans-serif; }
+  #outils { position: fixed; left: 10px; top: 8px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 3; }
+  button { background: #3a2a14cc; color: #fff1d6; border: 1px solid #8a6a3a; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  button.actif { background: #b07a26; border-color: #ffd48a; }
+  #temps { width: 300px; accent-color: #d9a441; }
+  #horloge { color: #3a2a14; font-size: 13px; background: #fff3dccc; padding: 4px 8px; border-radius: 6px; min-width: 52px; text-align: center; }
+  #legende { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); color: #fff; font-size: 23px; font-weight: 700;
+    text-shadow: 0 2px 6px #000c, 0 0 2px #000; text-align: center; pointer-events: none; z-index: 2; max-width: 92vw; }
+  #rire { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); color: #ffd36a; font-size: 56px; font-weight: 900; letter-spacing: 6px;
+    text-shadow: 0 3px 0 #6b3d0a, 0 0 18px #000a; opacity: 0; pointer-events: none; z-index: 2; }
+  #flash { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: #fff6d8; opacity: 0; }
+  #chargement { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #3a2a14; font-size: 18px; z-index: 4; background: #f3e3c3; }
+  #degats { position: fixed; right: 14px; top: 56px; background: #2a1a08d9; color: #ffe2a0; border: 1px solid #c9922e; border-radius: 8px;
+    padding: 10px 14px; font-size: 14px; line-height: 1.55; pointer-events: none; z-index: 2; }
+  #degats b { color: #fff; display: block; margin-bottom: 3px; font-size: 15px; }
+  #degats .on { color: #fff; text-shadow: 0 0 8px #ffb030; }
+  #aide { position: fixed; right: 12px; bottom: 8px; color: #fff; font-size: 12px; text-shadow: 0 1px 3px #000; z-index: 2; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="outils">
+  <button id="lecture" class="actif">Pause</button>
+  <button id="debut">Recommencer</button>
+  <button id="ralenti">Ralenti</button>
+  <input id="temps" type="range" min="0" max="24" step="0.01" value="0">
+  <span id="horloge">0,0 s</span>
+  <button id="camFilm" class="actif">Caméra film</button>
+  <button id="camLibre">Caméra libre</button>
+</div>
+<div id="flash"></div>
+<div id="legende"></div>
+<div id="rire">HA HA HA HA</div>
+<div id="chargement">Chargement des modèles…</div>
+<div id="degats"><b>Ce que fait la tempête (45 s, 40 blocs)</b>
+  <span id="d0">tornades : aspiré en l'air, 5</span><br>
+  <span id="d1">lames de sable : 2 à chaque passage</span><br>
+  <span id="d2">éclairs de sable : 6</span><br>
+  <span id="d3">pics du sol : 4</span><br>
+  <span id="d4">mains géantes : écrasé au sol, 10</span><br>
+  <span id="d5">la fin, l'effondrement : 12</span><br>
+  <span style="opacity:.75">et tout le temps : aveuglé, lent, emporté par le vent</span></div>
+<div id="aide">caméra libre : clic gauche tourner · clic droit déplacer · molette zoomer</div>
+<script type="module">
+// L'ulti d'Ichibi refait (croquis, rien en jeu) : une énorme tempête de sable, sans boost, qui fait des dégâts. Il rit
+// et abat ses bras au sol ; le sable de tout le coin se soulève en un ouragan géant (40 blocs de rayon, 90 de haut)
+// dont il est l'œil. Dedans : des tornades qui aspirent, des lames de sable qui tournent, des éclairs de sable, des pics
+// qui jaillissent du sol, des mains géantes qui sortent du sable et écrasent. À la fin, tout l'ouragan s'effondre sur
+// lui-même et explose. Tout se calcule à partir du temps t (0 à 24 s) : ?t=9 fige un moment.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const DUREE = 24;
+const $ = (id) => document.getElementById(id);
+const rendu = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+rendu.setPixelRatio(Math.min(2, devicePixelRatio));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const CIEL = new THREE.Color(0x9cc4ec), TEMPETE = new THREE.Color(0x8a5e2c), ORAGE = new THREE.Color(0x5a3a1a);
+scene.background = CIEL.clone();
+scene.fog = new THREE.Fog(CIEL.clone(), 200, 600);
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 900);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.enabled = false;
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); rendu.setSize(innerWidth, innerHeight); });
+
+const ciel = new THREE.HemisphereLight(0xeef4ff, 0xd8c8a8, 1.25);
+const soleil = new THREE.DirectionalLight(0xfff0d8, 1.5);
+soleil.position.set(25, 55, 35);
+const eclairLum = new THREE.PointLight(0xfff0b0, 0, 80, 1.4);
+scene.add(ciel, soleil, eclairLum);
+
+// ------------------------------------------------------------ outils
+const pres = (s, d0 = 5, d1 = 12) => Math.min(1, Math.max(0, (s.position.distanceTo(camera.position) - d0) / (d1 - d0)));
+const lisse = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const mixv = (a, b, k) => a + (b - a) * k;
+const bosse = (a, b, x) => lisse(a, a + 0.25, x) * (1 - lisse(b - 0.25, b, x));
+const hache = (i, k) => { let h = (i * 374761393 + k * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const lin = (c) => Math.pow(c / 255, 2.2);
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+
+async function modele(nom) {
+  const b = await (await fetch('modeles/' + nom + '.bin')).arrayBuffer();
+  const v = new DataView(b), n = b.byteLength / 64;
+  const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12), col = new Float32Array(n * 12), idx = new Uint32Array(n * 6);
+  for (let i = 0; i < n; i++) {
+    const o = i * 64, P = [];
+    for (let k = 0; k < 12; k++) P.push(v.getFloat32(o + k * 4, true));
+    const N = [v.getFloat32(o + 48, true), v.getFloat32(o + 52, true), v.getFloat32(o + 56, true)];
+    const c = [lin(v.getUint8(o + 60)), lin(v.getUint8(o + 61)), lin(v.getUint8(o + 62))];
+    for (let k = 0; k < 12; k++) { pos[i * 12 + k] = P[k]; nor[i * 12 + k] = N[k % 3]; col[i * 12 + k] = c[k % 3]; }
+    const ux = P[3] - P[0], uy = P[4] - P[1], uz = P[5] - P[2], wx = P[6] - P[0], wy = P[7] - P[1], wz = P[8] - P[2];
+    const d = (uy * wz - uz * wy) * N[0] + (uz * wx - ux * wz) * N[1] + (ux * wy - uy * wx) * N[2];
+    const a = i * 4;
+    idx.set(d >= 0 ? [a, a + 1, a + 2, a, a + 2, a + 3] : [a, a + 2, a + 1, a, a + 3, a + 2], i * 6);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  return g;
+}
+const matiere = (o = {}) => new THREE.MeshLambertMaterial({ vertexColors: true, ...o });
+
+// ------------------------------------------------------------ le décor
+function texSable(rep = 500) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const x = c.getContext('2d');
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) {
+    const k = 0.88 + 0.16 * hache(i * 16 + j, 3);
+    x.fillStyle = `rgb(${Math.round(218 * k)},${Math.round(184 * k)},${Math.round(124 * k)})`;
+    x.fillRect(i, j, 1, 1);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const sol = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshLambertMaterial({ map: texSable() }));
+sol.rotation.x = -Math.PI / 2;
+scene.add(sol);
+const matSable = new THREE.MeshLambertMaterial({ map: texSable(2) });
+const matSableF = new THREE.MeshLambertMaterial({ color: 0xb0864e });
+function bloc(x, y, z, sx, sy, sz, couleur) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshLambertMaterial({ color: couleur }));
+  m.position.set(x, y + sy / 2, z);
+  scene.add(m);
+  return m;
+}
+for (let i = 0; i < 34; i++) {
+  const a = (i / 34) * Math.PI * 2, r = 170 + 40 * hache(i, 1);
+  const x = Math.sin(a) * r, z = Math.cos(a) * r, h = 18 + 34 * hache(i, 2);
+  for (let k = 0; k < 4; k++) bloc(x + (hache(i, 3 + k) - 0.5) * 22, 0, z + (hache(i, 9 + k) - 0.5) * 14, 20 - k * 4, h * (1 - k * 0.22), 16 - k * 3, k % 2 ? 0x8d8a90 : 0x7a7780);
+}
+const palmes = [];
+for (let i = 0; i < 30; i++) {
+  const a = hache(i, 20) * Math.PI * 2, r = 56 + 40 * hache(i, 21), x = Math.cos(a) * r, z = Math.sin(a) * r;
+  const h = 5 + 3 * hache(i, 22);
+  bloc(x, 0, z, 0.6, h, 0.6, 0x8a6a40);
+  const g = new THREE.Group(); g.position.set(x, h, z); scene.add(g); palmes.push(g);
+  for (const [dx, dz] of [[1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [0, 0]]) {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(dx ? 2.6 : 1.2, 0.5, dz ? 2.6 : 1.2), new THREE.MeshLambertMaterial({ color: 0x5fa040 }));
+    f.position.set(dx, -0.4 - (dx || dz ? 0.6 : 0), dz); g.add(f);
+  }
+}
+
+// ------------------------------------------------------------ les acteurs
+const [gCorps, gJD, gJG, gRepos, gRire, gSteve, gPeur, gPris, gVole] = await Promise.all(
+  ['bete-corps', 'jambeD', 'jambeG', 'bras-repos', 'rire', 'steve', 'steve-peur', 'steve-pris', 'steve-vole'].map(modele));
+$('chargement').remove();
+const matBete = matiere({ emissive: new THREE.Color(0xffa020), emissiveIntensity: 0 });
+const bete = new THREE.Group(), beteRire = new THREE.Mesh(gRire, matBete);
+for (const g of [gCorps, gJD, gJG, gRepos]) bete.add(new THREE.Mesh(g, matBete));
+const lui = new THREE.Group();
+lui.add(bete, beteRire);
+lui.scale.setScalar(1.15);
+scene.add(lui);
+
+// les six autres : chacun a son malheur (voir MALHEURS)
+const POSES = [gSteve, gPeur, gPris, gVole];
+const victimes = [[9, 13], [-11, 10], [4, -15], [-13, -9], [17, -3], [-3, 21]].map(([x, z], i) => {
+  const g = new THREE.Group(), mat = matiere({ emissive: new THREE.Color(0xff2a10), emissiveIntensity: 0 });
+  const poses = POSES.map((geo) => { const m = new THREE.Mesh(geo, mat); g.add(m); return m; });
+  g.position.set(x, 0, z);
+  g.rotation.y = Math.atan2(-x, -z);
+  g.userData = { base: V(x, 0, z), poses, mat, i };
+  scene.add(g);
+  return g;
+});
+
+// ------------------------------------------------------------ textures et morceaux de sable
+function texBouffee(dur) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  for (let k = 0; k < 8; k++) {
+    const cx = 64 + (hache(k, 70 + dur) - 0.5) * 50, cy = 64 + (hache(k, 71 + dur) - 0.5) * 50, r = 24 + 24 * hache(k, 72 + dur);
+    const g = x.createRadialGradient(cx, cy, 1, cx, cy, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.8)'); g.addColorStop(0.6, 'rgba(255,255,255,0.32)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEX = [texBouffee(0), texBouffee(1), texBouffee(2)];
+const COUL = [new THREE.Color(0x6e4a22), new THREE.Color(0xa87a40), new THREE.Color(0xd8b276), new THREE.Color(0xf0d8a8)];
+function bouffee(i, couleur) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX[i % 3], transparent: true, depthWrite: false, opacity: 0, fog: true, color: couleur }));
+  s.visible = false;
+  scene.add(s);
+  return s;
+}
+function grains(n, sx, sy, sz, couleurs = [[0.6, 0.42, 0.22], [0.75, 0.58, 0.34], [0.86, 0.72, 0.5]]) {
+  const g = new THREE.InstancedMesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+  const c = new THREE.Color();
+  for (let i = 0; i < n; i++) g.setColorAt(i, c.setRGB(...couleurs[Math.floor(hache(i, 40 + n) * couleurs.length)]));
+  g.frustumCulled = false; scene.add(g); return g;
+}
+const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = V(), P = V();
+function poser(g, i, x, y, z, s, rx = 0, ry = 0, rz = 0, long = 1) {
+  const d = Math.hypot(x - camera.position.x, y - camera.position.y, z - camera.position.z);
+  s *= Math.min(1, Math.max(0, (d - 2.5) / 4));
+  if (s <= 0) { M.makeScale(0, 0, 0); g.setMatrixAt(i, M); return; }
+  E.set(rx, ry, rz); Q.setFromEuler(E);
+  M.compose(P.set(x, y, z), Q, S.set(s, s, s * long));
+  g.setMatrixAt(i, M);
+}
+
+// ------------------------------------------------------------ l'ouragan
+// le mur : des bouffées sur un grand cylindre qui tourne (plus vite en bas), de 40 à 52 blocs, jusqu'à 90 de haut ;
+// les bras de la spirale : des bandes de sable qui s'enroulent vers lui ; le sable qui se soulève du sol au début
+const MUR = [];
+for (let i = 0; i < 1700; i++) {
+  const etage = hache(i, 80), a = hache(i, 81) * Math.PI * 2, y = Math.pow(etage, 1.1) * 92;
+  // des bandes qui montent en spirale : une sombre, une claire
+  const bande = 0.5 + 0.5 * Math.sin(y * 0.22 + a * 3);
+  const c = COUL[0].clone().lerp(COUL[2], Math.min(1, Math.pow(etage, 0.8) * 0.6 + bande * 0.45 + 0.08 * hache(i, 85)));
+  const s = bouffee(i, c);
+  s.userData = { a, r: 40 + 10 * hache(i, 82), y, taille: 9 + 14 * etage + 7 * hache(i, 84), ph: hache(i, 86) * 6.28 };
+  MUR.push(s);
+}
+const BANDES = [];
+for (let i = 0; i < 420; i++) {
+  const c = COUL[1].clone().lerp(COUL[3], hache(i, 51) * 0.7);
+  const s = bouffee(i + 1, c);
+  s.userData = { bande: i % 5, u: hache(i, 52), y: 1 + 9 * Math.pow(hache(i, 53), 1.6), taille: 4 + 8 * hache(i, 54) };
+  BANDES.push(s);
+}
+const gSol = grains(1800, 1, 1, 1), gTempete = grains(3200, 1, 1, 1), gVent = grains(700, 0.05, 0.05, 1);
+gVent.material.transparent = true; gVent.material.opacity = 0.22; gVent.material.color.set(0xf0dcb0); gVent.material.depthWrite = false;
+
+// ------------------------------------------------------------ les tornades
+const NT = 4;
+const TORNADES = [];
+for (let k = 0; k < NT; k++) {
+  const l = [];
+  for (let i = 0; i < 70; i++) {
+    const h = i / 70;
+    const s = bouffee(i + k, COUL[0].clone().lerp(COUL[2], h * 0.85));
+    s.userData = { h, ph: hache(i, 60 + k) * 6.28 };
+    l.push(s);
+  }
+  TORNADES.push(l);
+}
+/** Où est la tornade k au temps t (elles se promènent autour de lui en serpentant). */
+function tornade(k, t) {
+  const a = k * Math.PI / 2 + 0.6 + t * (k % 2 ? -0.32 : 0.27), r = 16 + 7 * Math.sin(t * 0.55 + k * 1.9);
+  return V(Math.cos(a) * r, 0, Math.sin(a) * r);
+}
+const gTornade = grains(900, 0.5, 0.5, 0.5);
+
+// ------------------------------------------------------------ les lames de sable : des croissants qui tournent au ras du sol
+const formeLame = new THREE.Shape();
+formeLame.absarc(0, 0, 2.6, -1.1, 1.1, false);
+formeLame.absarc(0.9, 0, 2.0, 1.25, -1.25, true);
+const geoLame = new THREE.ExtrudeGeometry(formeLame, { depth: 0.18, bevelEnabled: false, curveSegments: 18 });
+geoLame.translate(0, 0, -0.09);
+const matLame = new THREE.MeshLambertMaterial({ color: 0xe8c890, emissive: 0x6a4010, emissiveIntensity: 0.4 });
+const LAMES = [];
+for (let i = 0; i < 9; i++) {
+  const m = new THREE.Mesh(geoLame, matLame);
+  m.userData = { r: 9 + 15 * hache(i, 30), v: 1.6 + 0.9 * hache(i, 31), a: hache(i, 32) * 6.28, y: 0.7 + 1.6 * hache(i, 33) };
+  m.visible = false;
+  scene.add(m);
+  LAMES.push(m);
+}
+const gTrainee = grains(9 * 26, 0.3, 0.3, 0.3);
+
+// ------------------------------------------------------------ les éclairs de sable (orages secs dans la poussière)
+const matEclair = new THREE.LineBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0 });
+const matEclairLarge = new THREE.MeshBasicMaterial({ color: 0xffe080, transparent: true, opacity: 0 });
+function eclair(depart, arrivee, graine) {
+  const pts = [], n = 18;
+  for (let i = 0; i <= n; i++) {
+    const k = i / n, p = depart.clone().lerp(arrivee, k);
+    if (i > 0 && i < n) p.add(V((hache(i, graine) - 0.5) * 5 * Math.sin(k * Math.PI), (hache(i, graine + 1) - 0.5) * 2, (hache(i, graine + 2) - 0.5) * 5 * Math.sin(k * Math.PI)));
+    pts.push(p);
+  }
+  const g = new THREE.Group();
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), matEclair));
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.22, 5), matEclairLarge.clone());
+  g.add(tube);
+  // des branches
+  for (let b = 0; b < 4; b++) {
+    const i = 4 + Math.floor(hache(b, graine + 9) * 10), o = pts[i];
+    const fin = o.clone().add(V((hache(b, graine + 10) - 0.5) * 12, -3 - 6 * hache(b, graine + 11), (hache(b, graine + 12) - 0.5) * 12));
+    const q = [o, o.clone().lerp(fin, 0.5).add(V(hache(b, graine + 13) * 2 - 1, 0, hache(b, graine + 14) * 2 - 1)), fin];
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(q), 10, 0.1, 4), matEclairLarge.clone()));
+  }
+  g.visible = false;
+  scene.add(g);
+  return g;
+}
+
+// ------------------------------------------------------------ les mains géantes et les pics
+function mainGeante() {
+  const g = new THREE.Group();
+  const paume = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.6, 4.8), matSable);
+  paume.position.set(0, 0, 0); g.add(paume);
+  const bras = new THREE.Mesh(new THREE.BoxGeometry(3.4, 14, 3.6), matSable);
+  bras.position.set(0, -7.5, -0.8); g.add(bras);
+  const doigts = [];
+  for (let k = 0; k < 5; k++) {
+    const pouce = k === 4;
+    const pivot = new THREE.Group();
+    pivot.position.set(pouce ? -2.4 : -1.65 + k * 1.1, 0.4, pouce ? 0.6 : 2.3);
+    const d1 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 2.6), matSable); d1.position.z = 1.2; pivot.add(d1);
+    const p2 = new THREE.Group(); p2.position.z = 2.4; pivot.add(p2);
+    const d2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 2.2), matSable); d2.position.z = 1; p2.add(d2);
+    const griffe = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.3, 4), new THREE.MeshLambertMaterial({ color: 0x2a2a3a }));
+    griffe.rotation.x = Math.PI / 2; griffe.position.z = 2.5; p2.add(griffe);
+    if (pouce) pivot.rotation.y = -1.1;
+    g.add(pivot); doigts.push([pivot, p2]);
+  }
+  g.userData = { doigts };
+  g.visible = false;
+  scene.add(g);
+  return g;
+}
+const MAINS = [mainGeante(), mainGeante()];
+function pics() {
+  const g = new THREE.Group();
+  for (let k = 0; k < 9; k++) {
+    const h = k === 0 ? 4.5 : 1.8 + 2.2 * hache(k, 120);
+    const c = new THREE.Mesh(new THREE.ConeGeometry(k === 0 ? 0.9 : 0.5, h, 5), k % 3 ? matSable : matSableF);
+    const a = (k / 8) * Math.PI * 2, r = k === 0 ? 0 : 1.2 + 0.6 * hache(k, 121);
+    c.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
+    c.rotation.set(Math.sin(a) * 0.35 * (k ? 1 : 0), 0, -Math.cos(a) * 0.35 * (k ? 1 : 0));
+    g.add(c);
+  }
+  g.visible = false;
+  scene.add(g);
+  return g;
+}
+const PICS = [pics(), pics(), pics()];
+// les éclairs dans le mur (on les voit de loin)
+const ECLAIRS_MUR = [];
+for (let k = 0; k < 6; k++) {
+  const a = hache(k, 400) * 6.28, r = 44, y = 30 + 40 * hache(k, 401);
+  ECLAIRS_MUR.push(eclair(new THREE.Vector3(Math.cos(a) * r, y + 14, Math.sin(a) * r), new THREE.Vector3(Math.cos(a + 0.15) * r, y - 10, Math.sin(a + 0.15) * r), 500 + k * 11));
+}
+
+// des chiffres de dégâts qui montent
+function texte(txt, couleur) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+  const x = c.getContext('2d');
+  x.font = '900 64px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineWidth = 10; x.strokeStyle = '#3a0a00'; x.strokeText(txt, 128, 50);
+  x.fillStyle = couleur; x.fillText(txt, 128, 50);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false }));
+  s.scale.set(3.2, 1.2, 1);
+  s.renderOrder = 10;
+  s.visible = false;
+  scene.add(s);
+  return s;
+}
+
+// ------------------------------------------------------------ la chronologie
+// les malheurs : [temps, victime, sorte] ; sortes : tornade, eclair, main, pics, lame
+const T_FORME = [2, 5.2], T_FIN = 18.4;
+const MALHEURS = [
+  [6.4, 0, 'tornade'], [7.6, 1, 'lame'], [8.1, 4, 'lame'], [8.6, 2, 'eclair'], [9.4, 3, 'pics'], [10.3, 5, 'lame'],
+  [10.8, 1, 'main'], [12.2, 4, 'eclair'], [12.9, 3, 'lame'], [13.6, 5, 'pics'], [14.2, 2, 'main'], [15.3, 0, 'eclair'],
+  [15.9, 1, 'pics'], [16.6, 4, 'lame'],
+];
+const DEGATS = { tornade: 5, lame: 2, eclair: 6, pics: 4, main: 10 };
+const LIGNE = { tornade: 'd0', lame: 'd1', eclair: 'd2', pics: 'd3', main: 'd4' };
+const CHIFFRES = MALHEURS.map(([, , s]) => texte('-' + DEGATS[s], s === 'eclair' ? '#fff3a0' : '#ff5a3a'));
+const CHIFFRES_FIN = victimes.map(() => texte('-12', '#ff3a20'));
+const ECLAIRS = MALHEURS.map(([, v, s], i) => (s === 'eclair' ? eclair(V(0, 30, 0), V(0, 1, 0), 300 + i * 7) : null));
+const ETAPES = [
+  [0, "J : il rit et abat ses deux bras dans le sable"],
+  [2, "Tout le sable du coin se soulève : un ouragan géant, 40 blocs de rayon, 90 de haut"],
+  [5.4, "Il est l'œil de l'ouragan. Dedans, on ne voit plus rien, le vent emporte tout"],
+  [6.4, "Les tornades aspirent ce qu'elles touchent"],
+  [7.6, "Des lames de sable tournent au ras du sol"],
+  [8.6, "Des éclairs de sable tombent sur ceux qui sont dedans"],
+  [9.4, "Des pics jaillissent sous leurs pieds"],
+  [10.8, "Des mains géantes sortent du sable, les attrapent et les écrasent"],
+  [17, "Au bout de 45 s, tout l'ouragan s'effondre sur lui-même…"],
+  [18.4, "… et explose. 12 à tout ce qui est dedans"],
+  [20.5, "Le sable retombe"],
+];
+
+// ------------------------------------------------------------ chaque image
+/** Combien la tempête est là (0 à 1) : elle se forme, puis s'effondre. */
+const FORME = (t) => lisse(T_FORME[0], T_FORME[1], t);
+const EFFONDRE = (t) => lisse(17, T_FIN, t);
+const LA = (t) => FORME(t) * (1 - lisse(T_FIN, T_FIN + 0.3, t));
+
+/** Où est la victime v à t (et dans quelle pose, comment elle est touchée). */
+function victime(g, t) {
+  const { base, i } = g.userData;
+  const dedans = LA(t);
+  const p = base.clone(), r = { pose: 1, rot: V(), rouge: 0 };
+  // le vent la pousse en tournant autour de lui
+  const ang = Math.atan2(base.z, base.x) + dedans * (t - T_FORME[0]) * 0.05, dist = base.length();
+  p.set(Math.cos(ang) * dist, 0, Math.sin(ang) * dist);
+  r.rot.set(-0.3 * dedans, 0.3 * Math.sin(t * 1.3 + i) * dedans, 0.15 * Math.sin(t * 2 + i) * dedans);
+  if (t < 2.4) r.pose = 0;
+  for (const [d, v, s] of MALHEURS) {
+    if (v !== i || t < d) continue;
+    const u = t - d;
+    if (s === 'tornade' && u < 3.4) {
+      // aspirée : elle monte en spirale dans la tornade, puis retombe
+      const c = tornade(0, t), h = u < 2.4 ? 14 * lisse(0, 2.2, u) : 14 * (1 - lisse(2.4, 3.3, u));
+      const a = u * 7;
+      p.lerp(V(c.x + Math.cos(a) * (1.2 + h * 0.15), h, c.z + Math.sin(a) * (1.2 + h * 0.15)), lisse(0, 0.3, u));
+      r.pose = 3; r.rot.set(u * 3, u * 9, u * 2);
+    }
+    if (s === 'main' && u < 3) {
+      // la main la saisit, la soulève, puis l'abat au sol
+      const haut = u < 0.8 ? 0 : u < 1.9 ? 7 * lisse(0.8, 1.5, u) : 7 * (1 - lisse(1.9, 2.15, u));
+      p.y = haut; r.pose = 2;
+    }
+    if (s === 'pics' && u < 1.2) { p.y = 3.5 * Math.sin(Math.PI * Math.min(1, u / 0.9)); r.pose = 3; r.rot.x = -u * 3; }
+    if (s === 'eclair' && u < 0.6) { r.pose = 3; r.rot.x = -0.6; p.y += 0.6 * Math.sin(Math.PI * u / 0.6); }
+    if (s === 'lame' && u < 0.4) { r.rot.z = 0.5 * Math.sin(u * 20); }
+    const coup = s === 'main' ? 2.15 : s === 'tornade' ? 0.3 : 0;
+    if (u > coup && u < coup + 0.35) r.rouge = 1;
+  }
+  // la fin : l'explosion les projette au loin
+  if (t > T_FIN) {
+    const u = t - T_FIN, loin = p.clone().setY(0).normalize();
+    p.addScaledVector(loin, 14 * lisse(0, 1.2, u));
+    p.y = Math.max(0, 7 * Math.sin(Math.PI * Math.min(1, u / 1.3)));
+    r.pose = u < 1.3 ? 3 : 1; r.rot.set(u < 1.3 ? -u * 4 : -1.4, 0, 0);
+    if (u < 0.35) r.rouge = 1;
+    if (u > 1.3) { p.y = 0.15; r.rot.set(-Math.PI / 2, 0, 0); }
+  }
+  return { p, ...r };
+}
+
+// les plans de la caméra dedans : [début, victime, hauteur visée]
+const PLANS = [[6.0, 0, 7], [8.2, 2, 2.4], [9.1, 3, 2.4], [10.4, 1, 4], [12.0, 4, 2.4], [13.3, 5, 2.4], [14.0, 2, 4]];
+function plan([d, v, h], t) {
+  const g = victimes[v], p = victime(g, Math.max(d, Math.min(t, d + 1.6))).p, base = g.userData.base;
+  // de côté, entre lui et le mur, un peu au-dessus
+  const vers = V(-base.x, 0, -base.z).normalize(), cote = V(vers.z, 0, -vers.x);
+  const loin = h >= 6 ? 2.2 : 1;
+  const ici = V(p.x, 0, p.z).addScaledVector(vers, 6 * loin).addScaledVector(cote, 7 * loin).add(V(0, 4.5 + h * 0.4, 0));
+  return [ici, V(p.x, h, p.z)];
+}
+function camFilm(t) {
+  const pos = V(), vise = V();
+  if (t < 2.2) {
+    const k = lisse(0, 2.2, t); pos.set(mixv(6, 5, k), mixv(2.8, 3.4, k), mixv(6, 5, k)); vise.set(0, 2.2, 0);
+  } else if (t < 6) {
+    // on monte très haut et très loin pour voir l'ouragan se former
+    const k = lisse(2.2, 5.4, t); pos.set(mixv(5, 120, k), mixv(3.4, 46, k), mixv(5, 150, k)); vise.set(0, mixv(2.2, 34, k), 0);
+  } else if (t < 15) {
+    // dedans : la caméra va de malheur en malheur, tout près de celui qui le prend
+    let i = 0;
+    while (i + 1 < PLANS.length && t >= PLANS[i + 1][0]) i++;
+    const [p1, v1] = plan(PLANS[i], t), k = lisse(PLANS[i][0], PLANS[i][0] + 0.45, t);
+    if (i > 0 && k < 1) {
+      const [p0, v0] = plan(PLANS[i - 1], t);
+      pos.copy(p0.lerp(p1, k)); vise.copy(v0.lerp(v1, k));
+    } else { pos.copy(p1); vise.copy(v1); }
+    // on arrive de loin au premier plan
+    const entre = lisse(6, 6.9, t);
+    if (entre < 1) { pos.lerp(V(120, 46, 150), 1 - entre); vise.lerp(V(0, 34, 0), 1 - entre); }
+  } else if (t < 17.2) {
+    const [p0, v0] = plan(PLANS[PLANS.length - 1], 15);
+    const k = lisse(15, 17, t), monte = lisse(15, 15.9, t);
+    pos.copy(p0.lerp(V(105, 95, 130), k)); pos.y = Math.max(pos.y, mixv(p0.y, 110, monte)); vise.copy(v0.lerp(V(0, 22, 0), k));
+  } else {
+    const k = lisse(17.2, 18.4, t), r = lisse(20.5, 23, t);
+    pos.set(mixv(105, 80, k), mixv(95, 55, k), mixv(130, 100, k)).lerp(V(30, 14, 36), r); vise.set(0, mixv(22, 10, k), 0).lerp(V(0, 2, 0), r);
+  }
+  // l'écran tremble à la formation et à l'explosion
+  const sec = 0.5 * bosse(2, 4.2, t) + 1.4 * bosse(T_FIN, T_FIN + 1.2, t);
+  pos.x += sec * Math.sin(t * 61); pos.y += sec * Math.sin(t * 47 + 1);
+  camera.position.copy(pos); camera.lookAt(vise);
+}
+
+function mettreA(t) {
+  const forme = FORME(t), la = LA(t), eff = EFFONDRE(t);
+  // lui : il rit au début et à la fin ; son sable luit pendant la tempête
+  const rire = t < 2.4 || (t > 16.6 && t < 19.5);
+  bete.visible = !rire; beteRire.visible = rire;
+  lui.position.y = 0.3 * bosse(0.3, 1.3, t);
+  matBete.emissiveIntensity = la * (0.18 + 0.08 * Math.sin(t * 7));
+  // le ciel s'assombrit, brun ; on ne voit plus loin
+  const sombre = la * (1 - 0.3 * eff);
+  const dedansCam = Math.hypot(camera.position.x, camera.position.z) < 40 * (1 - eff) + 2;
+  const k = dedansCam ? sombre : sombre * 0.45;
+  const coul = CIEL.clone().lerp(TEMPETE, k * 0.92).lerp(ORAGE, k * (dedansCam ? 0.75 : 0.35));
+  scene.background.copy(coul); scene.fog.color.copy(coul);
+  scene.fog.near = mixv(200, dedansCam ? 14 : 150, sombre); scene.fog.far = mixv(600, dedansCam ? 70 : 480, sombre);
+  sol.material.color.setRGB(1, 1, 1).lerp(new THREE.Color(0x9a7a50), sombre * 0.8);
+  ciel.intensity = mixv(1.25, 0.7, sombre); soleil.intensity = mixv(1.5, 0.35, sombre);
+  palmes.forEach((g, i) => { g.rotation.z = la * (0.35 + 0.12 * Math.sin(t * 7 + i)); });
+
+  // l'ouragan : il se forme depuis le sol (la hauteur monte, le rayon se resserre), tourne, puis s'effondre vers lui
+  const rayon = mixv(70, 1, 0) ; void rayon;
+  const tasse = 1 - eff * 0.97;
+  for (const s of MUR) {
+    const u = s.userData, h = u.y * forme;
+    const vit = 0.55 - 0.3 * (u.y / 92);
+    const a = u.a + t * vit + forme * 2;
+    const r = (mixv(5, u.r, forme) + (u.y > 72 ? (u.y - 72) * 0.9 * forme : 0)) * tasse + 1.5 * Math.sin(t * 2 + u.ph);
+    const ub = t - T_FIN;
+    if (ub > 0) {
+      // l'explosion : un anneau énorme qui file au ras du sol, un champignon au milieu
+      const loin = (4 + 95 * lisse(0, 2.2, ub)) * (0.45 + 0.55 * hache(u.ph * 100 | 0, 3)), haut = u.y / 92;
+      const champi = haut > 0.7 ? 1 : 0;
+      const rr = champi ? 6 + 30 * lisse(0, 1.6, ub) * haut : loin;
+      const yy = champi ? 10 + 70 * lisse(0, 1.4, ub) * haut : 1 + 12 * haut * Math.sin(Math.PI * Math.min(1, ub / 2.6));
+      s.visible = ub < 4;
+      s.position.set(Math.cos(u.a) * rr, yy, Math.sin(u.a) * rr);
+      s.scale.setScalar(u.taille * (1 + 0.8 * lisse(0, 1.5, ub)));
+      s.material.opacity = 0.95 * (1 - lisse(2, 4, ub)) * pres(s, 6, 16);
+      continue;
+    }
+    s.visible = forme > 0.01;
+    s.position.set(Math.cos(a) * r, Math.max(u.taille * 0.25, h * (1 - eff * 0.4) + 3 * Math.sin(t * 1.5 + u.ph)), Math.sin(a) * r);
+    s.scale.setScalar(u.taille * (0.6 + 0.4 * forme) * (1 - eff * 0.5));
+    s.material.rotation = a * 0.5;
+    s.material.opacity = 0.97 * lisse(0, 0.25, forme) * pres(s, 6, 16);
+  }
+  // les bandes de la spirale, qui s'enroulent vers lui au ras du sol
+  for (const s of BANDES) {
+    const u = s.userData, rr = mixv(40, 4, u.u) * tasse;
+    const a = u.bande * (Math.PI * 2 / 5) + u.u * 4.2 + t * 0.9;
+    s.visible = la > 0.02;
+    s.position.set(Math.cos(a) * rr, u.y, Math.sin(a) * rr);
+    s.scale.setScalar(u.taille);
+    s.material.opacity = 0.28 * la * pres(s);
+  }
+  // le sable qui se soulève du sol au début (tout autour, jusqu'à 70 blocs) et retombe à la fin
+  for (let i = 0; i < gSol.count; i++) {
+    const a0 = hache(i, 1) * 6.28, r0 = 4 + 66 * Math.sqrt(hache(i, 2)), d = hache(i, 3) * 2.2;
+    const ph = Math.max(0, t - T_FORME[0] - d) / 2.4;
+    let x, y, z, s = 0.25 + 0.3 * hache(i, 4);
+    if (t < T_FIN) {
+      const a = a0 + ph * 2.5, r = mixv(r0, 44, lisse(0, 1, ph)), yy = 30 * lisse(0, 1, ph) * hache(i, 5);
+      x = Math.cos(a) * r; z = Math.sin(a) * r; y = yy; if (ph <= 0 || ph > 1.2) s = 0;
+    } else {
+      const u = t - T_FIN, a = a0, r = 4 + 70 * lisse(0, 1.6, u) * hache(i, 6), yy = Math.max(0, 22 * Math.sin(Math.PI * Math.min(1, u / 2.4)) * hache(i, 7));
+      x = Math.cos(a) * r; z = Math.sin(a) * r; y = yy; s *= 1.6 * (1 - lisse(2.4, 3.6, u));
+    }
+    poser(gSol, i, x, y, z, s, t * 3 + i, t * 2, 0);
+  }
+  // les grains qui tournent partout dedans
+  for (let i = 0; i < gTempete.count; i++) {
+    const a = hache(i, 8) * 6.28 + t * (1.1 + 1.4 * hache(i, 9)), r = (2 + 40 * hache(i, 10)) * tasse;
+    const y = (hache(i, 11) * 22 + t * 3 * (0.4 + hache(i, 12))) % 22;
+    poser(gTempete, i, Math.cos(a) * r, y, Math.sin(a) * r, la > 0.05 ? 0.07 * la + 0.04 * hache(i, 13) : 0, t * 4 + i, t * 3, 0);
+  }
+  for (let i = 0; i < gVent.count; i++) {
+    const a = hache(i, 20) * 6.28 + t * (1.6 + hache(i, 21)), r = (3 + 36 * hache(i, 22)) * tasse, y = 0.3 + 14 * hache(i, 23);
+    poser(gVent, i, Math.cos(a) * r, y, Math.sin(a) * r, Math.max(0, la - 0.4) * 1.6, 0, -a, 0, 4 + 5 * hache(i, 24));
+  }
+
+  // les tornades : des entonnoirs qui serpentent, plus larges en haut
+  const tor = la * lisse(5.6, 6.3, t) * (1 - eff);
+  TORNADES.forEach((l, k) => {
+    const c = tornade(k, t);
+    for (const s of l) {
+      const u = s.userData, y = u.h * 26, rr = 0.9 + y * 0.3 + 0.4 * Math.sin(t * 4 + u.ph);
+      const a = -t * 9 + u.h * 14 + u.ph, plie = Math.sin(t * 0.8 + k) * y * 0.12;
+      s.visible = tor > 0.02;
+      s.position.set(c.x + Math.cos(a) * rr + plie, y, c.z + Math.sin(a) * rr);
+      s.scale.setScalar(2 + y * 0.32);
+      s.material.opacity = 0.9 * tor * pres(s, 3, 8);
+    }
+  });
+  for (let i = 0; i < gTornade.count; i++) {
+    const k = i % NT, c = tornade(k, t), h = (hache(i, 70) * 26 + t * 6) % 26, a = -t * 11 + hache(i, 71) * 6.28, rr = 1 + h * 0.33;
+    poser(gTornade, i, c.x + Math.cos(a) * rr, h, c.z + Math.sin(a) * rr, tor * (0.25 + 0.35 * hache(i, 72)), t * 5 + i, a, 0);
+  }
+
+  // les lames : des croissants de sable qui tournent au ras du sol, avec leur traînée
+  const lam = la * lisse(7.2, 7.8, t) * (1 - eff);
+  LAMES.forEach((m, i) => {
+    const u = m.userData, a = u.a + t * u.v;
+    m.visible = lam > 0.02;
+    m.position.set(Math.cos(a) * u.r, u.y, Math.sin(a) * u.r);
+    m.rotation.set(Math.PI / 2, 0, -a);
+    m.scale.setScalar(lam);
+    for (let k = 0; k < 26; k++) {
+      const b = a - k * 0.035;
+      poser(gTrainee, i * 26 + k, Math.cos(b) * u.r, u.y + (hache(k, i) - 0.5) * 0.6, Math.sin(b) * u.r, lam * (1 - k / 26) * 1.1, k, b, 0);
+    }
+  });
+  gTrainee.instanceMatrix.needsUpdate = true;
+
+  // les victimes
+  victimes.forEach((g) => {
+    const r = victime(g, t);
+    g.position.copy(r.p);
+    g.userData.poses.forEach((m, k) => { m.visible = k === r.pose; });
+    g.rotation.set(r.rot.x, Math.atan2(-g.userData.base.x, -g.userData.base.z) + r.rot.y, r.rot.z);
+    g.userData.mat.emissiveIntensity = r.rouge * 0.9;
+  });
+
+  // les malheurs : éclairs, mains, pics, chiffres
+  let flash = 0;
+  eclairLum.intensity = 0;
+  MAINS.forEach((m) => { m.visible = false; });
+  PICS.forEach((m) => { m.visible = false; });
+  let main = 0, pic = 0;
+  const actifs = new Set();
+  MALHEURS.forEach(([d, v, s], i) => {
+    const u = t - d, g = victimes[v], cible = g.position;
+    // le chiffre de dégâts monte au-dessus de lui
+    const ch = CHIFFRES[i], coup = s === 'main' ? 2.15 : s === 'tornade' ? 0.3 : 0.05;
+    const w = u - coup;
+    ch.visible = w > 0 && w < 1.2;
+    if (ch.visible) { ch.position.set(cible.x, cible.y + 2.6 + w * 1.6, cible.z); ch.material.opacity = 1 - lisse(0.8, 1.2, w); ch.scale.set(3.2 * (1 + 0.3 * (1 - lisse(0, 0.15, w))), 1.2, 1); }
+    if (u > -0.2 && u < 1.6) actifs.add(LIGNE[s]);
+    if (s === 'eclair') {
+      const e = ECLAIRS[i], vu = u > 0 && u < 0.45;
+      e.visible = vu;
+      if (vu) {
+        // l'éclair part du haut de l'ouragan et tombe sur lui ; il clignote
+        const on = Math.sin(u * 60) > -0.3 ? 1 : 0.2;
+        const haut = V(cible.x * 0.4 + 12 * Math.cos(d), 34, cible.z * 0.4 + 12 * Math.sin(d));
+        const pts = e.children[0].geometry.attributes.position;
+        void pts;
+        e.position.set(0, 0, 0);
+        e.children.forEach((c) => { c.material.opacity = on * (1 - u / 0.45); });
+        // on recalcule la forme (du haut jusqu'à lui)
+        if (!e.userData.pose || e.userData.pose !== i) { e.userData.pose = i; }
+        e.userData.vise = cible.clone().setY(cible.y + 1);
+        e.userData.haut = haut;
+        flash = Math.max(flash, on * (1 - u / 0.45) * 0.55);
+        eclairLum.position.copy(cible).setY(4); eclairLum.intensity = 40 * on * (1 - u / 0.45);
+      }
+    }
+    if (s === 'main' && u > 0 && u < 3.2 && main < MAINS.length) {
+      const m = MAINS[main++];
+      m.visible = true;
+      // elle sort du sable sous lui, se referme, le soulève, puis l'abat
+      const sort = lisse(0, 0.6, u), ferme = lisse(0.5, 0.9, u), rentre = lisse(2.6, 3.2, u);
+      const base = victimes[v].userData.base;
+      const ang = Math.atan2(base.z, base.x) + LA(d) * (d - T_FORME[0]) * 0.05, dist = base.length();
+      m.position.set(Math.cos(ang) * dist, mixv(-6, 0.4, sort) + cible.y - (u > 1.9 ? 0 : 0) - rentre * 8, Math.sin(ang) * dist - 1.4);
+      m.rotation.set(-0.5 + 0.3 * ferme, 0, 0);
+      m.scale.setScalar(1.3);
+      m.userData.doigts.forEach(([p1, p2], k) => { p1.rotation.x = -1.1 * ferme * (k === 4 ? 0.7 : 1) + 0.4 * (1 - ferme); p2.rotation.x = -1.2 * ferme; });
+    }
+    if (s === 'pics' && u > 0 && u < 1.6 && pic < PICS.length) {
+      const m = PICS[pic++];
+      m.visible = true;
+      const base = victimes[v].userData.base;
+      const ang = Math.atan2(base.z, base.x) + LA(d) * (d - T_FORME[0]) * 0.05, dist = base.length();
+      m.position.set(Math.cos(ang) * dist, -4.5 * (1 - lisse(0, 0.12, u)) - 5 * lisse(1.1, 1.6, u), Math.sin(ang) * dist);
+      m.scale.setScalar(1.3);
+    }
+  });
+  // les éclairs : on refait leur forme quand ils tombent
+  ECLAIRS.forEach((e, i) => {
+    if (!e || !e.visible || !e.userData.vise) return;
+    if (e.userData.fait === i) return;
+    e.userData.fait = i;
+    const neuf = eclair(e.userData.haut, e.userData.vise, 300 + i * 7);
+    scene.remove(e); ECLAIRS[i] = neuf; neuf.visible = true; neuf.userData.fait = i;
+  });
+  ECLAIRS_MUR.forEach((e, k) => {
+    const cyc = (t * 1.3 + k * 0.37) % 2.2, on = la > 0.5 && cyc < 0.18 && Math.sin(cyc * 90) > -0.4 ? 1 : 0;
+    e.visible = on > 0;
+    e.rotation.y = Math.floor((t * 1.3 + k * 0.37) / 2.2) * 1.7 + k + t * 0.4;
+    e.children.forEach((c) => { c.material.opacity = on; });
+    if (on && !dedansCam) flash = Math.max(flash, 0.12);
+  });
+  for (const k of ['d0', 'd1', 'd2', 'd3', 'd4', 'd5']) $(k).classList.toggle('on', actifs.has(k) || (k === 'd5' && t > T_FIN && t < T_FIN + 1.6));
+
+  // la fin : l'ouragan s'effondre en une colonne, puis explose en anneau
+  const u = t - T_FIN;
+  CHIFFRES_FIN.forEach((ch, k) => {
+    ch.visible = u > 0.1 && u < 1.6;
+    if (ch.visible) { const p = victimes[k].position; ch.position.set(p.x, p.y + 2.8 + u * 1.4, p.z); ch.material.opacity = 1 - lisse(1.1, 1.6, u); }
+  });
+  flash = Math.max(flash, u > 0 ? 0.9 * (1 - lisse(0, 0.6, u)) : 0);
+  $('flash').style.opacity = flash.toFixed(3);
+  // les bouffées de l'explosion : on réutilise celles des bandes, qui filent vers le dehors
+  if (u > 0 && u < 3.4) {
+    BANDES.forEach((s, i) => {
+      const a = (i / BANDES.length) * Math.PI * 2 * 3 + hache(i, 55);
+      const r = 2 + 60 * lisse(0, 1.8, u) * (0.6 + 0.4 * hache(i, 56));
+      s.visible = true;
+      s.position.set(Math.cos(a) * r, 0.8 + 10 * hache(i, 57) * Math.sin(Math.PI * Math.min(1, u / 2.4)), Math.sin(a) * r);
+      s.scale.setScalar(5 + 9 * lisse(0, 1.5, u));
+      s.material.opacity = 0.95 * (1 - lisse(1.6, 3.4, u));
+    });
+  }
+
+  for (const g of [gSol, gTempete, gVent, gTornade]) g.instanceMatrix.needsUpdate = true;
+  let txt = ''; for (const [d, l] of ETAPES) if (t >= d) txt = l;
+  $('legende').textContent = txt;
+  $('rire').style.opacity = Math.max(lisse(0.2, 0.5, t) * (1 - lisse(2, 2.4, t)), lisse(16.6, 16.9, t) * (1 - lisse(18.2, 18.4, t))).toFixed(2);
+  $('rire').style.transform = `translateX(-50%) scale(${1 + 0.06 * Math.sin(t * 18)})`;
+  $('horloge').textContent = t.toFixed(1).replace('.', ',') + ' s';
+}
+
+// ------------------------------------------------------------ la lecture
+let t = 0, joue = true, vitesse = 1, film = true, avant = performance.now();
+$('lecture').onclick = () => { joue = !joue; $('lecture').textContent = joue ? 'Pause' : 'Lecture'; $('lecture').classList.toggle('actif', joue); };
+$('debut').onclick = () => { t = 0; };
+$('ralenti').onclick = () => { vitesse = vitesse === 1 ? 0.35 : 1; $('ralenti').classList.toggle('actif', vitesse < 1); };
+$('temps').oninput = (e) => { t = +e.target.value; };
+const choisirCam = (f) => {
+  film = f; controles.enabled = !f;
+  $('camFilm').classList.toggle('actif', f); $('camLibre').classList.toggle('actif', !f);
+  if (!f) { camera.position.set(-60, 40, -60); controles.target.set(0, 5, 0); controles.update(); }
+};
+$('camFilm').onclick = () => choisirCam(true);
+$('camLibre').onclick = () => choisirCam(false);
+const fige = new URLSearchParams(location.search).get('t');
+if (fige !== null) { t = +fige; joue = false; $('lecture').textContent = 'Lecture'; $('lecture').classList.remove('actif'); }
+
+function boucle(maintenant) {
+  const dt = Math.min(0.05, (maintenant - avant) / 1000); avant = maintenant;
+  if (joue) { t += dt * vitesse; if (t > DUREE) t = 0; }
+  if (film) camFilm(t); else controles.update();
+  mettreA(t);
+  $('temps').value = t;
+  rendu.render(scene, camera);
+  requestAnimationFrame(boucle);
+}
+requestAnimationFrame(boucle);
+window.pret = true;
+</script>
+</body>
+</html>

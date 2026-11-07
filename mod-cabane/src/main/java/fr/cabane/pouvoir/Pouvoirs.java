@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
     public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Susano4.NOM, Hachibi.NOM, Hachibi.NOM2, Hachibi4.NOM, Maudit.NOM, Maudit.NOM2, Maudit.NOM3, Minato.NOM, Minato.NOM2,
-            Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Foudre.NOM, Foudre.NOM2, Foudre.NOM3, Vent.NOM, Vent.NOM2, Vent.NOM3);
+            Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Ichibi.NOM2, Ichibi.NOM3, Foudre.NOM, Foudre.NOM2, Foudre.NOM3, Vent.NOM, Vent.NOM2, Vent.NOM3);
 
     /** Les couleurs possibles (en français ou en anglais dans la commande) : la teinte du corps, puis celle du contour. */
     public enum Couleur {
@@ -184,8 +184,8 @@ public final class Pouvoirs {
         public record Elu(String pouvoir, Couleur couleur, String nom) {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
-                return Hachibi.deux(pouvoir) || Susano4.est(pouvoir) ? 4 : Susano3.est(pouvoir) || pouvoir.equals(Maudit.NOM3) || Fruit.troisieme(pouvoir) || pouvoir.equals(Foudre.NOM3) || pouvoir.equals(Vent.NOM3) ? 3
-                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) || pouvoir.equals(Vent.NOM2) ? 2 : 1;
+                return Hachibi.deux(pouvoir) || Susano4.est(pouvoir) ? 4 : Susano3.est(pouvoir) || pouvoir.equals(Maudit.NOM3) || Fruit.troisieme(pouvoir) || pouvoir.equals(Foudre.NOM3) || pouvoir.equals(Vent.NOM3) || pouvoir.equals(Ichibi.NOM3) ? 3
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) || pouvoir.equals(Vent.NOM2) || pouvoir.equals(Ichibi.NOM2) ? 2 : 1;
             }
         }
 
@@ -401,7 +401,7 @@ public final class Pouvoirs {
             Fruit.eveiller(joueur, suivant);
         }
         if (Ichibi.est(elu.pouvoir())) {
-            Ichibi.eveiller(joueur);
+            Ichibi.eveiller(joueur, suivant);
         }
         if (Foudre.est(elu.pouvoir())) {
             Foudre.eveiller(joueur, suivant);
@@ -504,7 +504,7 @@ public final class Pouvoirs {
     /** Les pouvoirs qui vont ensemble (on passe de l'un à l'autre sans s'endormir) : les deux Susano, les deux marques. */
     private static String famille(String pouvoir) {
         return pouvoir.startsWith("susano") ? "susano" : Maudit.est(pouvoir) ? Maudit.NOM : Hachibi.est(pouvoir) ? Hachibi.NOM
-                : Minato.est(pouvoir) ? Minato.NOM : pouvoir;
+                : Minato.est(pouvoir) ? Minato.NOM : Ichibi.est(pouvoir) ? Ichibi.NOM : pouvoir;
     }
 
     private static boolean hachibi(ServerPlayer joueur) {
@@ -531,7 +531,7 @@ public final class Pouvoirs {
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
         // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2, toujours au plus haut)
         // (et la marque au niveau 3, aux serpents ; et les fruits au niveau 3)
-        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
+        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Ichibi.est(pouvoir(joueur)) || Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
         // Minato (niveau 1) compte comme un niveau 2 : de la netherite
         boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
         boolean parfait = Susano4.est(pouvoir(joueur)) && niveau >= 4;
@@ -910,7 +910,7 @@ public final class Pouvoirs {
             }
             int reste = entree.getValue() + dureeEveil(Math.max(niveau(joueur), yeux(joueur))) - maintenant;
             // l'ulti de Hachibi 4 va jusqu'au bout de ses 45 secondes : l'éveil s'endort après
-            if (reste <= 0 && !Hachibi4.actif(joueur) && !Orage.actif(joueur) && !Meteorite.actif(joueur) && !Vent3.ultiActif(joueur)) {
+            if (reste <= 0 && !Hachibi4.actif(joueur) && !Orage.actif(joueur) && !Meteorite.actif(joueur) && !Vent3.ultiActif(joueur) && !IchibiTempete.actif(joueur)) {
                 endormir(joueur);
                 joueur.displayClientMessage(Component.literal("Ton pouvoir s'épuise et s'endort. Il se repose une minute.").withStyle(ChatFormatting.GOLD), false);
             } else if (reste == 60 * 20 || reste == 30 * 20 || (reste <= 10 * 20 && reste % 20 == 0)) {

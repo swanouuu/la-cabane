@@ -258,7 +258,7 @@ public final class PhotoTour {
             }
             case "technique" -> {
                 // la touche ² : le Susano monte d un niveau (ou Minato va à son kunai)
-                if (!fr.cabane.client.pouvoir.ClientMinato.technique()) {
+                if (!fr.cabane.client.pouvoir.ClientMinato.technique() && !fr.cabane.client.pouvoir.ClientIchibi.technique()) {
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_SUSANO));
                 }
                 return 2;
@@ -338,6 +338,8 @@ public final class PhotoTour {
                 j.setYRot(Float.parseFloat(e[2]));
                 j.setXRot(Float.parseFloat(e[3]));
                 j.yRotO = j.getYRot();
+                // le corps aussi (sinon il reste tourné d'avant, et la caméra le voit de biais)
+                j.yBodyRot = j.yBodyRotO = j.yHeadRot = j.yHeadRotO = j.getYRot();
                 j.xRotO = j.getXRot();
                 if (e.length > 4) {
                     return Integer.parseInt(e[4]);

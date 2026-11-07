@@ -162,9 +162,9 @@ function joueur(sc, peau, o = {}) {
   }
   const etape = o.etape ?? 2;
   for (const [nom, boite, uv1, uv2, gonfle] of PARTIES(false)) {
-    if (etape && nom === "brasD") continue;
+    if ((etape && nom === "brasD") || o.cache?.includes(nom)) continue;
     const R = nom === "tete" ? 4 : 2, base = texels(boite, uv1, 0, R);
-    const couvert = base.map((t) => etape > 0 && pris(nom, t, etape));
+    const couvert = base.map((t) => etape > 0 && (o.pris ?? pris)(nom, t, etape));
     const dessus = texels(boite, uv1, EPAIS[nom] ?? 0.55, R);
     for (const [uv, g, d] of [[uv1, 0, 0], [uv2, gonfle, 0.02]]) texels(boite, uv, g, R).forEach((t, k) => {
       const l = sc.lumiere(T[nom].n(t.N), false);
@@ -186,14 +186,14 @@ function joueur(sc, peau, o = {}) {
   }
   if (o.armure) {
     for (const [nom, g, garde] of ARMURE) {
-      if (etape && nom === "brasD") continue;
+      if ((etape && nom === "brasD") || o.cache?.includes(nom)) continue;
       const boite = PARTIES(false).find((p) => p[0] === nom)[1];
       for (const t of texels(boite, [0, 0], g, 2)) {
         if (!garde(t)) continue;
         const l = sc.lumiere(T[nom].n(t.N), false);
         if (l < 0) continue;
         // de son côté, le sable passe par-dessus l'armure
-        if (etape && pris(nom, t, etape)) {
+        if (etape && (o.pris ?? pris)(nom, t, etape)) {
           sc.quad(t.coins.map(T[nom].p), teinte(nom, t, l), 0.04, false);
           continue;
         }
@@ -203,7 +203,7 @@ function joueur(sc, peau, o = {}) {
       }
     }
   }
-  if (etape) {
+  if (etape && o.extras !== false) {
     brasGeant(sc, T, o.bras ?? REPOS);
     if (etape === 2) {
       oreille(sc, T.tete);
@@ -564,7 +564,8 @@ const vues = [
 ];
 
 // les briques servent aussi aux textures du mod (textures.mjs)
-export { bruit, sable, oeil, pris, NOMS, SABLE, SABLE_C, SABLE_F, QUEUE, ENCRE, GRIFFE };
+export { bruit, sable, oeil, pris, NOMS, SABLE, SABLE_C, SABLE_F, QUEUE, ENCRE, GRIFFE, NOIR, VERT, VERT_C, VERT_F, PUPILLE, TOUCHE, PEAU, griffe,
+  motif, joueur, membre, brasGeant, main, oreille, piquesDos, queue, grains, eclat, prise, proie, tenir, nuage, auSol, REPOS, POING, LANCE, PROIE, PIVOTS };
 
 const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 // node rendu.mjs essai 0,5 sortie.png : quelques vignettes en grand, pour les régler

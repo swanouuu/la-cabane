@@ -222,6 +222,11 @@ public final class Hachibi4 {
             Vent3.ulti(joueur);
             return;
         }
+        // et la tempête de sable d'Ichibi
+        if (action == ULTI && Ichibi.est(Pouvoirs.pouvoir(joueur))) {
+            IchibiTempete.ulti(joueur);
+            return;
+        }
         // et le grand serpent de la marque 3
         if (action == ULTI && Pouvoirs.pouvoir(joueur).equals(Maudit.NOM3)) {
             Marque3.ulti(joueur);

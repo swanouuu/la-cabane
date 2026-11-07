@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ichibi : la tempête de sable</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #9cc4ec; overflow: hidden; font-family: system-ui, sans-serif; }
+  #outils { position: fixed; left: 10px; top: 8px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 3; }
+  button { background: #3a2a14cc; color: #fff1d6; border: 1px solid #8a6a3a; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  button.actif { background: #b07a26; border-color: #ffd48a; }
+  #temps { width: 260px; accent-color: #d9a441; }
+  #horloge { color: #3a2a14; font-size: 13px; background: #fff3dccc; padding: 4px 8px; border-radius: 6px; min-width: 52px; text-align: center; }
+  #legende { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); color: #fff; font-size: 22px; font-weight: 600;
+    text-shadow: 0 2px 6px #000a, 0 0 2px #000; text-align: center; pointer-events: none; z-index: 2; max-width: 92vw; }
+  #rire { position: fixed; left: 50%; top: 20%; transform: translateX(-50%); color: #ffd36a; font-size: 54px; font-weight: 900; letter-spacing: 6px;
+    text-shadow: 0 3px 0 #6b3d0a, 0 0 18px #000a; opacity: 0; pointer-events: none; z-index: 2; }
+  #voile { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: #d9b46e; opacity: 0; }
+  #chargement { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #3a2a14; font-size: 18px; z-index: 4; background: #f3e3c3; }
+  #boost { position: fixed; right: 14px; top: 56px; background: #2a1a08d9; color: #ffe2a0; border: 1px solid #c9922e; border-radius: 8px;
+    padding: 10px 14px; font-size: 15px; line-height: 1.6; opacity: 0; pointer-events: none; z-index: 2; }
+  #boost b { color: #fff; display: block; margin-bottom: 2px; }
+  #aide { position: fixed; right: 12px; bottom: 8px; color: #fff; font-size: 12px; text-shadow: 0 1px 3px #000; z-index: 2; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="outils">
+  <button id="lecture" class="actif">Pause</button>
+  <button id="debut">Recommencer</button>
+  <button id="ralenti">Ralenti</button>
+  <input id="temps" type="range" min="0" max="14" step="0.01" value="0">
+  <span id="horloge">0,0 s</span>
+  <button id="camFilm" class="actif">Caméra comme la vidéo</button>
+  <button id="camLibre">Caméra libre</button>
+</div>
+<div id="voile"></div>
+<div id="legende"></div>
+<div id="rire">HA HA HA HA</div>
+<div id="chargement">Chargement des modèles…</div>
+<div id="boost"><b>Dans sa tempête, tout est boosté</b>dégâts ×1,5<br>vitesse III, grands sauts<br>attaques plus rapides, portée +50 %<br>recharges ÷ 2<br>armure +8, régénération II</div>
+<div id="aide">caméra libre : clic gauche tourner · clic droit déplacer · molette zoomer</div>
+<script type="module">
+// L'ulti d'Ichibi (J au niveau 3) : une grosse tempête de sable, c'est tout. Il rit, le sable monte autour de lui, un
+// mur de sable géant arrive de l'horizon et avale tout le coin, puis la tempête retombe. Les modèles viennent des
+// croquis (exporter.mjs). Tout se calcule à partir du temps t (0 à 14 s) : on peut avancer, reculer, ralentir.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const DUREE = 14;
+const CLAIR = new URLSearchParams(location.search).has('clair');
+const $ = (id) => document.getElementById(id);
+const rendu = new THREE.WebGLRenderer({ antialias: true });
+rendu.setPixelRatio(Math.min(2, devicePixelRatio));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const CIEL = new THREE.Color(0x9cc4ec), TEMPETE = new THREE.Color(0xc99a52), BRUME = new THREE.Color(0xe0bf80);
+scene.background = CIEL.clone();
+scene.fog = new THREE.Fog(CIEL.clone(), 70, 260);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 600);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.enabled = false;
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); rendu.setSize(innerWidth, innerHeight); });
+
+const ciel = new THREE.HemisphereLight(0xeef4ff, 0xd8c8a8, 1.25);
+const soleil = new THREE.DirectionalLight(0xfff0d8, 1.5);
+soleil.position.set(25, 55, 35);
+const contre = new THREE.DirectionalLight(0xfff4e4, 0.6);
+contre.position.set(-20, 30, -40);
+scene.add(ciel, soleil, contre);
+
+// ------------------------------------------------------------ outils
+const lisse = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const mixv = (a, b, k) => a + (b - a) * k;
+const hache = (i, k) => { let h = (i * 374761393 + k * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const lin = (c) => Math.pow(c / 255, 2.2);
+
+/** Un modèle des croquis : faces (4 coins, normale, couleur) → maillage. */
+async function modele(nom) {
+  const b = await (await fetch('modeles/' + nom + '.bin')).arrayBuffer();
+  const v = new DataView(b), n = b.byteLength / 64;
+  const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12), col = new Float32Array(n * 12), idx = new Uint32Array(n * 6);
+  for (let i = 0; i < n; i++) {
+    const o = i * 64, P = [];
+    for (let k = 0; k < 12; k++) P.push(v.getFloat32(o + k * 4, true));
+    const N = [v.getFloat32(o + 48, true), v.getFloat32(o + 52, true), v.getFloat32(o + 56, true)];
+    const c = [lin(v.getUint8(o + 60)), lin(v.getUint8(o + 61)), lin(v.getUint8(o + 62))];
+    for (let k = 0; k < 12; k++) { pos[i * 12 + k] = P[k]; nor[i * 12 + k] = N[k % 3]; col[i * 12 + k] = c[k % 3]; }
+    const ux = P[3] - P[0], uy = P[4] - P[1], uz = P[5] - P[2], wx = P[6] - P[0], wy = P[7] - P[1], wz = P[8] - P[2];
+    const d = (uy * wz - uz * wy) * N[0] + (uz * wx - ux * wz) * N[1] + (ux * wy - uy * wx) * N[2];
+    const a = i * 4;
+    idx.set(d >= 0 ? [a, a + 1, a + 2, a, a + 2, a + 3] : [a, a + 2, a + 1, a, a + 3, a + 2], i * 6);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  return g;
+}
+const matiere = (o = {}) => new THREE.MeshLambertMaterial({ vertexColors: true, ...o });
+
+// ------------------------------------------------------------ le décor : le désert, les montagnes, des palmiers
+function texSable() {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const x = c.getContext('2d');
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) {
+    const k = 0.9 + 0.14 * hache(i * 16 + j, 3);
+    x.fillStyle = `rgb(${Math.round(218 * k)},${Math.round(184 * k)},${Math.round(124 * k)})`;
+    x.fillRect(i, j, 1, 1);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(400, 400);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const sol = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshLambertMaterial({ map: texSable() }));
+sol.rotation.x = -Math.PI / 2;
+scene.add(sol);
+function bloc(x, y, z, sx, sy, sz, couleur) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshLambertMaterial({ color: couleur }));
+  m.position.set(x, y + sy / 2, z);
+  scene.add(m);
+  return m;
+}
+for (let i = 0; i < 26; i++) {
+  const a = -1.2 + (i / 25) * 2.4, r = 150 + 30 * hache(i, 1);
+  const x = Math.sin(a) * r, z = Math.cos(a) * r, h = 18 + 30 * hache(i, 2);
+  for (let k = 0; k < 4; k++) bloc(x + (hache(i, 3 + k) - 0.5) * 20, 0, z + (hache(i, 9 + k) - 0.5) * 12, 18 - k * 4, h * (1 - k * 0.22), 14 - k * 3, k % 2 ? 0x8d8a90 : 0x7a7780);
+}
+const palmes = [];
+for (let i = 0; i < 22; i++) {
+  const x = (hache(i, 20) - 0.5) * 120, z = -20 + hache(i, 21) * 110;
+  if (Math.abs(x) < 10 && z < 26) continue;
+  const h = 5 + 3 * hache(i, 22);
+  bloc(x, 0, z, 0.6, h, 0.6, 0x8a6a40);
+  const g = new THREE.Group(); g.position.set(x, h, z); scene.add(g); palmes.push(g);
+  for (const [dx, dz] of [[1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [0, 0]]) {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(dx ? 2.6 : 1.2, 0.5, dz ? 2.6 : 1.2), new THREE.MeshLambertMaterial({ color: 0x5fa040 }));
+    f.position.set(dx, -0.4 - (dx || dz ? 0.6 : 0), dz); g.add(f);
+  }
+}
+
+// ------------------------------------------------------------ les acteurs
+const BRAS = [0, 1, 2, 3, 4, 5, 6, 7].map((k) => 'bras-' + k);
+const [gCorps, gJD, gJG, gRepos, gRire, gSteve, gPeur, ...gBras] = await Promise.all(['bete-corps', 'jambeD', 'jambeG', 'bras-repos', 'rire', 'steve', 'steve-peur', ...BRAS].map(modele));
+$('chargement').remove();
+// au niveau 3 il n'a plus de jarre : c'est le sable de son corps qui s'illumine
+const matBete = matiere({ emissive: new THREE.Color(0xffb030), emissiveIntensity: 0 });
+// la bête en morceaux pour qu'elle coure : le corps, les jambes qui tournent à la hanche, les bras en 8 poses de course
+const bete = new THREE.Group(), beteRire = new THREE.Mesh(gRire, matBete);
+bete.add(new THREE.Mesh(gCorps, matBete));
+const hanche = (g, x) => { const h = new THREE.Group(); h.position.set(x, 10.5 / 16, 0); const m = new THREE.Mesh(g, matBete); m.position.set(-x, -10.5 / 16, 0); h.add(m); bete.add(h); return h; };
+const jambeD = hanche(gJD, -2 / 16), jambeG = hanche(gJG, 2 / 16);
+const brasRepos = new THREE.Mesh(gRepos, matBete);
+const brasCourse = gBras.map((g) => new THREE.Mesh(g, matBete));
+bete.add(brasRepos, ...brasCourse);
+const lui = new THREE.Group();
+lui.add(bete, beteRire);
+scene.add(lui);
+const matTouche = matiere({ emissive: new THREE.Color(0xff2a10), emissiveIntensity: 0 });
+const cibles = [[0, 0, 14], [-6, 0, 18], [6.5, 0, 16.5]].map(([x, y, z], i) => {
+  const g = new THREE.Group();
+  const a = new THREE.Mesh(gSteve, matiere()), b = new THREE.Mesh(gPeur, matTouche);
+  a.rotation.y = b.rotation.y = Math.PI;
+  g.add(a, b); g.position.set(x, y, z); g.userData = { a, b, base: new THREE.Vector3(x, y, z), k: i };
+  scene.add(g);
+  return g;
+});
+
+// ------------------------------------------------------------ la tempête
+// des bouffées de sable (sprites doux) : le mur qui arrive en roulant, puis celles qui tournent autour de lui
+function texBouffee(dur) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  // une bouffée bosselée : plusieurs disques flous
+  for (let k = 0; k < 7; k++) {
+    const cx = 64 + (hache(k, 70 + dur) - 0.5) * 50, cy = 64 + (hache(k, 71 + dur) - 0.5) * 50, r = 26 + 22 * hache(k, 72 + dur);
+    const g = x.createRadialGradient(cx, cy, 1, cx, cy, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.75)'); g.addColorStop(0.6, 'rgba(255,255,255,0.3)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEX = [texBouffee(0), texBouffee(1), texBouffee(2)];
+function bouffee(i) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX[i % 3], transparent: true, depthWrite: false, opacity: 0, fog: true }));
+  scene.add(s);
+  return s;
+}
+const COUL = [new THREE.Color(0xb7864a), new THREE.Color(0xd0a462), new THREE.Color(0xe6c48a)];
+const mur = [];
+for (let i = 0; i < 520; i++) {
+  const s = bouffee(i);
+  const etage = hache(i, 80);
+  s.userData = { x: (hache(i, 81) - 0.5) * 220, y: Math.pow(etage, 1.2) * 52, dz: (hache(i, 82) - 0.5) * 16, ph: hache(i, 83) * 6.28, taille: 14 + 18 * etage + 8 * hache(i, 84) };
+  s.material.color.copy(COUL[0]).lerp(COUL[2], etage * 0.8 + 0.2 * hache(i, 85));
+  mur.push(s);
+}
+const tourbillon = [];
+for (let i = 0; i < 160; i++) {
+  const s = bouffee(i + 1);
+  s.userData = { a: hache(i, 90) * 6.28, r: 5 + 32 * hache(i, 91), y: 0.5 + 16 * Math.pow(hache(i, 92), 1.4), v: 0.35 + 0.5 * hache(i, 93), taille: 5 + 9 * hache(i, 94) };
+  s.material.color.copy(COUL[1]).lerp(COUL[2], hache(i, 95));
+  tourbillon.push(s);
+}
+// des grains et des traînées de vent
+function grains(n, sx, sy, sz) {
+  const g = new THREE.InstancedMesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+  const c = new THREE.Color();
+  for (let i = 0; i < n; i++) { const k = hache(i, 40 + n); g.setColorAt(i, c.setRGB(...(k < 0.33 ? [0.6, 0.42, 0.22] : k < 0.66 ? [0.75, 0.58, 0.34] : [0.86, 0.72, 0.5]))); }
+  g.frustumCulled = false; scene.add(g); return g;
+}
+const gMonte = grains(500, 1, 1, 1), gTempete = grains(2600, 1, 1, 1), gVent = grains(420, 0.04, 0.04, 1);
+gVent.material.transparent = true; gVent.material.opacity = 0.45; gVent.material.depthWrite = false;
+const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = new THREE.Vector3(), P = new THREE.Vector3();
+function poser(g, i, x, y, z, s, rx = 0, ry = 0, rz = 0, long = 1) {
+  // rien tout près de la caméra (sinon un grain cache l'écran)
+  const d = Math.hypot(x - camera.position.x, y - camera.position.y, z - camera.position.z);
+  s *= Math.min(1, Math.max(0, (d - 3) / 4));
+  if (s <= 0) { M.makeScale(0, 0, 0); g.setMatrixAt(i, M); return; }
+  E.set(rx, ry, rz); Q.setFromEuler(E);
+  M.compose(P.set(x, y, z), Q, S.set(s, s, s * long));
+  g.setMatrixAt(i, M);
+}
+
+// ------------------------------------------------------------ la chronologie
+const ETAPES = [
+  [0, "J : il rit, le sable monte autour de lui"],
+  [1.9, "Un mur de sable géant arrive de l'horizon"],
+  [4.4, "La tempête de sable : 45 s, 30 blocs autour de lui, elle le suit"],
+  [5.6, "Dedans, tout est boosté pour lui : il fonce et tape beaucoup plus fort"],
+  [8.5, "Les autres ne voient rien, sont lents, 1 dégât toutes les 2 s"],
+  [11, "Au bout de 45 s, la tempête retombe"],
+];
+const MUR_Z = (t) => mixv(130, -60, lisse(1.9, 5.4, t)); // le front du mur de sable
+const DEDANS = (t) => Math.max(0, Math.min(1, lisse(4.0, 4.7, t) * (1 - lisse(10.8, 12.8, t))));
+
+/** Où il est : dans la tempête, il fonce en rond autour des autres (il va beaucoup plus vite). */
+function position(t) {
+  const k = lisse(5.6, 6.2, t) * (1 - lisse(10.2, 10.9, t));
+  const a = -Math.PI / 2 + Math.max(0, t - 5.6) * 2.2;
+  const c = new THREE.Vector3(Math.cos(a) * 7, 0, 9 + Math.sin(a) * 7);
+  const d = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a));
+  return { p: c.multiplyScalar(k), dir: Math.atan2(d.x, d.z) * k };
+}
+
+function camFilm(t) {
+  const pos = new THREE.Vector3(), vise = new THREE.Vector3();
+  if (t < 1.9) { const k = lisse(0, 1.9, t); pos.set(mixv(7, 5, k), mixv(3, 3.6, k), mixv(6, 4, k)); vise.set(0, 2.2, 0.5); }
+  else if (t < 4.6) { const k = lisse(1.9, 2.6, t); pos.set(mixv(5, 1, k), mixv(3.6, 3.4, k), mixv(4, -8, k)); vise.set(0, mixv(2.2, 8, k), mixv(0.5, 50, k)); }
+  else if (t < 11.5) {
+    // dans la tempête : on tourne lentement autour de lui
+    // dans la tempête : la caméra le suit de dos pendant qu'il fonce
+    const { p: l, dir } = position(t), av = new THREE.Vector3(Math.sin(dir), 0, Math.cos(dir));
+    pos.copy(l).addScaledVector(av, -8.5).add(new THREE.Vector3(0, 4.2, 0)); vise.copy(l).addScaledVector(av, 5).add(new THREE.Vector3(0, 1.6, 0));
+  } else {
+    const k = lisse(11.5, 13.5, t);
+    pos.set(mixv(0, -14, k), mixv(4.2, 9, k), mixv(-8.5, -10, k)); vise.set(0, 2, mixv(2, 10, k));
+  }
+  const sec = 0.22 * (lisse(3.9, 4.5, t) - lisse(5.2, 6.2, t));
+  pos.x += sec * Math.sin(t * 61); pos.y += sec * Math.sin(t * 47 + 1);
+  camera.position.copy(pos); camera.lookAt(vise);
+}
+
+function mettreA(t) {
+  // ?clair : sans la tempête (pour bien voir la course)
+  const dedans = CLAIR ? 0 : DEDANS(t);
+  // lui : il rit au début, son sable brille un peu pendant la tempête
+  const rire = t < 1.9 || t > 12.6;
+  bete.visible = !rire; beteRire.visible = rire;
+  const { p: ici, dir } = position(t);
+  // la course : les jambes balancent, les mains se posent l'une après l'autre, le corps rebondit
+  const court = lisse(5.6, 6.0, t) * (1 - lisse(10.3, 10.9, t));
+  const phi = Math.max(0, t - 5.6) * Math.PI * 2 * 2.6;
+  jambeD.rotation.x = mixv(0.55, 0.15 + 0.65 * Math.cos(phi), court);
+  jambeG.rotation.x = mixv(-0.25, 0.15 - 0.65 * Math.cos(phi), court);
+  const img = ((Math.round(phi / (Math.PI * 2) * 8) % 8) + 8) % 8;
+  brasRepos.visible = court < 0.3;
+  brasCourse.forEach((m, k) => { m.visible = court >= 0.3 && k === img; });
+  lui.position.copy(ici); lui.position.y += 0.14 * Math.abs(Math.sin(phi)) * court; lui.rotation.y = dir;
+  bete.rotation.x = 0.05 * Math.sin(phi * 2) * court;
+  // boosté : son sable luit d'or et pulse
+  matBete.emissiveIntensity = dedans * (0.12 + 0.06 * Math.sin(t * 9));
+  $('boost').style.opacity = lisse(5.6, 6.1, t) * (1 - lisse(10.6, 11.2, t));
+  // les autres : ils se cachent les yeux, poussés par le vent, rouges quand ça tape
+  for (const g of cibles) {
+    const { a, b, base, k } = g.userData;
+    a.visible = t < 2.4 || t > 12.6; b.visible = !a.visible;
+    const pousse = dedans * (0.6 + 0.4 * Math.sin(t * 2.3 + k));
+    g.position.copy(base).add(new THREE.Vector3(Math.sin(t * 1.7 + k) * 0.6 * dedans, 0, 2.2 * pousse));
+    g.rotation.set(-0.35 * pousse, 0.3 * Math.sin(t * 1.3 + k) * dedans, 0);
+  }
+  // rouges quand il passe à côté d'eux en fonçant
+  const proche = Math.min(...cibles.map((g) => g.position.distanceTo(ici)));
+  matTouche.emissiveIntensity = dedans > 0.5 ? Math.max(0.3 * Math.max(0, Math.sin(t * Math.PI)) ** 8, proche < 4 ? 0.8 : 0) : 0;
+  // les palmiers plient dans le vent
+  const vent = lisse(3.4, 4.6, t) * (1 - lisse(10.8, 12.5, t));
+  palmes.forEach((g, i) => { g.rotation.z = vent * (0.25 + 0.08 * Math.sin(t * 6 + i)); });
+  // le ciel : le sable cache tout, puis ça se dégage
+  const coul = CIEL.clone().lerp(TEMPETE, dedans * 0.9).lerp(BRUME, dedans * 0.25);
+  scene.background.copy(coul); scene.fog.color.copy(coul);
+  scene.fog.near = mixv(70, 3, dedans); scene.fog.far = mixv(260, 38, dedans);
+  ciel.intensity = mixv(1.25, 0.9, dedans); soleil.intensity = mixv(1.5, 0.5, dedans);
+  $('voile').style.opacity = (0.5 * (lisse(4.0, 4.4, t) - lisse(4.5, 5.6, t))).toFixed(3);
+  // le mur : des bouffées qui roulent vers l'avant (en haut elles avancent, en bas elles reviennent)
+  const zf = MUR_Z(t), murVu = t > 1.8 && t < 5.6;
+  for (const s of mur) {
+    const u = s.userData, rol = u.ph + t * 1.6;
+    const y = u.y + 4 * Math.sin(rol), z = zf + u.dz + 4 * Math.cos(rol) + 0.002 * u.x * u.x;
+    s.position.set(u.x, Math.max(u.taille * 0.3, y), z);
+    s.scale.setScalar(u.taille * (0.9 + 0.1 * Math.sin(rol * 1.3)));
+    s.material.rotation = rol * 0.2;
+    s.material.opacity = murVu ? 0.92 : 0;
+  }
+  // dedans : des bouffées qui tournent autour de lui
+  for (const s of tourbillon) {
+    const u = s.userData, a = u.a + t * u.v;
+    s.position.set(Math.cos(a) * u.r, u.y + Math.sin(t + u.a) * 0.8, 2 + Math.sin(a) * u.r);
+    s.scale.setScalar(u.taille);
+    s.material.rotation = a;
+    s.material.opacity = 0.42 * dedans;
+  }
+  // le sable qui monte autour de lui au début ; dans la tempête, la traînée derrière lui quand il fonce
+  const fonce = lisse(5.8, 6.2, t) * (1 - lisse(10.2, 10.6, t));
+  if (fonce > 0) for (let i = 0; i < gMonte.count; i++) {
+    const d = 0.18 + hache(i, 5) * 0.6, q = position(t - d).p;
+    poser(gMonte, i, q.x + (hache(i, 6) - 0.5) * 2.4, 0.2 + 1.6 * hache(i, 7) + d * 1.5, q.z + (hache(i, 8) - 0.5) * 2.4, fonce * 0.14 * (1 - (d - 0.18) / 0.6), t * 5 + i, t * 3, 0);
+  }
+  else for (let i = 0; i < gMonte.count; i++) {
+    const d = hache(i, 1) * 1.2, ph = (t - d) / 1.6;
+    const a = hache(i, 2) * 6.28 + ph * 5, r = 1.6 + 2.4 * hache(i, 3) + ph * 2, y = ph * 8;
+    poser(gMonte, i, Math.cos(a) * r, y, Math.sin(a) * r, ph > 0 && ph < 1 && t < 4.5 ? 0.07 + 0.06 * hache(i, 4) : 0, t * 3 + i, t * 2, 0);
+  }
+  // les grains de la tempête : ça tourne vite autour de lui
+  for (let i = 0; i < gTempete.count; i++) {
+    const a = hache(i, 8) * 6.28 + t * (0.9 + 1.2 * hache(i, 9)), r = 2 + 34 * hache(i, 10);
+    const y = (hache(i, 11) * 16 + t * 2 * (0.4 + hache(i, 12))) % 16;
+    poser(gTempete, i, Math.cos(a) * r, y, 2 + Math.sin(a) * r, dedans > 0.05 ? 0.1 * dedans + 0.05 * hache(i, 13) : 0, t * 4 + i, t * 3, 0);
+  }
+  // les traînées de vent, tangentes au tourbillon
+  for (let i = 0; i < gVent.count; i++) {
+    const a = hache(i, 20) * 6.28 + t * (1.4 + hache(i, 21)), r = 3 + 26 * hache(i, 22), y = 0.3 + 10 * hache(i, 23);
+    poser(gVent, i, Math.cos(a) * r, y, 2 + Math.sin(a) * r, Math.max(0, dedans - 0.5) * 2, 0, -a, 0, 3 + 4 * hache(i, 24));
+  }
+  for (const g of [gMonte, gTempete, gVent]) g.instanceMatrix.needsUpdate = true;
+  // les textes
+  let txt = ''; for (const [d, l] of ETAPES) if (t >= d) txt = l;
+  $('legende').textContent = txt;
+  $('rire').style.opacity = Math.max(lisse(0.2, 0.5, t) * (1 - lisse(1.6, 1.9, t)), lisse(12.6, 12.9, t) * (1 - lisse(13.7, 14, t))).toFixed(2);
+  $('rire').style.transform = `translateX(-50%) scale(${1 + 0.06 * Math.sin(t * 18)})`;
+  $('horloge').textContent = t.toFixed(1).replace('.', ',') + ' s';
+}
+
+// ------------------------------------------------------------ la lecture
+let t = 0, joue = true, vitesse = 1, film = true, avant = performance.now();
+$('lecture').onclick = () => { joue = !joue; $('lecture').textContent = joue ? 'Pause' : 'Lecture'; $('lecture').classList.toggle('actif', joue); };
+$('debut').onclick = () => { t = 0; };
+$('ralenti').onclick = () => { vitesse = vitesse === 1 ? 0.35 : 1; $('ralenti').classList.toggle('actif', vitesse < 1); };
+$('temps').oninput = (e) => { t = +e.target.value; };
+const choisirCam = (f) => {
+  film = f; controles.enabled = !f;
+  $('camFilm').classList.toggle('actif', f); $('camLibre').classList.toggle('actif', !f);
+  if (!f) { camera.position.set(-22, 14, -14); controles.target.set(0, 3, 10); controles.update(); }
+};
+$('camFilm').onclick = () => choisirCam(true);
+$('camLibre').onclick = () => choisirCam(false);
+// ?t=6.5 pour figer un moment (captures)
+const fige = new URLSearchParams(location.search).get('t');
+if (fige !== null) { t = +fige; joue = false; $('lecture').textContent = 'Lecture'; $('lecture').classList.remove('actif'); }
+
+function boucle(maintenant) {
+  const dt = Math.min(0.05, (maintenant - avant) / 1000); avant = maintenant;
+  if (joue) { t += dt * vitesse; if (t > DUREE) t = 0; }
+  if (film) camFilm(t); else controles.update();
+  mettreA(t);
+  $('temps').value = t;
+  rendu.render(scene, camera);
+  requestAnimationFrame(boucle);
+}
+requestAnimationFrame(boucle);
+</script>
+</body>
+</html>

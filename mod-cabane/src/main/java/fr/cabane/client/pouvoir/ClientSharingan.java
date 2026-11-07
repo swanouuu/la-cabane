@@ -494,7 +494,7 @@ public final class ClientSharingan {
     /** ², L, I : le Susano, le Kamui, la météorite (le serveur dit si c'est possible). */
     private static void touches(Minecraft mc) {
         while (SUSANO.consumeClick()) {
-            if (mc.screen == null && !ClientMinato.technique()) {
+            if (mc.screen == null && !ClientMinato.technique() && !ClientIchibi.technique()) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_SUSANO));
             }
         }
