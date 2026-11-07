@@ -91,6 +91,40 @@ public final class ClientSusano4 {
         return ETATS.containsKey(joueur);
     }
 
+    /** Le sol sous ce joueur (le dessus du premier bloc plein, à 90 blocs au plus), ou là où seraient les pieds du géant. */
+    private static double sol(Minecraft mc, Player joueur, Vec3 pos) {
+        HitResult sous = mc.level.clip(new ClipContext(pos.add(0, 0.5, 0), pos.subtract(0, 90, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
+        return sous.getType() == HitResult.Type.MISS ? pos.y - Susano4.HAUT : sous.getLocation().y;
+    }
+
+    /** Le joueur local vole au-dessus de la hauteur du joyau : s'accroupir le fait descendre, et ne lance pas la perce. */
+    static boolean enVol() {
+        Minecraft mc = Minecraft.getInstance();
+        Etat e = mc.player == null ? null : ETATS.get(mc.player.getUUID());
+        return e != null && e.phase() == 2 && mc.player.getY() - sol(mc, mc.player, mc.player.position()) > Susano4.HAUT + 1.5;
+    }
+
+    /**
+     * Le vol du joueur local, tenu ici (c'est son jeu qui le déplace) : jamais plus bas que le joyau (les pieds du géant au
+     * sol), sans toucher à sa vitesse à plat. Le serveur ne le corrige plus qu'en cas de gros écart.
+     */
+    @SubscribeEvent
+    public static void tenirVol(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
+            return;
+        }
+        Etat e = ETATS.get(mc.player.getUUID());
+        if (e == null || e.phase() != 2) {
+            return;
+        }
+        double cible = sol(mc, mc.player, mc.player.position()) + Susano4.HAUT;
+        if (mc.player.getY() < cible - 0.02) {
+            Vec3 v = mc.player.getDeltaMovement();
+            mc.player.setDeltaMovement(v.x, Math.max(v.y, (cible - mc.player.getY()) * 0.35), v.z);
+        }
+    }
+
     /** Les secondes avant la prochaine pluie et la prochaine perce du joueur local. */
     static double rechargePluie() {
         return pluieLocale < 0 ? 0 : Susano4.RECHARGE_PLUIE / 20.0 - (System.nanoTime() - pluieLocale) / 1e9;
@@ -140,13 +174,23 @@ public final class ClientSusano4 {
         float lacet = Mth.rotLerp(partiel, joueur.yBodyRotO, joueur.yBodyRot);
         float theta = -lacet * Mth.DEG_TO_RAD;
         Vec3 pos = joueur.getPosition(partiel);
-        HitResult sous = mc.level.clip(new ClipContext(pos.add(0, 0.5, 0), pos.subtract(0, 90, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
-        double sol = sous.getType() == HitResult.Type.MISS ? pos.y - Susano4.HAUT : sous.getLocation().y;
-        // tant que le joueur monte (ou redescend), le géant est plus petit
-        float s = (float) Mth.clamp((pos.y - sol) / Susano4.HAUT, 0.22, 1);
-        boolean vole = etat.phase() == 2 && pos.y - sol > Susano4.HAUT + 2.5;
+        double sol = sol(mc, joueur, pos);
+        // pendant la transformation et le retour, le géant grandit (ou rapetisse) avec le joueur qui monte ; en forme, il
+        // garde sa taille, même au-dessus d'un arbre ou d'une colline
+        float s = etat.phase() == 2 ? 1 : (float) Mth.clamp((pos.y - sol) / Susano4.HAUT, 0.22, 1);
         // tout passe en douceur ; la foulée suit la distance parcourue
-        double[] a = ANIM.computeIfAbsent(joueur.getUUID(), k -> new double[]{0, 0, 0, 0, temps, 0});
+        double[] a = ANIM.computeIfAbsent(joueur.getUUID(), k -> new double[]{0, 0, 0, 0, temps, 0, 0});
+        // il vole dès que le joueur quitte la hauteur du joyau, et ne se repose qu'une fois revenu dessus (sans clignoter
+        // entre les deux) : le géant ne reste jamais au sol pendant que le joueur monte sans lui
+        double auDessus = pos.y - sol - Susano4.HAUT;
+        if (etat.phase() != 2) {
+            a[6] = 0;
+        } else if (auDessus > 0.5) {
+            a[6] = 1;
+        } else if (auDessus < 0.15) {
+            a[6] = 0;
+        }
+        boolean vole = a[6] > 0;
         double dt = Mth.clamp(temps - a[4], 0, 0.1);
         a[4] = temps;
         double vitesseTic = Math.sqrt(Mth.square(joueur.getX() - joueur.xo) + Mth.square(joueur.getZ() - joueur.zo)) * 20;
@@ -154,7 +198,7 @@ public final class ClientSusano4 {
         double vitesse = a[5];
         a[0] += ((vole ? 0 : Mth.clamp(vitesse / 5, 0, 1)) - a[0]) * Math.min(1, dt * 5);
         a[1] += ((vole ? 0 : Mth.clamp((vitesse - 11) / 6, 0, 1)) - a[1]) * Math.min(1, dt * 4);
-        a[2] += ((vole ? 1 : 0) - a[2]) * Math.min(1, dt * 2.5);
+        a[2] += ((vole ? 1 : 0) - a[2]) * Math.min(1, dt * 6);
         a[3] += vitesse * dt / (9 + 5.7 * a[1]) + dt * 0.1 * a[0];
         AnimSusano4.Pose P = AnimSusano4.garde(temps).vers(AnimSusano4.pas(a[3], false), a[0]).vers(AnimSusano4.pas(a[3], true), a[1])
                 .vers(AnimSusano4.vol(temps), a[2]);

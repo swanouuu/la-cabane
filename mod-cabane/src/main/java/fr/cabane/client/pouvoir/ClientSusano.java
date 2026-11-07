@@ -1211,7 +1211,8 @@ public final class ClientSusano {
         String[][] lignes = parfait ? new String[][]{
                 {Clavier.gauche(), "Épées"},
                 {Clavier.droite(), ClientSusano4.rechargePluie() > 0 ? String.format("Pluie d'Amaterasu (%.0f s)", Math.ceil(ClientSusano4.rechargePluie())) : "Pluie d'Amaterasu"},
-                {Clavier.accroupi(), ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce"},
+                {Clavier.accroupi(), ClientSusano4.enVol() ? "Descendre"
+                        : ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce"},
                 {mc.options.keyJump.getTranslatedKeyMessage().getString(), "Voler"},
                 {EVEIL.getTranslatedKeyMessage().getString(), String.format("Chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
                 : new String[][]{
@@ -1269,8 +1270,9 @@ public final class ClientSusano {
             // s'accroupir (l'appui, pas le maintien) lance la charge
             boolean accroupi = mc.options.keyShift.isDown();
             Susano moi = SUSANOS.get(mc.player.getUUID());
+            // en Susano parfait, en l'air, s'accroupir sert à descendre : pas de perce
             if (accroupi && !accroupiAvant && mc.screen == null && eveille(moi) && secondes(moi.debut) >= FORME
-                    && System.nanoTime() - derniereCharge > RECHARGE_CHARGE) {
+                    && System.nanoTime() - derniereCharge > RECHARGE_CHARGE && !ClientSusano4.enVol()) {
                 derniereCharge = System.nanoTime();
                 PacketDistributor.sendToServer(new Pouvoirs.Charge());
             }

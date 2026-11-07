@@ -332,6 +332,10 @@ public final class Susano4 {
                 joueur.displayClientMessage(Component.literal("Le Susano parfait se défait : tu redeviens le chevalier.").withStyle(ChatFormatting.GOLD), true);
                 continue;
             }
+            // la transformation est finie : chacun passe le géant en forme (il vole avec le joueur, et le tient en l'air)
+            if (f.retour() < 0 && t == TRANSFO) {
+                PacketDistributor.sendToAllPlayers(new Etat4(joueur.getUUID(), 2, t));
+            }
             if (f.retour() < 0 && t >= TRANSFO) {
                 int reste = TRANSFO + DUREE - t;
                 if (reste == 10 * 20 || reste <= 5 * 20 && reste % 20 == 0) {
@@ -400,7 +404,9 @@ public final class Susano4 {
             // pendant la transformation et le retour, il ne bouge pas : il monte (ou descend) dans le joyau
             joueur.setDeltaMovement(0, (cible - joueur.getY()) * 0.25, 0);
             joueur.hurtMarked = true;
-        } else if (joueur.getY() < cible) {
+        } else if (joueur.getY() < cible - 3) {
+            // en forme, c'est son jeu qui le tient à la hauteur du joyau (ClientSusano4.tenirVol) : renvoyer sa vitesse à
+            // chaque tick l'arrêtait net en plein vol ; on ne le remonte ici que s'il est vraiment trop bas
             joueur.setDeltaMovement(v.x, Math.max(v.y, (cible - joueur.getY()) * 0.3), v.z);
             joueur.hurtMarked = true;
         }
