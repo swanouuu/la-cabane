@@ -324,9 +324,14 @@ public final class Vent {
     @SubscribeEvent
     public static void connexion(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer joueur) {
-            porteurs = porteurs(joueur.server);
-            PacketDistributor.sendToAllPlayers(new Porteurs(porteurs));
+            redire(joueur.server);
         }
+    }
+
+    /** Redit tout de suite à tous qui a le pouvoir (l'élu du vent : sa fée tourne sans attendre la seconde suivante). */
+    static void redire(MinecraftServer server) {
+        porteurs = porteurs(server);
+        PacketDistributor.sendToAllPlayers(new Porteurs(porteurs));
     }
 
     @SubscribeEvent

@@ -412,7 +412,7 @@ public final class ClientVent {
         }
     }
 
-    private static DustParticleOptions paillette(int i) {
+    static DustParticleOptions paillette(int i) {
         float[] c = i % 3 == 0 ? PAILLETTE : i % 3 == 1 ? VERT_C : BLANC;
         return new DustParticleOptions(new Vector3f(c[0], c[1], c[2]), 0.55F);
     }
@@ -538,13 +538,13 @@ public final class ClientVent {
     }
 
     /** 0 : les voiles et les cœurs ; 1 : la lueur qui s'ajoute. Tout est dessiné dans les deux passes. */
-    private static int passe;
+    static int passe;
 
-    private static void sommet(VertexConsumer c, Matrix4f m, Vec3 p, float[] col, float a) {
+    static void sommet(VertexConsumer c, Matrix4f m, Vec3 p, float[] col, float a) {
         c.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(col[0], col[1], col[2], a);
     }
 
-    private static void quad(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, Vec3 d, Vec3 e, float[] col, float al) {
+    static void quad(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, Vec3 d, Vec3 e, float[] col, float al) {
         sommet(c, m, a, col, al);
         sommet(c, m, b, col, al);
         sommet(c, m, d, col, al);
@@ -552,7 +552,7 @@ public final class ClientVent {
     }
 
     /** Le côté d'un segment, face à l'œil (la caméra est à l'origine), ou dans le sens donné. */
-    private static Vec3 cote(Vec3 a, Vec3 b, Vec3 sens) {
+    static Vec3 cote(Vec3 a, Vec3 b, Vec3 sens) {
         Vec3 tg = b.subtract(a);
         if (tg.lengthSqr() < 1e-12) {
             return null;
@@ -570,7 +570,7 @@ public final class ClientVent {
      * deux bouts, et un cœur blanc qui brille (épais de « coeur », 0 sans cœur) au milieu ; sa lueur dans la passe 1.
      * {@code sens} : le sens de sa largeur (null : face à l'œil). {@code fondu} : il s'efface vers le début.
      */
-    private static void ruban(VertexConsumer c, Matrix4f m, List<Vec3> pts, double large, float alpha, float[] col, Vec3 sens, double coeur, double fondu,
+    static void ruban(VertexConsumer c, Matrix4f m, List<Vec3> pts, double large, float alpha, float[] col, Vec3 sens, double coeur, double fondu,
             float[] lueur) {
         int n = pts.size();
         if (n < 2 || alpha <= 0.003F) {
@@ -610,7 +610,7 @@ public final class ClientVent {
         }
     }
 
-    private static void ruban(VertexConsumer c, Matrix4f m, List<Vec3> pts, double large, float alpha, Vec3 sens, double coeur) {
+    static void ruban(VertexConsumer c, Matrix4f m, List<Vec3> pts, double large, float alpha, Vec3 sens, double coeur) {
         ruban(c, m, pts, large, alpha, VERT_C, sens, coeur, 0, LUEUR);
     }
 
@@ -686,7 +686,7 @@ public final class ClientVent {
      * Une tornade (comme tornade() des planches) : des rubans en hélice de r0 (en bas) à r1 (en haut), haute de H, autour de
      * l'axe ; ils tournent (tourne : l'angle en plus), et des feuilles tournent avec.
      */
-    private static void tornade(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 axe, double h, double r0, double r1, int n, int graine, double tours,
+    static void tornade(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 axe, double h, double r0, double r1, int n, int graine, double tours,
             double tourne, float alpha, double large, double coeur, int feuilles, double taille) {
         axe = axe.normalize();
         for (int s = 0; s < n; s++) {
@@ -705,7 +705,7 @@ public final class ClientVent {
     }
 
     /** Un anneau de vent à plat (sous les pieds au saut, l'onde au sol) : un ruban rond qui brille, et des traits qui fusent. */
-    private static void anneau(VertexConsumer c, Matrix4f m, Vec3 centre, double r, double large, float alpha, int traits, double monte, double coeur) {
+    static void anneau(VertexConsumer c, Matrix4f m, Vec3 centre, double r, double large, float alpha, int traits, double monte, double coeur) {
         List<Vec3> pts = new ArrayList<>();
         for (int k = 0; k <= 48; k++) {
             double a = k * Math.PI * 2 / 48;
@@ -819,6 +819,8 @@ public final class ClientVent {
         // d'abord les modèles (la fée, le faucon, les lances, la hallebarde de la tornade royale), puis le vent
         mc.gameRenderer.lightTexture().turnOnLightLayer();
         modeles(pose, buffers, cam, partiel);
+        // l'élu du vent : son coffre et la fée qui en sort
+        ClientEluVent.modeles(pose, buffers, cam, partiel);
         buffers.endBatch(RenderType.entityCutoutNoCull(ModeleVent.BLANC));
         buffers.endBatch(RenderType.entityTranslucentEmissive(ModeleVent.BLANC));
         buffers.endBatch(RenderType.lightning());
@@ -827,6 +829,7 @@ public final class ClientVent {
         for (passe = 0; passe < 2; passe++) {
             RenderType type = passe == 0 ? Types.VOILE : Types.LUMIERE;
             tout(buffers.getBuffer(type), m, cam, partiel);
+            ClientEluVent.vent(buffers.getBuffer(type), m, cam, partiel);
             buffers.endBatch(type);
         }
         passe = 0;
@@ -845,16 +848,32 @@ public final class ClientVent {
      * même endormi : elle tourne autour de lui. À l'éveil 1, elle va dans sa main (le petit tourbillon) puis revient ; à
      * l'éveil 2, elle vole devant sa main et plonge dans son cœur ; à la fin d'un éveil 2 ou 3, elle ressort de son cœur.
      */
-    private static Vec3[] fee(Player j, Etat e, float partiel) {
+    /** Ce joueur a le pouvoir Vent (le serveur l'a dit) : sa fée tourne autour de lui. */
+    static boolean porteur(UUID joueur) {
+        return PORTEURS.contains(joueur);
+    }
+
+    /** Où la fée tourne autour de lui, et vers où elle vole (l'élu du vent l'y amène à la fin de sa scène). */
+    static Vec3[] orbite(Player j, float partiel) {
         Vec3 pieds = j.getPosition(partiel);
-        double temps = (j.tickCount + partiel) / 20.0;
+        double a = (j.tickCount + partiel) / 20.0 * 2.2 + j.getId();
+        return new Vec3[]{pieds.add(Math.cos(a) * 0.95, 1.56 + 0.09 * Math.sin(a * 2), Math.sin(a) * 0.75),
+                new Vec3(-Math.sin(a) * 0.95, 0, Math.cos(a) * 0.75)};
+    }
+
+    private static Vec3[] fee(Player j, Etat e, float partiel) {
+        // l'élu du vent : la fée est encore dans son coffre (ClientEluVent la dessine jusqu'à ce qu'elle tourne)
+        if (ClientEluVent.cache(j.getUUID())) {
+            return null;
+        }
+        Vec3 pieds = j.getPosition(partiel);
         float lacet = Mth.lerp(partiel, j.yBodyRotO, j.yBodyRot) * Mth.DEG_TO_RAD;
         Vec3 devant = new Vec3(-Mth.sin(lacet), 0, Mth.cos(lacet)), droite = new Vec3(-Mth.cos(lacet), 0, -Mth.sin(lacet));
         Vec3 main = pieds.add(droite.scale(0.33)).add(devant.scale(0.62)).add(0, 1.25, 0);
         Vec3 coeur = pieds.add(0, 1.25, 0).add(devant.scale(0.14));
-        double a = temps * 2.2 + j.getId();
-        Vec3 orbite = pieds.add(Math.cos(a) * 0.95, 1.56 + 0.09 * Math.sin(a * 2), Math.sin(a) * 0.75);
-        Vec3 sensOrbite = new Vec3(-Math.sin(a) * 0.95, 0, Math.cos(a) * 0.75);
+        Vec3[] o = orbite(j, partiel);
+        Vec3 orbite = o[0];
+        Vec3 sensOrbite = o[1];
         Vec3[] tourne = {orbite, sensOrbite, new Vec3(1, 1, 0)};
         if (e == null) {
             return PORTEURS.contains(j.getUUID()) ? tourne : null;
@@ -892,12 +911,12 @@ public final class ClientVent {
         return null;
     }
 
-    private static void modele(PoseStack pose, MultiBufferSource buffers, ModeleVent mod, Vec3 ou, Vec3 dir, float echelle, float alpha) {
+    static void modele(PoseStack pose, MultiBufferSource buffers, ModeleVent mod, Vec3 ou, Vec3 dir, float echelle, float alpha) {
         modele(pose, buffers, mod, ou, dir, 0, echelle, alpha);
     }
 
     /** Un modèle posé en ou, son avant (+z) vers dir, penché de roulis autour de son avant. */
-    private static void modele(PoseStack pose, MultiBufferSource buffers, ModeleVent mod, Vec3 ou, Vec3 dir, float roulis, float echelle, float alpha) {
+    static void modele(PoseStack pose, MultiBufferSource buffers, ModeleVent mod, Vec3 ou, Vec3 dir, float roulis, float echelle, float alpha) {
         if (mod == null) {
             return;
         }
@@ -1725,7 +1744,8 @@ public final class ClientVent {
         public static void monde(RenderLevelStageEvent event) {
             Minecraft mc = Minecraft.getInstance();
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || mc.level == null
-                    || ETATS.isEmpty() && PORTEURS.isEmpty() && TRANCHES.isEmpty() && FAUCONS.isEmpty() && LAMES.isEmpty() && ANNEAUX.isEmpty() && TOURBILLONS.isEmpty() && LANCES.isEmpty()) {
+                    || ETATS.isEmpty() && PORTEURS.isEmpty() && TRANCHES.isEmpty() && FAUCONS.isEmpty() && LAMES.isEmpty() && ANNEAUX.isEmpty() && TOURBILLONS.isEmpty() && LANCES.isEmpty()
+                    && !ClientEluVent.actif()) {
                 return;
             }
             dessiner(event.getPoseStack(), event.getCamera().getPosition(), event.getPartialTick().getGameTimeDeltaPartialTick(false));

@@ -32,6 +32,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  * La marque maudite : {@code /animation marquemaudite <joueur>} (un seul joueur). Une douleur, il tourne la tête vers
  * son épaule et y découvre trois virgules noires, puis il comprend qu'il ne devrait pas en parler
  * ({@link ClientMarqueMaudite}).
+ * <p>
+ * L'élu du vent : {@code /animation eluduvent <joueur>} : un coffre s'ouvre devant lui, la fée du vent en sort, et il
+ * reçoit le pouvoir Vent niveau 1 ({@link fr.cabane.pouvoir.EluVent}).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Marque {
@@ -79,7 +82,9 @@ public final class Marque {
                                 .then(Commands.argument("joueur2", EntityArgument.player()).executes(c -> lancer(c, 2))
                                         .then(Commands.argument("joueur3", EntityArgument.player()).executes(c -> lancer(c, 3))))))
                 .then(Commands.literal("marquemaudite")
-                        .then(Commands.argument("joueur", EntityArgument.player()).executes(Marque::maudire))));
+                        .then(Commands.argument("joueur", EntityArgument.player()).executes(Marque::maudire)))
+                .then(Commands.literal("eluduvent")
+                        .then(Commands.argument("joueur", EntityArgument.player()).executes(fr.cabane.pouvoir.EluVent::lancer))));
     }
 
     private static int maudire(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
