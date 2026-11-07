@@ -19,7 +19,9 @@ public abstract class AbstractClientPlayerMixin {
     @Inject(method = "getSkin", at = @At("RETURN"), cancellable = true)
     private void cabane$marque(CallbackInfoReturnable<PlayerSkin> cir) {
         PlayerSkin skin = cir.getReturnValue();
-        PlayerSkin nue = ClientMaudit.peau((AbstractClientPlayer) (Object) this, skin);
+        // le skin de méchant (/skin) d'abord : une tenue de pouvoir passe par-dessus
+        PlayerSkin nue = fr.cabane.client.costume.ClientCostumes.peau((AbstractClientPlayer) (Object) this, skin);
+        nue = ClientMaudit.peau((AbstractClientPlayer) (Object) this, nue);
         nue = fr.cabane.client.pouvoir.ClientEspionne.peau((AbstractClientPlayer) (Object) this, nue);
         nue = fr.cabane.client.pouvoir.ClientKurama.peau((AbstractClientPlayer) (Object) this, nue);
         nue = fr.cabane.client.pouvoir.ClientTenueFoudre.peau((AbstractClientPlayer) (Object) this, nue);

@@ -14,6 +14,7 @@ import { genererMissions } from "./missions.mjs";
 import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
 import { genererCartel, sonsCartel } from "./cartel.mjs";
+import { genererInfiltration } from "./infiltration.mjs";
 import { genererCatch, sonsCatch } from "./catch.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
@@ -463,6 +464,8 @@ genererLabo({ ecrire, png, lang });
 // le Sharingan : ses yeux, la dimension du genjutsu (voir pouvoir/Sharingan.java et docs/sharingan)
 genererSharingan({ ecrire, lang });
 console.log(`Cartel : ${genererCartel({ ecrire, lang })} gars du cartel`);
+// les missions d'infiltration (/mission whoop|anbu 1-3, voir mission/Missions.java et docs/missions)
+console.log(`Missions d'infiltration : ${genererInfiltration({ ecrire, lang })} scènes`);
 console.log(`Catch : ${genererCatch({ ecrire, lang })} tenues et masques`);
 
 Object.assign(lang, {

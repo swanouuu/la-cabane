@@ -1,0 +1,13 @@
+{
+  "type": "cabane:mission_jour",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:mission_jour",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

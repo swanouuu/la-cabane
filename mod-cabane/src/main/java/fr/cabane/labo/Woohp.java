@@ -84,11 +84,34 @@ public final class Woohp {
         final int tube;
         final long debut;
         AbstractMinecart chariot;
+        /** Au bout du toboggan : ailleurs que le QG (le départ d'une mission, voir mission/Missions.java). */
+        java.util.function.Consumer<ServerPlayer> arrivee;
 
         Trajet(int tube, long debut) {
             this.tube = tube;
             this.debut = debut;
         }
+    }
+
+    /**
+     * Le même départ que /whoop (le son, l'aspiration, l'anneau, le toboggan), mais au bout du toboggan {@code arrivee} prend
+     * la main au lieu du pad du QG. Faux si l'espionne est déjà en route ou si la dimension du labo manque.
+     */
+    public static boolean aspirer(ServerPlayer j, int tube, java.util.function.Consumer<ServerPlayer> arrivee) {
+        if (!pret(j.server) || TRAJETS.containsKey(j.getUUID())) {
+            return false;
+        }
+        if (j.isSleeping()) {
+            j.stopSleepInBed(true, true);
+        }
+        j.stopRiding();
+        Trajet t = new Trajet(tube, j.server.getTickCount());
+        t.arrivee = arrivee;
+        TRAJETS.put(j.getUUID(), t);
+        j.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, TOBOGGAN + 10, 4, false, false));
+        j.serverLevel().playSound(j, j.getX(), j.getY(), j.getZ(), Labo.SON_WOOHP.get(), SoundSource.PLAYERS, 1.6F, 1F);
+        PacketDistributor.sendToPlayer(j, new Etape(0, tube));
+        return true;
     }
 
     private static final Map<UUID, Trajet> TRAJETS = new HashMap<>();
@@ -393,6 +416,11 @@ public final class Woohp {
             // son jeu apprend tout de suite que le chariot est vide : elle en sort direct, sans devoir appuyer sur Maj
             j.connection.send(new ClientboundSetPassengersPacket(t.chariot));
             t.chariot.discard();
+        }
+        if (t.arrivee != null) {
+            PacketDistributor.sendToPlayer(j, new Etape(2, t.tube));
+            t.arrivee.accept(j);
+            return;
         }
         poserSurLePad(j, t.tube);
         PacketDistributor.sendToPlayer(j, new Etape(2, t.tube));

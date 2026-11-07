@@ -187,6 +187,26 @@ Le grand combat, à lancer quand tout le monde est là (seul l'hôte peut le fai
 
 Une île de roche apparaît alors dans le ciel, 80 blocs au-dessus de vous (elle n'existe que pendant le combat, et disparaît à la fin, même si le serveur s'arrête en plein milieu). Écran noir, « Goku est enfin arrivé… », puis la cinématique : Goku et Majin Vegeta passent Super Saiyan 2, plan par plan comme dans Dragon Ball Z Kai, avec le son de l'extrait (dans le pack « Beauvais - voix », voir plus bas). Ensuite chacun vote : celui qu'on aide se bat à nos côtés, l'autre devient le boss, sur l'île. Vegeta ne parle plus pareil après.
 
+## Les missions d'infiltration (WOOHP et ANBU)
+
+Six petites scènes à infiltrer, construites par le mod dans deux dimensions à part (le jour, la nuit) : rien ne touche au village. Les planches sont dans `docs/missions/` (`planche-whoop.png`, `planche-anbu.png`, `planche-regles.png`).
+
+- **WOOHP 1, la tour Glamtek** : voler la formule au 3e étage (lasers qui clignotent, caméra, employées qui crient), sortir par le toit.
+- **WOOHP 2, le Méga Mall, la nuit** : les mannequins ne bougent que quand personne ne les regarde ; trois puces à trouver, le vigile et sa lampe, l'atelier sous la fontaine ; sortie par le toit.
+- **WOOHP 3, l'île du volcan** : saboter les trois réservoirs de la fusée avant la fin du compte à rebours (15 min), sous les projecteurs, puis filer au sous-marin.
+- **ANBU 1, le village de la Brume, la nuit** : voler le rouleau dans la tour du chef ; on se cache dans les roseaux (accroupi) ou sous l'eau.
+- **ANBU 2, la forêt des pièges** : fils tendus, trou à pieux, tronc qui tombe, guetteurs dans les arbres ; libérer l'otage et le ramener au début du sentier.
+- **ANBU 3, le château du seigneur, la nuit** : archers sur les remparts, chien qui sent même accroupi, gong qui réveille tout le château ; voler le pacte, sortir par le toit du donjon.
+
+Les règles, pareilles partout : les gardes font leur ronde ; s'ils te voient (« ! »), ils foncent et tapent ; au moindre bruit (« ? »), ils vont voir. La nuit, dans l'ombre ou accroupi, on se voit de moins loin. Un coup dans le dos d'un garde qui ne t'a pas vu le met K.O. 45 secondes. Personne ne meurt : à deux cœurs, on est attrapé et jeté en cellule, et un pote ouvre d'un clic sur les barreaux. L'objectif s'affiche en haut à droite. On y est en mode aventure.
+
+- `/mission whoop 1 @espionnes` (l'hôte) : le même départ que `/whoop` (le son, l'aspiration, le toboggan), et on atterrit au départ de la mission. `/mission anbu 1 @ninjas` : un nuage de fumée. Chaque lancement remet la scène à neuf.
+- `/mission whoop 1 mechant @toi @tonpote` : direct dans la salle du méchant ; les gardes vous laissent passer.
+- `/mission alerte` (l'hôte ou le méchant) : tous les gardes en chasse. `/mission liberer @joueur` : ouvrir la cellule.
+- `/mission retour` : rentrer pile là d'où l'on venait. `/mission fin` (l'hôte) : tout le monde rentre.
+
+**Les skins des méchants** (tout le monde peut les mettre) : `/skin whoop1` (La Patronne), `/skin whoop2` (Le Styliste), `/skin whoop3` (Baron Magma), `/skin anbu1` (Le Mizukage), `/skin anbu2` (Le Déserteur), `/skin anbu3` (Le Seigneur), `/skin docteur` (Dr Gero), `/skin jerry` (Jerry), `/skin boss` (???). Le pseudo change aussi (au-dessus de la tête, dans le chat, dans la liste des joueurs). `/skin enlever` pour redevenir soi ; l'hôte peut habiller les autres (`/skin jerry @joueur`). Aperçu : `docs/missions/planche-boss.png`.
+
 ## Le téléphone
 
 - Chaque nouveau joueur en reçoit un ; les suivants s'achètent chez Mouloud (pas de recette). Touche **N** ou clic droit : la première fois, on choisit tout de suite son numéro.

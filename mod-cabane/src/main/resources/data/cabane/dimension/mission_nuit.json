@@ -1,0 +1,13 @@
+{
+  "type": "cabane:mission_nuit",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:mission_nuit",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

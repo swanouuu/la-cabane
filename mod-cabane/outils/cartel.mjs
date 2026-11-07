@@ -15,7 +15,7 @@ const ICI = path.dirname(fileURLToPath(import.meta.url));
 const RACINE = path.join(ICI, "..", "..");
 
 /** Une image RGBA en PNG. */
-function png(w, h, rgba) {
+export function png(w, h, rgba) {
   const brut = Buffer.alloc(h * (1 + w * 4));
   for (let y = 0; y < h; y++) rgba.copy(brut, y * (1 + w * 4) + 1, y * w * 4, (y + 1) * w * 4);
   const t = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -31,7 +31,7 @@ function png(w, h, rgba) {
  * suivent ligne après ligne ; chaque morceau devient un pavé centré sur z = 8. Une icône de 64 pixels fait 16 unités
  * (un bloc) ; un pixel d'épaisseur fait 1/4 d'unité.
  */
-function elements(ic) {
+export function elements(ic) {
   const N = 64, P = ic.prof, q = (d) => Math.max(1, Math.round(d * 2) / 2);
   const ouverts = new Map(), fini = [];
   for (let y = 0; y <= N; y++) {
@@ -72,7 +72,7 @@ function elements(ic) {
  * bras ; -90° la mettait à l'envers, crosse en avant), la poignée ramenée dans la main. À la troisième personne la grande arme
  * dépasse largement du bras (la Kalach fait presque deux blocs) ; à la première, elle part du bas à droite de l'écran.
  */
-const PRISES = {
+export const PRISES = {
   fusil: { thirdperson_righthand: { rotation: [0, 90, 0], translation: [0, 2, -2.5], scale: [1.75, 1.75, 1.75] }, firstperson_righthand: { rotation: [-2, 93, 0], translation: [0.5, 2.5, -4.5], scale: [1.15, 1.15, 1.15] } },
   epaule: { thirdperson_righthand: { rotation: [0, 90, 0], translation: [0, 3.5, -4], scale: [2, 2, 2] }, firstperson_righthand: { rotation: [-2, 93, 0], translation: [1.5, 2.5, -5], scale: [1.25, 1.25, 1.25] } },
   hanche: { thirdperson_righthand: { rotation: [0, 90, 0], translation: [0, -3, -6], scale: [1.9, 1.9, 1.9] }, firstperson_righthand: { rotation: [-2, 93, 0], translation: [0.5, 1.5, -4.5], scale: [1.15, 1.15, 1.15] } },
@@ -80,7 +80,7 @@ const PRISES = {
   lancer: { thirdperson_righthand: { rotation: [0, 90, 0], translation: [0, 1, -1], scale: [0.55, 0.55, 0.55] }, firstperson_righthand: { rotation: [0, 93, 0], translation: [1.5, 3.5, -1], scale: [0.6, 0.6, 0.6] } },
   lame: { thirdperson_righthand: { rotation: [0, 90, 55], translation: [0, 4, 0.5], scale: [1, 1, 1] }, firstperson_righthand: { rotation: [0, 90, 25], translation: [1.13, 3.2, 1.13], scale: [0.8, 0.8, 0.8] } },
 };
-const miroir = (d) => ({ rotation: [d.rotation[0], -d.rotation[1], -d.rotation[2]], translation: d.translation, scale: d.scale });
+export const miroir = (d) => ({ rotation: [d.rotation[0], -d.rotation[1], -d.rotation[2]], translation: d.translation, scale: d.scale });
 
 // ---------------------------------------------------------------- comment chaque arme se tient (les chiffres des armes sont dans cartel/Cartel.java)
 const PRISE_DE = {

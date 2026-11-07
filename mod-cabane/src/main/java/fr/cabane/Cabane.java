@@ -37,6 +37,8 @@ public class Cabane {
         fr.cabane.labo.Labo.register(modBus);
         fr.cabane.pouvoir.FeuNoir.register(modBus);
         fr.cabane.cartel.Cartel.register(modBus);
+        fr.cabane.mission.Missions.register(modBus);
+        fr.cabane.costume.Costumes.register(modBus);
         fr.cabane.lutte.Lutte.register(modBus);
         modBus.addListener(PhoneNetwork::register);
         modBus.addListener(Economie::register);
