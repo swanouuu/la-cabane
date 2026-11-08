@@ -75,9 +75,9 @@ import org.joml.Vector3f;
  * <ul>
  * <li>toujours (même endormi) : la grosse jarre de Gaara sur le dos, fermée par son bouchon ; à l'éveil le bouchon saute ;</li>
  * <li>niveau 1 : le sable de Gaara tourne autour de lui ; les poings de sable sortent de la jarre ;</li>
- * <li>niveau 2 : la moitié droite du corps en sable d'Ichibi (le grand bras, l'oreille, l'œil, les piques, la queue),
- * la jarre ; à l'éveil, le sable coule du goulot sur l'épaule ;</li>
- * <li>niveau 3 : plus de jarre (elle s'effondre), la bête de sable (tête de bête, deux grands bras en arc, grosse queue)
+ * <li>niveau 2 : la moitié droite du corps en sable d'Ichibi (le grand bras, l'oreille, l'œil, les piques, la queue) ;
+ * à l'éveil, la jarre se brise et s'effondre (le sable coule sur l'épaule), puis il n'y en a plus ;</li>
+ * <li>niveau 3 : toujours plus de jarre, la bête de sable (tête de bête, deux grands bras en arc, grosse queue)
  * mais le bas des jambes reste à lui ; il court penché ;</li>
  * <li>la tempête de l'ulti : le mur de sable qui arrive de l'horizon, puis le sable partout ; chez les autres, un
  * brouillard de sable épais (lui voit à travers).</li>
@@ -129,6 +129,8 @@ public final class ClientIchibi {
         long rire = -1;
         /** Niveau 2 : il arrache un rocher. */
         long rocher = -1;
+        /** La jarre s'est cassée à ce moment-là (en arrivant au niveau 2 ou plus) ; -1 : elle est entière. */
+        long casse = -1;
 
         Ichi(long debut) {
             this.debut = debut;
@@ -179,6 +181,9 @@ public final class ClientIchibi {
         }
         if (p.annonce() && p.niveau() >= 2 && i.niveau != p.niveau()) {
             i.rire = maintenant;
+        }
+        if (p.niveau() >= 2 && i.niveau < 2) {
+            i.casse = p.annonce() ? maintenant : maintenant - 10_000_000_000L;
         }
         i.niveau = p.niveau();
         i.max = Ichibi.max(p.pouvoir());
@@ -1017,8 +1022,9 @@ public final class ClientIchibi {
             int niveau = i == null ? 0 : i.niveau;
             double t = i == null ? 99 : secondes(i.debut);
             VertexConsumer blanc = buffers.getBuffer(RenderType.entityCutoutNoCull(BLANC));
-            // la jarre (jusqu'au niveau 2), fermée tant qu'il dort ; au niveau 3 elle s'effondre puis il n'y en a plus
-            if (niveau < 3) {
+            // la jarre (niveaux 0 et 1), fermée tant qu'il dort ; dès le niveau 2 elle s'effondre puis il n'y en a plus
+            double casse = i == null || i.casse < 0 ? 99 : secondes(i.casse);
+            if (niveau < 2) {
                 ps.pushPose();
                 parent.body.translateAndRotate(ps);
                 dessiner(m(jarre, 0), blanc, ps, lumiere, dessous);
@@ -1037,13 +1043,13 @@ public final class ClientIchibi {
                     ps.popPose();
                 }
                 ps.popPose();
-            } else if (t < 1.6) {
-                // éveil 3 : la jarre fissurée s'affaisse et tombe en morceaux
+            } else if (casse < 1.6) {
+                // éveil 2 (ou 3 si on saute le 2) : la jarre fissurée s'affaisse et tombe en morceaux, une seule fois
                 ps.pushPose();
                 parent.body.translateAndRotate(ps);
-                float s = (float) Math.max(0, t - 0.25);
+                float s = (float) Math.max(0, casse - 0.25);
                 ps.translate(0, s * s * 1.6F, s * 0.25F);
-                float k = 1 - lisse((t - 0.6) / 1.0) * 0.6F;
+                float k = 1 - lisse((casse - 0.6) / 1.0) * 0.6F;
                 ps.scale(k, k, k);
                 dessiner(m(jarreCassee, 0), blanc, ps, lumiere, dessous);
                 ps.popPose();
@@ -1322,7 +1328,7 @@ public final class ClientIchibi {
             // le sable part de la jarre (ou de la bête) et file jusqu'à lui
             if (lanceur != null && t < Ichibi.C_VOL + 4) {
                 Ichi i = ICHIS.get(x.lanceur);
-                Vec3 a = (i != null && i.niveau >= 3 ? local(lanceur, partiel, 0, 26, 6) : goulot(lanceur, partiel)).subtract(cam);
+                Vec3 a = (i != null && i.niveau >= 2 ? local(lanceur, partiel, 0, 26, 6) : goulot(lanceur, partiel)).subtract(cam);
                 Vec3 d = pieds.add(0, 0.4, 0).subtract(cam);
                 Vec3 b = a.add(0, 1.2, 0), cc = d.add(a.subtract(d).scale(0.3)).add(0, 0.8, 0);
                 double fin = Math.min(1, t / Ichibi.C_VOL), debut = Math.max(0, (t - Ichibi.C_VOL) / 4);

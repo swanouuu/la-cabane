@@ -33,7 +33,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 /**
  * L'ulti d'Ichibi (la touche d'ulti, au niveau 3 de « ichibi3 »), d'après docs/ichibi/apercu/tempete.html : une énorme
  * tempête de sable, sans boost. Il rit et abat ses bras ; tout le sable du coin se soulève en un ouragan géant (40 blocs
- * de rayon, 90 de haut) dont il est l'œil, et qui le suit. Pendant 45 s, à tous ceux qui sont dedans (lui, rien) :
+ * de rayon, 90 de haut) dont il est l'œil, et qui le suit. Pendant 20 s, à tous ceux qui sont dedans (lui, rien) :
  * <ul>
  * <li>quatre tornades se promènent : ce qu'elles touchent est aspiré en l'air (5) ;</li>
  * <li>neuf lames de sable tournent au ras du sol : 2 à chaque passage ;</li>
@@ -43,13 +43,13 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <li>et tout le temps : ils ne voient presque rien (le brouillard est chez eux, {@link fr.cabane.client.pouvoir.ClientIchibi}),
  * ils sont lents et le vent les emporte.</li>
  * </ul>
- * Au bout de 45 s, il rit encore, l'ouragan s'effondre sur lui-même en une colonne, puis explose : 12 à tout ce qui est
+ * Au bout de 20 s, il rit encore, l'ouragan s'effondre sur lui-même en une colonne, puis explose : 12 à tout ce qui est
  * dedans, projeté au loin. Une fois par éveil, puis 5 minutes de recharge.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class IchibiTempete {
     /** Le sable se soulève et forme l'ouragan pendant ce temps ; puis il dure ; puis il s'effondre avant d'exploser. */
-    public static final int FORME = 64, DUREE = 45 * 20, EFFONDRE = 28;
+    public static final int FORME = 64, DUREE = 20 * 20, EFFONDRE = 28;
     public static final double RAYON = 40;
     public static final int RECHARGE = 5 * 60 * 20;
     public static final int TORNADES = 4, LAMES = 9;
