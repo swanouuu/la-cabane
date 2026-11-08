@@ -53,6 +53,10 @@ file = "config/ftbquests/quests/lang/fr_fr.snbt"
 hash = "39f2d8c2fdc0a3722329c0db07249852d5f40058cfbe564a9057ee90fbae8f8e"
 
 [[files]]
+file = "config/sound_physics_remastered/soundphysics.properties"
+hash = "41be1a0a7323c2077f4f689a53305d8793225df6184c0d1602467a2a01fbaa58"
+
+[[files]]
 file = "emotes/adosse_bras_croises.json"
 hash = "638563980301b4b74639f08cedb3a931d74b7f9e3ebd077adffb6c686fd7e460"
 
