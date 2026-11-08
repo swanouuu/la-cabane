@@ -1,5 +1,6 @@
 package fr.cabane.client.backrooms;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -33,6 +34,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.lwjgl.opengl.GL11;
@@ -53,6 +56,12 @@ import org.lwjgl.opengl.GL11;
 public final class ClientBackrooms {
     private static final ResourceLocation CASIER = Cabane.id("textures/gui/backrooms/casier.png");
     private static final ResourceLocation NEIGE = Cabane.id("backrooms_neige");
+    private static final ResourceLocation VIGNETTE = ResourceLocation.withDefaultNamespace("textures/misc/vignette.png");
+    /** La couche d'interface de Xaero : sa minimap et ses infos. */
+    private static final ResourceLocation MINIMAP = ResourceLocation.fromNamespaceAndPath("xaerohud", "hud");
+    /** L'assombrissement : 42 % partout, et la force du noir sur les bords (de 0 à 1). */
+    private static final int SOMBRE = 0x6B000000;
+    private static final float BORDS = 1F;
     private static final Random HASARD = new Random();
 
     /** La séquence à l'écran (un genre de Backrooms.Ecran), -1 : rien. */
@@ -468,6 +477,39 @@ public final class ClientBackrooms {
         @SubscribeEvent
         public static void enregistrer(RegisterGuiLayersEvent event) {
             event.registerAboveAll(Cabane.id("backrooms"), (g, delta) -> dessiner(g, delta.getGameTimeDeltaPartialTick(true)));
+            // sous tout le reste de l'interface : c'est le décor qui s'assombrit, pas la barre d'objets
+            event.registerBelow(VanillaGuiLayers.CAMERA_OVERLAYS, Cabane.id("backrooms_sombre"), (g, delta) -> assombrir(g));
+        }
+    }
+
+    /** Dans les backrooms, la vue est un peu assombrie, surtout sur les bords. */
+    private static void assombrir(GuiGraphics g) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.level.dimension() != Backrooms.DIMENSION) {
+            return;
+        }
+        int w = g.guiWidth();
+        int h = g.guiHeight();
+        g.fill(0, 0, w, h, SOMBRE);
+        g.flush();
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR);
+        g.setColor(BORDS, BORDS, BORDS, 1F);
+        g.blit(VIGNETTE, 0, 0, -90, 0F, 0F, w, h, w, h);
+        g.setColor(1F, 1F, 1F, 1F);
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableDepthTest();
+    }
+
+    /** Pas de minimap de Xaero (ni ses coordonnées) dans les backrooms : on doit s'y perdre. */
+    @SubscribeEvent
+    public static void sansMinimap(RenderGuiLayerEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (event.getName().equals(MINIMAP) && mc.level != null && mc.level.dimension() == Backrooms.DIMENSION) {
+            event.setCanceled(true);
         }
     }
 
