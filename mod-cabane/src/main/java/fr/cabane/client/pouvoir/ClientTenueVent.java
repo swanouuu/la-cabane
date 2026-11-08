@@ -47,6 +47,8 @@ public final class ClientTenueVent {
     private static final Map<ResourceLocation, int[]> UNIFORMES = new HashMap<>();
     private static final Map<ResourceLocation, int[]> ESPRITS = new HashMap<>();
     private static final Map<String, Long> RATEES = new HashMap<>();
+    /** La rangée des yeux de chaque tenue fabriquée (12 d'habitude). */
+    private static final Map<ResourceLocation, Integer> RANGEES = new HashMap<>();
     private static final Map<ResourceLocation, PlayerSkin> REMPLACEES = new HashMap<>();
     private static int[] uniformeCorps, espritCorps;
     private static boolean lus;
@@ -141,6 +143,7 @@ public final class ClientTenueVent {
         id = Cabane.id("vent/tenue_" + PEAUX.size());
         Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(image));
         PEAUX.put(cle, id);
+        RANGEES.put(id, rangeeYeux(base));
         RATEES.remove(cle);
         return id;
     }
@@ -218,10 +221,25 @@ public final class ClientTenueVent {
         return r;
     }
 
+    private static boolean blanc(int c) {
+        return (c >>> 24) >= 128 && (c & 255) >= 225 && (c >> 8 & 255) >= 225 && (c >> 16 & 255) >= 225;
+    }
+
+    /**
+     * La rangée du visage où sont ses pupilles : la 12 d'habitude ; la 13 si le blanc de ses yeux est un rang plus bas
+     * (au-dessus, ce sont alors ses cils).
+     */
+    private static int rangeeYeux(int[] s) {
+        boolean plusBas = blanc(s[13 * 64 + 9]) && blanc(s[13 * 64 + 14]) && !blanc(s[12 * 64 + 9]) && !blanc(s[12 * 64 + 14])
+                && !blanc(s[13 * 64 + 10]) && !blanc(s[13 * 64 + 13]);
+        return plusBas ? 13 : 12;
+    }
+
     /** La tenue entière sur ce skin : la tête recoloriée (sa peau reste, ou devient vert pâle), le reste vient du générateur. */
     private static int[] composer(int[] base, int[] corps, boolean esprit) {
         int[] px = base.clone();
         int[] peau = peauDe(base);
+        int rangee = rangeeYeux(base);
         for (int i = 0; i < px.length; i++) {
             float h = ClientKurama.HAUTEUR[i];
             if (Float.isNaN(h)) {
@@ -236,10 +254,15 @@ public final class ClientTenueVent {
                 boolean premiere = i % 64 < 32;
                 boolean saPeau = premiere && Math.sqrt((r - peau[0]) * (r - peau[0]) + (g - peau[1]) * (g - peau[1]) + (b - peau[2]) * (b - peau[2])) < 52;
                 double lum = 0.3 * r + 0.59 * g + 0.11 * b;
-                // les pupilles (rangée 12 du visage, le pixel intérieur de chaque œil) : jaunes, aux niveaux 2 et 3
+                // les pupilles (le pixel intérieur de chaque œil, sur sa rangée) : jaunes, aux niveaux 2 et 3
                 int x = i % 64, y = i / 64;
-                if (y == 12 && (x == 10 || x == 13)) {
+                if (y == rangee && (x == 10 || x == 13)) {
                     px[i] = lum < 90 ? abgr(200, 140, 10) : abgr(255, 236, 90);
+                    continue;
+                }
+                // des yeux un rang plus bas ont un iris de 2 pixels de haut : le bas aussi, un peu plus sombre
+                if (rangee == 13 && y == 14 && (x == 10 || x == 13) && !saPeau) {
+                    px[i] = abgr(235, 205, 70);
                     continue;
                 }
                 if (esprit) {
@@ -332,7 +355,7 @@ public final class ClientTenueVent {
             }
         }
         if (niveau == 2 && t2 > 1.3 || niveau >= 3 && t3 > ClientVent.ILLUMINE) {
-            yeux(ps, buffers, modele, efface);
+            yeux(ps, buffers, modele, efface, RANGEES.getOrDefault(joueur.getSkin().texture(), 12));
         }
         if (niveau >= 3) {
             double a = ClientVent.ILLUMINE;
@@ -373,7 +396,7 @@ public final class ClientTenueVent {
     }
 
     /** Les pupilles qui brillent en jaune (un seul pixel par œil). */
-    private static void yeux(PoseStack ps, MultiBufferSource buffers, PlayerModel<AbstractClientPlayer> modele, float alpha) {
+    private static void yeux(PoseStack ps, MultiBufferSource buffers, PlayerModel<AbstractClientPlayer> modele, float alpha, int rangee) {
         if (!modele.head.visible) {
             return;
         }
@@ -383,8 +406,9 @@ public final class ClientTenueVent {
         VertexConsumer c = buffers.getBuffer(RenderType.entityTranslucentEmissive(ModeleVent.BLANC));
         float z = -4.55F / 16;
         int a = Math.round(255 * alpha);
+        float y0 = rangee - 16;
         for (float x0 : new float[]{-2, 1}) {
-            for (float[] p : new float[][]{{x0, -4}, {x0 + 1, -4}, {x0 + 1, -3}, {x0, -3}}) {
+            for (float[] p : new float[][]{{x0, y0}, {x0 + 1, y0}, {x0 + 1, y0 + 1}, {x0, y0 + 1}}) {
                 c.addVertex(pose, p[0] / 16, p[1] / 16, z).setColor(255, 226, 70, a).setUv(0.5F, 0.5F).setOverlay(OverlayTexture.NO_OVERLAY)
                         .setLight(LightTexture.FULL_BRIGHT).setNormal(pose, 0, 0, -1);
             }

@@ -58,7 +58,7 @@ import org.lwjgl.opengl.GL11;
  * validées (docs/marque-maudite) : à l'éveil, il porte la tenue de Sasuke (t-shirt bleu nuit, short blanc cassé), le
  * sceau (trois virgules) apparaît en haut à gauche du torse, dans le col, puis des petites flammes rouges se répandent
  * depuis le sceau sur sa peau, sous les vêtements, et ressortent au col, sur la tête, les avant-bras et les mollets ; une
- * fois le corps couvert, elles noircissent à partir du sceau. Ses yeux rougissent. Une aura l'entoure, violette du début
+ * fois le corps couvert, elles noircissent à partir du sceau. Une aura l'entoure, violette du début
  * à la fin. À l'endormissement, les marques se retirent vers le sceau. Les flammes sont dessinées dans un calque 4 fois
  * plus fin que la peau (256 × 256), collé par-dessus.
  * <p>
@@ -974,7 +974,7 @@ public final class ClientMaudit {
         }
     }
 
-    /** Le calque à une étape de l'éveil : les flammes rouges (un fin bord sombre) ou noires, et les yeux rouges. */
+    /** Le calque à une étape de l'éveil (niveau 1) : les flammes rouges (un fin bord sombre) ou noires. */
     private static void dessiner(NativeImage image, Geometrie g, double avance, double noirci) {
         byte[] marque = new byte[T * T];
         double rayon = avance * 34, rayonNoir = noirci * 40;
@@ -1001,11 +1001,6 @@ public final class ClientMaudit {
                 c = bord ? ROUGE_BORD : ROUGE_PLEIN;
             }
             image.setPixelRGBA(x, y, c);
-        }
-        if (avance > 0.15) {
-            for (int x : g.yeux) {
-                image.fillRect(x * R, 12 * R, R, R, YEUX);
-            }
         }
     }
 
