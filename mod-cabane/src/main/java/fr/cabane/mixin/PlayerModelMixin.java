@@ -38,6 +38,8 @@ public abstract class PlayerModelMixin {
             fr.cabane.client.pouvoir.ClientGenjutsu.poser((PlayerModel<?>) (Object) this, joueur);
             // la marque 3 : le saut, les mains au sol pour le sceau, les bras écartés sur le grand serpent
             fr.cabane.client.pouvoir.ClientSerpentGeant.poser((PlayerModel<?>) (Object) this, joueur);
+            // Kaguya : pliée à l éveil, la main dans le dos pour l épée, le saule, la main au sol et sur le dinosaure
+            fr.cabane.client.pouvoir.ClientKaguya.poser((PlayerModel<?>) (Object) this, joueur);
         }
     }
 }

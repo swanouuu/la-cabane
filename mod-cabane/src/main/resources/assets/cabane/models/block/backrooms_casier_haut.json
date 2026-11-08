@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "cabane:block/backrooms_casier_cote",
+    "north": "cabane:block/backrooms_casier_haut",
+    "south": "cabane:block/backrooms_casier_cote",
+    "east": "cabane:block/backrooms_casier_cote",
+    "west": "cabane:block/backrooms_casier_cote",
+    "up": "cabane:block/backrooms_casier_dessus",
+    "down": "cabane:block/backrooms_casier_dessus"
+  }
+}

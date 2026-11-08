@@ -1,0 +1,10 @@
+{
+  "type": "cabane:backrooms",
+  "generator": {
+    "type": "cabane:backrooms",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "cabane:backrooms"
+    }
+  }
+}

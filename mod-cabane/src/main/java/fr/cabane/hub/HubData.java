@@ -46,6 +46,10 @@ public class HubData extends SavedData {
     private final List<String> cartesReliques = new ArrayList<>();
     /** Les reliques déjà trouvées sur le serveur, dans l'ordre (chacune fait venir plus de Pillards que la précédente). */
     private final List<String> reliquesTrouvees = new ArrayList<>();
+    /** Les raids automatiques (/raid jusqu'à /raid stop) : combien de vagues, et quand le prochain arrive (temps du monde). */
+    private boolean raidsAuto;
+    private int vaguesAuto = 3;
+    private long prochainRaid;
     private final Set<UUID> kits = new HashSet<>();
 
     public static HubData get(MinecraftServer server) {
@@ -69,6 +73,9 @@ public class HubData extends SavedData {
         data.partie = Math.max(1, tag.getInt("partie"));
         tag.getList("cartesReliques", Tag.TAG_STRING).forEach(t -> data.cartesReliques.add(t.getAsString()));
         tag.getList("reliquesTrouvees", Tag.TAG_STRING).forEach(t -> data.reliquesTrouvees.add(t.getAsString()));
+        data.raidsAuto = tag.getBoolean("raidsAuto");
+        data.vaguesAuto = tag.contains("vaguesAuto") ? tag.getInt("vaguesAuto") : 3;
+        data.prochainRaid = tag.getLong("prochainRaid");
         ListTag list = tag.getList("kits", Tag.TAG_INT_ARRAY);
         for (Tag entry : list) {
             data.kits.add(NbtUtils.loadUUID(entry));
@@ -102,6 +109,9 @@ public class HubData extends SavedData {
         ListTag trouvees = new ListTag();
         reliquesTrouvees.forEach(r -> trouvees.add(StringTag.valueOf(r)));
         tag.put("reliquesTrouvees", trouvees);
+        tag.putBoolean("raidsAuto", raidsAuto);
+        tag.putInt("vaguesAuto", vaguesAuto);
+        tag.putLong("prochainRaid", prochainRaid);
         ListTag list = new ListTag();
         kits.forEach(id -> list.add(NbtUtils.createUUID(id)));
         tag.put("kits", list);
@@ -129,6 +139,30 @@ public class HubData extends SavedData {
 
     public void setPartie(int valeur) {
         partie = valeur;
+        setDirty();
+    }
+
+    public boolean raidsAuto() {
+        return raidsAuto;
+    }
+
+    public int vaguesAuto() {
+        return vaguesAuto;
+    }
+
+    public long prochainRaid() {
+        return prochainRaid;
+    }
+
+    /** Allume (avec ce nombre de vagues) ou éteint les raids automatiques. */
+    public void setRaidsAuto(boolean actifs, int vagues) {
+        raidsAuto = actifs;
+        vaguesAuto = vagues;
+        setDirty();
+    }
+
+    public void setProchainRaid(long temps) {
+        prochainRaid = temps;
         setDirty();
     }
 

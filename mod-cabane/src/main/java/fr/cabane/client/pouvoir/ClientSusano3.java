@@ -281,8 +281,8 @@ public final class ClientSusano3 {
         }
         // ---- l'armure, pièce par pièce
         armure(c, e, p);
-        // ---- la cape, déchirée, qui ondule
-        if (e.cape() > 0) {
+        // ---- la cape : enlevée (pas de cape sur les pouvoirs, demandé le 2026-11-08)
+        if (false && e.cape() > 0) {
             for (int i = 0; i < 9; i++) {
                 double x = -1.8 + i * 0.45, bas = 0.15 + hache(i, 3, 7) * 1.1;
                 double[] prec = v(x * 1.05, 4.7, -1.45);

@@ -1,0 +1,75 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "cabane:block/backrooms_papier",
+    "papier": "cabane:block/backrooms_papier",
+    "sortie": "cabane:block/backrooms_sortie"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#papier",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#papier",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#papier",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#papier",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#papier",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#papier",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        0.5,
+        3,
+        -0.06
+      ],
+      "to": [
+        15.5,
+        13,
+        0
+      ],
+      "faces": {
+        "north": {
+          "texture": "#sortie",
+          "uv": [
+            0,
+            3,
+            15,
+            13
+          ]
+        }
+      },
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      }
+    }
+  ]
+}

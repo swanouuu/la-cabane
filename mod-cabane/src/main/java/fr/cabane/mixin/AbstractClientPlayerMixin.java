@@ -26,6 +26,7 @@ public abstract class AbstractClientPlayerMixin {
         nue = fr.cabane.client.pouvoir.ClientKurama.peau((AbstractClientPlayer) (Object) this, nue);
         nue = fr.cabane.client.pouvoir.ClientTenueFoudre.peau((AbstractClientPlayer) (Object) this, nue);
         nue = fr.cabane.client.pouvoir.ClientTenueVent.peau((AbstractClientPlayer) (Object) this, nue);
+        nue = fr.cabane.client.pouvoir.ClientKaguya.peau((AbstractClientPlayer) (Object) this, nue);
         if (nue != skin) {
             cir.setReturnValue(nue);
         }

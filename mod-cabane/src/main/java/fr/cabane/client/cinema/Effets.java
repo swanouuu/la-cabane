@@ -78,6 +78,12 @@ public final class Effets {
         dessiner(fin ? modeleFin() : modele(), pose, buffers, skin, pieds, lacet, p, 1F, SANS, NOIR, 1F, teinte);
     }
 
+    /** Pareil, plus ou moins transparent (alpha de 0 à 1) : des fantômes, par exemple. */
+    public static void joueur(PoseStack pose, MultiBufferSource buffers, ResourceLocation skin, boolean fin, Vec3 pieds, float lacet, Posture p, int teinte,
+            float alpha) {
+        dessiner(fin ? modeleFin() : modele(), pose, buffers, skin, pieds, lacet, p, alpha, SANS, NOIR, 1F, teinte);
+    }
+
     private static PlayerModel<LivingEntity> modeleFin() {
         if (modeleFin == null) {
             modeleFin = new PlayerModel<>(net.minecraft.client.Minecraft.getInstance().getEntityModels().bakeLayer(ModelLayers.PLAYER_SLIM), true);

@@ -204,6 +204,120 @@
       }
     ]
   },
+  "backrooms.bourdon": {
+    "sounds": [
+      {
+        "name": "cabane:backrooms/bourdon",
+        "stream": true
+      }
+    ]
+  },
+  "backrooms.repere": {
+    "subtitle": "subtitles.cabane.backrooms.repere",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/repere"
+      }
+    ]
+  },
+  "backrooms.coeur": {
+    "sounds": [
+      {
+        "name": "cabane:backrooms/coeur"
+      }
+    ]
+  },
+  "backrooms.casier": {
+    "subtitle": "subtitles.cabane.backrooms.casier",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/casier"
+      }
+    ]
+  },
+  "backrooms.renifle": {
+    "subtitle": "subtitles.cabane.backrooms.renifle",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/renifle"
+      }
+    ]
+  },
+  "backrooms.gresille": {
+    "sounds": [
+      {
+        "name": "cabane:backrooms/gresille"
+      }
+    ]
+  },
+  "backrooms.pas": {
+    "subtitle": "subtitles.cabane.backrooms.pas",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/pas1"
+      },
+      {
+        "name": "cabane:backrooms/pas2"
+      },
+      {
+        "name": "cabane:backrooms/pas3"
+      }
+    ]
+  },
+  "backrooms.griffe": {
+    "subtitle": "subtitles.cabane.backrooms.pas_rampeur",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/griffe1"
+      },
+      {
+        "name": "cabane:backrooms/griffe2"
+      },
+      {
+        "name": "cabane:backrooms/griffe3"
+      }
+    ]
+  },
+  "backrooms.cri.rampeur": {
+    "subtitle": "subtitles.cabane.backrooms.cri",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/cri_rampeur"
+      }
+    ]
+  },
+  "backrooms.cri.souriant": {
+    "subtitle": "subtitles.cabane.backrooms.cri",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/cri_souriant"
+      }
+    ]
+  },
+  "backrooms.cri.fetard": {
+    "subtitle": "subtitles.cabane.backrooms.cri",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/cri_fetard"
+      }
+    ]
+  },
+  "backrooms.cri.sansvisage": {
+    "subtitle": "subtitles.cabane.backrooms.cri",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/cri_sansvisage"
+      }
+    ]
+  },
+  "backrooms.cri.phalene": {
+    "subtitle": "subtitles.cabane.backrooms.cri",
+    "sounds": [
+      {
+        "name": "cabane:backrooms/cri_phalene"
+      }
+    ]
+  },
   "espionne.zip": {
     "subtitle": "subtitles.cabane.espionne.zip",
     "sounds": [

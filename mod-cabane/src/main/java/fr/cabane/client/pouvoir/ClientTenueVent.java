@@ -346,7 +346,8 @@ public final class ClientTenueVent {
             float ka = pousse(t3, a + 0.3, a + 1.1);
             aile("aile3_d", -1, ps, buffers, lumiere, modele, ka, efface, battement, 5.5F);
             aile("aile3_g", 1, ps, buffers, lumiere, modele, ka, efface, battement, 5.5F);
-            float ouvre = (float) Mth.clamp((t3 - a - 0.3) / 0.6, 0, 1);
+            // la cape : enlevée (pas de cape sur les pouvoirs, demandé le 2026-11-08)
+            float ouvre = 0;
             if (ouvre > 0) {
                 float[] c = f(rampe(ESPRIT, 0.5)), cl = f(rampe(ESPRIT, 0.85)), bord = f(rampe(ESPRIT, 1));
                 cape(ps, buffers, lumiere, modele, joueur, c, cl, bord, true, true, 34, 18, ouvre, efface, partiel);

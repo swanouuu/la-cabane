@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "cabane:block/backrooms_plafond",
+    "up": "cabane:block/backrooms_plafond",
+    "down": "cabane:block/backrooms_plafond",
+    "north": "cabane:block/backrooms_plafond",
+    "south": "cabane:block/backrooms_plafond",
+    "east": "cabane:block/backrooms_plafond",
+    "west": "cabane:block/backrooms_plafond"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "cabane:block/backrooms_mur",
+        "weight": 40
+      },
+      {
+        "model": "cabane:block/backrooms_mur_tache"
+      },
+      {
+        "model": "cabane:block/backrooms_mur_tache2"
+      }
+    ]
+  }
+}

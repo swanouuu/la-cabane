@@ -1,5 +1,5 @@
-// Les skins fournis tels quels (dossier outils/skins/) : Vegeta (le PNJ du village et la cinématique) et Goku
-// Super Saiyan 2. On en tire Majin Vegeta en ajoutant le « M » de Babidi sur le front.
+// Les skins fournis tels quels (dossier outils/skins/) : Vegeta (le PNJ du village et la cinématique), Goku
+// Super Saiyan 2, Eren (le PNJ caché derrière la forge) et Erwin (la cinématique des titans). On en tire Majin Vegeta en ajoutant le « M » de Babidi sur le front.
 // Appelé à la fin de persos.mjs (ou seul :  node mod-cabane/outils/skins-perso.mjs).
 import fs from "node:fs";
 import path from "node:path";
@@ -74,6 +74,18 @@ export function skinsPerso() {
   const goku = lire(path.join(SOURCES, "goku_ssj2.png"));
   ecrire(path.join(DOSSIER, "vegeta.png"), vegeta);
   ecrire(path.join(DOSSIER, "goku_ssj2.png"), goku);
+  // Eren, du Bataillon d'exploration : caché derrière la forge, il sait des choses
+  const eren = lire(path.join(SOURCES, "eren.png"));
+  ecrire(path.join(DOSSIER, "eren.png"), eren);
+  // Erwin, le commandant qui mène la charge dans la cinématique des titans : le skin fourni (bras larges, cape verte)
+  ecrire(path.join(DOSSIER, "erwin.png"), lire(path.join(SOURCES, "erwin.png")));
+  // les soldats du Bataillon, au fond de la foule derrière les joueurs : l'uniforme d'Eren, chacun ses cheveux
+  const CHEVEUX = [[34, 30, 34], [96, 62, 38], [206, 172, 96], [168, 78, 38], [122, 110, 102]];
+  CHEVEUX.forEach((c, i) => {
+    const soldat = recolorer(eren, (r, g, b) => (r + g + b) / 3 < 100 && Math.max(r, g, b) - Math.min(r, g, b) < 22,
+      (l) => { const k = 0.55 + Math.min(1, Math.max(0, (l - 0.07) / 0.28)) * 0.7; return c.map((v) => Math.round(Math.min(255, v * k))); }, true);
+    ecrire(path.join(DOSSIER, `soldat_${i + 1}.png`), soldat);
+  });
   // Goku en forme normale : sa crinière dorée redevient noire
   ecrire(path.join(DOSSIER, "goku_base.png"), recolorer(goku, (r, g, b) => r > 150 && g > 110 && g - b > 40 && (r - g < 35 || (b < 90 && r - g < 75)),
     (l) => { const v = Math.round(14 + l * 50); return [v, v, v + 6]; }, false));
@@ -91,7 +103,7 @@ export function skinsPerso() {
     meche.px.set([v, v, v, 255], i * 4);
   }
   ecrire(path.join(DOSSIER, "..", "cheveux.png"), meche);
-  console.log("Skins fournis copiés : vegeta, goku_ssj2, goku_base, majin_vegeta");
+  console.log("Skins fournis copiés : vegeta, goku_ssj2, goku_base, majin_vegeta, eren, erwin, soldat_1 à 5");
 }
 
 /**

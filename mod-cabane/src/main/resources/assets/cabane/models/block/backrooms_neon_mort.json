@@ -1,0 +1,48 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "cabane:block/backrooms_plafond",
+    "plafond": "cabane:block/backrooms_plafond",
+    "neon": "cabane:block/backrooms_neon_mort"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "texture": "#neon",
+          "cullface": "down"
+        },
+        "up": {
+          "texture": "#plafond",
+          "cullface": "up"
+        },
+        "north": {
+          "texture": "#plafond",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#plafond",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#plafond",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#plafond",
+          "cullface": "west"
+        }
+      }
+    }
+  ]
+}

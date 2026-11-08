@@ -187,7 +187,20 @@ public final class ClientSusano {
         } else {
             TRANSFORMES.remove(p.joueur());
         }
-        // Hachibi, la marque maudite, Minato, les fruits du démon, Ichibi, la foudre et le vent ont leur propre dessin
+        // Hachibi, la marque maudite, Minato, les fruits du démon, Ichibi, la foudre, le vent et Kaguya ont leur propre dessin
+        if (fr.cabane.pouvoir.Kaguya.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.oublier(p.joueur());
+            ClientMinato.oublier(p.joueur());
+            ClientFruit.oublier(p.joueur());
+            ClientIchibi.oublier(p.joueur());
+            ClientFoudre.oublier(p.joueur());
+            ClientVent.oublier(p.joueur());
+            ClientKaguya.recevoir(p);
+            return;
+        }
+        ClientKaguya.oublier(p.joueur());
         if (fr.cabane.pouvoir.Vent.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
             ClientHachibi.oublier(p.joueur());

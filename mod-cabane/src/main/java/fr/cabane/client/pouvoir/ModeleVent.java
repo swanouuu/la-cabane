@@ -42,8 +42,13 @@ final class ModeleVent {
 
     /** Les modèles de ce fichier (assets/cabane/vent/nom.bin), lus une fois ; un tableau vide s'il est illisible. */
     static ModeleVent[] lire(String nom) {
-        return LUS.computeIfAbsent(nom, n -> {
-            ResourceLocation fichier = Cabane.id("vent/" + n + ".bin");
+        return lire("vent", nom);
+    }
+
+    /** Les modèles de assets/cabane/dossier/nom.bin (le Vent, Kaguya), lus une fois. */
+    static ModeleVent[] lire(String dossier, String nom) {
+        return LUS.computeIfAbsent(dossier + "/" + nom, n -> {
+            ResourceLocation fichier = Cabane.id(n + ".bin");
             try (var flux = new DataInputStream(new BufferedInputStream(Minecraft.getInstance().getResourceManager().open(fichier)))) {
                 ModeleVent[] l = new ModeleVent[flux.readInt()];
                 for (int g = 0; g < l.length; g++) {

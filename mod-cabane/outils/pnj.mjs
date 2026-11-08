@@ -399,6 +399,28 @@ export function genererPnj(ecrire) {
     ], boutons: [BYE("Vive le Prince !")] },
   ] });
 
+  // ------------------------------------------------------------ Eren, caché derrière la forge : il a vu ce qui va arriver (les titans)
+  // (son skin a des bras fins : le modèle « slim » d'Easy NPC, sinon ses bras sont mal découpés)
+  // dès qu'on arrive près de lui, il lâche son « Tatakae » (voix/ambiance/eren-1.ogg, pack privé ; hub/Ambiance, tag approche_)
+  pnj({ fichier: "eren", nom: "Eren", couleur: "dark_green", type: "humanoid_slim", variante: "ALEX", tags: ["approche_eren"], objectifs: IMMOBILE, dialogues: [
+    { label: "default", titre: "Eren", texte: [
+      "On dit rien, hein. … Mais voilà. On sait.",
+      "J'ai vu ce qui va arriver à Beauvais. Non, je te dirai rien. Profite de ta maison tant qu'elle a encore un toit.",
+      "La palissade du village… une clôture en bois. Contre eux. C'est mignon. C'est vraiment mignon.",
+      "Je me cache pas. J'attends. Derrière une forge. C'est pas pareil.",
+      "Tu entends ? Boum… boum… Non ? C'est normal. Pas encore.",
+      "Le Président se prend pour le maître des horloges. Moi, je sais déjà l'heure qu'il sera.",
+      "Brokk forge des épées. Dis-lui d'en faire plus. Beaucoup plus. … Je dis ça, je dis rien.",
+      "Un jour, quelqu'un va regarder par-dessus la palissade. Il sera très grand. Et il sourira.",
+      "Vegeta pense qu'il est le plus fort du village. Il a juste jamais levé la tête.",
+      "La nuque. Retiens bien ce mot. La nuque. Tu me remercieras.",
+      "Gérard dit que c'est la jungle qui ronfle, la nuit. C'est pas la jungle.",
+      "Avancer. Toujours avancer. … Pardon, je pensais tout haut.",
+      "Pourquoi derrière la forge ? Parce que c'est le mur le plus épais du village.",
+    ], boutons: [{ texte: "Tu sais quoi, exactement ?", vers: "sait" }, BYE("T'es bizarre, toi")] },
+    { label: "sait", titre: "Eren", texte: "Ah non. Ça, on dit rien. … Mais voilà. On sait.", boutons: [RETOUR, BYE("…D'accord")] },
+  ] });
+
   // ------------------------------------------------------------ les habitants : ils se baladent et se méfient des nouveaux
   const habitants = [
     ["jean", "Jean", ["Mon petit frère est parti « à la capitale ». Il n'a même pas pris son chapeau. Il ne sortait jamais sans son chapeau.", "Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, faut le temps qu'on vous connaisse.", "Mon grand-père a planté cet arbre. Mon père l'a coupé. Moi je le regarde. C'est une tradition.", "Tu marches trop vite. Ici, on marche lentement. Ça énerve les touristes, c'est le but."], "Bonne journée quand même"],

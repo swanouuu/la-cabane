@@ -16,6 +16,7 @@ import { genererLabo } from "./labo.mjs";
 import { genererCartel, sonsCartel } from "./cartel.mjs";
 import { genererInfiltration } from "./infiltration.mjs";
 import { genererCatch, sonsCatch } from "./catch.mjs";
+import { genererBackrooms, sonsBackrooms } from "./backrooms.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
 import { genererSharingan, sonsSharingan } from "./sharingan.mjs";
@@ -467,6 +468,8 @@ console.log(`Cartel : ${genererCartel({ ecrire, lang })} gars du cartel`);
 // les missions d'infiltration (/mission whoop|anbu 1-3, voir mission/Missions.java et docs/missions)
 console.log(`Missions d'infiltration : ${genererInfiltration({ ecrire, lang })} scènes`);
 console.log(`Catch : ${genererCatch({ ecrire, lang })} tenues et masques`);
+// les backrooms (/backroom) : blocs, monstres, dimension (voir backrooms/Backrooms.java et docs/backrooms)
+genererBackrooms({ ecrire, lang });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
@@ -475,7 +478,7 @@ Object.assign(lang, {
   "block.cabane.etal": "Étal", "block.cabane.machine_a_sous": "Machine à sous", "block.cabane.table_roulette": "Table de roulette",
   "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
-  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi",
+  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi", "entity.cabane.titan": "Titan",
   "item.cabane.puff_rose": "Puff rose (goût surprise)", "item.cabane.puff_bleue": "Puff bleue (goût surprise)", "item.cabane.puff_menthe": "Puff verte (goût surprise)",
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",
@@ -490,6 +493,7 @@ Object.assign(lang, {
   "death.attack.cabane.amaterasu.player": "%1$s a brûlé dans les flammes noires de %2$s",
   "subtitles.cabane.minato.flash": "Éclair jaune", "item.cabane.kunai_minato": "Kunai de Minato",
   "item.cabane.hallebarde_vent": "Hallebarde de vent",
+  "item.cabane.epee_colonne": "Épée colonne",
   "death.attack.cabane.eclair_jaune": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
   "death.attack.cabane.eclair_jaune.item": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
   "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune",
@@ -661,6 +665,8 @@ console.log("Ressources générées dans", RES);
   Object.assign(sons, sonsCartel(RES));
   // le catch : la cloche, le choc sur le tapis ; synthétisés par outils/catch.mjs
   Object.assign(sons, sonsCatch(RES));
+  // les backrooms : le bourdon des néons, les pas, les cris des screamers ; synthétisés par outils/backrooms.mjs
+  Object.assign(sons, sonsBackrooms(RES));
   // la fermeture éclair des tenues d'espionnes : synthétisée par outils/espionnes.mjs
   Object.assign(sons, sonsEspionnes(RES));
   // la grande expérience du labo (/experience) : perceuse, moniteur, lampes, bourdon… synthétisés par outils/operation.mjs

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "cabane:block/backrooms_moquette",
+        "weight": 10
+      },
+      {
+        "model": "cabane:block/backrooms_moquette_tache"
+      }
+    ]
+  }
+}

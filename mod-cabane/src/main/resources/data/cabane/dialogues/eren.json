@@ -1,0 +1,50 @@
+{
+  "nom": "Eren",
+  "couleur": "dark_green",
+  "voix": "",
+  "qui": "eren",
+  "pages": {
+    "default": {
+      "titre": "Eren",
+      "textes": [
+        "On dit rien, hein. … Mais voilà. On sait.",
+        "J'ai vu ce qui va arriver à Beauvais. Non, je te dirai rien. Profite de ta maison tant qu'elle a encore un toit.",
+        "La palissade du village… une clôture en bois. Contre eux. C'est mignon. C'est vraiment mignon.",
+        "Je me cache pas. J'attends. Derrière une forge. C'est pas pareil.",
+        "Tu entends ? Boum… boum… Non ? C'est normal. Pas encore.",
+        "Le Président se prend pour le maître des horloges. Moi, je sais déjà l'heure qu'il sera.",
+        "Brokk forge des épées. Dis-lui d'en faire plus. Beaucoup plus. … Je dis ça, je dis rien.",
+        "Un jour, quelqu'un va regarder par-dessus la palissade. Il sera très grand. Et il sourira.",
+        "Vegeta pense qu'il est le plus fort du village. Il a juste jamais levé la tête.",
+        "La nuque. Retiens bien ce mot. La nuque. Tu me remercieras.",
+        "Gérard dit que c'est la jungle qui ronfle, la nuit. C'est pas la jungle.",
+        "Avancer. Toujours avancer. … Pardon, je pensais tout haut.",
+        "Pourquoi derrière la forge ? Parce que c'est le mur le plus épais du village."
+      ],
+      "boutons": [
+        {
+          "texte": "Tu sais quoi, exactement ?",
+          "vers": "sait"
+        },
+        {
+          "texte": "T'es bizarre, toi"
+        }
+      ]
+    },
+    "sait": {
+      "titre": "Eren",
+      "textes": [
+        "Ah non. Ça, on dit rien. … Mais voilà. On sait."
+      ],
+      "boutons": [
+        {
+          "texte": "Retour",
+          "vers": "default"
+        },
+        {
+          "texte": "…D'accord"
+        }
+      ]
+    }
+  }
+}

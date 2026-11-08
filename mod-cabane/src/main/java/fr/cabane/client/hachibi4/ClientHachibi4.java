@@ -686,6 +686,8 @@ public final class ClientHachibi4 {
                 fr.cabane.client.pouvoir.ClientFruit.toucheUlti();
                 // et au Tsukuyomi du Susano (ses yeux éveillés)
                 fr.cabane.client.pouvoir.ClientSharingan.toucheUlti();
+                // et au dinosaure d os de Kaguya (niveau 3)
+                fr.cabane.client.pouvoir.ClientKaguya.toucheUlti();
                 PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.ULTI));
             }
         }

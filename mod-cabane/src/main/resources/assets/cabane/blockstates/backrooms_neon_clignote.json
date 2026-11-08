@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "cabane:block/backrooms_neon_clignote_a"
+      },
+      {
+        "model": "cabane:block/backrooms_neon_clignote_b"
+      }
+    ]
+  }
+}

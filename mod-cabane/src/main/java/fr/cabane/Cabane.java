@@ -40,6 +40,8 @@ public class Cabane {
         fr.cabane.mission.Missions.register(modBus);
         fr.cabane.costume.Costumes.register(modBus);
         fr.cabane.lutte.Lutte.register(modBus);
+        fr.cabane.titans.Titans.register(modBus);
+        fr.cabane.backrooms.Backrooms.register(modBus);
         modBus.addListener(PhoneNetwork::register);
         modBus.addListener(Economie::register);
         modBus.addListener(Boutique::register);

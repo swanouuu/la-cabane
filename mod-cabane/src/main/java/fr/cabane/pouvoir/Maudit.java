@@ -55,7 +55,7 @@ import org.joml.Vector3f;
  * tout ce qu'il frappe prend 1,5 dégât de plus, quoi qu'il ait en main.
  * <p>
  * Avec « marque2 », la touche Éveil passe ensuite au niveau 2 : la peau devient claire, les cheveux gris, et deux mains
- * géantes jaillissent de son dos. Tout est doublé : la vitesse, l'armure (Protection IV), les dégâts. Accroupi au sol, un
+ * géantes jaillissent de son dos. La vitesse et les dégâts sont doublés, l'armure monte. Accroupi au sol, un
  * grand coup d'ailes le lance en l'air ; il plane ensuite (dessin et vol côté client), et ne prend plus de dégâts de
  * chute. Le clic droit lance le Chidori sur ce qu'il vise ({@link #chidori}).
  * <p>
@@ -69,10 +69,10 @@ public final class Maudit {
     public static final String NOM3 = "marque3";
 
     /**
-     * Ce qui reste des dégâts : Protection II sur les quatre pièces (32 % en moins), Protection IV au niveau 2 (64 %), et
-     * au niveau 3 Protection IV aussi (son armure, celle du chevalier, fait le reste).
+     * Ce qui reste des dégâts : Protection II sur les quatre pièces (32 % en moins), 20 % en moins au niveau 2, et plus rien
+     * au niveau 3 (son armure, celle du chevalier, suffit : équilibrage du 2026-11-08, il était bien plus dur à tuer que les autres).
      */
-    private static final float[] PROTECTION = {1, 0.68F, 0.36F, 0.36F};
+    private static final float[] PROTECTION = {1, 0.68F, 0.8F, 1};
     private static final double[] VITESSE_BONUS = {0, 0.2, 0.4, 0.4};
     /** Les coups boostés : au niveau 3, comme les pouvoirs de niveau 3 (voir l'équilibrage par niveau). */
     private static final double[] FORCE_BONUS = {0, 1.5, 3, 5};

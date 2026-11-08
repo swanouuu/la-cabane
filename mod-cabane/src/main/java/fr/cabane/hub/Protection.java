@@ -33,6 +33,8 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
  * <ul>
  * <li>Ce qu'un joueur a posé lui-même dans le village se recasse.</li>
  * <li>Une maison ou un terrain à vendre est protégé tant qu'il n'est pas acheté ; acheté, tout le monde peut le modifier.</li>
+ * <li>Pendant la première partie de l'histoire, on ne creuse pas non plus sous la Mairie (la terre et la pierre autour
+ * du puits d'échelle et du laboratoire) : le passage secret reste secret.</li>
  * <li>À partir de la deuxième partie de l'histoire, la Mairie (et son laboratoire) se casse.</li>
  * <li>Un hôte en créatif casse tout (pour réparer).</li>
  * </ul>
@@ -60,18 +62,21 @@ public final class Protection {
         if (etat.is(CabaneBlocks.BORNE_TERRAIN.get())) {
             return true; // la borne garde le nom du propriétaire
         }
-        if (naturel(etat) || Poses.get(serveur).contient(pos)) {
+        if (Poses.get(serveur).contient(pos)) {
             return false;
         }
         int x = pos.getX() - c.getX();
         int y = pos.getY() - c.getY();
         int z = pos.getZ() - c.getZ();
-        if (hub.partie() >= 2) {
-            for (int[] b : MAIRIE) {
-                if (x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] && z >= b[2] && z <= b[5]) {
-                    return false;
-                }
-            }
+        if (sousLaMairie(x, y, z)) {
+            // pendant la première partie, même la terre et la pierre : personne ne creuse jusqu'au passage secret
+            return hub.partie() < 2;
+        }
+        if (naturel(etat)) {
+            return false;
+        }
+        if (hub.partie() >= 2 && dansLaMairie(x, y, z)) {
+            return false;
         }
         for (int[] lot : LOTS) {
             if (x >= lot[0] && x <= lot[2] && z >= lot[1] && z <= lot[3]) {
@@ -80,6 +85,21 @@ public final class Protection {
             }
         }
         return true;
+    }
+
+    /** Dans la Mairie ou dans son laboratoire (coordonnées par rapport au centre du village). */
+    private static boolean dansLaMairie(int x, int y, int z) {
+        for (int[] b : MAIRIE) {
+            if (x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] && z >= b[2] && z <= b[5]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Sous le sol de la Mairie : le puits d'échelle, le couloir et le laboratoire, avec la terre et la pierre autour. */
+    private static boolean sousLaMairie(int x, int y, int z) {
+        return y < 0 && dansLaMairie(x, y, z);
     }
 
     /** Dans l'enceinte du village (un peu plus large que la palissade), du fond du laboratoire jusqu'au ciel. */
@@ -124,8 +144,9 @@ public final class Protection {
         BlockPos pos = event.getPos();
         if (!hoteCreatif(joueur) && protege(level, pos, event.getState())) {
             event.setCanceled(true);
-            joueur.displayClientMessage(Component.literal("Ce bâtiment appartient à Beauvais : impossible de le casser.")
-                    .withStyle(ChatFormatting.RED), true);
+            joueur.displayClientMessage(Component.literal(naturel(event.getState())
+                    ? "Ce terrain appartient à la Mairie : interdit d'y creuser."
+                    : "Ce bâtiment appartient à Beauvais : impossible de le casser.").withStyle(ChatFormatting.RED), true);
             return;
         }
         if (dansLeVillage(level, pos)) {

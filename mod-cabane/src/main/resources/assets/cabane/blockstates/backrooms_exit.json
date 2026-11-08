@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/backrooms_exit"
+    },
+    "facing=east": {
+      "model": "cabane:block/backrooms_exit",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/backrooms_exit",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/backrooms_exit",
+      "y": 270
+    }
+  }
+}

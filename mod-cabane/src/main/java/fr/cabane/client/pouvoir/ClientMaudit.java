@@ -405,7 +405,7 @@ public final class ClientMaudit {
         return p;
     }
 
-    private static ResourceLocation enregistrer(int[] px, String nom) {
+    static ResourceLocation enregistrer(int[] px, String nom) {
         NativeImage image = new NativeImage(64, 64, true);
         for (int i = 0; i < px.length; i++) {
             image.setPixelRGBA(i % 64, i / 64, px[i]);
@@ -419,7 +419,7 @@ public final class ClientMaudit {
     private static int[] basSasukeLu;
 
     /** Le bas du skin de Sasuke (pantalon, sandales, ceinture de corde), seul sur une peau 64 × 64 (en ABGR), ou null. */
-    private static int[] basSasuke() {
+    static int[] basSasuke() {
         if (basSasukeLu != null) {
             return basSasukeLu;
         }
@@ -482,7 +482,7 @@ public final class ClientMaudit {
     }
 
     /** La couleur de peau : la plus fréquente sur le bas du visage (sous les yeux). */
-    private static double[] teint(int[] px) {
+    static double[] teint(int[] px) {
         Map<Integer, Integer> n = new LinkedHashMap<>();
         for (int y = 13; y < 16; y++) {
             for (int x = 8; x < 16; x++) {
@@ -581,7 +581,7 @@ public final class ClientMaudit {
      * Torse nu : le corps, les bras et les jambes à la couleur du visage, sans la deuxième couche ; puis le bas du skin
      * de Sasuke par-dessus (ses deux couches).
      */
-    private static int[] torseNu(int[] base, int[] bas, boolean fin, double[] peau) {
+    static int[] torseNu(int[] base, int[] bas, boolean fin, double[] peau) {
         int[] s = base.clone();
         for (int partie = CORPS; partie < 6; partie++) {
             for (Texel t : texels(boite(partie, fin), UV[partie], 1)) {
@@ -604,6 +604,11 @@ public final class ClientMaudit {
      * grisent ; les yeux deviennent noirs, avec un seul pixel rouge au coin intérieur du haut.
      */
     private static int[] forme2(int[] s, boolean fin, double[] peau) {
+        return forme2(s, fin, peau, YEUX);
+    }
+
+    /** La même, avec un iris d une autre couleur (Kaguya niveau 3 : jaune). */
+    static int[] forme2(int[] s, boolean fin, double[] peau, int iris) {
         int[] avant = s.clone();
         double lumPeau = Math.max(1, lum(peau));
         // la lumière moyenne des cheveux, pour garder leurs reflets
@@ -648,8 +653,8 @@ public final class ClientMaudit {
         for (int y = 12; y <= 13; y++) {
             for (int x : new int[]{9, 10, 13, 14}) {
                 if (oeil(avant, x, y)) {
-                    boolean iris = (x == 10 || x == 13) && (y == 12 || !oeil(avant, x, 12));
-                    s[y * 64 + x] = iris ? YEUX : OEIL_NOIR;
+                    boolean estIris = (x == 10 || x == 13) && (y == 12 || !oeil(avant, x, 12));
+                    s[y * 64 + x] = estIris ? iris : OEIL_NOIR;
                 }
             }
         }

@@ -90,6 +90,7 @@ Les PNJ (Easy NPC) :
 - **Ovsie la Fée**, **Nyota la Guérisseuse**, les gardes de la grande porte ;
 - **les habitants** : Jean, Jacques, Francis, Louis, Bernard, Gérard, Ginette, Monique, Martine et Thierry. Ils se baladent autour de chez eux et se méfient des nouveaux ;
 - **Vegeta**, qui s'entraîne près de la tour de guet (« ma stupide fierté… ») ;
+- **Eren**, du Bataillon d'exploration, caché juste derrière la forge de Brokk, côté boulevard : il a vu ce qui va arriver à Beauvais, et il n'en dira rien (« On dit rien, hein… Mais voilà. On sait. ») ;
 - les **orques de Brokk** (Grosh, Mog et Urga), qui travaillent dans sa forge ;
 - **Macron, Président de Beauvais**, sur la place, et ses **quatre gardes présidentiels**. Ils sont invincibles : qui frappe le Président (ou un garde) est pris en chasse pendant deux minutes. Ils finissent par se calmer ;
 - **Sylvie**, la femme de Pierre, qui se balade sur la place avec leur fils **Lucas**, un gamin qui la suit partout (voir « Où est Pierre ? ») ;
@@ -140,7 +141,7 @@ Le chapitre de quêtes **L'Histoire de Beauvais** raconte la grande aventure, en
 
 ## Le bar : bières, vin et sodas
 
-- **L'alcool** : bière blonde, bière brune, la fameuse **8.6**, vin rouge, pastis, rhum. Chaque verre fait monter l'**ivresse** : le hoquet, puis la tête qui tourne, la caméra qui tangue, la démarche qui titube… et le trou noir si on abuse. Au vocal, la voix d'un joueur bourré devient pâteuse et tangue (pour tout le monde, téléphone compris), jusqu'à ce que l'effet passe. Certaines donnent un petit bonus (la 8.6 et le rhum rendent plus fort, le vin soigne un peu, le pastis protège du feu).
+- **L'alcool** : bière blonde, bière brune, la fameuse **8.6**, vin rouge, pastis, rhum. Chaque verre fait monter l'**ivresse** : le hoquet, puis la tête qui tourne, la caméra qui tangue, la démarche qui titube… et le trou noir si on abuse. Au vocal, la voix d'un joueur bourré part en vrille (pour tout le monde, téléphone compris), jusqu'à ce que l'effet passe : à « Pompette » elle tangue un peu ; à « Ivre mort » elle monte et descend, ralentit puis accélère, il bégaie, il a le hoquet, il rote des bouts de phrase et parle la bouche pleine. On ne le comprend presque plus. Certaines donnent un petit bonus (la 8.6 et le rhum rendent plus fort, le vin soigne un peu, le pastis protège du feu).
 - **Les sodas** (coca, fanta, ice tea pêche) : un coup de fouet (vitesse, saut, régénération), et ils font redescendre d'un cran.
 - Tout s'achète chez Mouloud, et tout se fabrique : bouteille vide + blé + sucre (blonde), + cacao (brune), + sucre, sucre et œil d'araignée fermenté (8.6), trois baies sucrées (vin), sucre + deux fougères (pastis), cannes à sucre (rhum) ; pépite de fer + deux sucres + cacao, colorant orange ou glace pour les canettes.
 - **Pour les vendre** : le marché rachète bières, vin et coca dans ses contrats, et chacun peut tenir son étal (ou ouvrir la taverne du village, une quête d'« Agrandir Beauvais »).
@@ -186,6 +187,31 @@ Le grand combat, à lancer quand tout le monde est là (seul l'hôte peut le fai
 3. `/cabane evenement vegeta annuler` : on arrête tout.
 
 Une île de roche apparaît alors dans le ciel, 80 blocs au-dessus de vous (elle n'existe que pendant le combat, et disparaît à la fin, même si le serveur s'arrête en plein milieu). Écran noir, « Goku est enfin arrivé… », puis la cinématique : Goku et Majin Vegeta passent Super Saiyan 2, plan par plan comme dans Dragon Ball Z Kai, avec le son de l'extrait (dans le pack « Beauvais - voix », voir plus bas). Ensuite chacun vote : celui qu'on aide se bat à nos côtés, l'autre devient le boss, sur l'île. Vegeta ne parle plus pareil après.
+
+## L'attaque des titans (l'événement d'Eren)
+
+Eren, caché derrière la forge, l'avait dit : « On dit rien… mais voilà. On sait. » L'hôte lance l'attaque avec `/cabane evenement eren` :
+
+1. **La cinématique (2 min 13), pour tout le monde**, même ceux qui sont ailleurs (ils sont ramenés au village).
+   - **Le discours d'Erwin.** Il reprend plan par plan la vidéo « Le speech d'Erwin », avec sa bande-son. Sur l'avenue, Erwin, Eren à côté de lui, parle à la foule : c'est vous, au premier rang, chacun avec son skin, et des soldats du Bataillon derrière. Le premier joueur lui répond. La Mâchoire lance un rocher au loin, des rochers traversent le ciel, et les camarades morts apparaissent en bleu derrière Erwin. Des sous-titres en français résument ce qu'il dit, parce que la voix est en japonais.
+   - **La charge.** Tout le monde charge à cheval sous les fusées vertes. Les rochers tombent, des soldats sont projetés, et Erwin est éjecté de son cheval à la grande porte.
+   - **Ensuite.** Le Barbu enjambe la palissade près de la forge. Derrière la forge, Eren : « On disait rien… mais voilà. On savait. » Pour finir, on voit tous les titans autour de Beauvais, et le titre.
+   - **La bande-son** (`voix/cinematique/erwin.ogg`) n'est que dans le pack privé « Beauvais - voix » : sans lui, quelques bruitages de Minecraft la remplacent.
+2. **Le combat.** À la fin de la scène, vous êtes sur la place, et les titans apparaissent tout autour du village, juste derrière la palissade. Il y en a 24. Une barre rouge en haut de l'écran compte ceux qui restent debout. Quand le dernier tombe : « BEAUVAIS A TENU ».
+
+Les cinq titans (le rendu : `docs/titans/apercu/titans.html`) sont des géants maigres de 13 à 16 blocs, chacun avec sa tête. Ils ont beaucoup de vie et frappent lentement, sans trop de dégâts. Ils ne cassent rien et se régénèrent un peu. Morts, ils tombent et partent en vapeur.
+
+| Titan | Vie | Coup |
+|---|---|---|
+| le Chauve | 400 | 2 cœurs, rapide |
+| le Bigleux | 450 | 2 cœurs, rapide |
+| le Souriant | 500 | 2,5 cœurs |
+| le Barbu | 550 | 2,5 cœurs |
+| la Mâchoire | 700 | 3 cœurs, lent |
+
+**Le point faible, c'est la nuque :** un coup porté de derrière ou d'au-dessus (à l'épée, ou en volant avec un pouvoir), ou une flèche qui l'atteint là, fait **cinq fois plus mal** (« LA NUQUE ! × 5 »).
+
+Pour tester : `/cabane evenement eren <seconde> [faux]` rejoue la scène à partir de cette seconde, avec de faux cavaliers en plus. `/cabane evenement eren titans [nombre]` fait venir les titans tout de suite, sans la scène. `/cabane evenement eren fin` les fait disparaître. Les modèles des titans se refont avec `node mod-cabane/outils/titans.mjs`.
 
 ## Les missions d'infiltration (WOOHP et ANBU)
 
@@ -251,7 +277,7 @@ Chaque PNJ dit une réplique enregistrée quand on lui parle (s'il en a). Pour a
 3. Mets-les dans le dossier `voix/` à la racine du projet, au format `.ogg` (Audacity sait exporter en OGG, gratuit). Sinon, envoie-les-moi dans n'importe quel format et je les convertis.
 4. Lance `node mod-cabane/outils/generer.mjs`, puis `compiler.bat` et `publier.bat`.
 
-Pour qu'un PNJ parle **tout seul** de temps en temps quand on passe à côté (toutes les 45 à 90 s), mets ses répliques dans `voix/ambiance/` (par exemple `voix/ambiance/vegeta-1.ogg`) : pour l'instant, seul Vegeta a ce réglage. Ces répliques-là ne vont **ni sur GitHub ni dans le mod** : `construire-instance.bat` les range dans le pack de ressources « Beauvais - voix » de `dist/SakaiMod.zip`, activé d'office. Envoie ce zip à tes potes toi-même (ils le réimportent dans Prism), et mets le même pack sur ton propre Prism.
+Pour qu'un PNJ parle **tout seul** de temps en temps quand on passe à côté (toutes les 45 à 90 s), mets ses répliques dans `voix/ambiance/` (par exemple `voix/ambiance/vegeta-1.ogg`) : pour l'instant, seul Vegeta a ce réglage. Eren, lui, réagit **dès qu'on arrive** à moins de 9 blocs de lui, avec son « Tatakae » (`voix/ambiance/eren-1.ogg`), puis attend 25 s avant de recommencer : c'est le tag `approche_eren` de son PNJ (`outils/pnj.mjs`). Ces répliques-là ne vont **ni sur GitHub ni dans le mod** : `construire-instance.bat` les range dans le pack de ressources « Beauvais - voix » de `dist/SakaiMod.zip`, activé d'office. Envoie ce zip à tes potes toi-même (ils le réimportent dans Prism), et mets le même pack sur ton propre Prism.
 
 Pareil pour les bruitages tirés du doublage : `voix/effets/<son>.ogg` remplace le son `cabane:<son>` du mod, seulement dans ce pack (par exemple `voix/effets/minato.flash.ogg` pour les téléportations de Minato). Sans le pack, on entend le son du mod (pour Minato, un coup de tonnerre).
 

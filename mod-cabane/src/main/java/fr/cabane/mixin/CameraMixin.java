@@ -20,6 +20,10 @@ public abstract class CameraMixin {
     @Inject(method = "setup", at = @At("TAIL"))
     private void cabane$hachibi4(BlockGetter niveau, Entity entite, boolean detachee, boolean miroir, float partiel, CallbackInfo ci) {
         Vec3 p = ClientHachibi4.camera((Camera) (Object) this, entite, detachee, partiel);
+        if (p == null) {
+            // l ulti de Kaguya : loin derrière elle, sur son dinosaure d os
+            p = fr.cabane.client.pouvoir.ClientKaguyaDino.camera((Camera) (Object) this, entite, detachee, partiel);
+        }
         if (p != null) {
             setPosition(p);
         }

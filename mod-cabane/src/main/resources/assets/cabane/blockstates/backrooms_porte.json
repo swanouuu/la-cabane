@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,half=lower": {
+      "model": "cabane:block/backrooms_porte_bas"
+    },
+    "facing=north,half=upper": {
+      "model": "cabane:block/backrooms_porte_haut"
+    },
+    "facing=east,half=lower": {
+      "model": "cabane:block/backrooms_porte_bas",
+      "y": 90
+    },
+    "facing=east,half=upper": {
+      "model": "cabane:block/backrooms_porte_haut",
+      "y": 90
+    },
+    "facing=south,half=lower": {
+      "model": "cabane:block/backrooms_porte_bas",
+      "y": 180
+    },
+    "facing=south,half=upper": {
+      "model": "cabane:block/backrooms_porte_haut",
+      "y": 180
+    },
+    "facing=west,half=lower": {
+      "model": "cabane:block/backrooms_porte_bas",
+      "y": 270
+    },
+    "facing=west,half=upper": {
+      "model": "cabane:block/backrooms_porte_haut",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{"texture":[128,64],"sommet":60.3587,"parties":[
+  {"nom":"jambe_d","parent":null,"pivot":[-2.4,-4,0],"rotation":[0,0,0],"boites":[{"uv":[0,0],"coin":[-2,0,-2],"taille":[4,28,4],"gonfle":[-0.2,0,-0.2]},{"uv":[56,32],"coin":[-2,26.02,-4],"taille":[4,2,6],"gonfle":[0,0,0]}]},
+  {"nom":"jambe_g","parent":null,"pivot":[2.4,-4,0],"rotation":[0,0,0],"boites":[{"uv":[16,0],"coin":[-2,0,-2],"taille":[4,28,4],"gonfle":[-0.2,0,-0.2]},{"uv":[76,32],"coin":[-2,26.02,-4],"taille":[4,2,6],"gonfle":[0,0,0]}]},
+  {"nom":"bassin","parent":null,"pivot":[0,-4,0],"rotation":[0,0,0],"boites":[{"uv":[30,32],"coin":[-4,-4.5,-2.5],"taille":[8,5,5],"gonfle":[0,0,-0.2]}]},
+  {"nom":"torse","parent":"bassin","pivot":[0,-4,0],"rotation":[0.13,0,0],"boites":[{"uv":[0,32],"coin":[-5,-14,-2.5],"taille":[10,14,5],"gonfle":[0,0,0]},{"uv":[96,32],"coin":[-2,-16.8,-2.3],"taille":[4,3,4],"gonfle":[0,0,0]}]},
+  {"nom":"bras_d","parent":"torse","pivot":[-6.6,-12.4,0],"rotation":[-0.13,0,0.07],"boites":[{"uv":[32,0],"coin":[-1.5,-1.6,-1.5],"taille":[3,26,3],"gonfle":[0.1,0,0.1]}]},
+  {"nom":"bras_g","parent":"torse","pivot":[6.6,-12.4,0],"rotation":[-0.13,0,-0.07],"boites":[{"uv":[44,0],"coin":[-1.5,-1.6,-1.5],"taille":[3,26,3],"gonfle":[0.1,0,0.1]}]},
+  {"nom":"tete","parent":"torse","pivot":[0,-16.6,-0.6],"rotation":[0,0,0],"boites":[{"uv":[56,0],"coin":[-6,-12,-6.1],"taille":[12,12,11],"gonfle":[0,0,0]},{"uv":[112,32],"coin":[-7,-6.9,-1.1],"taille":[1,3,2],"gonfle":[0,0,0]},{"uv":[118,32],"coin":[6,-6.9,-1.1],"taille":[1,3,2],"gonfle":[0,0,0]},{"uv":[0,51],"coin":[-1,-6.7,-7.3],"taille":[2,2,1],"gonfle":[0,0.2,0.2]}]}
+]}

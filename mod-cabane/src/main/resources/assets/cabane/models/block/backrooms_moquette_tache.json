@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "cabane:block/backrooms_moquette",
+    "up": "cabane:block/backrooms_moquette_tache",
+    "down": "cabane:block/backrooms_moquette",
+    "north": "cabane:block/backrooms_moquette",
+    "south": "cabane:block/backrooms_moquette",
+    "east": "cabane:block/backrooms_moquette",
+    "west": "cabane:block/backrooms_moquette"
+  }
+}

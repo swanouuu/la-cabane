@@ -56,6 +56,10 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * Une barre en haut de l'écran compte ceux qui restent. Chaque vague repoussée rapporte de l'argent à tous.
  * <p>
  * Les bâtiments du village ne craignent rien (voir hub/Protection) : les Pillards en ont après les joueurs.
+ * <p>
+ * /raid allume aussi les raids automatiques : après chaque raid repoussé, le suivant arrive au hasard entre 30 minutes et
+ * 1 h 30 plus tard (une minute avant, on entend les tambours), jusqu'à /raid stop (ou /stopraid). Personne en ligne ou
+ * monde en paisible : il attend cinq minutes et réessaie. /raid info dit quand arrive le prochain.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class GrandRaid {
@@ -63,6 +67,13 @@ public final class GrandRaid {
     private static final int PAUSE_DEBUT = 20 * 8;
     private static final int PAUSE_VAGUES = 20 * 15;
     private static final long PRIME_PAR_VAGUE = 400;
+    /** Les raids automatiques : entre deux raids, de 30 minutes à 1 h 30 ; le préavis ; l'attente quand ce n'est pas possible. */
+    private static final int ATTENTE_MIN = 20 * 60 * 30, ATTENTE_MAX = 20 * 60 * 90;
+    private static final int PREAVIS = 20 * 60;
+    private static final int REESSAI = 20 * 60 * 5;
+    /** prochainRaid vaut ça pendant un raid automatique : le suivant se tire au sort quand celui-ci finit. */
+    private static final long APRES_CE_RAID = -1;
+    private static boolean prevenu;
 
     private static int vagues;
     private static int vague;
@@ -82,7 +93,10 @@ public final class GrandRaid {
                 .executes(ctx -> lancer(ctx.getSource(), 3))
                 .then(Commands.argument("vagues", IntegerArgumentType.integer(1, 5))
                         .executes(ctx -> lancer(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "vagues"))))
-                .then(Commands.literal("stop").executes(ctx -> arreter(ctx.getSource()))));
+                .then(Commands.literal("stop").executes(ctx -> arreter(ctx.getSource())))
+                .then(Commands.literal("info").executes(ctx -> info(ctx.getSource()))));
+        // « /stop raid » arrêterait le serveur (/stop est la commande de Minecraft) : /stopraid fait comme /raid stop
+        event.getDispatcher().register(Commands.literal("stopraid").requires(GrandRaid::hote).executes(ctx -> arreter(ctx.getSource())));
     }
 
     private static boolean hote(CommandSourceStack source) {
@@ -93,20 +107,50 @@ public final class GrandRaid {
         return joueur != null && !source.getServer().isDedicatedServer() && source.getServer().isSingleplayerOwner(joueur.getGameProfile());
     }
 
+    /** /raid : un raid tout de suite, et les raids automatiques allumés (avec ce nombre de vagues). */
     private static int lancer(CommandSourceStack source, int nombre) {
         MinecraftServer server = source.getServer();
-        if (HubData.get(server).centre() == null) {
-            source.sendFailure(Component.literal("Beauvais n'est pas encore construit."));
+        String refus = demarrer(server, nombre);
+        if (refus != null) {
+            source.sendFailure(Component.literal(refus));
             return 0;
+        }
+        HubData data = HubData.get(server);
+        data.setRaidsAuto(true, nombre);
+        data.setProchainRaid(APRES_CE_RAID);
+        source.sendSuccess(() -> Component.literal("Grand raid lancé : " + nombre + (nombre > 1 ? " vagues." : " vague.")
+                + " Les raids automatiques sont allumés : un nouveau raid toutes les 30 min à 1 h 30, jusqu'à /raid stop."), true);
+        return nombre;
+    }
+
+    /** /raid info : y a-t-il des raids automatiques, et quand arrive le prochain ? */
+    private static int info(CommandSourceStack source) {
+        HubData data = HubData.get(source.getServer());
+        String texte;
+        if (!data.raidsAuto()) {
+            texte = "Raids automatiques : coupés. /raid pour les allumer.";
+        } else if (vagues > 0 || data.prochainRaid() == APRES_CE_RAID) {
+            texte = "Raids automatiques : allumés. Un raid est en cours ; le suivant se tirera au sort quand il sera repoussé.";
+        } else {
+            long reste = Math.max(0, data.prochainRaid() - source.getServer().overworld().getGameTime());
+            texte = "Raids automatiques : allumés (" + data.vaguesAuto() + " vagues). Prochain raid dans environ " + Math.max(1, reste / 1200) + " min.";
+        }
+        source.sendSuccess(() -> Component.literal(texte).withStyle(ChatFormatting.GOLD), false);
+        return 1;
+    }
+
+    /** Lance un grand raid ; renvoie pourquoi c'est impossible, ou null s'il part. */
+    private static String demarrer(MinecraftServer server, int nombre) {
+        if (HubData.get(server).centre() == null) {
+            return "Beauvais n'est pas encore construit.";
         }
         if (vagues > 0) {
-            source.sendFailure(Component.literal("Un raid est déjà en cours (vague " + vague + "/" + vagues + "). /raid stop pour l'arrêter."));
-            return 0;
+            return "Un raid est déjà en cours (vague " + vague + "/" + vagues + "). /raid stop pour l'arrêter.";
         }
         if (server.overworld().getDifficulty() == Difficulty.PEACEFUL) {
-            source.sendFailure(Component.literal("Le monde est en paisible : les Pillards disparaîtraient tout de suite. Passe en facile ou plus (/difficulty)."));
-            return 0;
+            return "Le monde est en paisible : les Pillards disparaîtraient tout de suite. Passe en facile ou plus (/difficulty).";
         }
+        prevenu = false;
         vagues = nombre;
         vague = 0;
         pause = PAUSE_DEBUT;
@@ -124,19 +168,68 @@ public final class GrandRaid {
         }
         server.getPlayerList().broadcastSystemMessage(Component.literal("⚔ Le cor des Pillards résonne dans la jungle : un grand raid marche sur Beauvais ! "
                 + "Défendez le village (grande porte du sud et passages sud de la palissade).").withStyle(ChatFormatting.RED), false);
-        source.sendSuccess(() -> Component.literal("Grand raid lancé : " + nombre + (nombre > 1 ? " vagues." : " vague.")), true);
-        return nombre;
+        return null;
     }
 
+    /** /raid stop (ou /stopraid) : le raid en cours s'arrête, et il n'y en a plus d'automatiques. */
     private static int arreter(CommandSourceStack source) {
+        HubData data = HubData.get(source.getServer());
+        boolean auto = data.raidsAuto();
+        data.setRaidsAuto(false, data.vaguesAuto());
+        prevenu = false;
         if (vagues == 0) {
-            source.sendFailure(Component.literal("Aucun raid en cours."));
+            if (auto) {
+                source.sendSuccess(() -> Component.literal("Raids automatiques coupés : plus de raid tant que tu ne refais pas /raid."), true);
+                return 1;
+            }
+            source.sendFailure(Component.literal("Aucun raid en cours, et les raids automatiques sont déjà coupés."));
             return 0;
         }
         int n = nettoyer(source.getServer());
         finir();
-        source.sendSuccess(() -> Component.literal("Raid arrêté : " + n + " pillards renvoyés dans leurs marais."), true);
+        source.sendSuccess(() -> Component.literal("Raid arrêté : " + n + " pillards renvoyés dans leurs marais."
+                + (auto ? " Raids automatiques coupés." : "")), true);
         return n;
+    }
+
+    /** Les raids automatiques, une fois par seconde quand aucun raid n'est en cours : le préavis, puis le raid. */
+    private static void automatique(MinecraftServer server) {
+        HubData data = HubData.get(server);
+        if (!data.raidsAuto()) {
+            return;
+        }
+        long maintenant = server.overworld().getGameTime();
+        if (data.prochainRaid() == APRES_CE_RAID || data.prochainRaid() <= 0) {
+            // un raid coupé par un redémarrage, ou jamais tiré au sort : on tire le suivant
+            planifier(server);
+            return;
+        }
+        boolean personne = server.getPlayerList().getPlayers().stream().noneMatch(p -> p.level() == server.overworld());
+        if (maintenant >= data.prochainRaid() - PREAVIS && !prevenu && !personne) {
+            prevenu = true;
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                p.playNotifySound(SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 1.2F, 0.6F);
+            }
+            server.getPlayerList().broadcastSystemMessage(Component.literal("🥁 Des tambours résonnent au sud de la jungle… "
+                    + "les Pillards du Sud attaqueront Beauvais dans une minute !").withStyle(ChatFormatting.GOLD), false);
+        }
+        if (maintenant < data.prochainRaid()) {
+            return;
+        }
+        // personne pour défendre, ou monde en paisible : on réessaie dans cinq minutes
+        if (personne || server.overworld().getDifficulty() == Difficulty.PEACEFUL || demarrer(server, data.vaguesAuto()) != null) {
+            prevenu = false;
+            data.setProchainRaid(maintenant + REESSAI);
+            return;
+        }
+        data.setProchainRaid(APRES_CE_RAID);
+    }
+
+    /** Le prochain raid automatique : entre 30 minutes et 1 h 30 à partir de maintenant. */
+    private static void planifier(MinecraftServer server) {
+        ServerLevel level = server.overworld();
+        prevenu = false;
+        HubData.get(server).setProchainRaid(level.getGameTime() + level.random.nextIntBetweenInclusive(ATTENTE_MIN, ATTENTE_MAX));
     }
 
     private static int nettoyer(MinecraftServer server) {
@@ -181,6 +274,9 @@ public final class GrandRaid {
     @SubscribeEvent
     public static void onTick(ServerTickEvent.Post event) {
         if (vagues == 0) {
+            if (event.getServer().getTickCount() % 20 == 0) {
+                automatique(event.getServer());
+            }
             return;
         }
         MinecraftServer server = event.getServer();
@@ -248,6 +344,10 @@ public final class GrandRaid {
             server.getPlayerList().broadcastSystemMessage(Component.literal("★ Les Pillards du Sud fuient vers leurs marais ! Beauvais a tenu bon. "
                     + "Prime de la dernière vague : ").append(Economie.texte(prime)).append(" pour chaque défenseur.").withStyle(ChatFormatting.GOLD), false);
             finir();
+            // les raids automatiques : le prochain se tire au sort maintenant
+            if (HubData.get(server).raidsAuto()) {
+                planifier(server);
+            }
             return;
         }
         pause = PAUSE_VAGUES;
