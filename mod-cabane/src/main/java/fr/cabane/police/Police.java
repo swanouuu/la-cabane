@@ -208,7 +208,7 @@ public final class Police {
                 fin = mur.getLocation();
             }
             EntityHitResult touche = ProjectileUtil.getEntityHitResult(level, tireur, oeil, fin, new AABB(oeil, fin).inflate(1),
-                    e -> e instanceof LivingEntity && e != tireur && !e.isSpectator());
+                    e -> e instanceof LivingEntity && e != tireur && !e.isSpectator(), 0F);
             if (touche != null) {
                 fin = touche.getLocation();
             }

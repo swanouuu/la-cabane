@@ -387,7 +387,7 @@ public final class Espionne {
         HitResult bloc = monde.clip(new ClipContext(oeil, loin, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
         fin[0] = bloc.getType() == HitResult.Type.MISS ? loin : bloc.getLocation();
         EntityHitResult touche = ProjectileUtil.getEntityHitResult(monde, joueur, oeil, fin[0], new AABB(oeil, fin[0]).inflate(1),
-                e -> e instanceof LivingEntity l && Pouvoirs.cible(joueur, l) && !l.isSpectator(), 0.3F);
+                e -> e instanceof LivingEntity l && Pouvoirs.cible(joueur, l) && !l.isSpectator(), 0F);
         if (touche != null) {
             fin[0] = touche.getLocation();
         }

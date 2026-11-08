@@ -114,7 +114,7 @@ public final class Cartel {
     public static final DeferredItem<ArmeItem> MAC10 = arme("mac10", Spec.balle(2.5F, 2, 40, 30, 40, 3.5F, true, Prise.MAIN, SON_MAC10));
     public static final DeferredItem<ArmeItem> THOMPSON = arme("thompson", Spec.balle(3, 3, 48, 50, 60, 3, true, Prise.FUSIL, SON_THOMPSON));
     public static final DeferredItem<ArmeItem> DESERT_EAGLE = arme("desert_eagle_or", Spec.balle(9, 10, 64, 7, 35, 0.8F, false, Prise.MAIN, SON_EAGLE));
-    public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(3, 14, 20, 2, 40, 9, false, Prise.FUSIL, SON_CANON).plombs(8));
+    public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(3, 14, 20, 2, 40, 5, false, Prise.FUSIL, SON_CANON).plombs(8));
     public static final DeferredItem<ArmeItem> BARRETT = arme("barrett", Spec.balle(22, 30, 160, 5, 70, 0.2F, false, Prise.FUSIL, SON_BARRETT).avecLunette());
     public static final DeferredItem<ArmeItem> M60 = arme("m60", Spec.balle(4, 3, 72, 100, 90, 3, true, Prise.FUSIL, SON_M60).lourde());
     public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(3, 1, 56, 200, 120, 5, true, Prise.HANCHE, SON_MINIGUN).lourde());

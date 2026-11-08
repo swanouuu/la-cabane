@@ -155,8 +155,8 @@ public class ArmeItem extends Item {
         switch (spec.tir()) {
             case ROQUETTE, OBUS -> ProjectileArme.tirer(level, tireur, canon, regard, spec);
             default -> {
-                // sans lunette, le Barrett part un peu n'importe où
-                float dispersion = spec.lunette() && !tireur.isCrouching() ? 3F : spec.dispersion();
+                // chaque balle part exactement là où on vise ; seuls les plombs du canon scié s'ouvrent un peu autour du viseur
+                float dispersion = spec.plombs() > 1 ? spec.dispersion() : 0F;
                 for (int i = 0; i < spec.plombs(); i++) {
                     balle(level, tireur, oeil, canon, devier(regard, dispersion, tireur), spec);
                 }
@@ -211,7 +211,7 @@ public class ArmeItem extends Item {
             fin = mur.getLocation();
         }
         EntityHitResult touche = ProjectileUtil.getEntityHitResult(level, tireur, oeil, fin, new AABB(oeil, fin).inflate(1),
-                e -> e instanceof LivingEntity && e != tireur && e.isAlive() && !e.isSpectator());
+                e -> e instanceof LivingEntity && e != tireur && e.isAlive() && !e.isSpectator(), 0F); // 0 : la vraie silhouette, sans marge qui attire les balles
         boolean chair = false;
         if (touche != null) {
             fin = touche.getLocation();
