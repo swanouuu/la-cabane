@@ -208,8 +208,8 @@ public final class Titans {
                 }
             }
             ACTEURS.clear();
-            // 24 titans, quel que soit le nombre de joueurs (demandé le 7 novembre)
-            vague(server, 24);
+            // le maximum de titans, quel que soit le nombre de joueurs
+            vague(server, MAX_TITANS);
             return;
         }
         if (server.getTickCount() % 20 == 0) {
@@ -249,32 +249,69 @@ public final class Titans {
     private static final ServerBossEvent BARRE = new ServerBossEvent(Component.literal("Les titans"), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
     private static boolean enVague;
     private static int total;
+    /** Jamais plus de titans en même temps autour du village, quel que soit le nombre demandé ou le nombre de joueurs. */
+    public static final int MAX_TITANS = 20;
+    /** Les titans venus avec un raid : c'est le raid qui les compte, pas la barre des titans. */
+    private static final String RENFORT = "cabane_titan_renfort";
 
-    /** Fait apparaître {@code nombre} titans tout autour du village, juste derrière la palissade, tournés vers la place. */
+    private static int debout(ServerLevel monde, BlockPos c) {
+        return monde.getEntities(TITAN.get(), new AABB(c).inflate(400, 200, 400), Titan::isAlive).size();
+    }
+
+    /** Pose ce titan dans cette direction, juste derrière la palissade, tourné vers la place. */
+    private static boolean poser(ServerLevel monde, BlockPos c, Titan t, Titan.Sorte sorte, double angle, Random r) {
+        t.preparer(sorte);
+        Vec3 p = place(monde, c, t, angle, r);
+        float lacet = (float) Math.toDegrees(Math.atan2(-(c.getX() + 0.5 - p.x), c.getZ() + 0.5 - p.z));
+        t.moveTo(p.x, p.y, p.z, lacet, 0F);
+        t.yBodyRot = lacet;
+        t.yHeadRot = lacet;
+        t.finalizeSpawn(monde, monde.getCurrentDifficultyAt(BlockPos.containing(p)), MobSpawnType.EVENT, null);
+        t.preparer(sorte);
+        return monde.addFreshEntity(t);
+    }
+
+    /**
+     * Un titan qui accompagne un raid, venu de cette direction (π/2 : le sud). Null si le maximum est déjà atteint.
+     * {@code tags} : ce que le raid veut retrouver sur lui.
+     */
+    public static Titan renfort(ServerLevel monde, BlockPos c, double angle, int rang, String... tags) {
+        if (debout(monde, c) >= MAX_TITANS) {
+            return null;
+        }
+        // le terrain doit être là pour lui trouver une place, même si personne n'est à côté
+        double d = HubBuilder.rayon() + 4;
+        int cx = (c.getX() + (int) Math.round(Math.cos(angle) * d)) >> 4, cz = (c.getZ() + (int) Math.round(Math.sin(angle) * d)) >> 4;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                monde.getChunk(cx + dx, cz + dz);
+            }
+        }
+        Titan t = TITAN.get().create(monde);
+        if (t == null) {
+            return null;
+        }
+        t.addTag(RENFORT);
+        for (String tag : tags) {
+            t.addTag(tag);
+        }
+        return poser(monde, c, t, Titan.Sorte.de(rang), angle, new Random()) ? t : null;
+    }
+
+    /** Fait apparaître {@code nombre} titans tout autour du village (sans dépasser le maximum), tournés vers la place. */
     public static int vague(MinecraftServer server, int nombre) {
         BlockPos c = HubData.get(server).centre();
         if (c == null) {
             return 0;
         }
         ServerLevel monde = server.overworld();
+        nombre = Math.min(nombre, MAX_TITANS - debout(monde, c));
         Random r = new Random();
         double depart = r.nextDouble() * Math.PI * 2;
         int poses = 0;
         for (int i = 0; i < nombre; i++) {
-            Titan.Sorte sorte = Titan.Sorte.de(i);
             Titan t = TITAN.get().create(monde);
-            if (t == null) {
-                continue;
-            }
-            t.preparer(sorte);
-            Vec3 p = place(monde, c, t, depart + i * Math.PI * 2 / nombre, r);
-            float lacet = (float) Math.toDegrees(Math.atan2(-(c.getX() + 0.5 - p.x), c.getZ() + 0.5 - p.z));
-            t.moveTo(p.x, p.y, p.z, lacet, 0F);
-            t.yBodyRot = lacet;
-            t.yHeadRot = lacet;
-            t.finalizeSpawn(monde, monde.getCurrentDifficultyAt(BlockPos.containing(p)), MobSpawnType.EVENT, null);
-            t.preparer(sorte);
-            if (monde.addFreshEntity(t)) {
+            if (t != null && poser(monde, c, t, Titan.Sorte.de(i), depart + i * Math.PI * 2 / nombre, r)) {
                 poses++;
             }
         }
@@ -324,7 +361,7 @@ public final class Titans {
         if (c == null) {
             return;
         }
-        List<Titan> debout = monde.getEntities(TITAN.get(), new AABB(c).inflate(400, 200, 400), Titan::isAlive);
+        List<Titan> debout = monde.getEntities(TITAN.get(), new AABB(c).inflate(400, 200, 400), t -> t.isAlive() && !t.getTags().contains(RENFORT));
         if (!enVague) {
             if (debout.isEmpty()) {
                 return;
@@ -385,7 +422,7 @@ public final class Titans {
                 .then(Commands.literal("eren")
                         .executes(ctx -> lancerDepuis(ctx.getSource(), 0, 0))
                         .then(Commands.literal("titans")
-                                .executes(ctx -> vagueDepuis(ctx.getSource(), 24))
+                                .executes(ctx -> vagueDepuis(ctx.getSource(), MAX_TITANS))
                                 .then(Commands.argument("nombre", IntegerArgumentType.integer(1, 60))
                                         .executes(ctx -> vagueDepuis(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "nombre")))))
                         .then(Commands.literal("fin").executes(ctx -> {
@@ -420,7 +457,7 @@ public final class Titans {
 
     private static int vagueDepuis(CommandSourceStack source, int nombre) {
         int n = vague(source.getServer(), nombre);
-        source.sendSuccess(() -> Component.literal(n + " titan(s) autour du village."), true);
+        source.sendSuccess(() -> Component.literal(n == 0 ? "Il y a déjà " + MAX_TITANS + " titans autour du village." : n + " titan(s) autour du village."), true);
         return n;
     }
 

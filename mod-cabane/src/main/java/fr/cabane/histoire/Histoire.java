@@ -664,6 +664,12 @@ public final class Histoire {
                 n++;
             }
         }
+        // et quelques titans avec eux, venus du sud
+        for (int t = 0, titans = Math.min(3, 1 + nombre / 10); t < titans; t++) {
+            if (fr.cabane.titans.Titans.renfort(level, centre, Math.PI / 2 + (t - (titans - 1) / 2.0) * 0.5, t) != null) {
+                n++;
+            }
+        }
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("⚔ LES PILLARDS DU SUD ⚔").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)));
             p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("ils marchent sur Beauvais !").withStyle(ChatFormatting.GOLD)));

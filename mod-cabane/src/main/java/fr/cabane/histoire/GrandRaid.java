@@ -442,6 +442,13 @@ public final class GrandRaid {
             cavaliers.get(i).moveTo(monture.getX(), monture.getY(), monture.getZ());
             cavaliers.get(i).startRiding(monture, true);
         }
+        // quelques titans avec eux : un à la première vague, un de plus à chaque vague, trois au plus
+        for (int t = 0, titans = Math.min(3, w); t < titans; t++) {
+            fr.cabane.titans.Titan titan = fr.cabane.titans.Titans.renfort(level, centre, Math.PI / 2 + (t - (titans - 1) / 2.0) * 0.5, w + t, TAG);
+            if (titan != null) {
+                PILLARDS.put(titan.getUUID(), titan.blockPosition());
+            }
+        }
         total = PILLARDS.size();
         String sous = derniere ? "leur chef est avec eux !" : total + " pillards";
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
