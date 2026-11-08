@@ -2,19 +2,24 @@ package fr.cabane.mission;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
 import fr.cabane.Cabane;
 import fr.cabane.labo.Woohp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -475,6 +480,9 @@ public final class Missions {
 
     // ================================================================== la commande
 
+    /** Le nombre de noms qu'on peut mettre à la suite dans /mission. */
+    private static final int NOMS_MAX = 10;
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         LiteralArgumentBuilder<CommandSourceStack> racine = Commands.literal("mission")
@@ -521,14 +529,33 @@ public final class Missions {
                     .then(Commands.argument("numero", IntegerArgumentType.integer(1, 3))
                             .executes(ctx -> heros(ctx.getSource(), serie, IntegerArgumentType.getInteger(ctx, "numero"),
                                     List.of(ctx.getSource().getPlayerOrException())))
-                            .then(Commands.literal("mechant").then(Commands.argument("mechants", EntityArgument.players())
-                                    .executes(ctx -> mechants(ctx.getSource(), serie, IntegerArgumentType.getInteger(ctx, "numero"),
-                                            EntityArgument.getPlayers(ctx, "mechants")))))
-                            .then(Commands.argument("joueurs", EntityArgument.players())
-                                    .executes(ctx -> heros(ctx.getSource(), serie, IntegerArgumentType.getInteger(ctx, "numero"),
-                                            EntityArgument.getPlayers(ctx, "joueurs"))))));
+                            .then(Commands.literal("mechant").then(suiteDeJoueurs("mechants", 1,
+                                    (ctx, j) -> mechants(ctx.getSource(), serie, IntegerArgumentType.getInteger(ctx, "numero"), j))))
+                            .then(suiteDeJoueurs("joueurs", 1,
+                                    (ctx, j) -> heros(ctx.getSource(), serie, IntegerArgumentType.getInteger(ctx, "numero"), j)))));
         }
         event.getDispatcher().register(racine);
+    }
+
+    @FunctionalInterface
+    private interface Envoi {
+        int lancer(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> joueurs);
+    }
+
+    /**
+     * Plusieurs joueurs d'un coup, à la suite : /mission anbu 1 Alice Bob Charlie. Un seul argument n'accepte qu'un nom (ou
+     * un sélecteur comme @a), et relancer la commande pour le suivant repartirait sur une nouvelle mission.
+     */
+    private static RequiredArgumentBuilder<CommandSourceStack, EntitySelector> suiteDeJoueurs(String nom, int rang, Envoi envoi) {
+        RequiredArgumentBuilder<CommandSourceStack, EntitySelector> noeud = Commands.argument(nom + rang, EntityArgument.players())
+                .executes(ctx -> {
+                    Set<ServerPlayer> joueurs = new LinkedHashSet<>();
+                    for (int i = 1; i <= rang; i++) {
+                        joueurs.addAll(EntityArgument.getPlayers(ctx, nom + i));
+                    }
+                    return envoi.lancer(ctx, joueurs);
+                });
+        return rang < NOMS_MAX ? noeud.then(suiteDeJoueurs(nom, rang + 1, envoi)) : noeud;
     }
 
     private static boolean estMechant(CommandSourceStack source, Session s) {
