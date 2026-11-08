@@ -84,6 +84,18 @@ final class ModeleVent {
      * (il apparaît, il s'en va). Le plein dans un tampon, les voiles et les cœurs dans un autre, leur lueur dans un troisième.
      */
     void dessiner(MultiBufferSource buffers, PoseStack.Pose pose, int lumiere, float e, float alpha) {
+        dessiner(buffers, pose, lumiere, e, alpha, null);
+    }
+
+    /** Déplace un point du modèle (en pixels) avant de le dessiner : ce qui ondule (la queue de Kaguya). */
+    interface Deformation {
+        void appliquer(float x, float y, float z, Vector3f sortie);
+    }
+
+    private static final Vector3f DEFORME = new Vector3f();
+
+    /** Pareil, chaque point passant d'abord par la déformation (null : aucune). Seules les faces pleines et les voiles la suivent. */
+    void dessiner(MultiBufferSource buffers, PoseStack.Pose pose, int lumiere, float e, float alpha, Deformation d) {
         // trois tampons, l'un après l'autre : en demander un autre peut fermer celui d'avant
         int n = normales.length / 3;
         if (alpha >= 0.99F) {
@@ -91,7 +103,7 @@ final class ModeleVent {
             for (int f = 0; f < n; f++) {
                 int sorte = couleurs[f * 4 + 3] & 255;
                 if (sorte <= 1) {
-                    face(plein, pose, f, e, 255, sorte == 1 ? LightTexture.FULL_BRIGHT : lumiere);
+                    face(plein, pose, f, e, 255, sorte == 1 ? LightTexture.FULL_BRIGHT : lumiere, d);
                 }
             }
         }
@@ -104,7 +116,7 @@ final class ModeleVent {
             }
             int a = sorte >= 8 ? Math.round(sorte * alpha) : Math.round(255 * alpha);
             if (a > 2) {
-                face(voile, pose, f, e, a, sorte >= 1 ? LightTexture.FULL_BRIGHT : lumiere);
+                face(voile, pose, f, e, a, sorte >= 1 ? LightTexture.FULL_BRIGHT : lumiere, d);
             }
         }
         // la lueur des cœurs : le même trait trois fois plus large (dans le sens de sa largeur, du coin 0 au coin 1), de la
@@ -143,12 +155,19 @@ final class ModeleVent {
         }
     }
 
-    private void face(VertexConsumer c, PoseStack.Pose pose, int f, float e, int a, int l) {
+    private void face(VertexConsumer c, PoseStack.Pose pose, int f, float e, int a, int l, Deformation d) {
         int r = couleurs[f * 4] & 255, v = couleurs[f * 4 + 1] & 255, b = couleurs[f * 4 + 2] & 255;
         float nx = normales[f * 3], ny = normales[f * 3 + 1], nz = normales[f * 3 + 2];
         for (int q = 0; q < 4; q++) {
             int i = f * 12 + q * 3;
-            c.addVertex(pose, coins[i] * e, coins[i + 1] * e, coins[i + 2] * e).setColor(r, v, b, a).setUv(0.5F, 0.5F)
+            float x = coins[i], y = coins[i + 1], z = coins[i + 2];
+            if (d != null) {
+                d.appliquer(x, y, z, DEFORME);
+                x = DEFORME.x;
+                y = DEFORME.y;
+                z = DEFORME.z;
+            }
+            c.addVertex(pose, x * e, y * e, z * e).setColor(r, v, b, a).setUv(0.5F, 0.5F)
                     .setOverlay(OverlayTexture.NO_OVERLAY).setLight(l).setNormal(pose, nx, ny, nz);
         }
     }

@@ -604,7 +604,12 @@ public final class ClientMaudit {
      * grisent ; les yeux deviennent noirs, avec un seul pixel rouge au coin intérieur du haut.
      */
     private static int[] forme2(int[] s, boolean fin, double[] peau) {
-        return forme2(s, fin, peau, YEUX);
+        int[] forme = forme2(s, fin, peau, YEUX);
+        // la couche des cheveux de son skin s'efface : il ne reste que ce que la marque ajoute
+        for (Texel t : texels(boite(TETE, fin), UV2[TETE], 1)) {
+            forme[t.ty * 64 + t.tx] = 0;
+        }
+        return forme;
     }
 
     /** La même, avec un iris d une autre couleur (Kaguya niveau 3 : jaune). */

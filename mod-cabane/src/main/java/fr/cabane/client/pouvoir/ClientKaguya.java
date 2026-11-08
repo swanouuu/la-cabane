@@ -426,6 +426,26 @@ public final class ClientKaguya {
         }
     }
 
+    /** La base de la queue sur le corps, et sa longueur (en pixels du joueur). */
+    private static final float QUEUE_Y = 12, QUEUE_Z = 1.6F, QUEUE_L = 32.6F;
+
+    /**
+     * La queue est vivante : une ondulation la parcourt sans arrêt, nulle à la base, de plus en plus forte vers le bout
+     * (environ un tiers de bloc), avec deux rythmes mêlés pour que ça ne fasse pas métronome. Chacune a son propre décalage.
+     */
+    private static ModeleVent.Deformation ondulation(AbstractClientPlayer joueur) {
+        double t = System.nanoTime() / 1e9 + joueur.getId() * 1.7;
+        return (x, y, z, s) -> {
+            float dy = y - QUEUE_Y, dz = z - QUEUE_Z;
+            double w = Math.min(1, Math.sqrt(x * x + dy * dy + dz * dz) / QUEUE_L), w2 = w * w;
+            double lacet = 0.20 * w2 * Math.sin(1.6 * t - 2.4 * w) + 0.06 * w * Math.sin(3.3 * t - 5 * w);
+            double tangage = 0.10 * w2 * Math.sin(1.2 * t - 2 * w + 0.8);
+            float cl = (float) Math.cos(lacet), sl = (float) Math.sin(lacet), ct = (float) Math.cos(tangage), st = (float) Math.sin(tangage);
+            float x1 = x * cl + dz * sl, z1 = -x * sl + dz * cl;
+            s.set(x1, dy * ct - z1 * st + QUEUE_Y, dy * st + z1 * ct + QUEUE_Z);
+        };
+    }
+
     /** L'étape (1 à n) d'une pièce qui pousse de « de » à « a » secondes ; 0 avant. */
     private static int etape(double t, double de, double a, int n) {
         if (t < de) {
@@ -460,23 +480,21 @@ public final class ClientKaguya {
         if (os > 0) {
             piece("os_dos_" + os, ps, buffers, lumiere, parties, 1, efface);
         }
-        // niveau 3 : la queue pousse du bas du dos (elle balaie quand elle frappe derrière)
+        // niveau 3 : la queue pousse du bas du dos ; elle ondule sans arrêt, et balaie quand elle frappe derrière
         if (niveau >= 3) {
             int q = etape(t3, 1.0, 2.2, 4);
-            if (q > 0 && e.queue >= 0 && secondes(e.queue) < 0.6) {
-                float a = (float) Math.sin(secondes(e.queue) / 0.6 * Math.PI) * 0.9F;
+            ModeleVent[] l = q > 0 ? ModeleVent.lire("kaguya", "queue_" + q) : new ModeleVent[0];
+            if (l.length > 1) {
                 ps.pushPose();
                 m.body.translateAndRotate(ps);
-                ps.translate(0, 12 / 16F, 1.6F / 16F);
-                ps.mulPose(Axis.YP.rotation(a));
-                ps.translate(0, -12 / 16F, -1.6F / 16F);
-                ModeleVent[] l = ModeleVent.lire("kaguya", "queue_" + q);
-                if (l.length > 1) {
-                    l[1].dessiner(buffers, ps.last(), lumiere, 1 / 16F, efface);
+                if (e.queue >= 0 && secondes(e.queue) < 0.6) {
+                    float a = (float) Math.sin(secondes(e.queue) / 0.6 * Math.PI) * 0.9F;
+                    ps.translate(0, QUEUE_Y / 16F, QUEUE_Z / 16F);
+                    ps.mulPose(Axis.YP.rotation(a));
+                    ps.translate(0, -QUEUE_Y / 16F, -QUEUE_Z / 16F);
                 }
+                l[1].dessiner(buffers, ps.last(), lumiere, 1 / 16F, efface, ondulation(joueur));
                 ps.popPose();
-            } else if (q > 0) {
-                piece("queue_" + q, ps, buffers, lumiere, parties, 1, efface);
             }
         }
         // les lances : elles poussent sur ses bras (l'épée est rentrée), puis rentrent
