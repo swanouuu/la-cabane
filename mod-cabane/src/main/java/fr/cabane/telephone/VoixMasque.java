@@ -19,6 +19,10 @@ final class VoixMasque {
     private static final double HAUTEUR = 0.72;
     /** La fenêtre des deux têtes de lecture (40 ms) : plus courte, ça grésille ; plus longue, ça bégaie. */
     private static final int FENETRE = FREQUENCE / 25;
+    /** Le volume : la voix perd du niveau en descendant et en s'adoucissant, on le rattrape largement. */
+    private static final float GAIN = 3.0F;
+    /** À partir d'ici (les trois quarts du maximum), le son s'arrondit au lieu de saturer. */
+    private static final float SEUIL = 24576;
 
     private static final class Traitement {
         final OpusDecoder decodeur;
@@ -61,10 +65,20 @@ final class VoixMasque {
             float x = (float) (g1 * lire(t, d1 + 16) + (1 - g1) * lire(t, d2 + 16));
             // un peu sourde : on adoucit les aigus
             t.sourd += 0.45F * (x - t.sourd);
-            sortie[i] = (short) Math.max(-32768, Math.min(32767, t.sourd * 1.15F));
+            sortie[i] = (short) limiter(t.sourd * GAIN);
             t.ecriture = (t.ecriture + 1) % n;
         }
         return t.encodeur.encode(sortie);
+    }
+
+    /** Sous le seuil, rien ne change ; au-dessus, le son tend doucement vers le maximum sans jamais le dépasser. */
+    private static float limiter(float x) {
+        float a = Math.abs(x);
+        if (a <= SEUIL) {
+            return x;
+        }
+        float reste = 32767 - SEUIL;
+        return Math.copySign(SEUIL + reste * (1 - (float) Math.exp(-(a - SEUIL) / reste)), x);
     }
 
     /** L'échantillon d'il y a {@code retard} échantillons (entre deux, mélangé). */

@@ -29,7 +29,8 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
 
 /**
  * Les bâtiments de Beauvais sont incassables : ni les joueurs, ni les explosions, ni le feu, ni les monstres ne les
- * abîment. On peut quand même creuser la terre, la pierre et le sable du village, cueillir et récolter.
+ * abîment. Partout ailleurs dans le village (arbres, rues, jardins, décor), on casse et on construit librement ; même
+ * autour d'un bâtiment, on peut creuser la terre, la pierre et le sable, cueillir et récolter.
  * <ul>
  * <li>Ce qu'un joueur a posé lui-même dans le village se recasse.</li>
  * <li>Une maison ou un terrain à vendre est protégé tant qu'il n'est pas acheté ; acheté, tout le monde peut le modifier.</li>
@@ -44,6 +45,7 @@ public final class Protection {
     /** La Mairie, au-dessus du sol, et le laboratoire en dessous ({x0, y0, z0, x1, y1, z1} autour du centre). */
     private static final int[][] MAIRIE = {{3, -3, 41, 27, 24, 57}, {22, -30, 41, 49, -4, 63}};
     private static final List<int[]> LOTS = HubBuilder.lotsAVendre();
+    private static final List<int[]> BATIMENTS = HubBuilder.batiments();
 
     /** Ce bloc fait partie d'un bâtiment du village (et ne doit pas être cassé). */
     public static boolean protege(Level level, BlockPos pos) {
@@ -84,7 +86,20 @@ public final class Protection {
                         && borne.proprietaire() != null);
             }
         }
-        return true;
+        return batiment(x, y, z);
+    }
+
+    /** Dans un bâtiment du village (la Mairie, les grands édifices), ou dans la palissade qui l'entoure. */
+    private static boolean batiment(int x, int y, int z) {
+        if (dansLaMairie(x, y, z)) {
+            return true;
+        }
+        for (int[] b : BATIMENTS) {
+            if (x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] && z >= b[2] && z <= b[5]) {
+                return true;
+            }
+        }
+        return y >= -1 && y <= 4 && Math.abs(Math.sqrt(x * x + z * z) - (HubBuilder.rayon() - 1)) <= 1.5;
     }
 
     /** Dans la Mairie ou dans son laboratoire (coordonnées par rapport au centre du village). */

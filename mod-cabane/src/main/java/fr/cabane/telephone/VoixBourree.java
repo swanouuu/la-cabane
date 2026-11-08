@@ -30,6 +30,8 @@ final class VoixBourree {
     private static final double TRAINE_MAX = 0.3;
     /** Plus de 300 ms sans paquet : il s'est tu, on repart d'une bande vierge (sinon on rejouerait sa fin de phrase). */
     private static final long PAUSE_MS = 300;
+    /** Le volume avant d'arrondir les crêtes : tous ces effets font perdre du niveau, on l'entendait à peine à 1,4. */
+    private static final double GAIN = 3.5;
     /** Les réglages de chaque niveau d'ivresse, de 0 (Pompette) à 6 (Ivre mort). */
     private static final Reglages[] NIVEAUX = new Reglages[7];
 
@@ -301,7 +303,7 @@ final class VoixBourree {
         // 6. le volume qui vacille, et on arrondit les crêtes (jamais de saturation)
         double vol = 1 - r.vacille * (0.5 + 0.5 * Math.sin(t.phVolume));
         t.phVolume += 2 * Math.PI * 0.8 / F;
-        return Math.tanh(t.sourd * vol * volEvenement * grince * t.fondu * 1.4) * 0.92;
+        return Math.tanh(t.sourd * vol * volEvenement * grince * t.fondu * GAIN) * 0.92;
     }
 
     private static double boucler(double g) {

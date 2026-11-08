@@ -2,7 +2,7 @@
   id:"easy_npc:humanoid",
   UUID:[I;-867216517,1750550858,-510155886,-960953091],
   CustomName:'{"text":"Pierre, le disparu","color":"gray"}',
-  CustomNameVisible:1b,
+  CustomNameVisible:0b,
   PersistenceRequired:1b,
   Tags:["cabane_pnj","pnj.prisonnier"],
   EasyNPCVersion:3,

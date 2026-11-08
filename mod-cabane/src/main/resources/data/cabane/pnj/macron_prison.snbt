@@ -2,7 +2,7 @@
   id:"easy_npc:humanoid",
   UUID:[I;-727292952,490419164,-1716798527,1501792293],
   CustomName:'{"text":"Macron, ancien président","color":"gray"}',
-  CustomNameVisible:1b,
+  CustomNameVisible:0b,
   PersistenceRequired:1b,
   Tags:["cabane_pnj","pnj.macron_prison"],
   EasyNPCVersion:3,

@@ -9,6 +9,8 @@ import fr.cabane.hub.HubEvents;
 import fr.cabane.tcg.Cartes;
 import fr.cabane.telephone.PhoneCalls;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -66,13 +68,36 @@ public final class CabaneEvents {
             }
             HubEvents.accueillir(player);
             PhoneCalls.sendState(player);
+            plusEnAventure(player);
         }
     }
 
     @SubscribeEvent
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && !event.isEndConquered()) {
-            HubEvents.reapparition(player);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            if (!event.isEndConquered()) {
+                HubEvents.reapparition(player);
+            }
+            plusEnAventure(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            plusEnAventure(player);
+        }
+    }
+
+    /**
+     * L'aventure (on n'y casse rien) est réservée à la salle d'embarquement et aux lieux à part (missions, cartel, labo…).
+     * Une fois la partie lancée, quelqu'un resté en aventure dans le monde normal repasse en survie : sinon il ne peut
+     * plus rien casser, nulle part.
+     */
+    private static void plusEnAventure(ServerPlayer joueur) {
+        if (joueur.level().dimension() == Level.OVERWORLD && joueur.gameMode.getGameModeForPlayer() == GameType.ADVENTURE
+                && fr.cabane.hub.HubData.get(joueur.server).demarre()) {
+            joueur.setGameMode(GameType.SURVIVAL);
         }
     }
 

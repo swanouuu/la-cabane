@@ -126,7 +126,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 19;
+    public static final int VERSION_PNJ = 20;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {

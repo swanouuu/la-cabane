@@ -25,6 +25,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -43,6 +44,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -57,8 +59,10 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  * (à moins de 16 blocs) ; les deux voient ses yeux en grand ({@link Sharingan.Regard}), puis tous les deux sont emmenés
  * 30 s dans le genjutsu : la dimension cabane:tsukuyomi, un monde en négatif (ciel rouge, lune noire, sol noir quadrillé
  * de rouge, dessinés par {@link ClientGenjutsu}). La cible y est attachée à une croix de bois (elle peut regarder
- * autour d'elle, pas bouger) et perd un demi-cœur toutes les 2,5 s ; lui s'y promène librement (30 blocs autour), et
- * ses clones sortent du sol. À la fin, l'illusion se brise et chacun revient pile là où il était. Une fois par minute.
+ * autour d'elle, pas bouger) ; lui s'y promène librement (30 blocs autour), et ses clones sortent du sol. À la fin,
+ * l'illusion se brise et chacun revient pile là où il était. Une fois par minute.
+ * <p>Les dégâts sont une illusion : dedans, sa vie descend jusqu'à un demi-cœur, mais rien ne peut la tuer (même les coups
+ * de celui qui l'y a mise). Au réveil, elle retrouve sa vie d'avant, moins {@link #PERTE 3 cœurs} au plus.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Genjutsu {
@@ -70,7 +74,11 @@ public final class Genjutsu {
     public static final int RECHARGE = 60 * 20;
     private static final double PORTEE = 16;
     private static final int DEGATS_TOUS_LES = 50;
-    private static final float POINTS = 1;
+    /** Ce qu'il lui reste au plus bas dans le genjutsu (un demi-cœur), ce qu'elle garde vraiment en moins au réveil (3 cœurs). */
+    private static final float VIE_MINI = 1;
+    private static final float PERTE = 6;
+    /** Au réveil, le genjutsu ne la laisse jamais sous 2 cœurs (si elle en avait moins en entrant, elle n'en perd pas). */
+    private static final float VIE_REVEIL = 4;
     /** La salle : le sol (sa hauteur), son rayon, et l'écart entre deux salles (une par Tsukuyomi en même temps). */
     public static final int SOL = 64;
     public static final int RAYON = 30;
@@ -87,6 +95,8 @@ public final class Genjutsu {
         Retour retourLanceur;
         Retour retourVictime;
         boolean dedans;
+        /** Sa vraie vie en entrant : celle qu'elle retrouve au réveil. */
+        float vieAvant;
 
         Seance(UUID lanceur, UUID victime, int debut, int place) {
             this.lanceur = lanceur;
@@ -238,6 +248,7 @@ public final class Genjutsu {
         construire(tsu, s.place);
         s.retourLanceur = retour(lanceur);
         s.retourVictime = retour(victime);
+        s.vieAvant = victime.getHealth();
         BlockPos c = centre(s.place);
         for (ServerPlayer p : new ServerPlayer[]{lanceur, victime}) {
             if (p.isSleeping()) {
@@ -282,8 +293,18 @@ public final class Genjutsu {
         if (!s.dedans) {
             return;
         }
+        ServerPlayer victime = server.getPlayerList().getPlayer(s.victime);
+        if (victime != null && victime.isAlive()) {
+            victime.setHealth(Math.min(victime.getMaxHealth(), Math.max(Math.min(s.vieAvant, VIE_REVEIL), s.vieAvant - PERTE)));
+        }
         ramener(server, s.lanceur, s.retourLanceur);
         ramener(server, s.victime, s.retourVictime);
+    }
+
+    /** Une blessure de l'illusion : l'écran rougit, le cri, les cœurs qui tombent ; jamais la mort. */
+    private static void blesser(ServerPlayer victime, DamageSource source, float vie) {
+        victime.setHealth(Math.max(VIE_MINI, Math.min(victime.getHealth(), vie)));
+        victime.serverLevel().broadcastDamageEvent(victime, source);
     }
 
     /** Ramène ce joueur là où il était avant le genjutsu (s'il est encore dedans), dans son mode de jeu. */
@@ -354,7 +375,9 @@ public final class Genjutsu {
             }
             if (age > REGARD && (age - REGARD) % DEGATS_TOUS_LES == 0) {
                 DamageSource source = new DamageSource(server.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DEGATS), lanceur);
-                victime.hurt(source, POINTS);
+                // sa vie fond régulièrement, de ce qu'elle avait jusqu'au dernier demi-cœur à la dernière blessure
+                int etape = (age - REGARD) / DEGATS_TOUS_LES, etapes = DUREE / DEGATS_TOUS_LES - 1;
+                blesser(victime, source, s.vieAvant - (s.vieAvant - VIE_MINI) * etape / etapes);
             }
         }
     }
@@ -400,6 +423,16 @@ public final class Genjutsu {
     public static void casser(BlockEvent.BreakEvent event) {
         if (event.getPlayer() != null && event.getPlayer().level().dimension() == DIMENSION && !event.getPlayer().isCreative()) {
             event.setCanceled(true);
+        }
+    }
+
+    /** Sur la croix, tout coup fait partie de l'illusion (sauf /kill et le vide). */
+    @SubscribeEvent
+    public static void fictif(LivingIncomingDamageEvent event) {
+        if (event.getEntity() instanceof ServerPlayer victime && attache(victime.getUUID())
+                && !event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            event.setCanceled(true);
+            blesser(victime, event.getSource(), victime.getHealth() - event.getAmount());
         }
     }
 

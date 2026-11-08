@@ -47,7 +47,7 @@ export function genererPnj(ecrire) {
    * mains ([main droite, main gauche]), qui (le nom pour les missions, le même pour toutes ses versions),
    * dialogues [{label, titre, texte (ou tableau = au hasard), boutons, ftb (quête du livre cochée en arrivant ici)}].
    */
-  function pnj({ fichier, id = fichier, qui = id, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, taille, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
+  function pnj({ fichier, nomVisible = true, id = fichier, qui = id, nom, couleur, type = "humanoid", variante = "STEVE", rendu, peau = fichier, voix = fichier, echelle, taille, objectifs = IMMOBILE, tags = [], mains, dialogues }) {
     ecrire(`data/cabane/dialogues/${fichier}.json`, {
       nom, couleur, voix: VOIX.has(voix) ? voix : "", qui,
       pages: Object.fromEntries(dialogues.map((d) => [d.label, {
@@ -65,7 +65,7 @@ export function genererPnj(ecrire) {
   id:${snbt("easy_npc:" + type)},
   UUID:${uuid(id)},
   CustomName:${nomJson(nom, couleur)},
-  CustomNameVisible:1b,
+  CustomNameVisible:${nomVisible ? "1b" : "0b"},
   PersistenceRequired:1b,
   Tags:[${["cabane_pnj", "pnj." + fichier, ...tags].map(snbt).join(",")}],
   EasyNPCVersion:3,
@@ -262,7 +262,7 @@ export function genererPnj(ecrire) {
   ] });
 
   // ------------------------------------------------------------ Pierre, enfermé dans le laboratoire sous la Mairie
-  pnj({ fichier: "prisonnier", nom: "Pierre, le disparu", couleur: "gray", dialogues: [
+  pnj({ fichier: "prisonnier", nomVisible: false, nom: "Pierre, le disparu", couleur: "gray", dialogues: [
     { label: "default", titre: "Pierre", ftb: "histoire/pierre", texte: [
       "Vous… vous n'êtes pas des gardes ? Écoutez-moi : le Président ne protège personne. Les Pillards du Sud, c'est lui qui les envoie. Il leur dit quand frapper.",
       "Il m'a enfermé parce que je posais trop de questions. Les autres… il leur fait boire la potion verte. Après, ils ne parlent plus.",
@@ -282,7 +282,7 @@ export function genererPnj(ecrire) {
       "Ce soir, j'apprends à pêcher à Lucas. Je lui avais promis. Dans ma lettre.",
     ], boutons: [BYE("Content de te voir dehors")] },
   ] });
-  pnj({ fichier: "macron_prison", nom: "Macron, ancien président", couleur: "gray", peau: "macron", voix: "macron", dialogues: [
+  pnj({ fichier: "macron_prison", nomVisible: false, nom: "Macron, ancien président", couleur: "gray", peau: "macron", voix: "macron", dialogues: [
     { label: "default", titre: "L'ancien président", ftb: "histoire/epilogue", texte: [
       "Je n'ai jamais dit ça. Et si je l'ai dit, c'était sorti de son contexte.",
       "C'était… en même temps une erreur et un succès.",

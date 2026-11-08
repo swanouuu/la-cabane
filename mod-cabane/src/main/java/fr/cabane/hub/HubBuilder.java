@@ -1879,6 +1879,19 @@ public class HubBuilder {
         return lots;
     }
 
+    /** Les grands édifices ({x0, y0, z0, x1, y1, z1} autour du centre), un peu plus larges que leurs murs ; la Mairie est dans Protection. */
+    public static List<int[]> batiments() {
+        return List.of(
+                new int[] {CX0 - 3, -3, CZ0 - 2, CX1 + 3, 40, CZ1 + 4}, // la Grande Cabane, ses tours et son porche
+                new int[] {BX0 - 2, -3, BZ0 - 2, BX1 + 2, 30, BZ1 + 2}, // le Grand Bazar
+                new int[] {50, -3, -17, 69, 30, 17}, // la forge
+                new int[] {BOUTIQUE_CARTES[0] - 8, -1, BOUTIQUE_CARTES[1] - 5, BOUTIQUE_CARTES[0] + 1, 12, BOUTIQUE_CARTES[1] + 5}, // l'échoppe de Jean-Mi
+                new int[] {KIOSQUE[0] - 4, 0, KIOSQUE[1] - 4, KIOSQUE[0] + 4, 8, KIOSQUE[1] + 4}, // le kiosque d'infos
+                new int[] {-44, -1, 32, -36, 24, 40}, // la tour de guet
+                new int[] {-6, -1, Z_PORTE - 1, 6, 11, Z_PORTE + 1}, // la grande porte
+                new int[] {-8, 0, -4, 8, 12, 4}); // le grand panneau
+    }
+
     private static int[] lot(int xa, int za, int xb, int zb, int bx, int bz) {
         return new int[] {Math.min(xa, xb), Math.min(za, zb), Math.max(xa, xb), Math.max(za, zb), bx, bz};
     }
