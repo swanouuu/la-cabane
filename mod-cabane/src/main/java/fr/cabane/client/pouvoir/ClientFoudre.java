@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.resources.ResourceLocation;
 import java.util.Random;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
@@ -959,7 +960,33 @@ public final class ClientFoudre {
         passe = 0;
     }
 
-    /** Les yeux qui brillent (juste leurs deux pixels, sans lueur autour), les éclairs sur lui et, au niveau 2, l'aura bleu clair. */
+    /** Les pixels des yeux qui brillent, {x, y, largeur} sur la tête : par défaut la rangée des yeux, deux pixels de chaque côté. */
+    private static final int[][] YEUX_NORMAUX = {{-3, -4, 2}, {1, -4, 2}};
+    /** Le skin à la capuche de lapin : ses grands yeux sont plus bas, et le haut du coin extérieur est sous les cheveux. */
+    private static final int[][] YEUX_LAPIN = {{-2, -4, 1}, {-3, -3, 2}, {1, -4, 1}, {1, -3, 2}};
+    private static final Map<ResourceLocation, int[][]> YEUX = new HashMap<>();
+
+    private static int[][] yeux(ResourceLocation peau) {
+        int[][] y = YEUX.get(peau);
+        if (y == null) {
+            int[] px = ClientMaudit.lire(peau);
+            if (px == null) {
+                return YEUX_NORMAUX;
+            }
+            y = estLapin(px) ? YEUX_LAPIN : YEUX_NORMAUX;
+            YEUX.put(peau, y);
+        }
+        return y;
+    }
+
+    /** Reconnaît ce skin aux couleurs de ses yeux (le noir de la pupille, son reflet, de chaque côté ; ABGR, comme NativeImage). */
+    private static boolean estLapin(int[] px) {
+        return (px[12 * 64 + 10] & 0xFFFFFF) == 0x2B2E34 && (px[12 * 64 + 13] & 0xFFFFFF) == 0x2B2E34
+                && (px[13 * 64 + 9] & 0xFFFFFF) == 0x373A42 && (px[13 * 64 + 14] & 0xFFFFFF) == 0x373A42
+                && (px[14 * 64 + 9] & 0xFFFFFF) == 0xACB7C4 && (px[14 * 64 + 14] & 0xFFFFFF) == 0xACB7C4;
+    }
+
+    /** Les yeux qui brillent (juste leurs pixels, sans lueur autour), les éclairs sur lui et, au niveau 2, l'aura bleu clair. */
     public static final class Couche extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
         public Couche(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
             super(parent);
@@ -993,14 +1020,15 @@ public final class ClientFoudre {
             modele.head.translateAndRotate(ps);
             Matrix4f mat = ps.last().pose();
             VertexConsumer c = buffers.getBuffer(Types.VOILE);
-            // la rangée des yeux (y de -4 à -3 sur la tête), deux pixels de chaque côté, juste devant le visage
+            // juste devant le visage
             float z = -4.55F / 16;
             float[] col = {0.88F, 0.97F, 1F};
-            for (float x0 : new float[]{-3, 1}) {
-                c.addVertex(mat, x0 / 16, -4F / 16, z).setColor(col[0], col[1], col[2], 1F);
-                c.addVertex(mat, (x0 + 2) / 16, -4F / 16, z).setColor(col[0], col[1], col[2], 1F);
-                c.addVertex(mat, (x0 + 2) / 16, -3F / 16, z).setColor(col[0], col[1], col[2], 1F);
-                c.addVertex(mat, x0 / 16, -3F / 16, z).setColor(col[0], col[1], col[2], 1F);
+            for (int[] o : yeux(joueur.getSkin().texture())) {
+                float x0 = o[0] / 16F, x1 = (o[0] + o[2]) / 16F, y0 = o[1] / 16F, y1 = (o[1] + 1) / 16F;
+                c.addVertex(mat, x0, y0, z).setColor(col[0], col[1], col[2], 1F);
+                c.addVertex(mat, x1, y0, z).setColor(col[0], col[1], col[2], 1F);
+                c.addVertex(mat, x1, y1, z).setColor(col[0], col[1], col[2], 1F);
+                c.addVertex(mat, x0, y1, z).setColor(col[0], col[1], col[2], 1F);
             }
             ps.popPose();
         }
