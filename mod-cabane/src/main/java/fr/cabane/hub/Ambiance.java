@@ -2,10 +2,10 @@ package fr.cabane.hub;
 
 import fr.cabane.Cabane;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,27 +14,24 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 
 /**
- * Les PNJ qui parlent tout seuls : un PNJ portant le tag « ambiance_<nom> » lâche de temps en temps une de ses répliques
- * (le son cabane:ambiance.<nom>, tirée au hasard parmi les fichiers voix/ambiance/<nom>-N.ogg), quand quelqu'un passe à côté.
+ * Les PNJ qui parlent tout seuls : tant que quelqu'un est près d'un PNJ portant le tag « ambiance_<nom> » (Vegeta) ou
+ * « approche_<nom> » (Eren et son « Tatakae »), il lâche une de ses répliques toutes les 10 à 15 secondes (le son
+ * cabane:ambiance.<nom>, tirée au hasard parmi les fichiers voix/ambiance/<nom>-N.ogg). La première part dès qu'on arrive.
  * Les sons viennent du pack de ressources « Beauvais - voix » (outils/voix-privees.mjs) : sans lui, on n'entend rien.
- *
- * <p>Un PNJ portant le tag « approche_<nom> » réagit, lui, dès qu'on arrive près de lui : sa réplique part tout de suite
- * (le même son cabane:ambiance.<nom>), puis il se repose un peu avant de recommencer. Eren et son « Tatakae ».
  */
 public final class Ambiance {
-    private static final String PREFIXE = "ambiance_";
-    private static final double PORTEE = 16;
-    /** Entre deux répliques d'un même PNJ : de 45 à 90 secondes (certaines durent près de 30 s). */
-    private static final int ATTENTE_MIN = 45 * 20;
-    private static final int ATTENTE_HASARD = 45 * 20;
-    private static final Map<UUID, Long> PROCHAINE = new HashMap<>();
+    private static final String AMBIANCE = "ambiance_";
     private static final String APPROCHE = "approche_";
+    private static final double PORTEE_AMBIANCE = 16;
     private static final double PORTEE_APPROCHE = 9;
-    /** Après sa réplique, il attend 25 secondes avant de réagir à quelqu'un d'autre. */
-    private static final int REPOS_APPROCHE = 25 * 20;
-    /** Pour chaque PNJ « approche_ » : les joueurs déjà près de lui (il ne réagit qu'à ceux qui arrivent). */
-    private static final Map<UUID, Set<UUID>> PROCHES = new HashMap<>();
-    private static final Map<UUID, Long> REPOS = new HashMap<>();
+    private static final float VOLUME_AMBIANCE = 0.55F;
+    private static final float VOLUME_APPROCHE = 1F;
+    /** Entre deux répliques d'un même PNJ : de 10 à 15 secondes. */
+    private static final int ATTENTE_MIN = 10 * 20;
+    private static final int ATTENTE_HASARD = 5 * 20 + 1;
+    /** Assez loin pour couper la réplique d'avant chez tous ceux qui pouvaient l'entendre. */
+    private static final double PORTEE_COUPURE = 48;
+    private static final Map<UUID, Long> PROCHAINE = new HashMap<>();
 
     public static void tick(MinecraftServer server) {
         if (server.getTickCount() % 20 != 0) {
@@ -42,68 +39,55 @@ public final class Ambiance {
         }
         for (ServerLevel level : server.getAllLevels()) {
             long maintenant = level.getGameTime();
+            Map<UUID, Entity> vus = new HashMap<>();
             for (ServerPlayer joueur : level.players()) {
-                for (Entity pnj : level.getEntities(joueur, joueur.getBoundingBox().inflate(PORTEE), e -> nom(e) != null)) {
-                    Long prochaine = PROCHAINE.get(pnj.getUUID());
-                    if (prochaine == null) {
-                        // la première fois qu'on le croise, il attend un peu avant de parler
-                        PROCHAINE.put(pnj.getUUID(), maintenant + 60 + level.random.nextInt(ATTENTE_HASARD));
-                    } else if (maintenant >= prochaine) {
-                        SoundEvent son = SoundEvent.createVariableRangeEvent(Cabane.id("ambiance." + nom(pnj)));
-                        level.playSound(null, pnj.getX(), pnj.getEyeY(), pnj.getZ(), son, SoundSource.NEUTRAL, 0.55F, 1F);
-                        Cabane.LOGGER.debug("Ambiance : {} parle", nom(pnj));
-                        PROCHAINE.put(pnj.getUUID(), maintenant + ATTENTE_MIN + level.random.nextInt(ATTENTE_HASARD));
+                if (joueur.isSpectator()) {
+                    continue;
+                }
+                for (Entity pnj : level.getEntities(joueur, joueur.getBoundingBox().inflate(PORTEE_AMBIANCE), e -> nom(e) != null)) {
+                    if (pnj.distanceTo(joueur) <= portee(pnj)) {
+                        vus.put(pnj.getUUID(), pnj);
                     }
                 }
             }
-            approches(level, maintenant);
-        }
-    }
-
-    /** Les PNJ qui réagissent à l'arrivée de quelqu'un : un joueur qui vient d'arriver près d'eux, et la réplique part. */
-    private static void approches(ServerLevel level, long maintenant) {
-        Map<UUID, Entity> vus = new HashMap<>();
-        Map<UUID, Set<UUID>> presents = new HashMap<>();
-        for (ServerPlayer joueur : level.players()) {
-            if (joueur.isSpectator()) {
-                continue;
-            }
-            for (Entity pnj : level.getEntities(joueur, joueur.getBoundingBox().inflate(PORTEE_APPROCHE), e -> approche(e) != null)) {
-                if (pnj.distanceTo(joueur) <= PORTEE_APPROCHE) {
-                    vus.put(pnj.getUUID(), pnj);
-                    presents.computeIfAbsent(pnj.getUUID(), k -> new HashSet<>()).add(joueur.getUUID());
+            for (Entity pnj : vus.values()) {
+                if (maintenant >= PROCHAINE.getOrDefault(pnj.getUUID(), 0L)) {
+                    parler(level, pnj);
+                    PROCHAINE.put(pnj.getUUID(), maintenant + ATTENTE_MIN + level.random.nextInt(ATTENTE_HASARD));
                 }
             }
         }
-        for (Map.Entry<UUID, Entity> e : vus.entrySet()) {
-            Set<UUID> avant = PROCHES.getOrDefault(e.getKey(), Set.of());
-            boolean arrivee = presents.get(e.getKey()).stream().anyMatch(j -> !avant.contains(j));
-            if (arrivee && maintenant >= REPOS.getOrDefault(e.getKey(), 0L)) {
-                Entity pnj = e.getValue();
-                SoundEvent son = SoundEvent.createVariableRangeEvent(Cabane.id("ambiance." + approche(pnj)));
-                level.playSound(null, pnj.getX(), pnj.getEyeY(), pnj.getZ(), son, SoundSource.NEUTRAL, 1F, 1F);
-                Cabane.LOGGER.debug("Ambiance : {} réagit à une arrivée", approche(pnj));
-                REPOS.put(e.getKey(), maintenant + REPOS_APPROCHE);
-            }
-        }
-        // ceux qui n'ont plus personne autour : on les oublie (la prochaine arrivée les fera parler)
-        PROCHES.keySet().removeIf(u -> level.getEntity(u) != null && !presents.containsKey(u));
-        PROCHES.putAll(presents);
     }
 
-    private static String approche(Entity e) {
-        for (String tag : e.getTags()) {
-            if (tag.startsWith(APPROCHE)) {
-                return tag.substring(APPROCHE.length());
+    private static void parler(ServerLevel level, Entity pnj) {
+        ResourceLocation id = Cabane.id("ambiance." + nom(pnj));
+        // certaines répliques durent près de 30 s : on coupe celle d'avant, pour qu'il ne parle pas par-dessus lui-même
+        ClientboundStopSoundPacket couper = new ClientboundStopSoundPacket(id, SoundSource.NEUTRAL);
+        for (ServerPlayer joueur : level.players()) {
+            if (joueur.distanceTo(pnj) <= PORTEE_COUPURE) {
+                joueur.connection.send(couper);
             }
         }
-        return null;
+        float volume = approche(pnj) ? VOLUME_APPROCHE : VOLUME_AMBIANCE;
+        level.playSound(null, pnj.getX(), pnj.getEyeY(), pnj.getZ(), SoundEvent.createVariableRangeEvent(id), SoundSource.NEUTRAL, volume, 1F);
+        Cabane.LOGGER.debug("Ambiance : {} parle", nom(pnj));
+    }
+
+    private static double portee(Entity e) {
+        return approche(e) ? PORTEE_APPROCHE : PORTEE_AMBIANCE;
+    }
+
+    private static boolean approche(Entity e) {
+        return e.getTags().stream().anyMatch(t -> t.startsWith(APPROCHE));
     }
 
     private static String nom(Entity e) {
         for (String tag : e.getTags()) {
-            if (tag.startsWith(PREFIXE)) {
-                return tag.substring(PREFIXE.length());
+            if (tag.startsWith(AMBIANCE)) {
+                return tag.substring(AMBIANCE.length());
+            }
+            if (tag.startsWith(APPROCHE)) {
+                return tag.substring(APPROCHE.length());
             }
         }
         return null;
