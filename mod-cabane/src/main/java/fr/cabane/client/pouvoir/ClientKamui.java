@@ -255,7 +255,7 @@ public final class ClientKamui {
             }
         }
         double reste = Math.max(0, (fin - mc.level.getGameTime()) / 20.0);
-        g.drawCenteredString(mc.font, Component.literal("Kamui : " + (int) Math.ceil(reste) + " s"), W / 2, 12, 0xFFD0D8E0);
+        g.drawCenteredString(mc.font, Component.literal(reste > 86400 ? "Kamui : sans limite" : "Kamui : " + (int) Math.ceil(reste) + " s"), W / 2, 12, 0xFFD0D8E0);
         g.drawCenteredString(mc.font, Component.literal("Personne ne te voit ni ne t'entend. Toi, tu entends tout."), W / 2, 24, 0xFFA8B0B8);
     }
 
@@ -369,11 +369,10 @@ public final class ClientKamui {
             }
         }
 
-        /** Caché : les autres ne le voient pas du tout (ni corps, ni nom, ni objet, ni armure). */
+        /** Caché : on ne le voit pas du tout (ni corps, ni nom, ni objet, ni armure, ni masque), lui non plus en vue extérieure. */
         @SubscribeEvent
         public static void cacher(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre event) {
-            Minecraft mc = Minecraft.getInstance();
-            if (!CACHES.isEmpty() && CACHES.containsKey(event.getEntity().getUUID()) && event.getEntity() != mc.player) {
+            if (!CACHES.isEmpty() && CACHES.containsKey(event.getEntity().getUUID())) {
                 event.setCanceled(true);
             }
         }

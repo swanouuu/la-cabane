@@ -1227,7 +1227,7 @@ public final class ClientSusano {
                 {Clavier.accroupi(), ClientSusano4.enVol() ? "Descendre"
                         : ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce"},
                 {mc.options.keyJump.getTranslatedKeyMessage().getString(), "Voler"},
-                {EVEIL.getTranslatedKeyMessage().getString(), String.format("Chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
+                {EVEIL.getTranslatedKeyMessage().getString(), fr.cabane.pouvoir.Susano3.DEV.equals(s.pouvoir) ? "Chevalier" : String.format("Chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
                 : new String[][]{
                 {Clavier.gauche(), chevalier ? "Épée" : s.tient ? "Jeter" : "Frappe"},
                 {Clavier.droite(), chevalier ? (rechargeArc > 0 ? String.format("Arc noir (%.0f s)", Math.ceil(rechargeArc)) : "Arc noir")

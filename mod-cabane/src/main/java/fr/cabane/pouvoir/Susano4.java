@@ -318,8 +318,9 @@ public final class Susano4 {
                 continue;
             }
             int t = maintenant - f.debut();
-            // la forme s'achève au bout de 45 s : il revient au chevalier
-            if (f.retour() < 0 && t >= TRANSFO + DUREE) {
+            // la forme s'achève au bout de 45 s : il revient au chevalier (« susanodev » : quand il le décide)
+            boolean sansFin = Susano3.DEV.equals(Pouvoirs.pouvoir(joueur));
+            if (f.retour() < 0 && t >= TRANSFO + DUREE && !sansFin) {
                 f = new Forme(f.debut(), maintenant);
                 FORMES.put(entree.getKey(), f);
                 PacketDistributor.sendToAllPlayers(new Etat4(joueur.getUUID(), 3, 0));
@@ -336,7 +337,7 @@ public final class Susano4 {
             if (f.retour() < 0 && t == TRANSFO) {
                 PacketDistributor.sendToAllPlayers(new Etat4(joueur.getUUID(), 2, t));
             }
-            if (f.retour() < 0 && t >= TRANSFO) {
+            if (f.retour() < 0 && t >= TRANSFO && !sansFin) {
                 int reste = TRANSFO + DUREE - t;
                 if (reste == 10 * 20 || reste <= 5 * 20 && reste % 20 == 0) {
                     joueur.displayClientMessage(Component.literal("Susano parfait : encore " + reste / 20 + " s").withStyle(reste <= 5 * 20 ? ChatFormatting.RED : ChatFormatting.GOLD), true);

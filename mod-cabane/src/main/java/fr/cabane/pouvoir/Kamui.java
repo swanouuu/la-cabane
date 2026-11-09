@@ -71,6 +71,8 @@ public final class Kamui {
     private static final int RECHARGE_SOI = 20 * 20;
     /** Caché dans le Kamui : 30 s au plus. */
     public static final int CACHE = 30 * 20;
+    /** « susanodev » reste caché tant qu'il ne décide pas de sortir. */
+    public static final int SANS_FIN = Integer.MAX_VALUE / 2;
     private static final double PORTEE_CIBLE = 20;
     private static final double PORTEE_SOI = 25;
     /** La dimension : le dessus du bloc du milieu, l'écart entre deux arrivées, la taille (en cases de 6 blocs). */
@@ -361,11 +363,12 @@ public final class Kamui {
     // ================================================================ caché dans le Kamui
 
     private static void cacher(ServerPlayer p) {
-        CACHES.put(p.getUUID(), p.server.getTickCount() + CACHE);
+        int duree = Susano3.DEV.equals(Pouvoirs.pouvoir(p)) ? SANS_FIN : CACHE;
+        CACHES.put(p.getUUID(), p.server.getTickCount() + duree);
         p.setSilent(true);
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 40, 0, false, false));
         fr.cabane.telephone.VoiceBridge.muet(p.getUUID(), true);
-        PacketDistributor.sendToAllPlayers(new Cache(p.getUUID(), true, CACHE));
+        PacketDistributor.sendToAllPlayers(new Cache(p.getUUID(), true, duree));
         p.playNotifySound(SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.25F, 1.8F);
         p.displayClientMessage(Component.literal("Caché dans le Kamui : personne ne te voit ni ne t'entend.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), true);
     }
