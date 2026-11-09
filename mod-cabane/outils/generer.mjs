@@ -650,8 +650,8 @@ const cartes = [
   ["skkyweeds", "Skkyweeds", "Buff handicapé", "epique"],
   ["darkos", "Darkos", "Il a plus de QI que Célia", "legendaire"],
   ["nocten", "Nocten", "LE GOAAAT DES TOUCHOUUUU", "legendaire"],
-  ["lucas", "Lucas", "Portugais de cacaprout", "gold"],
-  ["marj", "Marj", "MAAAARJJJ LA GOAT", "gold"],
+  ["lucas", "Lucas", "Portugais de cacaprout", "mythique"],
+  ["marj", "Marj", "MAAAARJJJ LA GOAT", "mythique"],
   ["jarod", "Jarod", "Le vrai visage de Haru-chan", "arc"],
   ["swan", "Swan", "Swanou bink plato zoo", "arc"],
 ];

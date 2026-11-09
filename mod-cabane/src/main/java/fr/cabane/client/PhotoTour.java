@@ -170,6 +170,17 @@ public final class PhotoTour {
                 mc.setScreen(ecranBooster);
                 ecranBooster.demo();
             }
+            case "booster-rare" -> {
+                // « ui <nom> ecran booster-rare <n° de carte> [charge] » : cette carte au centre, révélée ou en pleine attente
+                var ids = fr.cabane.tcg.Cartes.toutes().stream().map(fr.cabane.tcg.Cartes.Def::id).toList();
+                ClientCartes.BoosterScreen ecranBooster = new ClientCartes.BoosterScreen(List.of(ids.get(0), ids.get(11), ids.get(18), ids.get(Integer.parseInt(e[4]) - 1), ids.get(1)));
+                mc.setScreen(ecranBooster);
+                if (e.length > 5 && e[5].equals("charge")) {
+                    ecranBooster.demoCharge();
+                } else {
+                    ecranBooster.demo();
+                }
+            }
             case "ticket-penalty", "ticket-morpion" -> {
                 var gratte = nom.equals("ticket-penalty")
                         ? new fr.cabane.casino.Ticket.Gratte(fr.cabane.casino.Ticket.PENALTY, List.of(1, 0, 1, 1, 0), 100, 100)

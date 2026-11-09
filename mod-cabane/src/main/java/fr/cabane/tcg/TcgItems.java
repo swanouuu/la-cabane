@@ -30,7 +30,7 @@ public final class TcgItems {
         @Override
         public Component getName(ItemStack stack) {
             Cartes.Def def = Cartes.def(stack.getOrDefault(CabaneComponents.CARTE.get(), ""));
-            return def == null ? super.getName(stack) : Component.literal(def.nom()).withStyle(Cartes.COULEURS[def.rarete()]);
+            return def == null ? super.getName(stack) : Cartes.colore(def.nom(), def.rarete());
         }
 
         @Override
@@ -46,7 +46,7 @@ public final class TcgItems {
                 tooltip.add(Component.literal("Carte inconnue").withStyle(ChatFormatting.DARK_GRAY));
                 return;
             }
-            tooltip.add(Component.literal(Cartes.RARETES[def.rarete()]).withStyle(Cartes.COULEURS[def.rarete()]));
+            tooltip.add(Cartes.colore(Cartes.RARETES[def.rarete()], def.rarete()));
             tooltip.add(Component.literal(def.description()).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
             tooltip.add(Component.literal(def.serie() + " — n° " + def.numero() + "/" + Cartes.toutes().size()).withStyle(ChatFormatting.DARK_GRAY));
         }

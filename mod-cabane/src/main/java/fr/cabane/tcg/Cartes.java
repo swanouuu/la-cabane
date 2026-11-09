@@ -13,6 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -22,6 +25,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.ItemStack;
@@ -33,15 +37,15 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
  * Le catalogue des cartes, lu dans data/cabane/cartes/*.json :
- * {"nom": "...", "description": "...", "rarete": "commune|rare|epique|legendaire|gold|arc", "numero": 1, "serie": "La Cabane"}.
+ * {"nom": "...", "description": "...", "rarete": "commune|rare|epique|legendaire|mythique|arc", "numero": 1, "serie": "La Cabane"}.
  * Le serveur l'envoie aux joueurs à la connexion et après chaque /reload.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Cartes extends SimpleJsonResourceReloadListener {
     public static final Cartes INSTANCE = new Cartes();
-    public static final String[] RARETES = {"Commune", "Rare", "Épique", "Légendaire", "Gold", "Arc-en-ciel"};
-    public static final ChatFormatting[] COULEURS = {ChatFormatting.GRAY, ChatFormatting.AQUA, ChatFormatting.LIGHT_PURPLE, ChatFormatting.GOLD, ChatFormatting.YELLOW, ChatFormatting.GREEN};
-    public static final int[] COULEURS_RGB = {0xFFB4BCC8, 0xFF4FC3F7, 0xFFC77DFF, 0xFFFF9A2E, 0xFFFFD75E, 0xFF7CF29C};
+    public static final String[] RARETES = {"Commune", "Rare", "Épique", "Légendaire", "Mythique", "Arc-en-ciel"};
+    public static final ChatFormatting[] COULEURS = {ChatFormatting.GREEN, ChatFormatting.BLUE, ChatFormatting.DARK_PURPLE, ChatFormatting.GOLD, ChatFormatting.RED, ChatFormatting.WHITE};
+    public static final int[] COULEURS_RGB = {0xFF5FD068, 0xFF4F8DFF, 0xFFA855F7, 0xFFFFC23D, 0xFFFF2E63, 0xFF7CF29C};
 
     private static volatile Map<String, Def> catalogue = Map.of();
 
@@ -82,7 +86,7 @@ public final class Cartes extends SimpleJsonResourceReloadListener {
                     case "rare" -> 1;
                     case "epique" -> 2;
                     case "legendaire" -> 3;
-                    case "gold" -> 4;
+                    case "mythique" -> 4;
                     case "arc" -> 5;
                     default -> 0;
                 };
@@ -94,6 +98,19 @@ public final class Cartes extends SimpleJsonResourceReloadListener {
         });
         definir(liste);
         Cabane.LOGGER.info("Cartes : {} dans le catalogue", liste.size());
+    }
+
+    /** Un texte aux couleurs de sa rareté ; l'arc-en-ciel ondule lettre par lettre. */
+    public static Component colore(String texte, int rarete) {
+        if (rarete != 5) {
+            return Component.literal(texte).withStyle(COULEURS[rarete]);
+        }
+        MutableComponent c = Component.empty();
+        float decale = (System.currentTimeMillis() % 2000L) / 2000F;
+        for (int i = 0; i < texte.length(); i++) {
+            c.append(Component.literal(texte.substring(i, i + 1)).withStyle(Style.EMPTY.withColor(Mth.hsvToRgb(decale + i * 0.07F, 0.6F, 1F) & 0xFFFFFF)));
+        }
+        return c;
     }
 
     public static void definir(List<Def> liste) {

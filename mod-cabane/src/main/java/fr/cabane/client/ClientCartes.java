@@ -1,6 +1,7 @@
 package fr.cabane.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import fr.cabane.Cabane;
 import fr.cabane.CabaneComponents;
 import fr.cabane.CabaneItems;
@@ -14,6 +15,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -28,6 +30,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.joml.Matrix4f;
 
 /** Côté client du jeu de cartes : dessin d'une carte, ouverture de booster, classeur. */
 @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
@@ -171,6 +174,13 @@ public final class ClientCartes {
             courante = 3;
         }
 
+        /** Pour les captures : trois cartes déjà rangées, la quatrième en train de se charger. */
+        public void demoCharge() {
+            demo();
+            retournee[3] = 0;
+            charge[3] = maintenant();
+        }
+
         /** Tout révéler d'un coup (outil de captures, ou pour les pressés). */
         public void toutRetourner() {
             if (phase != Phase.REVELATION) {
@@ -238,6 +248,10 @@ public final class ClientCartes {
                     son(SoundEvents.BEACON_AMBIENT, 1.5F);
                 }
             }
+        }
+
+        private static void son(net.minecraft.sounds.SoundEvent s, float hauteur, float volume) {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(s, hauteur, volume));
         }
 
         private static void son(net.minecraft.sounds.SoundEvent s, float hauteur) {
@@ -310,7 +324,7 @@ public final class ClientCartes {
             for (int k = 0; k < nombre; k++) {
                 double a = alea.nextDouble() * Math.PI * 2;
                 float v = (r + 1.5F) * (0.6F + alea.nextFloat() * 1.8F);
-                int cc = r >= 2 && alea.nextInt(3) == 0 ? 0xFFFFFFFF : couleur;
+                int cc = r == 5 ? 0xFF000000 | Mth.hsvToRgb(alea.nextFloat(), 0.7F, 1F) : r >= 2 && alea.nextInt(3) == 0 ? 0xFFFFFFFF : couleur;
                 etincelles.add(new Etincelle(c[0], c[1], (float) Math.cos(a) * v, (float) Math.sin(a) * v - 0.6F, cc, maintenant(), 800 + alea.nextInt(900), false));
             }
             switch (r) {
@@ -330,7 +344,16 @@ public final class ClientCartes {
                     son(SoundEvents.TOTEM_USE, 1.4F);
                     son(SoundEvents.FIREWORK_ROCKET_TWINKLE, 1F);
                     eclair = maintenant();
-                    couleurEclair = 0xFFF3C4;
+                    couleurEclair = r == 4 ? 0xFF2E63 : r == 5 ? 0xFFFFFF : 0xFFF3C4;
+                    if (r == 4) {
+                        son(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.1F, 0.5F);
+                        son(SoundEvents.WITHER_SPAWN, 1.4F, 0.35F);
+                    } else if (r == 5) {
+                        son(SoundEvents.END_PORTAL_SPAWN, 1F, 0.6F);
+                        son(SoundEvents.BEACON_ACTIVATE, 0.7F, 1F);
+                        son(SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, 0.8F, 1F);
+                        son(SoundEvents.FIREWORK_ROCKET_TWINKLE, 0.7F, 1F);
+                    }
                 }
             }
         }
@@ -357,7 +380,13 @@ public final class ClientCartes {
                         dos(g, x, y, c[2], c[3], 0, 0F);
                     }
                 }
-                case REVELATION -> dessinerRevelation(g, t);
+                case REVELATION -> {
+                    float s = secousse(t);
+                    g.pose().pushPose();
+                    g.pose().translate(Mth.sin((t % 3600000L) / 23F) * s, Mth.cos((t % 3600000L) / 31F) * s, 0);
+                    dessinerRevelation(g, t);
+                    g.pose().popPose();
+                }
             }
             dessinerEtincelles(g, t);
             if (eclair > 0 && t - eclair < 600) {
@@ -366,8 +395,240 @@ public final class ClientCartes {
             }
         }
 
+        /** L'écran tremble quand une Mythique ou une Arc-en-ciel arrive. */
+        private float secousse(long t) {
+            if (courante >= cartes.size() || charge[courante] == 0 || rarete(courante) < 4) {
+                return 0F;
+            }
+            int r = rarete(courante);
+            if (retournee[courante] == 0) {
+                float k = Mth.clamp((t - charge[courante]) / (float) attente(r), 0F, 1F);
+                return k * k * (r == 5 ? 5F : 3F);
+            }
+            return Math.max(0F, 1F - (t - retournee[courante]) / 1000F) * (r == 5 ? 9F : 6F);
+        }
+
+        /** Un nombre de 0 à 1 qui dépend seulement de n : les effets n'ont rien à retenir d'une image à l'autre. */
+        private static float hasard(int n) {
+            float x = Mth.sin(n * 12.9898F) * 43758.547F;
+            return x - Mth.floor(x);
+        }
+
+        private static int arc(float teinte, int alpha) {
+            return alpha << 24 | Mth.hsvToRgb(teinte - Mth.floor(teinte), 0.75F, 1F) & 0xFFFFFF;
+        }
+
+        /** Un triangle, dégradé du sommet A vers les deux autres ; tracé dans les deux sens pour être vu quel que soit son angle. */
+        private static void triangle(VertexConsumer vc, Matrix4f m, float ax, float ay, int ca, float bx, float by, float cx, float cy, int cb) {
+            vc.addVertex(m, ax, ay, 0).setColor(ca);
+            vc.addVertex(m, bx, by, 0).setColor(cb);
+            vc.addVertex(m, cx, cy, 0).setColor(cb);
+            vc.addVertex(m, ax, ay, 0).setColor(ca);
+            vc.addVertex(m, ax, ay, 0).setColor(ca);
+            vc.addVertex(m, cx, cy, 0).setColor(cb);
+            vc.addVertex(m, bx, by, 0).setColor(cb);
+            vc.addVertex(m, ax, ay, 0).setColor(ca);
+        }
+
+        private static void point(VertexConsumer vc, Matrix4f m, float x, float y, float s, int c) {
+            vc.addVertex(m, x, y, 0).setColor(c);
+            vc.addVertex(m, x, y + s, 0).setColor(c);
+            vc.addVertex(m, x + s, y + s, 0).setColor(c);
+            vc.addVertex(m, x + s, y, 0).setColor(c);
+        }
+
+        private static void trait(VertexConsumer vc, Matrix4f m, float x1, float y1, float x2, float y2, float e, int c) {
+            float l = Math.max(0.01F, Mth.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)));
+            float nx = -(y2 - y1) / l * e, ny = (x2 - x1) / l * e;
+            triangle(vc, m, x1 + nx, y1 + ny, c, x1 - nx, y1 - ny, x2 - nx, y2 - ny, c);
+            triangle(vc, m, x1 + nx, y1 + ny, c, x2 - nx, y2 - ny, x2 + nx, y2 + ny, c);
+        }
+
+        private static void cercle(VertexConsumer vc, Matrix4f m, float cx, float cy, float r, float e, int c) {
+            int n = 72;
+            for (int k = 0; k < n; k++) {
+                float a = k * Mth.TWO_PI / n, b = (k + 1) * Mth.TWO_PI / n;
+                trait(vc, m, cx + Mth.cos(a) * r, cy + Mth.sin(a) * r, cx + Mth.cos(b) * r, cy + Mth.sin(b) * r, e, c);
+            }
+        }
+
+        /** Des rayons qui partent du centre et s'effacent en s'éloignant. */
+        private static void soleil(VertexConsumer vc, Matrix4f m, float cx, float cy, float rayon, int branches, float rotation, float largeur, java.util.function.IntUnaryOperator couleur) {
+            float d = largeur * Mth.PI / branches;
+            for (int n = 0; n < branches; n++) {
+                float a = rotation + n * Mth.TWO_PI / branches;
+                int c = couleur.applyAsInt(n);
+                triangle(vc, m, cx, cy, c, cx + Mth.cos(a + d) * rayon, cy + Mth.sin(a + d) * rayon, cx + Mth.cos(a - d) * rayon, cy + Mth.sin(a - d) * rayon, c & 0xFFFFFF);
+            }
+        }
+
+        /** Des éclairs qui partent des bords de l'écran et frappent la carte ; ils changent 14 fois par seconde. */
+        private void eclairs(VertexConsumer vc, Matrix4f m, long t, int[] c, int nombre, boolean arcEnCiel) {
+            java.util.Random rnd = new java.util.Random(t / 70);
+            for (int b = 0; b < nombre; b++) {
+                float a = rnd.nextFloat() * Mth.TWO_PI, loin = Math.max(width, height);
+                float px = c[0] + Mth.cos(a) * loin, py = c[1] + Mth.sin(a) * loin;
+                int couleur = arcEnCiel ? arc(rnd.nextFloat(), 255) : 0xFFFF4A78;
+                for (int s = 1; s <= 12; s++) {
+                    float k = s / 12F, ecart = (1 - k) * 34;
+                    float x = Mth.lerp(k, c[0] + Mth.cos(a) * loin, c[0]) + (s == 12 ? 0 : (rnd.nextFloat() - 0.5F) * ecart);
+                    float y = Mth.lerp(k, c[1] + Mth.sin(a) * loin, c[1]) + (s == 12 ? 0 : (rnd.nextFloat() - 0.5F) * ecart);
+                    trait(vc, m, px, py, x, y, 2.5F, couleur & 0xFFFFFF | 0x50000000);
+                    trait(vc, m, px, py, x, y, 0.8F, 0xFFFFFFFF);
+                    px = x;
+                    py = y;
+                }
+            }
+        }
+
+        /** Un cadre lumineux qui pulse tout autour de l'écran. */
+        private void bordure(VertexConsumer vc, Matrix4f m, int epaisseur, java.util.function.IntUnaryOperator couleur) {
+            int n = 40;
+            float tour = 2F * (width + height);
+            for (int k = 0; k < n; k++) {
+                float p = k * tour / n, q = (k + 1) * tour / n;
+                int c = couleur.applyAsInt(k);
+                float[] a = surBord(p), b = surBord(q);
+                float cx = width / 2F, cy = height / 2F;
+                float ax2 = Mth.lerp(epaisseur / (float) height, a[0], cx), ay2 = Mth.lerp(epaisseur / (float) height, a[1], cy);
+                float bx2 = Mth.lerp(epaisseur / (float) height, b[0], cx), by2 = Mth.lerp(epaisseur / (float) height, b[1], cy);
+                triangle(vc, m, a[0], a[1], c, ax2, ay2, bx2, by2, c & 0xFFFFFF);
+                triangle(vc, m, b[0], b[1], c, a[0], a[1], bx2, by2, c & 0xFFFFFF);
+            }
+        }
+
+        /** Le point à la distance p le long du tour de l'écran. */
+        private float[] surBord(float p) {
+            if (p < width) {
+                return new float[] {p, 0};
+            }
+            p -= width;
+            if (p < height) {
+                return new float[] {width, p};
+            }
+            p -= height;
+            if (p < width) {
+                return new float[] {width - p, height};
+            }
+            return new float[] {0, height - (p - width)};
+        }
+
+        /** Ce qui se passe derrière une Mythique ou une Arc-en-ciel, pendant l'attente puis tant qu'elle est au centre. */
+        private void fondRare(GuiGraphics g, long t, int[] c) {
+            if (courante >= cartes.size() || charge[courante] == 0 || rarete(courante) < 4) {
+                return;
+            }
+            int r = rarete(courante);
+            boolean revelee = retournee[courante] > 0;
+            float k = revelee ? 1F : Mth.clamp((t - charge[courante]) / (float) attente(r), 0F, 1F);
+            g.fill(0, 0, width, height, (int) (k * k * (r == 5 ? 240 : 215)) << 24);
+            VertexConsumer vc = g.bufferSource().getBuffer(RenderType.gui());
+            Matrix4f m = g.pose().last().pose();
+            // l'heure entière ne tient pas dans un float : les effets comptent sur une heure qui reboucle
+            long temps = t % 3600000L;
+            if (r == 4) {
+                fondMythique(vc, m, temps, c, revelee, k);
+            } else {
+                fondArc(vc, m, temps, c, revelee, k, t - retournee[courante]);
+            }
+            g.flush();
+        }
+
+        /** Mythique : l'orage rouge et or. */
+        private void fondMythique(VertexConsumer vc, Matrix4f m, long t, int[] c, boolean revelee, float k) {
+            float loin = (float) Math.hypot(width, height);
+            float s = t / 1000F;
+            if (!revelee) {
+                eclairs(vc, m, t, c, 2 + (int) (k * 9), false);
+                soleil(vc, m, c[0], c[1], loin * k, 14, s * 2, 0.5F, n -> (int) (k * 110) << 24 | 0xFF2E63);
+                return;
+            }
+            soleil(vc, m, c[0], c[1], loin, 16, s * 0.5F, 0.6F, n -> 0xB0FF2E63);
+            soleil(vc, m, c[0], c[1], loin * 0.8F, 16, -s * 0.8F, 0.3F, n -> 0x90FFC23D);
+            for (int n = 0; n < 4; n++) {
+                float p = (t / 1500F + n / 4F) % 1F;
+                cercle(vc, m, c[0], c[1], 40 + p * loin * 0.7F, 1.5F, (int) ((1 - p) * 220) << 24 | 0xFF6A88);
+            }
+            for (int n = 0; n < 110; n++) {
+                // des braises qui montent
+                float v = 0.03F + hasard(n) * 0.06F;
+                float y = height - (t * v + hasard(n + 500) * height) % (height + 20);
+                float x = hasard(n + 900) * width + Mth.sin(t / 400F + n) * 8;
+                point(vc, m, x, y, 1 + hasard(n + 40) * 2.5F, n % 3 == 0 ? 0xFFFFC23D : n % 3 == 1 ? 0xFFFF2E63 : 0xFFFF8A3D);
+            }
+            if ((t / 70) % 5 == 0) {
+                eclairs(vc, m, t, c, 3, false);
+            }
+            float pouls = 0.6F + 0.4F * Mth.sin(t / 180F);
+            bordure(vc, m, 70, n -> (int) (pouls * 200) << 24 | 0xFF2E63);
+        }
+
+        /** Arc-en-ciel : soleils qui tournent, galaxie autour de la carte, ondes, feux d'artifice, pluie d'étoiles. */
+        private void fondArc(VertexConsumer vc, Matrix4f m, long t, int[] c, boolean revelee, float k, long depuis) {
+            float loin = (float) Math.hypot(width, height);
+            float s = t / 1000F;
+            if (!revelee) {
+                // des rubans de couleur aspirés en spirale vers la carte
+                for (int bras = 0; bras < 10; bras++) {
+                    for (int n = 0; n < 46; n++) {
+                        float p = (n / 46F + t / 800F) % 1F;
+                        float a = bras * Mth.TWO_PI / 10 + p * 7F + s * 2;
+                        float rayon = (1 - p) * loin * 0.6F * (0.4F + 0.6F * k);
+                        point(vc, m, c[0] + Mth.cos(a) * rayon, c[1] + Mth.sin(a) * rayon, 1 + (1 - p) * 3, arc(bras / 10F + p + s * 0.5F, (int) (k * 255)));
+                    }
+                }
+                eclairs(vc, m, t, c, 3 + (int) (k * 13), true);
+                bordure(vc, m, (int) (40 + k * 60), n -> arc(n / 40F + s, (int) (k * 230)));
+                soleil(vc, m, c[0], c[1], loin * k, 24, -s * 3, 0.45F, n -> arc(n / 24F + s, (int) (k * 130)));
+                return;
+            }
+            soleil(vc, m, c[0], c[1], loin, 36, s * 0.7F, 0.75F, n -> arc(n / 36F + s * 0.4F, 0xC8));
+            soleil(vc, m, c[0], c[1], loin * 0.85F, 18, -s * 1.1F, 0.45F, n -> arc(n / 18F - s * 0.6F, 0x88));
+            soleil(vc, m, c[0], c[1], loin * 0.7F, 9, s * 2.2F, 0.16F, n -> 0x70FFFFFF);
+            // les ondes de couleur
+            for (int n = 0; n < 8; n++) {
+                float p = (t / 1300F + n / 8F) % 1F;
+                cercle(vc, m, c[0], c[1], 30 + p * loin * 0.75F, 2F, arc(n / 8F + s, (int) ((1 - p) * 255)));
+            }
+            // la galaxie qui tourne autour de la carte
+            for (int n = 0; n < 340; n++) {
+                float f = n / 340F;
+                float rayon = c[3] * 0.62F + f * f * loin * 0.42F;
+                float a = n * 2.39996F + s * (2.4F - f * 1.7F);
+                float y = Mth.sin(a) * rayon * 0.8F;
+                point(vc, m, c[0] + Mth.cos(a) * rayon, c[1] + y, 1 + hasard(n) * 2.5F, arc(f * 2 + s * 0.8F, 255));
+            }
+            // les feux d'artifice
+            for (int f = 0; f < 7; f++) {
+                long periode = 1300 + f * 90L;
+                long cycle = (t + f * 311L) / periode;
+                float p = ((t + f * 311L) % periode) / (float) periode;
+                int graine = (int) (cycle * 7 + f * 131);
+                float bx = hasard(graine) * width, by = hasard(graine + 1) * height * 0.8F;
+                float teinte = hasard(graine + 2);
+                for (int e = 0; e < 44; e++) {
+                    float a = e * Mth.TWO_PI / 44, v = (0.55F + 0.45F * hasard(graine + e)) * 95 * (1 - (1 - p) * (1 - p));
+                    point(vc, m, bx + Mth.cos(a) * v, by + Mth.sin(a) * v + p * p * 26, 2F, arc(teinte + e * 0.004F, (int) ((1 - p) * 255)));
+                }
+            }
+            // la pluie d'étoiles
+            for (int n = 0; n < 130; n++) {
+                float v = 0.06F + hasard(n + 7) * 0.14F;
+                float y = (t * v + hasard(n + 300) * height) % (height + 20) - 10;
+                float x = (hasard(n + 800) * width + y * 0.25F) % width;
+                point(vc, m, x, y, 1 + hasard(n + 60) * 2F, arc(hasard(n) + s, 255));
+            }
+            bordure(vc, m, 90, n -> arc(n / 40F + s, 0xE0));
+            // la couleur de tout l'écran glisse doucement à la révélation, sans clignoter
+            if (depuis < 1400) {
+                float d = 1F - depuis / 1400F;
+                soleil(vc, m, c[0], c[1], loin, 6, 0F, 1F, n -> arc(s * 0.3F, (int) (d * 150)));
+            }
+        }
+
         private void dessinerRevelation(GuiGraphics g, long t) {
             int[] c = centre();
+            fondRare(g, t, c);
             // la rangée du bas : les cartes déjà vues
             for (int i = 0; i < cartes.size(); i++) {
                 if (rangee[i] == 0) {
@@ -442,7 +703,7 @@ public final class ClientCartes {
                 float k = charge[i] > 0 ? Mth.clamp((t - charge[i]) / (float) attente(r), 0F, 1F) : 0F;
                 float tremble = r > 0 ? (float) Math.sin(t / (28.0 - r * 5)) * k * k * (1 + r * 2.5F) : 0F;
                 float monte = k * k * (4 + r * 3);
-                if (r >= 3 && k > 0) {
+                if (r == 3 && k > 0) {
                     // une légendaire assombrit tout autour d'elle
                     g.fill(0, 0, width, height, (int) (k * 150) << 24);
                 }
@@ -470,12 +731,15 @@ public final class ClientCartes {
             float k = Mth.clamp((t - retournee[i]) / 420F, 0F, 1F);
             long depuis = t - retournee[i];
             // l'onde de choc
-            if (r >= 1 && depuis < 700) {
-                float o = depuis / 700F;
-                anneau(g, c[0], c[1], (int) (w * 0.3F + o * w * (1.2F + r * 0.4F)), 3, (int) (255 * (1 - o)) << 24 | couleur & 0xFFFFFF);
+            for (int n = 0; r >= 1 && n < Math.max(1, r - 1); n++) {
+                long d = depuis - n * 140;
+                if (d >= 0 && d < 700) {
+                    float o = d / 700F;
+                    anneau(g, c[0], c[1], (int) (w * 0.3F + o * w * (1.2F + r * 0.4F)), 3, (int) (255 * (1 - o)) << 24 | couleur & 0xFFFFFF);
+                }
             }
             // les rayons qui tournent derrière les épiques et les légendaires
-            if (r >= 2 && k >= 0.5F) {
+            if (r >= 2 && r < 4 && k >= 0.5F) {
                 int rayons = r >= 3 ? 20 : 12;
                 float tourne = (t % 9000) / 9000F * 360F;
                 g.pose().pushPose();
@@ -517,10 +781,24 @@ public final class ClientCartes {
             if (k >= 0.5F) {
                 float rebond = 1F + 0.35F * (float) Math.exp(-depuis / 180.0) * Mth.sin(depuis / 40F);
                 String nom = Cartes.RARETES[r].toUpperCase() + (r >= 3 ? " !!!" : r == 2 ? " !" : "");
+                float taille = (r >= 4 ? 2.3F : 1.8F) * rebond;
                 g.pose().pushPose();
-                g.pose().translate(c[0], y - 22, 0);
-                g.pose().scale(1.8F * rebond, 1.8F * rebond, 1F);
-                g.drawCenteredString(font, nom, 0, 0, couleur);
+                g.pose().translate(c[0], y - (r >= 4 ? 26 : 22), 0);
+                g.pose().scale(taille, taille, 1F);
+                if (r == 5) {
+                    // l'arc-en-ciel : chaque lettre a sa couleur et danse
+                    int lx = -font.width(nom) / 2;
+                    for (int n = 0; n < nom.length(); n++) {
+                        String lettre = nom.substring(n, n + 1);
+                        g.drawString(font, lettre, lx, Math.round(Mth.sin((t % 3600000L) / 130F + n * 0.7F) * 2.5F), arc(n * 0.07F + (t % 3600000L) / 900F, 255), true);
+                        lx += font.width(lettre);
+                    }
+                } else {
+                    if (r == 4) {
+                        g.pose().translate(alea.nextFloat() - 0.5F, alea.nextFloat() - 0.5F, 0);
+                    }
+                    g.drawCenteredString(font, nom, 0, 0, couleur);
+                }
                 g.pose().popPose();
             }
             // une légendaire fait pleuvoir des étincelles tant qu'elle est là
