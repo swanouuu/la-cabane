@@ -640,7 +640,7 @@ const cartes = [
   ["geo", "Géo", "Le titan colossal", "rare"],
   ["haru", "Haru", "Haru le streamer qui pue", "rare"],
   ["isma", "Isma", "Kebab Oignon gros tas de gras", "rare"],
-  ["jack_rider", "Jack Rider", "Bleck Jack Rider va vous casser la gueule !", "rare"],
+  ["jack_rider", "Jack Rider", "Jack Rider va vous casser la gueule !", "rare"],
   ["ovsie_la_femme_de_swan", "Ovsie la femme de Swan", "Elle est destinée à Sakai", "rare"],
   ["tina", "Tina", "Titine d'amouuuur", "rare"],
   ["celia", "Célia", "La grosse pétasse", "epique"],
