@@ -654,6 +654,7 @@ const cartes = [
   ["marj", "Marj", "MAAAARJJJ LA GOAT", "mythique"],
   ["jarod", "Jarod", "Le vrai visage de Haru-chan", "arc"],
   ["swan", "Swan", "Swanou bink plato zoo", "arc"],
+  ["nico_le_chelou", "Nico le chelou", "Pas grand-chose à dire, ce sont des histoires", "commune"],
 ];
 fs.rmSync(path.join(RES, "data/cabane/cartes"), { recursive: true, force: true });
 cartes.forEach(([id, nom, description, rarete], i) => ecrire(`data/cabane/cartes/${id}.json`, { nom, description, rarete, numero: i + 1, serie: "Série 1 — Beauvais" }));
