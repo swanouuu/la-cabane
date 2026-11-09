@@ -33,15 +33,15 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
  * Le catalogue des cartes, lu dans data/cabane/cartes/*.json :
- * {"nom": "...", "description": "...", "rarete": "commune|rare|epique|legendaire", "numero": 1, "serie": "La Cabane"}.
+ * {"nom": "...", "description": "...", "rarete": "commune|rare|epique|legendaire|gold|arc", "numero": 1, "serie": "La Cabane"}.
  * Le serveur l'envoie aux joueurs à la connexion et après chaque /reload.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Cartes extends SimpleJsonResourceReloadListener {
     public static final Cartes INSTANCE = new Cartes();
-    public static final String[] RARETES = {"Commune", "Rare", "Épique", "Légendaire"};
-    public static final ChatFormatting[] COULEURS = {ChatFormatting.GRAY, ChatFormatting.AQUA, ChatFormatting.LIGHT_PURPLE, ChatFormatting.GOLD};
-    public static final int[] COULEURS_RGB = {0xFFB4BCC8, 0xFF4FC3F7, 0xFFC77DFF, 0xFFFFC23D};
+    public static final String[] RARETES = {"Commune", "Rare", "Épique", "Légendaire", "Gold", "Arc-en-ciel"};
+    public static final ChatFormatting[] COULEURS = {ChatFormatting.GRAY, ChatFormatting.AQUA, ChatFormatting.LIGHT_PURPLE, ChatFormatting.GOLD, ChatFormatting.YELLOW, ChatFormatting.GREEN};
+    public static final int[] COULEURS_RGB = {0xFFB4BCC8, 0xFF4FC3F7, 0xFFC77DFF, 0xFFFF9A2E, 0xFFFFD75E, 0xFF7CF29C};
 
     private static volatile Map<String, Def> catalogue = Map.of();
 
@@ -82,6 +82,8 @@ public final class Cartes extends SimpleJsonResourceReloadListener {
                     case "rare" -> 1;
                     case "epique" -> 2;
                     case "legendaire" -> 3;
+                    case "gold" -> 4;
+                    case "arc" -> 5;
                     default -> 0;
                 };
                 liste.add(new Def(id.toString(), GsonHelper.getAsString(o, "nom"), GsonHelper.getAsString(o, "description", ""),
@@ -116,8 +118,9 @@ public final class Cartes extends SimpleJsonResourceReloadListener {
 
     /** Tire une carte : rareté d'abord, puis une carte de cette rareté. */
     public static Def tirer(RandomSource rnd, boolean garantieRare) {
-        int[] poids = garantieRare ? new int[] {0, 75, 21, 4} : new int[] {72, 21, 6, 1};
-        int r = rnd.nextInt(100);
+        // sur 1000 tirages
+        int[] poids = garantieRare ? new int[] {0, 700, 220, 60, 15, 5} : new int[] {610, 240, 100, 35, 12, 3};
+        int r = rnd.nextInt(1000);
         int rarete = 0;
         while (r >= poids[rarete]) {
             r -= poids[rarete];

@@ -623,28 +623,39 @@ const contrats = [
 contrats.push(...CONTRATS_BOISSONS);
 contrats.forEach(([id, item, min, max, prix]) => ecrire(`data/cabane/contrats/${id}.json`, { item, min, max, prix_unitaire: prix }));
 
-// ---- la première série de cartes (à remplacer par les vôtres)
+// ---- la série de cartes : les images (textures/gui/cartes) viennent de .outils/dessin-ia (fabriquer.mjs puis vers-mod.mjs, qui réécrit cette liste)
 const cartes = [
-  ["la_cabane", "La Grande Cabane", "Le refuge de la Confrérie des Explorateurs, à Beauvais.", "commune"],
-  ["feu_de_camp", "Le Feu de Camp", "Là où l'on se raconte les expéditions.", "commune"],
-  ["tour_de_guet", "La Tour de Guet", "Sa fumée se voit à des kilomètres.", "commune"],
-  ["telephone", "Le Téléphone", "3 ou 4 chiffres, et le monde entier au bout du fil.", "commune"],
-  ["bako", "Mouloud le Marchand", "Toujours une bonne affaire… pour lui.", "commune"],
-  ["lion", "Le Lion de la Savane", "Le vrai roi de la savane (ne le dites pas à Umvuthi).", "commune"],
-  ["zebre", "Le Zèbre", "Noir sur blanc ou blanc sur noir ?", "commune"],
-  ["sakaidollar", "Le SakaiDollar", "La monnaie du serveur.", "commune"],
-  ["mira", "Karim le Chouf", "Une carte pour chaque relique.", "rare"],
-  ["avion", "L'Avion en Feu", "Mayday ! On saute au-dessus de la jungle.", "rare"],
-  ["elephant", "L'Éléphant", "Il n'oublie jamais une dette.", "rare"],
-  ["scarabee", "Le Scarabée d'Or", "Gardé par le Pharaon.", "rare"],
-  ["idole", "L'Idole de Jade", "Au cœur de la jungle.", "rare"],
-  ["gardien", "Le Hejj du Village", "Il en sait plus qu'il ne le dit.", "epique"],
-  ["umvuthi", "Umvuthi", "Le roi masqué de la savane.", "epique"],
-  ["perle", "La Perle des Abysses", "Elle brille au fond de l'océan.", "epique"],
-  ["plume", "La Plume Céleste", "Tombée d'une citadelle des nuages.", "epique"],
-  ["ignis", "Ignis", "Le chevalier de flammes.", "legendaire"],
-  ["leviathan", "Le Léviathan", "Ce qui dort sous la Cité Engloutie.", "legendaire"],
+  ["bndro", "Bndro", "Le jnoun d'Andres mais c'est pas Andres !", "commune"],
+  ["enola", "Enola", "Un rire wow", "commune"],
+  ["jc", "JC", "La masse qui démonte les meubles", "commune"],
+  ["la_batte", "La batte", "Elle en a vu des choses...", "commune"],
+  ["la_planche", "La Planche", "RIP la planche Haru il l'a pété", "commune"],
+  ["la_ventoliine", "La ventoliine", "Faut prendre des forces en live", "commune"],
+  ["lada", "Lada", "Il met les ténèbres en rouge et dans sa chambre", "commune"],
+  ["leo", "Leo", "1 an pour trouver un T-shirt", "commune"],
+  ["paul_alexandre", "Paul Alexandre", "Les ténèbres de PA l'ancieeeeeeen", "commune"],
+  ["ro_szylkret", "Ro Szylkret", "Il est bizarre attention a vos fesses", "commune"],
+  ["andres", "Andres", "Il est habité par un jnoun", "rare"],
+  ["coline", "Coline", "Cocooo d'amouuur, elle met ténèbres mais elle est cardio", "rare"],
+  ["geo", "Géo", "Le titan colossal", "rare"],
+  ["haru", "Haru", "Haru le streamer qui pue", "rare"],
+  ["isma", "Isma", "Kebab Oignon gros tas de gras", "rare"],
+  ["jack_rider", "Jack Rider", "Bleck Jack Rider va vous casser la gueule !", "rare"],
+  ["ovsie_la_femme_de_swan", "Ovsie la femme de Swan", "Elle est destinée à Sakai", "rare"],
+  ["tina", "Tina", "Titine d'amouuuur", "rare"],
+  ["celia", "Célia", "La grosse pétasse", "epique"],
+  ["doigt_d_enola", "Doigt d'Enola", "Le doigt plus long que le monde", "epique"],
+  ["gilera_alias_becane", "Gilera alias Bécane", "VROUUUM LA BECANE PREMIER UNIVERS DE SAKAÏ", "epique"],
+  ["sakai", "Sakai", "Le roi du monde", "epique"],
+  ["skkyweeds", "Skkyweeds", "Buff handicapé", "epique"],
+  ["darkos", "Darkos", "Il a plus de QI que Célia", "legendaire"],
+  ["nocten", "Nocten", "LE GOAAAT DES TOUCHOUUUU", "legendaire"],
+  ["lucas", "Lucas", "Portugais de cacaprout", "gold"],
+  ["marj", "Marj", "MAAAARJJJ LA GOAT", "gold"],
+  ["jarod", "Jarod", "Le vrai visage de Haru-chan", "arc"],
+  ["swan", "Swan", "Swanou bink plato zoo", "arc"],
 ];
+fs.rmSync(path.join(RES, "data/cabane/cartes"), { recursive: true, force: true });
 cartes.forEach(([id, nom, description, rarete], i) => ecrire(`data/cabane/cartes/${id}.json`, { nom, description, rarete, numero: i + 1, serie: "Série 1 — Beauvais" }));
 
 console.log("Ressources générées dans", RES);

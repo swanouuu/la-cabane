@@ -1,5 +1,6 @@
 package fr.cabane.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import fr.cabane.Cabane;
 import fr.cabane.CabaneComponents;
 import fr.cabane.CabaneItems;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
@@ -35,7 +37,7 @@ public final class ClientCartes {
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> ItemProperties.register(CabaneItems.CARTE.get(), Cabane.id("rarete"), (stack, level, entity, seed) -> {
             Cartes.Def def = Cartes.def(stack.getOrDefault(CabaneComponents.CARTE.get(), ""));
-            return def == null ? 0F : def.rarete() / 3F;
+            return def == null ? 0F : Math.min(def.rarete(), 3) / 3F;
         }));
     }
 
@@ -53,41 +55,38 @@ public final class ClientCartes {
         Minecraft.getInstance().setScreen(new ClasseurScreen());
     }
 
-    /** Dessine une carte (w x h). Inconnue = dos sombre avec son numéro. */
+    /** La couleur d'une rareté ; l'arc-en-ciel change sans arrêt. */
+    static int teinte(int rarete) {
+        return rarete == 5 ? 0xFF000000 | Mth.hsvToRgb((System.currentTimeMillis() % 2400L) / 2400F, 0.7F, 1F) : Cartes.COULEURS_RGB[rarete];
+    }
+
+    /** Une image de carte, lissée, en entier dans le rectangle ; ses coins sont arrondis. */
+    private static void image(GuiGraphics g, ResourceLocation image, int x, int y, int w, int h) {
+        Minecraft.getInstance().getTextureManager().getTexture(image).setFilter(true, false);
+        RenderSystem.enableBlend();
+        g.blit(image, x, y, w, h, 0F, 0F, 1, 1, 1, 1);
+        RenderSystem.disableBlend();
+    }
+
+    /** Dessine une carte (w x h) : son image, ou un emplacement sombre avec son numéro si on ne l'a pas encore. */
     static void dessinerCarte(GuiGraphics g, Font font, Cartes.Def def, int x, int y, int w, int h, boolean connue, int nombre) {
-        int cadre = def == null ? 0xFF3A3F4A : Cartes.COULEURS_RGB[def.rarete()];
-        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF0B0C10);
-        g.fill(x, y, x + w, y + h, connue ? cadre : 0xFF2A2E36);
-        g.fill(x + 3, y + 3, x + w - 3, y + h - 3, connue ? 0xFF1B1E25 : 0xFF20232A);
         if (!connue || def == null) {
+            g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF0B0C10);
+            g.fill(x, y, x + w, y + h, 0xFF2A2E36);
+            g.fill(x + 3, y + 3, x + w - 3, y + h - 3, 0xFF20232A);
             g.drawCenteredString(font, "?", x + w / 2, y + h / 2 - 8, 0xFF555B66);
             if (def != null) {
                 g.drawCenteredString(font, "n° " + def.numero(), x + w / 2, y + h - 14, 0xFF555B66);
             }
             return;
         }
-        // illustration provisoire : un médaillon de la couleur de la rareté avec l'initiale
-        int cx = x + w / 2;
-        int cy = y + h / 2 - 6;
-        int r = Math.min(w, h) / 4;
-        for (int dy = -r; dy <= r; dy++) {
-            int demi = (int) Math.sqrt(r * r - dy * dy);
-            g.fill(cx - demi, cy + dy, cx + demi, cy + dy + 1, (cadre & 0x00FFFFFF) | 0x66000000);
-        }
-        g.pose().pushPose();
-        g.pose().translate(cx, cy - 6, 0);
-        g.pose().scale(1.6F, 1.6F, 1F);
-        g.drawCenteredString(font, def.nom().substring(0, 1).toUpperCase(), 0, 0, 0xFFFFFFFF);
-        g.pose().popPose();
-        List<FormattedCharSequence> lignes = font.split(Component.literal(def.nom()), w - 8);
-        int ly = y + 5;
-        for (FormattedCharSequence l : lignes.subList(0, Math.min(2, lignes.size()))) {
-            g.drawCenteredString(font, l, x + w / 2, ly, 0xFFFFFFFF);
-            ly += 9;
-        }
-        g.drawCenteredString(font, Cartes.RARETES[def.rarete()], x + w / 2, y + h - 14, cadre);
+        // en petit (classeur, rangée du bas), l'image réduite reste nette
+        String fichier = (w < 80 ? "petites/" : "") + ResourceLocation.parse(def.id()).getPath();
+        image(g, Cabane.id("textures/gui/cartes/" + fichier + ".png"), x, y, w, h);
         if (nombre > 1) {
-            g.drawString(font, "×" + nombre, x + w - 4 - font.width("×" + nombre), y + h - 24, Ui.OR, true);
+            String n = "×" + nombre;
+            g.fill(x + w - font.width(n) - 6, y + h - 13, x + w - 1, y + h - 2, 0xB0000000);
+            g.drawString(font, n, x + w - 4 - font.width(n), y + h - 11, Ui.OR, true);
         }
     }
 
@@ -152,6 +151,8 @@ public final class ClientCartes {
                 case 1 -> 700;
                 case 2 -> 1400;
                 case 3 -> 2300;
+                case 4 -> 3000;
+                case 5 -> 3800;
                 default -> 150;
             };
         }
@@ -231,9 +232,9 @@ public final class ClientCartes {
                 charge[courante] = t;
                 int r = rarete(courante);
                 if (r >= 1) {
-                    son(SoundEvents.BEACON_POWER_SELECT, r == 3 ? 0.5F : r == 2 ? 0.75F : 1.1F);
+                    son(SoundEvents.BEACON_POWER_SELECT, r >= 3 ? 0.5F : r == 2 ? 0.75F : 1.1F);
                 }
-                if (r == 3) {
+                if (r >= 3) {
                     son(SoundEvents.BEACON_AMBIENT, 1.5F);
                 }
             }
@@ -263,7 +264,7 @@ public final class ClientCartes {
                             double a = alea.nextDouble() * Math.PI * 2;
                             float d = 140 + alea.nextFloat() * 80;
                             etincelles.add(new Etincelle(c[0] + (float) Math.cos(a) * d, c[1] + (float) Math.sin(a) * d,
-                                    -(float) Math.cos(a) * d, -(float) Math.sin(a) * d, Cartes.COULEURS_RGB[r], t, 600, true));
+                                    -(float) Math.cos(a) * d, -(float) Math.sin(a) * d, teinte(r), t, 600, true));
                         }
                     }
                     if (t - charge[i] >= attente(r)) {
@@ -304,8 +305,8 @@ public final class ClientCartes {
         private void reveler(int i) {
             int r = rarete(i);
             int[] c = centre();
-            int nombre = new int[] {14, 50, 110, 220}[r];
-            int couleur = Cartes.COULEURS_RGB[r];
+            int nombre = new int[] {14, 50, 110, 220, 280, 360}[r];
+            int couleur = teinte(r);
             for (int k = 0; k < nombre; k++) {
                 double a = alea.nextDouble() * Math.PI * 2;
                 float v = (r + 1.5F) * (0.6F + alea.nextFloat() * 1.8F);
@@ -385,7 +386,7 @@ public final class ClientCartes {
                 if (r > 0) {
                     for (int n = 3; n > 0; n--) {
                         int a = (int) ((18 + 10 * Math.sin(t / 300.0 + i)) * n / 3);
-                        g.fill(-n * 2, -n * 2, p[2] + n * 2, p[3] + n * 2, a << 24 | Cartes.COULEURS_RGB[r] & 0xFFFFFF);
+                        g.fill(-n * 2, -n * 2, p[2] + n * 2, p[3] + n * 2, a << 24 | teinte(r) & 0xFFFFFF);
                     }
                 }
                 dessinerCarte(g, font, Cartes.def(cartes.get(i)), 0, 0, p[2], p[3], true, 1);
@@ -436,12 +437,12 @@ public final class ClientCartes {
             int w = c[2], h = c[3];
             int x = c[0] - w / 2, y = c[1] - h / 2;
             int r = rarete(i);
-            int couleur = Cartes.COULEURS_RGB[r];
+            int couleur = teinte(r);
             if (retournee[i] == 0) {
                 float k = charge[i] > 0 ? Mth.clamp((t - charge[i]) / (float) attente(r), 0F, 1F) : 0F;
                 float tremble = r > 0 ? (float) Math.sin(t / (28.0 - r * 5)) * k * k * (1 + r * 2.5F) : 0F;
                 float monte = k * k * (4 + r * 3);
-                if (r == 3 && k > 0) {
+                if (r >= 3 && k > 0) {
                     // une légendaire assombrit tout autour d'elle
                     g.fill(0, 0, width, height, (int) (k * 150) << 24);
                 }
@@ -475,14 +476,14 @@ public final class ClientCartes {
             }
             // les rayons qui tournent derrière les épiques et les légendaires
             if (r >= 2 && k >= 0.5F) {
-                int rayons = r == 3 ? 20 : 12;
+                int rayons = r >= 3 ? 20 : 12;
                 float tourne = (t % 9000) / 9000F * 360F;
                 g.pose().pushPose();
                 g.pose().translate(c[0], c[1], 0);
                 for (int n = 0; n < rayons; n++) {
                     g.pose().pushPose();
                     g.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(tourne + n * 360F / rayons));
-                    g.fill(-4, 0, 4, (int) (h * 1.3F), (r == 3 ? 0x40000000 : 0x30000000) | couleur & 0xFFFFFF);
+                    g.fill(-4, 0, 4, (int) (h * 1.3F), (r >= 3 ? 0x40000000 : 0x30000000) | couleur & 0xFFFFFF);
                     g.fill(-1, 0, 1, (int) (h * 1.4F), 0x30FFFFFF);
                     g.pose().popPose();
                 }
@@ -515,7 +516,7 @@ public final class ClientCartes {
             // le nom de la rareté, qui rebondit
             if (k >= 0.5F) {
                 float rebond = 1F + 0.35F * (float) Math.exp(-depuis / 180.0) * Mth.sin(depuis / 40F);
-                String nom = Cartes.RARETES[r].toUpperCase() + (r == 3 ? " !!!" : r == 2 ? " !" : "");
+                String nom = Cartes.RARETES[r].toUpperCase() + (r >= 3 ? " !!!" : r == 2 ? " !" : "");
                 g.pose().pushPose();
                 g.pose().translate(c[0], y - 22, 0);
                 g.pose().scale(1.8F * rebond, 1.8F * rebond, 1F);
@@ -523,9 +524,9 @@ public final class ClientCartes {
                 g.pose().popPose();
             }
             // une légendaire fait pleuvoir des étincelles tant qu'elle est là
-            if (r == 3 && alea.nextInt(2) == 0) {
+            if (r >= 3 && alea.nextInt(2) == 0) {
                 etincelles.add(new Etincelle(alea.nextInt(width), -5, (alea.nextFloat() - 0.5F) * 0.5F, 1.5F + alea.nextFloat(),
-                        alea.nextBoolean() ? 0xFFFFE08A : 0xFFFFFFFF, t, 2500, false));
+                        alea.nextBoolean() ? (r == 3 ? 0xFFFFE08A : teinte(r)) : 0xFFFFFFFF, t, 2500, false));
             }
         }
 
@@ -607,27 +608,22 @@ public final class ClientCartes {
                     g.fill(x - k * 3, y - k * 3, x + w + k * 3, y + h + k * 3, a << 24 | couleurAura & 0xFFFFFF);
                 }
             }
-            g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF0B0C10);
-            g.fill(x, y, x + w, y + h, 0xFF8A1C1C);
-            g.fill(x + 4, y + 4, x + w - 4, y + h - 4, 0xFFB03A2E);
-            g.fill(x + 8, y + 8, x + w - 8, y + h - 8, 0xFF8A1C1C);
-            for (int k = 0; k < 4; k++) {
-                g.fill(x + 12 + k * 4, y + 12 + k * 4, x + w - 12 - k * 4, y + 13 + k * 4, 0x30FFD75E);
-            }
-            g.drawCenteredString(font, "BEAUVAIS", x + w / 2, y + h / 2 - 4, 0xFFFFD75E);
+            image(g, Cabane.id("textures/gui/cartes/dos.png"), x, y, w, h);
         }
 
-        /** Le reflet holographique qui passe en diagonale sur les cartes rares. */
+        /** Le reflet qui passe en diagonale sur les cartes rares : blanc, doré sur les Gold, arc-en-ciel sur les Arc-en-ciel. */
         private static void reflet(GuiGraphics g, int x, int y, int w, int h, long t, int r) {
-            float periode = 2600F - r * 400F;
+            int force = Math.min(r, 3);
+            float periode = 2600F - force * 400F;
             float pos = (t % (long) periode) / periode * (w + h) - h * 0.6F;
-            int alpha = 0x22 + r * 0x14;
+            int alpha = 0x22 + force * 0x14;
             for (int dy = 0; dy < h; dy++) {
                 int bx = (int) (pos + dy * 0.6F);
                 int x1 = Math.max(x, x + bx);
-                int x2 = Math.min(x + w, x + bx + 10 + r * 3);
+                int x2 = Math.min(x + w, x + bx + 10 + force * 3 + (r > 3 ? 10 : 0));
                 if (x2 > x1) {
-                    g.fill(x1, y + dy, x2, y + dy + 1, alpha << 24 | 0xFFFFFF);
+                    int c = r == 5 ? Mth.hsvToRgb((t % 1500L) / 1500F + dy / (float) h * 0.6F, 0.55F, 1F) : r == 4 ? 0xFFE9A8 : 0xFFFFFF;
+                    g.fill(x1, y + dy, x2, y + dy + 1, alpha << 24 | c & 0xFFFFFF);
                 }
             }
         }
@@ -824,7 +820,7 @@ public final class ClientCartes {
                 long a = toutes.stream().filter(d -> d.rarete() == rr && contenu.getOrDefault(d.id(), 0) > 0).count();
                 String s = Cartes.RARETES[r] + " " + a + "/" + total;
                 g.drawString(font, s, rx, top - 11, Cartes.COULEURS_RGB[r], false);
-                rx += font.width(s) + 12;
+                rx += font.width(s) + 8;
             }
             // les pochettes de la double page
             float apparition = Mth.clamp((t - tourne) / 220F, 0F, 1F);
@@ -843,13 +839,16 @@ public final class ClientCartes {
                     g.fill(p[0] - 4, p[1] - 4, p[0] + CW + 4, p[1] + CH + 4, Ui.OR);
                 } else if (n > 0 && def.rarete() > 0) {
                     int a = (int) (40 + 30 * Math.sin(t / 400.0 + i));
-                    g.fill(p[0] - 3, p[1] - 3, p[0] + CW + 3, p[1] + CH + 3, a << 24 | Cartes.COULEURS_RGB[def.rarete()] & 0xFFFFFF);
+                    g.fill(p[0] - 3, p[1] - 3, p[0] + CW + 3, p[1] + CH + 3, a << 24 | teinte(def.rarete()) & 0xFFFFFF);
                 }
                 g.pose().pushPose();
                 // la page qui vient d'être tournée glisse en place
                 float decale = (1 - apparition) * 24 * sens;
                 g.pose().translate(decale, dessus ? -2 : 0, 0);
                 dessinerCarte(g, font, def, p[0], p[1], CW, CH, n > 0, n);
+                if (n > 0 && def.rarete() >= 4) {
+                    BoosterScreen.reflet(g, p[0], p[1], CW, CH, t + i * 400L, def.rarete());
+                }
                 // le plastique de la pochette : un reflet en biais
                 g.fill(p[0] + 2, p[1] + 2, p[0] + CW - 2, p[1] + 4, 0x30FFFFFF);
                 g.fill(p[0] + CW - 8, p[1] + 2, p[0] + CW - 5, p[1] + CH - 2, 0x18FFFFFF);
@@ -876,11 +875,14 @@ public final class ClientCartes {
                 if (bx + bw > width) {
                     bx = width - bw - 4;
                 }
-                int c = Cartes.COULEURS_RGB[montree.rarete()];
+                int c = teinte(montree.rarete());
                 for (int halo = 4; halo > 0; halo--) {
                     g.fill(bx - halo * 2, by - halo * 2, bx + bw + halo * 2, by + bh + halo * 2, (n > 0 ? 18 * halo : 6 * halo) << 24 | c & 0xFFFFFF);
                 }
                 dessinerCarte(g, font, montree, bx, by, bw, bh, n > 0, n);
+                if (n > 0 && montree.rarete() >= 4) {
+                    BoosterScreen.reflet(g, bx, by, bw, bh, t, montree.rarete());
+                }
                 List<FormattedCharSequence> desc = font.split(Component.literal(n > 0 ? montree.description() : "Pas encore trouvée…"), bw + 20);
                 int ty = by + bh + 8;
                 g.drawCenteredString(font, n > 0 ? "Tu en as " + n : "Manquante", bx + bw / 2, ty, n > 0 ? Ui.VERT : Ui.ROUGE);
