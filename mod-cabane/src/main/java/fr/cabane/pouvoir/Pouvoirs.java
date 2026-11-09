@@ -1034,7 +1034,7 @@ public final class Pouvoirs {
         }
         donner(joueur, pouvoir, couleur);
         c.getSource().sendSuccess(() -> Component.literal(joueur.getGameProfile().getName() + " a le " + pouvoir + " (" + couleur.nom
-                + "). Touche Éveil pour l'activer."), true);
+                + "). Touche Éveil pour l'activer."), false);
         return 1;
     }
 
@@ -1073,7 +1073,7 @@ public final class Pouvoirs {
             return 0;
         }
         d.setDirty();
-        c.getSource().sendSuccess(() -> Component.literal(joueur.getGameProfile().getName() + " n'a plus de pouvoir."), true);
+        c.getSource().sendSuccess(() -> Component.literal(joueur.getGameProfile().getName() + " n'a plus de pouvoir."), false);
         return 1;
     }
 
