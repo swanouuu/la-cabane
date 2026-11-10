@@ -111,10 +111,11 @@ public final class Commissariat {
     @SubscribeEvent
     public static void commandes(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("commissariat").requires(Commissariat::hote)
-                .executes(c -> devant(c.getSource()))
+                .executes(c -> devant(c.getSource(), false))
+                .then(Commands.literal("forcer").executes(c -> devant(c.getSource(), true)))
                 .then(Commands.literal("annuler").executes(c -> annuler(c.getSource())))
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
-                        .executes(c -> lancer(c.getSource(), BlockPosArgument.getBlockPos(c, "pos"), Rotation.NONE))
+                        .executes(c -> lancer(c.getSource(), BlockPosArgument.getBlockPos(c, "pos"), Rotation.NONE, false))
                         .then(Commands.argument("facade", StringArgumentType.word())
                                 .suggests((c, b) -> {
                                     for (String s : List.of("nord", "est", "sud", "ouest")) {
@@ -122,14 +123,17 @@ public final class Commissariat {
                                     }
                                     return b.buildFuture();
                                 })
-                                .executes(c -> {
-                                    Rotation rot = facade(StringArgumentType.getString(c, "facade"));
-                                    if (rot == null) {
-                                        c.getSource().sendFailure(Component.literal("Choisis nord, est, sud ou ouest."));
-                                        return 0;
-                                    }
-                                    return lancer(c.getSource(), BlockPosArgument.getBlockPos(c, "pos"), rot);
-                                }))));
+                                .executes(c -> aFacade(c, false))
+                                .then(Commands.literal("forcer").executes(c -> aFacade(c, true))))));
+    }
+
+    private static int aFacade(com.mojang.brigadier.context.CommandContext<CommandSourceStack> c, boolean forcer) {
+        Rotation rot = facade(StringArgumentType.getString(c, "facade"));
+        if (rot == null) {
+            c.getSource().sendFailure(Component.literal("Choisis nord, est, sud ou ouest."));
+            return 0;
+        }
+        return lancer(c.getSource(), BlockPosArgument.getBlockPos(c, "pos"), rot, forcer);
     }
 
     private static boolean hote(CommandSourceStack source) {
@@ -151,7 +155,7 @@ public final class Commissariat {
         };
     }
 
-    private static int devant(CommandSourceStack source) {
+    private static int devant(CommandSourceStack source, boolean forcer) {
         ServerPlayer joueur = source.getPlayer();
         if (joueur == null) {
             source.sendFailure(Component.literal("Depuis la console, donne l'endroit : /commissariat <x> <y> <z> [nord|est|sud|ouest]"));
@@ -164,10 +168,10 @@ public final class Commissariat {
             case EAST -> Rotation.COUNTERCLOCKWISE_90;
             default -> Rotation.NONE;
         };
-        return lancer(source, joueur.blockPosition().below().relative(regard, RECUL), rot);
+        return lancer(source, joueur.blockPosition().below().relative(regard, RECUL), rot, forcer);
     }
 
-    private static int lancer(CommandSourceStack source, BlockPos ancre, Rotation rot) {
+    private static int lancer(CommandSourceStack source, BlockPos ancre, Rotation rot, boolean forcer) {
         MinecraftServer server = source.getServer();
         ServerLevel level = source.getLevel();
         if (chantier != null) {
@@ -181,7 +185,7 @@ public final class Commissariat {
             return 0;
         }
         Pose pose = new Pose(ancre.getX(), ancre.getY(), ancre.getZ(), rot);
-        String raison = obstacle(level, pose);
+        String raison = obstacle(level, pose, forcer);
         if (raison != null) {
             source.sendFailure(Component.literal("Pas ici : " + raison + ". Rien n'a été touché."));
             return 0;
@@ -247,8 +251,14 @@ public final class Commissariat {
 
     // ================================================================ on ne touche à rien de ce qui existe
 
-    /** Ce qui empêche de construire ici, ou null. Ne modifie rien. */
-    private static String obstacle(ServerLevel level, Pose pose) {
+    /**
+     * Ce qui empêche de construire ici, ou null. Ne modifie rien.
+     *
+     * <p>Dans le village, ce que les joueurs posent est noté : tout le reste (lampadaires, muret…) vient de la carte et
+     * peut être remplacé. {@code forcer} passe aussi sur ce qu'un joueur a posé et sur un terrain encore à vendre, jamais
+     * sur un coffre, un bâtiment du village, un terrain acheté, un joueur ou un PNJ.
+     */
+    private static String obstacle(ServerLevel level, Pose pose, boolean forcer) {
         Boite boite = pose.boite();
         if (level.isOutsideBuildHeight(boite.min()) || level.isOutsideBuildHeight(boite.max())) {
             return "c'est trop près du haut ou du bas du monde";
@@ -259,14 +269,23 @@ public final class Commissariat {
                 for (int y = Y_MAX; y >= Y_MIN; y--) {
                     BlockPos p = pose.bloc(x, y, z);
                     BlockState etat = level.getBlockState(p);
-                    if (Protection.reserve(level, p)) {
+                    if (Protection.reserve(level, p, forcer)) {
                         return "c'est sur un terrain réservé ou un bâtiment du village, en " + texte(p);
                     }
                     if (!etat.getFluidState().isEmpty()) {
                         return "il y a de l'eau ou de la lave en " + texte(p);
                     }
-                    if (!naturel(level, p, etat)) {
-                        return "il y a déjà " + etat.getBlock().getName().getString() + " en " + texte(p);
+                    String nom = etat.getBlock().getName().getString();
+                    if (etat.hasBlockEntity()) {
+                        return "il y a déjà " + nom + " en " + texte(p);
+                    }
+                    if (!forcer && !naturel(level, p, etat)) {
+                        if (Protection.poseParUnJoueur(level, p)) {
+                            return "un joueur a posé " + nom + " en " + texte(p) + " (ajoute « forcer » à la commande pour construire quand même)";
+                        }
+                        if (!Protection.dansLeVillage(level, p)) {
+                            return "il y a déjà " + nom + " en " + texte(p);
+                        }
                     }
                     if (sol == Integer.MIN_VALUE && terrain(level, p, etat)) {
                         sol = y;

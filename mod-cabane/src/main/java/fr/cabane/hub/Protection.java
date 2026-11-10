@@ -89,8 +89,13 @@ public final class Protection {
         return batiment(x, y, z);
     }
 
-    /** Sur un terrain à vendre ou acheté, dans un bâtiment du village, ou un bloc posé par un joueur : on n'y construit rien d'office. */
-    public static boolean reserve(Level level, BlockPos pos) {
+    /** Ce bloc du village a été posé par un joueur (le reste du village vient de la carte). */
+    public static boolean poseParUnJoueur(Level level, BlockPos pos) {
+        return level instanceof ServerLevel serveur && !level.getBlockState(pos).isAir() && dansLeVillage(level, pos) && Poses.get(serveur).contient(pos);
+    }
+
+    /** Sur un terrain à vendre ou acheté, ou dans un bâtiment du village : on n'y construit rien d'office ({@code forcer} : un terrain encore à vendre passe). */
+    public static boolean reserve(Level level, BlockPos pos, boolean forcer) {
         if (!(level instanceof ServerLevel serveur) || level.dimension() != Level.OVERWORLD) {
             return false;
         }
@@ -103,10 +108,13 @@ public final class Protection {
         int z = pos.getZ() - c.getZ();
         for (int[] lot : LOTS) {
             if (x >= lot[0] && x <= lot[2] && z >= lot[1] && z <= lot[3]) {
-                return true;
+                boolean vendu = level.getBlockEntity(c.offset(lot[4], 1, lot[5])) instanceof fr.cabane.bloc.InteractifBlockEntity borne && borne.proprietaire() != null;
+                if (!forcer || vendu) {
+                    return true;
+                }
             }
         }
-        return batiment(x, y, z) || (!level.getBlockState(pos).isAir() && Poses.get(serveur).contient(pos));
+        return batiment(x, y, z);
     }
 
     /** Dans un bâtiment du village (la Mairie, les grands édifices), ou dans la palissade qui l'entoure. */

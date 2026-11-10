@@ -2,6 +2,7 @@ package fr.cabane.client;
 
 import fr.cabane.Cabane;
 import fr.cabane.accessoire.Masques;
+import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -13,6 +14,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderNameTagEvent;
+import net.neoforged.neoforge.common.util.TriState;
 
 /**
  * Les pseudos au-dessus des joueurs : on ne les voit que si on voit le joueur, jamais à travers un mur (une vitre ne
@@ -25,10 +27,17 @@ public final class ClientPseudos {
     /** Les points du corps qu'on cherche à voir, en part de sa hauteur : la tête, le ventre, les pieds. */
     private static final double[] POINTS = {0.9, 0.5, 0.1};
 
+    /** Les prisonniers de la Mairie : Easy NPC affiche le nom même avec CustomNameVisible à 0, et un nom vide devient « Humanoid ». */
+    private static final Set<String> SANS_NOM = Set.of("Pierre, le disparu", "Macron, ancien président");
+
     @SubscribeEvent
     public static void pseudo(RenderNameTagEvent event) {
         if (event.getEntity() instanceof Player joueur && Masques.surLaTete(joueur)) {
             event.setContent(INCONNU);
+        }
+        Component nom = event.getEntity().getCustomName();
+        if (nom != null && SANS_NOM.contains(nom.getString())) {
+            event.setCanRender(TriState.FALSE);
         }
     }
 
