@@ -1,5 +1,5 @@
 // Les skins fournis tels quels (dossier outils/skins/) : Vegeta (le PNJ du village et la cinématique), Goku
-// Super Saiyan 2, Eren (le PNJ caché derrière la forge) et Erwin (la cinématique des titans). On en tire Majin Vegeta en ajoutant le « M » de Babidi sur le front.
+// Super Saiyan 2, Eren (le PNJ caché derrière la forge), Erwin (la cinématique des titans) et les mannequins du stand de tir. On en tire Majin Vegeta en ajoutant le « M » de Babidi sur le front.
 // Appelé à la fin de persos.mjs (ou seul :  node mod-cabane/outils/skins-perso.mjs).
 import fs from "node:fs";
 import path from "node:path";
@@ -96,6 +96,9 @@ export function skinsPerso() {
     majin.px.set([18, 18, 22, 255], ((8 + y) * 64 + 40 + x) * 4);
   }
   ecrire(path.join(DOSSIER, "majin_vegeta.png"), majin);
+  // les mannequins du stand de tir du commissariat (Rachid, Mamadou, Mouloud) : trois skins de gens du serveur RP,
+  // tirés au hasard à chaque apparition
+  for (const n of [1, 2, 3]) ecrire(path.join(DOSSIER, `cible_${n}.png`), lire(path.join(SOURCES, `cible_${n}.png`)));
   // la texture des mèches en 3D : un blanc légèrement grainé, teint en noir ou en doré au rendu
   const meche = { w: 16, h: 16, px: Buffer.alloc(16 * 16 * 4) };
   for (let i = 0; i < 256; i++) {
@@ -103,7 +106,7 @@ export function skinsPerso() {
     meche.px.set([v, v, v, 255], i * 4);
   }
   ecrire(path.join(DOSSIER, "..", "cheveux.png"), meche);
-  console.log("Skins fournis copiés : vegeta, goku_ssj2, goku_base, majin_vegeta, eren, erwin, soldat_1 à 5");
+  console.log("Skins fournis copiés : vegeta, goku_ssj2, goku_base, majin_vegeta, eren, erwin, soldat_1 à 5, cible_1 à 3");
 }
 
 /**

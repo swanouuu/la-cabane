@@ -816,15 +816,35 @@ public final class Commissariat {
     // ================================================================ le stand de tir : trois mannequins des persos du serveur
 
     private static final String CIBLE = "cabane_cible";
-    /** {nom affiché, skin du village (ou rien : un skin provisoire), rangée du stand} */
-    private static final String[][] CIBLES = {{"Rachid", "", "13"}, {"Mamadou", "", "17"}, {"Mouloud", "mouloud", "20"}};
+    /** Suivi du numéro du skin porté (cible_1 à 3) : cabane_peau1, cabane_peau2… */
+    private static final String PEAU = "cabane_peau";
+    private static final int PEAUX = 3;
+    /** {nom affiché, rangée du stand} */
+    private static final String[][] CIBLES = {{"Rachid", "13"}, {"Mamadou", "17"}, {"Mouloud", "20"}};
 
-    /** Les mannequins manquants reviennent, et les anciennes cibles en bloc laissent la place (commissariats d'avant). */
+    /**
+     * Les mannequins manquants reviennent avec un des trois skins tiré au hasard (jamais deux fois le même), les mannequins
+     * d'avant (skins provisoires) sont remplacés, et les anciennes cibles en bloc laissent la place (commissariats d'avant).
+     */
     private static void cibles(ServerLevel level, Pose pose) {
         AABB stand = new AABB(pose.bloc(1, -5, 12)).minmax(new AABB(pose.bloc(21, -1, 21))).inflate(1);
-        List<Entity> presentes = level.getEntities((Entity) null, stand, e -> e.getTags().contains(CIBLE));
+        List<Entity> presentes = new ArrayList<>(level.getEntities((Entity) null, stand, e -> e.getTags().contains(CIBLE)));
+        List<Integer> libres = new ArrayList<>();
+        for (int n = 1; n <= PEAUX; n++) {
+            libres.add(n);
+        }
+        for (Entity e : presentes) {
+            int n = peau(e);
+            if (n == 0) {
+                e.discard();
+            } else {
+                libres.remove(Integer.valueOf(n));
+            }
+        }
+        presentes.removeIf(Entity::isRemoved);
+        net.minecraft.Util.shuffle(libres, level.random);
         for (String[] c : CIBLES) {
-            int z = Integer.parseInt(c[2]);
+            int z = Integer.parseInt(c[1]);
             for (int y = -3; y <= -2; y++) {
                 BlockPos p = pose.bloc(20, y, z);
                 if (level.getBlockState(p).is(Blocks.TARGET)) {
@@ -834,9 +854,10 @@ public final class Commissariat {
             if (presentes.stream().anyMatch(e -> e.getCustomName() != null && e.getCustomName().getString().equals(c[0]))) {
                 continue;
             }
-            String peau = c[1].isEmpty() ? "SkinData:{Type:\"DEFAULT\"}" : "SkinData:{Type:\"RESOURCE_LOCATION\",Texture:\"cabane:textures/entity/pnj/" + c[1] + ".png\"}";
+            int n = libres.isEmpty() ? 1 + level.random.nextInt(PEAUX) : libres.remove(0);
+            String peau = "SkinData:{Type:\"RESOURCE_LOCATION\",Texture:\"cabane:textures/entity/pnj/cible_" + n + ".png\"}";
             String snbt = "{id:\"easy_npc:humanoid\",CustomName:'{\"text\":\"" + c[0] + "\",\"color\":\"gray\"}',CustomNameVisible:1b,PersistenceRequired:1b,"
-                    + "NoAI:1b,Tags:[\"" + TAG + "\",\"" + CIBLE + "\"],EasyNPCVersion:3,VariantType:\"" + (c[0].equals("Mamadou") ? "ALEX" : "STEVE") + "\"," + peau + ","
+                    + "NoAI:1b,Tags:[\"" + TAG + "\",\"" + CIBLE + "\",\"" + PEAU + n + "\"],EasyNPCVersion:3,VariantType:\"STEVE\"," + peau + ","
                     + "attributes:[{id:\"minecraft:generic.knockback_resistance\",base:1.0d}],ObjectiveData:{ObjectiveDataSet:[]},Status:{finalized:1b}}";
             try {
                 Vec3 v = pose.point(19.5, -4, z + 0.5);
@@ -854,6 +875,16 @@ public final class Commissariat {
                 LOG.error("Mannequin du stand de tir illisible", ex);
             }
         }
+    }
+
+    /** Le numéro du skin d'un mannequin, 0 pour un mannequin d'avant les skins tirés au sort. */
+    private static int peau(Entity e) {
+        for (int n = 1; n <= PEAUX; n++) {
+            if (e.getTags().contains(PEAU + n)) {
+                return n;
+            }
+        }
+        return 0;
     }
 
     /** Les mannequins encaissent tout (on voit qu'ils sont touchés) sans jamais tomber ; /kill marche toujours. */
