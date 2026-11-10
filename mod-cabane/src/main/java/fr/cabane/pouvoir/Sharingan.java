@@ -26,8 +26,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  * niveau de plus à chaque appui, jusqu'au niveau des yeux, puis il se range), L le Kamui (dès le niveau 2), I la
  * météorite (niveau 3, une fois par éveil).
  * <p>
- * Lui ne voit pas l'animation de ses yeux : ce sont ceux qui le regardent au moment où il s'éveille (à moins de 24 blocs,
- * les yeux dans les siens) qui la voient en grand, sur leur écran noir. Voir {@link Genjutsu}, {@link Kamui}, {@link Meteorite}.
+ * À l'éveil, on ne voit que ses pupilles changer sur son visage. L'image de ses yeux en grand n'arrive qu'au Tsukuyomi, selon
+ * ses yeux du moment : chez lui, chez sa cible et chez ceux qui le regardent à moins de 24 blocs. susanodev a deux techniques de
+ * plus : {@link Corbeau} et {@link Fracture}. Voir {@link Genjutsu}, {@link Kamui}, {@link Meteorite}.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Sharingan {
@@ -48,12 +49,15 @@ public final class Sharingan {
     public static final int J_KAMUI = 1;
     public static final int J_METEORITE = 2;
     public static final int J_SUSANO = 3;
+    public static final int J_CORBEAU = 4;
+    public static final int J_FRACTURE = 5;
 
     /** Serveur → tous : le niveau des yeux de ce joueur (0 : endormis), le plus haut qu'il peut atteindre, et s'il vient de monter. */
-    public record Yeux(UUID joueur, int niveau, int max, boolean annonce) implements CustomPacketPayload {
+    public record Yeux(UUID joueur, int niveau, int max, boolean annonce, boolean dev) implements CustomPacketPayload {
         public static final Type<Yeux> TYPE = new Type<>(Cabane.id("sharingan_yeux"));
         public static final StreamCodec<ByteBuf, Yeux> CODEC = StreamCodec.composite(
-                UUIDUtil.STREAM_CODEC, Yeux::joueur, ByteBufCodecs.VAR_INT, Yeux::niveau, ByteBufCodecs.VAR_INT, Yeux::max, ByteBufCodecs.BOOL, Yeux::annonce, Yeux::new);
+                UUIDUtil.STREAM_CODEC, Yeux::joueur, ByteBufCodecs.VAR_INT, Yeux::niveau, ByteBufCodecs.VAR_INT, Yeux::max, ByteBufCodecs.BOOL, Yeux::annonce,
+                ByteBufCodecs.BOOL, Yeux::dev, Yeux::new);
 
         @Override
         public Type<Yeux> type() {
@@ -61,13 +65,9 @@ public final class Sharingan {
         }
     }
 
-    /** Ses yeux changent : tout le monde le sait (pour les dessiner) ; ceux qui le regardent dans les yeux voient l'éveil en grand. */
+    /** Ses yeux changent : tout le monde le sait (pour les dessiner sur son visage). */
     static void envoyerYeux(ServerPlayer joueur, Pouvoirs.Donnees.Elu elu, int niveau, boolean annonce) {
-        // d'abord l'éveil en grand chez ceux qui le regardent : leur son est calé dessus, ils n'entendent pas l'autre
-        if (annonce && niveau > 0) {
-            eveiller(joueur, niveau);
-        }
-        PacketDistributor.sendToAllPlayers(new Yeux(joueur.getUUID(), niveau, Pouvoirs.maxYeux(elu), annonce));
+        PacketDistributor.sendToAllPlayers(new Yeux(joueur.getUUID(), niveau, Pouvoirs.maxYeux(elu), annonce, Susano3.DEV.equals(elu.pouvoir())));
         bonus(joueur, niveau);
     }
 
@@ -135,18 +135,6 @@ public final class Sharingan {
                 .playToClient(Yeux.TYPE, Yeux.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientSharingan.yeux(p)));
     }
 
-    /** Il vient de monter à ce niveau : ceux qui le regardent dans les yeux voient ses yeux changer, en grand. */
-    static void eveiller(ServerPlayer joueur, int niveau) {
-        if (niveau < 1 || niveau > 3) {
-            return;
-        }
-        for (ServerPlayer autre : joueur.serverLevel().players()) {
-            if (autre != joueur && regarde(autre, joueur)) {
-                PacketDistributor.sendToPlayer(autre, new Regard(joueur.getUUID(), niveau, EVEIL));
-            }
-        }
-    }
-
     /** {@code qui} regarde {@code lui} droit dans les yeux, de près, sans rien entre eux. */
     static boolean regarde(ServerPlayer qui, ServerPlayer lui) {
         if (qui.isSpectator() || !qui.isAlive()) {
@@ -160,6 +148,10 @@ public final class Sharingan {
     /** La touche J : le Tsukuyomi (niveau 1 et plus), le Kamui (niveau 2 et plus), la météorite (niveau 3, une fois par éveil). */
     private static void touche(ServerPlayer joueur, int action) {
         if (!est(Pouvoirs.pouvoir(joueur))) {
+            return;
+        }
+        // en corbeau, il ne peut que redevenir lui-même
+        if (Corbeau.actif(joueur.getUUID()) && action != J_CORBEAU) {
             return;
         }
         if (action == J_SUSANO) {
@@ -178,6 +170,16 @@ public final class Sharingan {
         }
         // caché dans le Kamui : il ne peut que ressortir (la touche du Kamui)
         if (Kamui.cache(joueur.getUUID()) && action != J_KAMUI) {
+            return;
+        }
+        if (action == J_CORBEAU || action == J_FRACTURE) {
+            if (Susano3.DEV.equals(Pouvoirs.pouvoir(joueur))) {
+                if (action == J_CORBEAU) {
+                    Corbeau.basculer(joueur);
+                } else {
+                    Fracture.lancer(joueur);
+                }
+            }
             return;
         }
         if (action == J_METEORITE) {
@@ -216,6 +218,12 @@ public final class Sharingan {
                             PacketDistributor.sendToPlayer(moi, new Regard(moi.getUUID(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "eveil"), EVEIL));
                             return 1;
                         })))
+                .then(net.minecraft.commands.Commands.literal("regard").then(net.minecraft.commands.Commands.argument("eveil",
+                        com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3)).executes(c -> {
+                            ServerPlayer moi = c.getSource().getPlayerOrException();
+                            PacketDistributor.sendToPlayer(moi, new Regard(moi.getUUID(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "eveil"), TSUKUYOMI));
+                            return 1;
+                        })))
                 .then(net.minecraft.commands.Commands.literal("tsukuyomi").executes(c -> {
                     Genjutsu.tester(c.getSource().getPlayerOrException());
                     return 1;
@@ -231,6 +239,7 @@ public final class Sharingan {
         bonus(joueur, 0);
         Genjutsu.finirPour(joueur);
         Kamui.endormir(joueur);
+        Corbeau.endormir(joueur);
         Meteorite.oublierEveil(joueur);
     }
 

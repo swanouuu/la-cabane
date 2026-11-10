@@ -13,7 +13,7 @@ public final class TouchesCachees {
     public static final boolean ACTIF = true;
 
     /** L'Éveil reste dans le menu : son nom ne dévoile rien, et les joueurs doivent pouvoir le changer. */
-    private static final Set<String> CACHEES = Set.of("key.cabane.ulti", "key.cabane.technique", "key.cabane.kamui", "key.cabane.meteorite");
+    private static final Set<String> CACHEES = Set.of("key.cabane.ulti", "key.cabane.technique", "key.cabane.kamui", "key.cabane.meteorite", "key.cabane.corbeau", "key.cabane.fracture");
 
     /** Les touches à montrer dans le menu. */
     public static KeyMapping[] filtrer(KeyMapping[] touches) {

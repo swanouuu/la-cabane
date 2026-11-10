@@ -170,8 +170,8 @@ export const NOMS = ["EVEIL 1 : SHARINGAN", "EVEIL 2 : MANGEKYO SHARINGAN", "EVE
 // ------------------------------------------------------------------ l'écran : deux yeux dans le noir
 const W = 960, H = 540, A = 132, HT = 50, HB = 36, R = 54;
 
-/** Une image de l'éveil n au temps t (960 × 540). */
-export function image(n, t) {
+/** Une image de l'éveil n au temps t (960 × 540). {@code toutViolet} : au Tsukuyomi, l'œil du Rinnegan n'a plus de blanc. */
+export function image(n, t, { toutViolet = false } = {}) {
   const e = etat(n, t);
   const tex = iris(e);
   const img = Buffer.alloc(W * H * 4);
@@ -180,13 +180,13 @@ export function image(n, t) {
   const lueurC = e.couleurLueur;
   // à l'éveil 3, seul son œil gauche (à droite de l'écran) passe au Rinnegan ; le droit garde le Mangekyo, qui tourne doucement
   const texM = n === 3 ? iris({ ...etat(2, 4.4), rot: etat(2, 4.4).rot + 0.4 * t }) : tex;
-  const yeux = [[300 + dx0, 262 + dy0, -1, texM, n === 3 ? ROUGE_C : lueurC], [660 + dx0, 262 + dy0, 1, tex, lueurC]];
+  const yeux = [[300 + dx0, 262 + dy0, -1, texM, n === 3 ? ROUGE_C : lueurC], [660 + dx0, 262 + dy0, 1, tex, lueurC, toutViolet && n === 3]];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     // le fond : noir, avec une brume de la couleur de l'éveil
     let c = [3, 2, 4];
     const halo = Math.max(0, 1 - Math.hypot((x - 480) / 520, (y - 262) / 260)) ** 2;
     c = mix(c, lueurC, halo * 0.16 * e.lueur * (e.ouvert ?? 1));
-    for (const [cx, cy, cote, tex, lueurC] of yeux) {
+    for (const [cx, cy, cote, tex, lueurC, plein] of yeux) {
       const lx = (x - cx) * cote, ly = y - cy, nx = lx / A;
       if (Math.abs(nx) > 1.35 || Math.abs(ly) > 110) continue;
       const o = e.ouvert ?? 1;
@@ -194,7 +194,7 @@ export function image(n, t) {
       const bas = (q) => HB * o * Math.max(0, 1 - q * q) ** 0.95 - 4 * q;
       // le halo blanc autour de l'œil (comme sur l'image), qui prend la couleur de l'éveil quand il s'allume
       const g = Math.max(0, 1 - Math.hypot(nx / 1.22, (ly + 4) / (HT * 1.9))) ** 1.6;
-      c = mix(c, mix([235, 235, 245], lueurC, 0.35 + 0.4 * e.lueur), g * 0.55 * o);
+      c = mix(c, plein ? VIOLET : mix([235, 235, 245], lueurC, 0.35 + 0.4 * e.lueur), g * 0.55 * o);
       const dedans = Math.abs(nx) < 1 && ly > haut(nx) && ly < bas(nx);
       if (dedans) {
         const d = Math.min(ly - haut(nx), bas(nx) - ly);
@@ -202,6 +202,11 @@ export function image(n, t) {
         // le blanc de l'œil, avec l'ombre de la paupière en haut
         let s = mix([226, 226, 232], [150, 150, 165], Math.exp(-(ly - haut(nx)) / 9) * 0.8);
         s = mix(s, [180, 180, 192], borne(Math.abs(nx) - 0.6) * 0.6);
+        if (plein) {
+          // tout l'œil en violet : les anneaux de l'iris continuent jusqu'aux coins
+          const anneau = 0.5 + 0.5 * Math.cos((Math.hypot(x - cx, y - (cy + 3)) / R) * Math.PI * 6.4);
+          s = mix(mix(VIOLET, VIOLET_F, 0.2 + anneau * 0.6), NOIR_V, Math.exp(-(ly - haut(nx)) / 9) * 0.75);
+        }
         // l'iris (la texture, texel par texel), un peu vers le bas
         const ix = (x - (cx + 0)) / R, iy = (y - (cy + 3)) / R, ri = Math.hypot(ix, iy);
         if (ri < 1) {

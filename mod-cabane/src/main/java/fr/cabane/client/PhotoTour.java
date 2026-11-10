@@ -263,6 +263,14 @@ public final class PhotoTour {
                 return 2;
             }
             // « act ulti » : la touche de l'ulti (Hachibi 4, l'ultime des fruits niveau 3)
+            case "corbeau" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_CORBEAU));
+                return 2;
+            }
+            case "fracture" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_FRACTURE));
+                return 2;
+            }
             case "meteorite" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_METEORITE));
                 return 2;

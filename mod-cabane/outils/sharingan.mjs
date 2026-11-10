@@ -101,6 +101,13 @@ const calques = {
     const s = [226, 226, 232].map((v, i) => { const a = v + ([150, 150, 165][i] - v) * k; return a + ([180, 180, 192][i] - a) * coin; });
     return [...s, 255 * bordure(ly, nx)];
   }),
+  // au Tsukuyomi avec le Rinnegan, à la place du blanc : tout l'œil violet, les anneaux de l'iris vont jusqu'aux coins
+  oeil_violet: () => calque((lx, ly, nx) => {
+    if (!dedans(ly, nx)) return null;
+    const anneau = 0.5 + 0.5 * Math.cos((Math.hypot(lx, ly - 3) / 54) * Math.PI * 6.4), k = 0.2 + anneau * 0.6, ombre = Math.exp(-(ly - haut(nx)) / 9) * 0.75;
+    const s = [150, 112, 224].map((v, i) => { const a = v + ([92, 58, 160][i] - v) * k; return a + ([32, 14, 52][i] - a) * ombre; });
+    return [...s, 255 * bordure(ly, nx)];
+  }),
   // noir hors de l'amande (pour couper l'iris qui dépasse), transparent dedans
   oeil_masque: () => calque((lx, ly, nx) => [3, 2, 4, 255 * (1 - (dedans(ly, nx) ? bordure(ly, nx) : 0))]),
   // l'ombre de la paupière sur l'iris, les traits des paupières (épais en haut, avec la pointe du coin extérieur)
@@ -189,7 +196,7 @@ export function genererSharingan({ ecrire, lang }) {
   ecrire("data/cabane/damage_type/tsukuyomi.json", { message_id: "cabane.tsukuyomi", exhaustion: 0.1, scaling: "never" });
   ecrire("data/cabane/damage_type/meteorite.json", { message_id: "cabane.meteorite", exhaustion: 0.1, scaling: "never" });
   Object.assign(lang, {
-    "key.cabane.technique": "Technique (pouvoir) : Susano, kunai de Minato", "key.cabane.kamui": "Kamui (Sharingan)", "key.cabane.meteorite": "Météorite (Rinnegan)",
+    "key.cabane.technique": "Technique (pouvoir) : Susano, kunai de Minato", "key.cabane.kamui": "Kamui (Sharingan)", "key.cabane.meteorite": "Météorite (Rinnegan)", "key.cabane.corbeau": "Corbeau (susanodev)", "key.cabane.fracture": "Fracture temporelle (susanodev)",
     "subtitles.cabane.sharingan.eveil": "Le Sharingan s'éveille", "subtitles.cabane.sharingan.mangekyo": "Le Mangekyo s'éveille",
     "death.attack.cabane.tsukuyomi": "%1$s n'est jamais revenu du Tsukuyomi de %2$s",
     "death.attack.cabane.tsukuyomi.item": "%1$s n'est jamais revenu du Tsukuyomi de %2$s",

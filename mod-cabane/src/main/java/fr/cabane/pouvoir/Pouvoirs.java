@@ -1106,7 +1106,7 @@ public final class Pouvoirs {
         YEUX.forEach((uuid, niveau) -> {
             Donnees.Elu elu = d.elus.get(uuid);
             if (elu != null) {
-                PacketDistributor.sendToPlayer(arrivant, new Sharingan.Yeux(uuid, niveau, maxYeux(elu), false));
+                PacketDistributor.sendToPlayer(arrivant, new Sharingan.Yeux(uuid, niveau, maxYeux(elu), false, Susano3.DEV.equals((elu).pouvoir())));
             }
         });
     }

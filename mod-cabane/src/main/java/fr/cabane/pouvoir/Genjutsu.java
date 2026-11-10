@@ -166,9 +166,12 @@ public final class Genjutsu {
         }
         SEANCES.put(lanceur.getUUID(), new Seance(lanceur.getUUID(), cible.getUUID(), maintenant, place));
         DERNIER.put(lanceur.getUUID(), maintenant);
-        // les deux voient ses yeux : le Mangekyo s'allume, puis le saut
-        for (ServerPlayer p : new ServerPlayer[]{lanceur, cible}) {
-            PacketDistributor.sendToPlayer(p, new Sharingan.Regard(lanceur.getUUID(), 2, Sharingan.TSUKUYOMI));
+        // ses yeux du moment en grand, puis le saut : chez eux deux, et chez ceux qui le regardent
+        Sharingan.Regard regard = new Sharingan.Regard(lanceur.getUUID(), Math.max(1, Pouvoirs.yeux(lanceur)), Sharingan.TSUKUYOMI);
+        for (ServerPlayer p : lanceur.serverLevel().players()) {
+            if (p == lanceur || p == cible || Sharingan.regarde(p, lanceur)) {
+                PacketDistributor.sendToPlayer(p, regard);
+            }
         }
         cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, REGARD, 6, false, false));
     }
@@ -183,7 +186,7 @@ public final class Genjutsu {
             place++;
         }
         SEANCES.put(moi.getUUID(), new Seance(moi.getUUID(), moi.getUUID(), moi.server.getTickCount(), place));
-        PacketDistributor.sendToPlayer(moi, new Sharingan.Regard(moi.getUUID(), 2, Sharingan.TSUKUYOMI));
+        PacketDistributor.sendToPlayer(moi, new Sharingan.Regard(moi.getUUID(), Pouvoirs.yeux(moi) > 0 ? Pouvoirs.yeux(moi) : 2, Sharingan.TSUKUYOMI));
     }
 
     /** Le joueur qu'il regarde, à moins de 16 blocs (ni en spectateur, ni en créatif). */

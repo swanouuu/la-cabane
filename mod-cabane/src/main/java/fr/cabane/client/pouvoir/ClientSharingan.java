@@ -44,8 +44,8 @@ import org.lwjgl.glfw.GLFW;
  * <li>sur son visage, le motif (16 × 16) se dessine dans le pixel de la pupille de son skin, et le blanc de l'œil à côté
  * prend la couleur de l'œil ; quand il monte de niveau, le motif s'anime (les tomoe tombent, les lames se forment, le
  * Rinnegan monte du bord) ; au niveau 3, seul son œil gauche passe au Rinnegan, le droit garde le Mangekyo ;</li>
- * <li>celui qui le regardait dans les yeux voit, en grand sur son écran noir, ses deux yeux s'ouvrir et changer
- * (l'animation des aperçus validés), avec le son de l'éveil (le vrai, de l'anime, seulement dans le pack privé) ;</li>
+ * <li>au Tsukuyomi, ses yeux du moment en grand, sur l'écran noir de ceux qui le regardent (au Rinnegan, l'œil violet n'a plus
+ * de blanc) ; l'animation complète reste pour {@code /sharingan yeux} ;</li>
  * <li>la touche d'ulti (J) : le Tsukuyomi, ou la météorite au niveau 3.</li>
  * </ul>
  */
@@ -56,6 +56,8 @@ public final class ClientSharingan {
     private static final ResourceLocation MASQUE = Cabane.id("textures/sharingan/oeil_masque.png");
     private static final ResourceLocation TRAITS = Cabane.id("textures/sharingan/oeil_traits.png");
     private static final ResourceLocation HALO = Cabane.id("textures/sharingan/oeil_halo.png");
+    /** Au Tsukuyomi avec le Rinnegan, à la place du blanc : tout l'œil en violet. */
+    private static final ResourceLocation VIOLET_PLEIN = Cabane.id("textures/sharingan/oeil_violet.png");
     /** Les mêmes calques, retournés, pour l'œil à gauche de l'écran. */
     private static final ResourceLocation BLANC_G = Cabane.id("textures/sharingan/oeil_blanc_g.png");
     private static final ResourceLocation MASQUE_G = Cabane.id("textures/sharingan/oeil_masque_g.png");
@@ -68,8 +70,13 @@ public final class ClientSharingan {
     private static final int ATLAS_PUPILLES_W = 256, ATLAS_PUPILLES_H = 224, ATLAS_IRIS_W = 768, ATLAS_IRIS_H = 672;
     /** La durée de l'animation à l'écran pour chaque éveil (en secondes), comme docs/sharingan/generateur/yeux.mjs. */
     private static final double[] DUREES = {5.2, 6.1, 6.5};
-    /** Le Tsukuyomi : on montre le Mangekyo de 1,7 s à 3,7 s (2 s, le temps avant le saut dans le genjutsu). */
+    /** Le Tsukuyomi : on montre ses yeux pendant 2 s, le temps avant le saut dans le genjutsu (le Mangekyo : de 1,7 s à 3,7 s). */
     private static final double TSU_DEBUT = 1.7, TSU_DUREE = 2.0;
+
+    /** Où commencer dans l'animation pour que ce soit déjà l'œil final (Sharingan, Mangekyo, Rinnegan). */
+    private static double debutTsukuyomi(int n) {
+        return n == 1 ? 3.6 : n == 3 ? 4.4 : TSU_DEBUT;
+    }
 
     private static final SoundEvent SON_EVEIL = SoundEvent.createVariableRangeEvent(Cabane.id("sharingan.eveil"));
     private static final SoundEvent SON_MANGEKYO = SoundEvent.createVariableRangeEvent(Cabane.id("sharingan.mangekyo"));
@@ -111,6 +118,8 @@ public final class ClientSharingan {
 
     /** Le plus haut niveau que les yeux du joueur local peuvent atteindre. */
     private static int maxLocal;
+    /** Le joueur local a susanodev : deux touches de plus. */
+    private static boolean devLocal;
 
     /** Les yeux d'un joueur changent (ou s'endorment, niveau 0). */
     public static void yeux(Sharingan.Yeux p) {
@@ -125,6 +134,7 @@ public final class ClientSharingan {
         }
         if (moi) {
             maxLocal = p.max();
+            devLocal = p.dev();
         }
         Yeux avant = YEUX.get(p.joueur());
         if (avant != null && avant.niveau() == p.niveau()) {
@@ -294,7 +304,7 @@ public final class ClientSharingan {
         regardDebut = System.nanoTime();
         sonJoue = false;
         if (p.mode() == Sharingan.TSUKUYOMI) {
-            jouer(SON_MANGEKYO);
+            jouer(regardEveil == 2 ? SON_MANGEKYO : SON_EVEIL);
             sonJoue = true;
         }
     }
@@ -315,7 +325,7 @@ public final class ClientSharingan {
         }
         double s = secondes(regardDebut);
         if (regardMode == Sharingan.TSUKUYOMI) {
-            return s > TSU_DUREE ? -1 : TSU_DEBUT + s;
+            return s > TSU_DUREE ? -1 : debutTsukuyomi(regardEveil) + s;
         }
         return s > DUREES[regardEveil - 1] ? -1 : s;
     }
@@ -337,6 +347,9 @@ public final class ClientSharingan {
     }
 
     private static Moment moment(int n, double t, boolean tsukuyomi) {
+        if (tsukuyomi && n != 2) {
+            return new Moment(1, 1, 0, entre(secondes(regardDebut), TSU_DUREE - 0.3, TSU_DUREE), 0, 0, n == 3 ? 1 : 0);
+        }
         if (n == 1) {
             double ouvert = sortie(entre(t, 0.45, 1.05)) * (1 - 0.08 * Math.sin(entre(t, 3.3, 3.6) * Math.PI));
             double eclair = Math.max(0, 1 - Math.abs(t - 3.42) / 0.12) * 0.75;
@@ -370,7 +383,7 @@ public final class ClientSharingan {
         }
         sons(t);
         boolean tsu = regardMode == Sharingan.TSUKUYOMI;
-        int n = tsu ? 2 : regardEveil;
+        int n = regardEveil;
         Moment m = moment(n, t, tsu);
         int W = g.guiWidth(), H = g.guiHeight();
         double k = H / 540.0;
@@ -389,7 +402,7 @@ public final class ClientSharingan {
             // e = 0 : l'œil à gauche de l'écran (son œil droit, le coin extérieur à gauche) ; e = 1 : à droite (son œil gauche)
             double cx = W / 2.0 + (e == 0 ? -180 : 180) * k + dx, cy = H / 2.0 - 8 * k + dy;
             int lueur = e == 0 ? ROUGE : lueurDroite;
-            oeil(g, cx, cy, k, e == 0, m.ouvert(), im[e], lueur, m.lueur(), visible * entree);
+            oeil(g, cx, cy, k, e == 0, m.ouvert(), im[e], lueur, m.lueur(), visible * entree, tsu && n == 3 && e == 1);
             if (m.larme() > 0) {
                 // la larme de sang du Mangekyo, sous l'iris
                 double x = cx + (e == 0 ? 6 : -6) * k, y0 = cy + 37 * k, lg = 150 * k * sortie(m.larme());
@@ -407,7 +420,7 @@ public final class ClientSharingan {
         }
         // le Tsukuyomi : tout vire au rouge juste avant le saut
         if (tsu) {
-            double rouge = entre(t, TSU_DEBUT + TSU_DUREE - 0.35, TSU_DEBUT + TSU_DUREE);
+            double rouge = entre(secondes(regardDebut), TSU_DUREE - 0.35, TSU_DUREE);
             if (rouge > 0) {
                 g.fill(0, 0, W, H, ((int) (255 * rouge) << 24) | 0xFF3232);
             }
@@ -415,7 +428,7 @@ public final class ClientSharingan {
     }
 
     /** Un grand œil : le blanc, l'iris (une image de l'atlas), le masque (on coupe ce qui dépasse), le halo teinté, les traits. */
-    private static void oeil(GuiGraphics g, double cx, double cy, double k, boolean miroir, double ouvert, int image, int lueur, double force, double alpha) {
+    private static void oeil(GuiGraphics g, double cx, double cy, double k, boolean miroir, double ouvert, int image, int lueur, double force, double alpha, boolean toutViolet) {
         if (ouvert <= 0.01 || alpha <= 0.01) {
             return;
         }
@@ -426,7 +439,7 @@ public final class ClientSharingan {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1, 1, 1, (float) alpha);
-        g.blit(miroir ? BLANC_G : BLANC, -180, -110, 0, 0, 360, 220, 360, 220);
+        g.blit(toutViolet ? VIOLET_PLEIN : miroir ? BLANC_G : BLANC, -180, -110, 0, 0, 360, 220, 360, 220);
         g.flush();
         // l'iris : 108 de large, un peu vers le bas, coupé par les paupières (le masque)
         int iu = (image % COLONNES) * 48, iv = (image / COLONNES) * 48;
@@ -444,7 +457,7 @@ public final class ClientSharingan {
         g.blit(miroir ? MASQUE_G : MASQUE, -180, -110, 0, 0, 360, 220, 360, 220);
         g.flush();
         float r = (lueur >> 16 & 255) / 255F, v = (lueur >> 8 & 255) / 255F, b = (lueur & 255) / 255F;
-        float melange = (float) (0.35 + 0.4 * force);
+        float melange = toutViolet ? 1F : (float) (0.35 + 0.4 * force);
         RenderSystem.setShaderColor(1 + (r - 1) * melange, 1 + (v - 1) * melange, 1 + (b - 1) * melange, (float) alpha);
         g.blit(miroir ? HALO_G : HALO, -180, -110, 0, 0, 360, 220, 360, 220);
         g.flush();
@@ -482,6 +495,9 @@ public final class ClientSharingan {
     public static final KeyMapping SUSANO = new KeyMapping("key.cabane.technique", GLFW.GLFW_KEY_GRAVE_ACCENT, "key.categories.cabane");
     public static final KeyMapping KAMUI = new KeyMapping("key.cabane.kamui", GLFW.GLFW_KEY_L, "key.categories.cabane");
     public static final KeyMapping METEORITE = new KeyMapping("key.cabane.meteorite", GLFW.GLFW_KEY_I, "key.categories.cabane");
+    /** Les deux techniques de susanodev. */
+    public static final KeyMapping CORBEAU = new KeyMapping("key.cabane.corbeau", GLFW.GLFW_KEY_COMMA, "key.categories.cabane");
+    public static final KeyMapping FRACTURE = new KeyMapping("key.cabane.fracture", GLFW.GLFW_KEY_PERIOD, "key.categories.cabane");
 
     /** La touche d'ulti (J, lue avec les autres pouvoirs dans ClientHachibi4) : le Tsukuyomi, dès que ses yeux sont éveillés. */
     public static void toucheUlti() {
@@ -507,6 +523,16 @@ public final class ClientSharingan {
         while (METEORITE.consumeClick()) {
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_METEORITE));
+            }
+        }
+        while (CORBEAU.consumeClick()) {
+            if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
+                PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_CORBEAU));
+            }
+        }
+        while (FRACTURE.consumeClick()) {
+            if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
+                PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_FRACTURE));
             }
         }
     }
@@ -567,6 +593,10 @@ public final class ClientSharingan {
         if (y >= 3) {
             l.add(new String[]{Clavier.nom(METEORITE), meteoriteFaite ? "Chute de météorite (faite)" : "Chute de météorite"});
         }
+        if (devLocal) {
+            l.add(new String[]{Clavier.nom(CORBEAU), fr.cabane.pouvoir.Corbeau.actif(mc.player.getUUID()) ? "Redevenir toi" : "Corbeau"});
+            l.add(new String[]{Clavier.nom(FRACTURE), "Fracture temporelle"});
+        }
         return l.toArray(new String[0][]);
     }
 
@@ -622,6 +652,8 @@ public final class ClientSharingan {
             event.register(SUSANO);
             event.register(KAMUI);
             event.register(METEORITE);
+            event.register(CORBEAU);
+            event.register(FRACTURE);
         }
 
         @SubscribeEvent
