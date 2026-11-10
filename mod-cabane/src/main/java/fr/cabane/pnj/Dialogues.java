@@ -459,7 +459,7 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
         if (!o.prend().isEmpty()) {
             Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(o.prend()));
             if (joueur.getInventory().countItem(item) < 1) {
-                envoyer(joueur, s, m.titre(), "(Il te faut : " + new ItemStack(item).getHoverName().getString() + ". Tu ne l'as plus sur toi…)", choix, suites);
+                envoyer(joueur, s, m.titre(), "(Il te faut : " + fr.cabane.Noms.de(new ItemStack(item)) + ". Tu ne l'as plus sur toi…)", choix, suites);
                 return;
             }
             joueur.getInventory().clearOrCountMatchingItems(st -> st.is(item), 1, joueur.inventoryMenu.getCraftSlots());

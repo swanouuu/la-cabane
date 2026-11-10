@@ -62,7 +62,7 @@ public final class Labos {
 
     private record Ingredient(Supplier<? extends Item> item, int nombre) {
         String texte() {
-            return nombre + " " + new ItemStack(item.get()).getHoverName().getString();
+            return nombre + " " + fr.cabane.Noms.de(new ItemStack(item.get()));
         }
     }
 
@@ -152,7 +152,7 @@ public final class Labos {
 
         String recette() {
             return String.join(" + ", ingredients.stream().map(Ingredient::texte).toList()) + " → " + nombre + " "
-                    + new ItemStack(resultat.get()).getHoverName().getString() + " (" + duree / 20 + " s"
+                    + fr.cabane.Noms.de(new ItemStack(resultat.get())) + " (" + duree / 20 + " s"
                     + (explosion > 0 ? ", risque d'explosion " + Math.round(explosion * 100) + " %" : "") + ")";
         }
 

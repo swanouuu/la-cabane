@@ -210,7 +210,7 @@ public final class Contrats extends SimpleJsonResourceReloadListener {
                 livrer(joueur, i);
                 livres++;
             } else {
-                manque.add((c.demande().getCount() - possede) + " × " + c.demande().getHoverName().getString());
+                manque.add((c.demande().getCount() - possede) + " × " + fr.cabane.Noms.de(c.demande()));
             }
         }
         if (livres == 0) {

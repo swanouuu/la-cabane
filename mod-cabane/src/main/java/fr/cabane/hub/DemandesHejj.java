@@ -87,7 +87,7 @@ public final class DemandesHejj {
             return d.texte() + "\n\nMais tu m'as déjà aidé aujourd'hui. Reviens demain !";
         }
         int a = joueur.getInventory().countItem(objet(d));
-        return d.texte() + "\n\n→ " + d.nombre() + " × " + new ItemStack(objet(d)).getHoverName().getString()
+        return d.texte() + "\n\n→ " + d.nombre() + " × " + fr.cabane.Noms.de(new ItemStack(objet(d)))
                 + " (tu en as " + a + ")\nRécompense : " + Economie.format(d.prime());
     }
 
@@ -104,7 +104,7 @@ public final class DemandesHejj {
         }
         Item item = objet(d);
         if (joueur.getInventory().countItem(item) < d.nombre()) {
-            return "Il m'en faut " + d.nombre() + " × " + new ItemStack(item).getHoverName().getString() + ", pas un de moins. Tu en as "
+            return "Il m'en faut " + d.nombre() + " × " + fr.cabane.Noms.de(new ItemStack(item)) + ", pas un de moins. Tu en as "
                     + joueur.getInventory().countItem(item) + ".";
         }
         joueur.getInventory().clearOrCountMatchingItems(s -> s.is(item), d.nombre(), joueur.inventoryMenu.getCraftSlots());

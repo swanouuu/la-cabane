@@ -39,6 +39,7 @@ public final class CabaneEvents {
         if (!event.getServer().isDedicatedServer()) {
             event.getServer().getPlayerList().setAllowCommandsForAllPlayers(true);
         }
+        fr.cabane.Noms.charger();
         HubEvents.onServerStarted(event.getServer());
         fr.cabane.hub.DemandesHejj.onServerStarted(event.getServer());
     }

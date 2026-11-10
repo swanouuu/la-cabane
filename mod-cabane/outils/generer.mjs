@@ -25,6 +25,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { RELIQUES } from "./reliques.mjs";
+import { A_LA_MAIN } from "./noms-fr-main.mjs";
 
 const RES = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "main", "resources");
 const ecrire = (rel, contenu) => {
@@ -520,6 +521,8 @@ Object.assign(lang, {
   "death.attack.cabane.kirin.item": "%1$s a été écrasé par le Kirin de %2$s",
   "death.attack.cabane.kirin.player": "%1$s a été écrasé par un Kirin",
 });
+// les objets des mods qui n'ont pas de français : le jeu fusionne les langues de tous les mods
+Object.assign(lang, A_LA_MAIN);
 ecrire("assets/cabane/lang/fr_fr.json", lang);
 ecrire("assets/cabane/lang/en_us.json", lang);
 

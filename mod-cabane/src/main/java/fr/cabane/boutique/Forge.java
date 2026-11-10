@@ -384,7 +384,7 @@ public final class Forge extends SimpleJsonResourceReloadListener {
         for (int i = 0; i < a.file.size(); i++) {
             Commande c = a.file.get(i);
             if (c.joueur.equals(joueur.getUUID())) {
-                return (c.debut < 0 ? "En attente : " : "Sur l'enclume : ") + c.objet.getHoverName().getString()
+                return (c.debut < 0 ? "En attente : " : "Sur l'enclume : ") + fr.cabane.Noms.de(c.objet)
                         + " (encore " + secondes(a.attente(i + 1, maintenant)) + ")";
             }
         }
@@ -431,7 +431,7 @@ public final class Forge extends SimpleJsonResourceReloadListener {
         for (ItemStack ing : r.ingredients()) {
             int n = compter(joueur, ing.getItem());
             if (n < ing.getCount()) {
-                manque.add((ing.getCount() - n) + " × " + ing.getHoverName().getString());
+                manque.add((ing.getCount() - n) + " × " + fr.cabane.Noms.de(ing));
             }
         }
         if (!manque.isEmpty()) {
@@ -514,7 +514,7 @@ public final class Forge extends SimpleJsonResourceReloadListener {
                 a.setDirty();
                 diffuser(server, c, 1, maintenant);
                 if (maitre != null && maitre.position().distanceToSqr(enclumeOuJoueur(server, maitre)) > 40 * 40) {
-                    maitre.displayClientMessage(Component.literal("Brokk a posé ton " + c.objet.getHoverName().getString()
+                    maitre.displayClientMessage(Component.literal("Brokk a posé ton " + fr.cabane.Noms.de(c.objet)
                             + " sur l'enclume. Viens le regarder faire, à la forge.").withStyle(ChatFormatting.GOLD), false);
                 }
             } else if (maintenant >= c.debut + c.duree) {
@@ -523,7 +523,7 @@ public final class Forge extends SimpleJsonResourceReloadListener {
                 a.setDirty();
                 diffuser(server, c, 2, maintenant);
                 if (maitre != null && maitre.position().distanceToSqr(enclumeOuJoueur(server, maitre)) > 20 * 20) {
-                    maitre.displayClientMessage(Component.literal("Brokk : « Ton " + c.objet.getHoverName().getString()
+                    maitre.displayClientMessage(Component.literal("Brokk : « Ton " + fr.cabane.Noms.de(c.objet)
                             + " est prêt. Viens le chercher à la forge. »").withStyle(ChatFormatting.GOLD), false);
                 }
             } else {

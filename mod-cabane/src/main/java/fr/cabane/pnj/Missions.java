@@ -450,8 +450,8 @@ public final class Missions extends SimpleJsonResourceReloadListener {
             return o.texte();
         }
         return switch (o.type()) {
-            case APPORTER -> "Apporter " + o.nombre() + " × " + new ItemStack(objet(o.cible())).getHoverName().getString();
-            case AVOIR -> "Avoir " + (o.nombre() > 1 ? o.nombre() + " × " : "") + new ItemStack(objet(o.cible())).getHoverName().getString();
+            case APPORTER -> "Apporter " + o.nombre() + " × " + fr.cabane.Noms.de(new ItemStack(objet(o.cible())));
+            case AVOIR -> "Avoir " + (o.nombre() > 1 ? o.nombre() + " × " : "") + fr.cabane.Noms.de(new ItemStack(objet(o.cible())));
             case TUER -> "Vaincre " + o.nombre() + " × " + nomEntite(o.cible());
             case PARLER -> "Parler à " + Dialogues.nomCourt(o.cible());
             case SUCCES -> "Trouver ce qui se cache…";
@@ -463,7 +463,7 @@ public final class Missions extends SimpleJsonResourceReloadListener {
         if (id.startsWith("#")) {
             return id.substring(id.indexOf(':') + 1).replace('_', ' ');
         }
-        return BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(id)).getDescription().getString();
+        return fr.cabane.Noms.de(BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(id)));
     }
 
     /** Une ligne d'objectif avec sa progression : « ✔ Parler à Jean », « • Apporter 16 × Morue cuite (8/16) ». */
@@ -481,7 +481,7 @@ public final class Missions extends SimpleJsonResourceReloadListener {
             l.add(Economie.format(m.argent()));
         }
         for (ItemStack s : m.objets()) {
-            l.add(s.getCount() + " × " + s.getHoverName().getString());
+            l.add(s.getCount() + " × " + fr.cabane.Noms.de(s));
         }
         if (m.xp() > 0) {
             l.add(m.xp() + " niveaux d'expérience");
