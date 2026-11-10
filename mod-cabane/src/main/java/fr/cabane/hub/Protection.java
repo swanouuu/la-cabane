@@ -89,6 +89,26 @@ public final class Protection {
         return batiment(x, y, z);
     }
 
+    /** Sur un terrain à vendre ou acheté, dans un bâtiment du village, ou un bloc posé par un joueur : on n'y construit rien d'office. */
+    public static boolean reserve(Level level, BlockPos pos) {
+        if (!(level instanceof ServerLevel serveur) || level.dimension() != Level.OVERWORLD) {
+            return false;
+        }
+        BlockPos c = HubData.get(serveur.getServer()).centre();
+        if (c == null) {
+            return false;
+        }
+        int x = pos.getX() - c.getX();
+        int y = pos.getY() - c.getY();
+        int z = pos.getZ() - c.getZ();
+        for (int[] lot : LOTS) {
+            if (x >= lot[0] && x <= lot[2] && z >= lot[1] && z <= lot[3]) {
+                return true;
+            }
+        }
+        return batiment(x, y, z) || (!level.getBlockState(pos).isAir() && Poses.get(serveur).contient(pos));
+    }
+
     /** Dans un bâtiment du village (la Mairie, les grands édifices), ou dans la palissade qui l'entoure. */
     private static boolean batiment(int x, int y, int z) {
         if (dansLaMairie(x, y, z)) {
