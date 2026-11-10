@@ -38,6 +38,8 @@ zone(1, 6, 16, 3, 6, 16, null); // pas de tapis sur la dernière marche
 pose(2, -1, 20, null); pose(1, -1, 18, "plafonnier");
 // les gyrophares du toit sur un petit mât
 for (const x of [8, 21]) pose(x, 6, 1, "poteau");
+// le stand de tir : des mannequins (posés par le jeu) à la place des cibles
+for (const z of [13, 17, 20]) zone(20, -3, z, 20, -2, z, null);
 
 // ---------------------------------------------------------------- traduction en blocs
 const SIMPLES = {

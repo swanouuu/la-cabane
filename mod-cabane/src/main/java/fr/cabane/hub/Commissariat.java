@@ -671,6 +671,7 @@ public final class Commissariat {
                 LOG.warn("Affiche du commissariat introuvable");
             }
             enseigne(o.getAsJsonArray("enseigne"));
+            cibles(level, pose);
         }
 
         private void enseigne(JsonArray c) {
@@ -716,29 +717,51 @@ public final class Commissariat {
 
     // ================================================================ le passage secret
 
-    /** Le pupitre du bureau ouvre la bibliothèque ; depuis la salle secrète, on l'ouvre en cliquant dessus. */
+    /** Le pupitre et les deux étagères qui pivotent (coordonnées du plan). */
+    private static boolean mecanisme(int[] c) {
+        return (c[0] == 7 && c[1] == 6 && c[2] == 15) || (c[0] == 9 && (c[1] == 6 || c[1] == 7) && c[2] == 14);
+    }
+
+    /** Dans la salle secrète, à l'étage (coordonnées du plan). */
+    private static boolean dansLaSalle(int[] c) {
+        return c[0] >= 5 && c[0] <= 12 && c[1] >= 6 && c[1] <= 9 && c[2] >= 10 && c[2] <= 13;
+    }
+
+    /** Le commissariat construit dans ce monde-là, ou null. */
+    private static Pose ici(ServerLevel level) {
+        Donnees d = Donnees.get(level.getServer());
+        return d.present && level.dimension().location().toString().equals(d.dim) ? d.pose() : null;
+    }
+
+    /**
+     * Le pupitre du bureau ouvre la bibliothèque. Depuis la salle secrète, n'importe quelle étagère du mur l'ouvre (et elle
+     * s'ouvre toute seule quand on s'en approche, voir {@link #garder}).
+     */
     @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
     public static void clic(PlayerInteractEvent.RightClickBlock event) {
         if (!(event.getLevel() instanceof ServerLevel level) || event.getHand() != InteractionHand.MAIN_HAND) {
             return;
         }
-        Donnees d = Donnees.get(level.getServer());
-        if (!d.present || !level.dimension().location().toString().equals(d.dim)) {
+        Pose pose = ici(level);
+        if (pose == null) {
             return;
         }
-        Pose pose = d.pose();
         int[] c = pose.plan(event.getPos());
         boolean pupitre = c[0] == 7 && c[1] == 6 && c[2] == 15;
-        boolean bibliotheque = c[0] == 9 && (c[1] == 6 || c[1] == 7) && c[2] == 14;
-        if (!pupitre && !bibliotheque) {
-            return;
+        boolean mur = c[2] == 14 && c[0] >= 5 && c[0] <= 13 && c[1] >= 6 && c[1] <= 9;
+        boolean dedans = dansLaSalle(pose.plan(event.getEntity().blockPosition()));
+        if (pupitre || (mur && dedans)) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            ouvrir(level, pose, event.getEntity());
+        } else if (mecanisme(c)) {
+            // de l'autre côté, c'est une étagère comme les autres
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
         }
-        event.setCanceled(true);
-        event.setCancellationResult(InteractionResult.SUCCESS);
-        // de l'autre côté, c'est une étagère comme les autres
-        if (bibliotheque && pose.plan(event.getEntity().blockPosition())[2] >= 14) {
-            return;
-        }
+    }
+
+    private static void ouvrir(ServerLevel level, Pose pose, Player joueur) {
         Histoire.BibliothequeSecrete bloc = CabaneBlocks.BIBLIOTHEQUE_SECRETE.get();
         boolean ouvert = false;
         for (int y : new int[] {6, 7}) {
@@ -752,7 +775,132 @@ public final class Commissariat {
         }
         if (ouvert) {
             level.playSound(null, pose.bloc(9, 6, 14), SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 0.6F, 0.6F);
-            event.getEntity().displayClientMessage(Component.literal("La bibliothèque pivote sans un bruit…").withStyle(ChatFormatting.DARK_GRAY), true);
+            joueur.displayClientMessage(Component.literal("La bibliothèque pivote sans un bruit…").withStyle(ChatFormatting.DARK_GRAY), true);
+        }
+    }
+
+    private static int compteur;
+
+    /** De l'intérieur, le passage s'ouvre quand on s'en approche ; s'il a été cassé, il se répare. */
+    @SubscribeEvent
+    public static void garder(ServerTickEvent.Post event) {
+        if (++compteur % 10 != 0 || chantier != null) {
+            return;
+        }
+        Donnees d = Donnees.get(event.getServer());
+        if (!d.present) {
+            return;
+        }
+        ServerLevel level = event.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(d.dim)));
+        Pose pose = d.pose();
+        BlockPos porte = pose.bloc(9, 6, 14);
+        if (level == null || !level.isLoaded(porte)) {
+            return;
+        }
+        for (ServerPlayer p : level.players()) {
+            if (!p.isSpectator() && p.distanceToSqr(porte.getCenter()) < 12) {
+                int[] c = pose.plan(p.blockPosition());
+                if (dansLaSalle(c) && c[2] >= 12) {
+                    ouvrir(level, pose, p);
+                }
+            }
+        }
+        if (compteur % 100 == 0) {
+            reparer(level, pose);
+            if (level.isLoaded(pose.bloc(19, -4, 17))) {
+                cibles(level, pose);
+            }
+        }
+    }
+
+    // ================================================================ le stand de tir : trois mannequins des persos du serveur
+
+    private static final String CIBLE = "cabane_cible";
+    /** {nom affiché, skin du village (ou rien : un skin provisoire), rangée du stand} */
+    private static final String[][] CIBLES = {{"Rachid", "", "13"}, {"Mamadou", "", "17"}, {"Mouloud", "mouloud", "20"}};
+
+    /** Les mannequins manquants reviennent, et les anciennes cibles en bloc laissent la place (commissariats d'avant). */
+    private static void cibles(ServerLevel level, Pose pose) {
+        AABB stand = new AABB(pose.bloc(1, -5, 12)).minmax(new AABB(pose.bloc(21, -1, 21))).inflate(1);
+        List<Entity> presentes = level.getEntities((Entity) null, stand, e -> e.getTags().contains(CIBLE));
+        for (String[] c : CIBLES) {
+            int z = Integer.parseInt(c[2]);
+            for (int y = -3; y <= -2; y++) {
+                BlockPos p = pose.bloc(20, y, z);
+                if (level.getBlockState(p).is(Blocks.TARGET)) {
+                    level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                }
+            }
+            if (presentes.stream().anyMatch(e -> e.getCustomName() != null && e.getCustomName().getString().equals(c[0]))) {
+                continue;
+            }
+            String peau = c[1].isEmpty() ? "SkinData:{Type:\"DEFAULT\"}" : "SkinData:{Type:\"RESOURCE_LOCATION\",Texture:\"cabane:textures/entity/pnj/" + c[1] + ".png\"}";
+            String snbt = "{id:\"easy_npc:humanoid\",CustomName:'{\"text\":\"" + c[0] + "\",\"color\":\"gray\"}',CustomNameVisible:1b,PersistenceRequired:1b,"
+                    + "NoAI:1b,Tags:[\"" + TAG + "\",\"" + CIBLE + "\"],EasyNPCVersion:3,VariantType:\"" + (c[0].equals("Mamadou") ? "ALEX" : "STEVE") + "\"," + peau + ","
+                    + "attributes:[{id:\"minecraft:generic.knockback_resistance\",base:1.0d}],ObjectiveData:{ObjectiveDataSet:[]},Status:{finalized:1b}}";
+            try {
+                Vec3 v = pose.point(19.5, -4, z + 0.5);
+                float lacet = pose.yaw(90F);
+                Entity e = EntityType.loadEntityRecursive(net.minecraft.nbt.TagParser.parseTag(snbt), level, x -> {
+                    x.moveTo(v.x, v.y, v.z, lacet, 0F);
+                    return x;
+                });
+                if (e instanceof net.minecraft.world.entity.LivingEntity l) {
+                    l.setYHeadRot(lacet);
+                    l.setYBodyRot(lacet);
+                    level.addFreshEntity(l);
+                }
+            } catch (com.mojang.brigadier.exceptions.CommandSyntaxException ex) {
+                LOG.error("Mannequin du stand de tir illisible", ex);
+            }
+        }
+    }
+
+    /** Les mannequins encaissent tout (on voit qu'ils sont touchés) sans jamais tomber ; /kill marche toujours. */
+    @SubscribeEvent
+    public static void encaisser(net.neoforged.neoforge.event.entity.living.LivingDamageEvent.Pre event) {
+        if (event.getEntity().getTags().contains(CIBLE) && !event.getSource().is(net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL)) {
+            event.setNewDamage(0F);
+        }
+    }
+
+    /** Une étagère ou le pupitre ont disparu (cassés, explosés) : on les remet, là où il n'y a rien. */
+    private static void reparer(ServerLevel level, Pose pose) {
+        Block bloc = CabaneBlocks.BIBLIOTHEQUE_SECRETE.get();
+        for (int y : new int[] {6, 7}) {
+            BlockPos p = pose.bloc(9, y, 14);
+            BlockState s = level.getBlockState(p);
+            if (!s.is(bloc) && s.canBeReplaced() && level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new AABB(p)).isEmpty()) {
+                level.setBlock(p, bloc.defaultBlockState(), Block.UPDATE_ALL);
+            }
+        }
+        BlockPos l = pose.bloc(7, 6, 15);
+        if (!level.getBlockState(l).is(Blocks.LECTERN) && level.getBlockState(l).canBeReplaced()) {
+            level.setBlock(l, Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, pose.rot().rotate(Direction.SOUTH)),
+                    Block.UPDATE_ALL);
+        }
+    }
+
+    /** Le pupitre et la bibliothèque qui pivote ne se cassent pas (sauf en créatif). */
+    @SubscribeEvent
+    public static void casser(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || event.getPlayer().isCreative()) {
+            return;
+        }
+        Pose pose = ici(level);
+        if (pose != null && mecanisme(pose.plan(event.getPos()))) {
+            event.setCanceled(true);
+            event.getPlayer().displayClientMessage(Component.literal("Ce mécanisme ne se casse pas.").withStyle(ChatFormatting.GRAY), true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void explosion(net.neoforged.neoforge.event.level.ExplosionEvent.Detonate event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            Pose pose = ici(level);
+            if (pose != null) {
+                event.getAffectedBlocks().removeIf(p -> mecanisme(pose.plan(p)));
+            }
         }
     }
 
