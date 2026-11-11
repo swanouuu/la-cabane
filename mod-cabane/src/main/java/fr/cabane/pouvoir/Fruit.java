@@ -102,8 +102,7 @@ import org.joml.Vector3f;
  * de la lave. Éveillé (touche Éveil, 2 minutes puis 2 minutes de repos), sa main gauche se change en lave sous nos yeux
  * (ou la droite, en glace ; voir {@link ClientFruit}) :
  * <ul>
- * <li>celui de la glace marche sur l'eau : elle gèle sous ses pas, et refond 5 s après (endormi, il coule comme
- * l'autre) ;</li>
+ * <li>celui de la glace marche sur l'eau, même endormi : elle gèle sous ses pas, et refond 5 s après ;</li>
  * <li>clic gauche : toute arme frappe 1 cœur de plus, et enflamme 4 s (ou ralentit 3 s) ;</li>
  * <li>clic droit : un jet de lave (ou de glace) sur 12 blocs, 3 cœurs, la cible brûle 5 s (ou est très lente 4 s) ;</li>
  * <li>s'accroupir : l'éruption, 5 blocs autour, 4 cœurs, on vole en l'air et on brûle ; ou l'ère glaciaire, 3 cœurs,
@@ -156,6 +155,9 @@ public final class Fruit {
     public static final int RECHARGE_JET_2 = 8 * 20;
     public static final int RECHARGE_CHOC_2 = 25 * 20;
     private static final float BONUS_ARME_2 = 4;
+    /** La glace n'enflamme pas : le froid ajoute au coup ce que le feu ferait en brûlant (niveau 1, niveau 2 et plus). */
+    private static final float FROID = 3;
+    private static final float FROID_2 = 5;
     private static final float ECLABOUSSURE = 3;
     private static final float DEGATS_POING = 14;
     private static final float DEGATS_EXPLOSION = 4;
@@ -958,7 +960,8 @@ public final class Fruit {
                 if (joueur.isOnFire() && !joueur.isInLava()) {
                     joueur.clearFire();
                 }
-            } else if (eveille(joueur)) {
+            } else {
+                // celui de la glace gèle l'eau sous ses pas à tous les niveaux, même endormi
                 marcherSurLEau(joueur);
             }
         }
@@ -1061,10 +1064,11 @@ public final class Fruit {
         }
         LivingEntity cible = event.getEntity();
         boolean fort = niveau(joueur) >= 2, glace = glace(Pouvoirs.pouvoir(joueur));
-        event.setAmount(event.getAmount() + (fort ? BONUS_ARME_2 : BONUS_ARME));
+        event.setAmount(event.getAmount() + (fort ? BONUS_ARME_2 : BONUS_ARME) + (glace ? (fort ? FROID_2 : FROID) : 0));
         ServerLevel monde = joueur.serverLevel();
         if (glace) {
-            cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, fort ? 80 : 60, fort ? 1 : 0));
+            // il gèle : bien ralenti, plus longtemps au niveau 2
+            cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, fort ? 100 : 80, fort ? 2 : 1));
             givrer(cible);
             monde.sendParticles(ParticleTypes.SNOWFLAKE, cible.getX(), cible.getY(0.6), cible.getZ(), 14, 0.3, 0.4, 0.3, 0.04);
         } else {
