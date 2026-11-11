@@ -35,6 +35,8 @@ public final class ClientTenueFoudre {
     private static final Map<ResourceLocation, int[]> ENTIERES = new HashMap<>();
     private static final Map<String, Long> RATEES = new HashMap<>();
     private static final Map<ResourceLocation, PlayerSkin> REMPLACEES = new HashMap<>();
+    /** La tenue → la texture du vrai skin d'où elle vient (pour lui garder ses yeux). */
+    private static final Map<ResourceLocation, ResourceLocation> ORIGINES = new HashMap<>();
 
     private static long maintenant() {
         Minecraft mc = Minecraft.getInstance();
@@ -137,8 +139,14 @@ public final class ClientTenueFoudre {
         id = Cabane.id("foudre/tenue_" + PEAUX.size());
         Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(image));
         PEAUX.put(cle, id);
+        ORIGINES.put(id, vraie.texture());
         RATEES.remove(cle);
         return id;
+    }
+
+    /** Le vrai skin derrière cette texture, si c'est une tenue de la Foudre 3 ; sinon la texture elle-même. */
+    public static ResourceLocation vraie(ResourceLocation texture) {
+        return ORIGINES.getOrDefault(texture, texture);
     }
 
     // ---- la tenue entière

@@ -966,7 +966,9 @@ public final class ClientFoudre {
     private static final int[][] YEUX_LAPIN = {{-2, -4, 1}, {-3, -3, 2}, {1, -4, 1}, {1, -3, 2}};
     private static final Map<ResourceLocation, int[][]> YEUX = new HashMap<>();
 
-    private static int[][] yeux(ResourceLocation peau) {
+    private static int[][] yeux(ResourceLocation texture) {
+        // au niveau 3, la tenue remplace le skin : on garde les yeux du vrai skin, à leur place, à tous les niveaux
+        ResourceLocation peau = ClientTenueFoudre.vraie(texture);
         int[][] y = YEUX.get(peau);
         if (y == null) {
             int[] px = ClientMaudit.lire(peau);
