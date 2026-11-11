@@ -133,6 +133,7 @@ dependencies {
     // API de Curios : les accessoires (queue de Saiyan, détecteurs…) ; le mod est dans le pack et dans run/mods
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
     compileOnly "maven.modrinth:corpse:SElnDbg1"
+    compileOnly "maven.modrinth:jade:eYz2YBGT"
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

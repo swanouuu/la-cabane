@@ -1,0 +1,30 @@
+package fr.cabane.client;
+
+import fr.cabane.pouvoir.Corbeau;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import snownee.jade.api.EntityAccessor;
+import snownee.jade.api.ITooltip;
+import snownee.jade.api.IWailaClientRegistration;
+import snownee.jade.api.IWailaPlugin;
+import snownee.jade.api.JadeIds;
+import snownee.jade.api.WailaPlugin;
+import snownee.jade.api.theme.IThemeHelper;
+
+/**
+ * Ce que Jade affiche en haut de l'écran quand on regarde quelqu'un : un joueur en corbeau n'est qu'un « Corbeau »,
+ * ni son pseudo ni son armure, sinon on le reconnaît.
+ */
+@WailaPlugin
+public class JadeCabane implements IWailaPlugin {
+    @Override
+    public void registerClient(IWailaClientRegistration registration) {
+        registration.addTooltipCollectedCallback((boite, cible) -> {
+            if (cible instanceof EntityAccessor e && e.getEntity() instanceof Player joueur && Corbeau.actif(joueur.getUUID())) {
+                ITooltip bulle = boite.getTooltip();
+                bulle.replace(JadeIds.CORE_OBJECT_NAME, IThemeHelper.get().title(Component.literal("Corbeau")));
+                bulle.remove(JadeIds.MC_ENTITY_ARMOR);
+            }
+        });
+    }
+}
