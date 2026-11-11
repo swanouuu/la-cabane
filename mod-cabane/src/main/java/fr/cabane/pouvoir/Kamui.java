@@ -362,11 +362,43 @@ public final class Kamui {
 
     // ================================================================ caché dans le Kamui
 
+    /** Caché, il passe à travers les autres : une équipe du tableau des scores sans collision, le temps du Kamui. */
+    private static final String EQUIPE = "cabane_kamui";
+    private static final Map<UUID, String> EQUIPES_AVANT = new HashMap<>();
+
+    private static void fantome(ServerPlayer p, boolean oui) {
+        net.minecraft.world.scores.Scoreboard tableau = p.server.getScoreboard();
+        String nom = p.getScoreboardName();
+        net.minecraft.world.scores.PlayerTeam actuelle = tableau.getPlayersTeam(nom);
+        if (oui) {
+            net.minecraft.world.scores.PlayerTeam equipe = tableau.getPlayerTeam(EQUIPE);
+            if (equipe == null) {
+                equipe = tableau.addPlayerTeam(EQUIPE);
+            }
+            equipe.setCollisionRule(net.minecraft.world.scores.Team.CollisionRule.NEVER);
+            equipe.setNameTagVisibility(net.minecraft.world.scores.Team.Visibility.NEVER);
+            equipe.setSeeFriendlyInvisibles(false);
+            if (actuelle != null && actuelle != equipe) {
+                EQUIPES_AVANT.put(p.getUUID(), actuelle.getName());
+            }
+            tableau.addPlayerToTeam(nom, equipe);
+        } else {
+            if (actuelle != null && actuelle.getName().equals(EQUIPE)) {
+                tableau.removePlayerFromTeam(nom, actuelle);
+            }
+            String avant = EQUIPES_AVANT.remove(p.getUUID());
+            if (avant != null && tableau.getPlayerTeam(avant) != null) {
+                tableau.addPlayerToTeam(nom, tableau.getPlayerTeam(avant));
+            }
+        }
+    }
+
     private static void cacher(ServerPlayer p) {
         int duree = Susano3.DEV.equals(Pouvoirs.pouvoir(p)) ? SANS_FIN : CACHE;
         CACHES.put(p.getUUID(), p.server.getTickCount() + duree);
         p.setSilent(true);
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 40, 0, false, false));
+        fantome(p, true);
         fr.cabane.telephone.VoiceBridge.muet(p.getUUID(), true);
         PacketDistributor.sendToAllPlayers(new Cache(p.getUUID(), true, duree));
         p.playNotifySound(SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.25F, 1.8F);
@@ -378,6 +410,7 @@ public final class Kamui {
         CACHES.remove(p.getUUID());
         p.setSilent(false);
         p.removeEffect(MobEffects.INVISIBILITY);
+        fantome(p, false);
         fr.cabane.telephone.VoiceBridge.muet(p.getUUID(), false);
         PacketDistributor.sendToAllPlayers(new Cache(p.getUUID(), false, 0));
         PRET_SOI.put(p.getUUID(), p.server.getTickCount() + RECHARGE_SOI);
@@ -412,6 +445,10 @@ public final class Kamui {
     @SubscribeEvent
     public static void arrivee(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer p) {
+            // parti caché (déconnexion, redémarrage) : il revient tangible
+            if (!CACHES.containsKey(p.getUUID())) {
+                fantome(p, false);
+            }
             int maintenant = p.server.getTickCount();
             CACHES.forEach((u, fin) -> PacketDistributor.sendToPlayer(p, new Cache(u, true, fin - maintenant)));
         }

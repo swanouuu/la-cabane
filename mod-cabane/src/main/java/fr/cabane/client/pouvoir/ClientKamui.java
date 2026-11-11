@@ -362,6 +362,26 @@ public final class ClientKamui {
             }
         }
 
+        /** Caché, il marche sans bruit : on coupe les pas, les sauts et les chutes qu'on entendrait autour de lui. */
+        @SubscribeEvent
+        public static void silence(net.neoforged.neoforge.client.event.sound.PlaySoundEvent event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (CACHES.isEmpty() || mc.level == null || event.getSound() == null) {
+                return;
+            }
+            String chemin = event.getSound().getLocation().getPath();
+            if (!(chemin.contains(".step") || chemin.contains(".fall") || chemin.contains(".land") || chemin.contains(".swim") || chemin.contains("splash"))) {
+                return;
+            }
+            Vec3 ou = new Vec3(event.getSound().getX(), event.getSound().getY(), event.getSound().getZ());
+            for (net.minecraft.world.entity.player.Player j : mc.level.players()) {
+                if (j != mc.player && CACHES.containsKey(j.getUUID()) && j.position().distanceToSqr(ou) < 4) {
+                    event.setSound(null);
+                    return;
+                }
+            }
+        }
+
         @SubscribeEvent
         public static void corpsAvant(RenderLivingEvent.Pre<?, ?> event) {
             if (!SPIRALES.isEmpty()) {

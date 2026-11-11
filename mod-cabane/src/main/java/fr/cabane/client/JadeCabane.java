@@ -19,6 +19,9 @@ import snownee.jade.api.theme.IThemeHelper;
 public class JadeCabane implements IWailaPlugin {
     @Override
     public void registerClient(IWailaClientRegistration registration) {
+        // caché dans le Kamui : Jade ne le voit pas du tout
+        registration.addRayTraceCallback((visee, cible, original) -> cible instanceof EntityAccessor e
+                && fr.cabane.client.pouvoir.ClientKamui.cache(e.getEntity().getUUID()) ? null : cible);
         registration.addTooltipCollectedCallback((boite, cible) -> {
             if (cible instanceof EntityAccessor e && e.getEntity() instanceof Player joueur && Corbeau.actif(joueur.getUUID())) {
                 ITooltip bulle = boite.getTooltip();
