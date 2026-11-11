@@ -102,7 +102,8 @@ import org.joml.Vector3f;
  * de la lave. Éveillé (touche Éveil, 2 minutes puis 2 minutes de repos), sa main gauche se change en lave sous nos yeux
  * (ou la droite, en glace ; voir {@link ClientFruit}) :
  * <ul>
- * <li>celui de la glace marche sur l'eau, même endormi : elle gèle sous ses pas, et refond 5 s après ;</li>
+ * <li>celui de la glace marche sur l'eau : elle gèle sous ses pas, et refond 5 s après ; s'il saute ou tombe dedans, la
+ * glace le remonte (endormi, il coule comme l'autre) ;</li>
  * <li>clic gauche : toute arme frappe 1 cœur de plus, et enflamme 4 s (ou ralentit 3 s) ;</li>
  * <li>clic droit : un jet de lave (ou de glace) sur 12 blocs, 3 cœurs, la cible brûle 5 s (ou est très lente 4 s) ;</li>
  * <li>s'accroupir : l'éruption, 5 blocs autour, 4 cœurs, on vole en l'air et on brûle ; ou l'ère glaciaire, 3 cœurs,
@@ -960,8 +961,8 @@ public final class Fruit {
                 if (joueur.isOnFire() && !joueur.isInLava()) {
                     joueur.clearFire();
                 }
-            } else {
-                // celui de la glace gèle l'eau sous ses pas à tous les niveaux, même endormi
+            } else if (eveille(joueur)) {
+                // celui de la glace, éveillé (niveau 1, 2 ou 3) : l'eau gèle sous ses pas ; endormi, il coule
                 marcherSurLEau(joueur);
             }
         }
@@ -997,10 +998,30 @@ public final class Fruit {
 
     /** Celui de la glace, éveillé : l'eau gèle sous ses pieds (comme les bottes Semelles givrantes), et refond derrière lui. */
     private static void marcherSurLEau(ServerPlayer joueur) {
+        ServerLevel monde = joueur.serverLevel();
         if (!joueur.onGround()) {
+            // il a sauté ou il tombe dans l'eau : la surface gèle sous lui (même s'il arrive vite) et il se pose dessus
+            if (joueur.isUnderWater()) {
+                return;
+            }
+            BlockPos dans = joueur.blockPosition();
+            double chute = Math.max(0, -joueur.getDeltaMovement().y) + 0.2;
+            if (!surface(monde, dans)) {
+                // pas encore dedans : la surface juste sous ses pieds, s'il va la toucher à ce tick
+                BlockPos dessous = dans.below();
+                if (!surface(monde, dessous) || joueur.getY() - (dessous.getY() + 1) > chute) {
+                    return;
+                }
+                dans = dessous;
+            }
+            monde.setBlockAndUpdate(dans, Blocks.FROSTED_ICE.defaultBlockState());
+            monde.scheduleTick(dans, Blocks.FROSTED_ICE, Mth.nextInt(joueur.getRandom(), 60, 120));
+            GLACES.put(new Glace(monde, dans.immutable()), joueur.server.getTickCount() + FONTE);
+            joueur.teleportTo(joueur.getX(), dans.getY() + 1, joueur.getZ());
+            joueur.setDeltaMovement(joueur.getDeltaMovement().multiply(1, 0, 1));
+            joueur.hurtMarked = true;
             return;
         }
-        ServerLevel monde = joueur.serverLevel();
         int fonte = joueur.server.getTickCount() + FONTE;
         BlockState glace = Blocks.FROSTED_ICE.defaultBlockState();
         BlockPos pieds = joueur.blockPosition();
@@ -1025,6 +1046,12 @@ public final class Fruit {
                 GLACES.put(new Glace(monde, p.immutable()), fonte);
             }
         }
+    }
+
+    /** Une surface d'eau qu'on peut geler : de l'eau pleine avec de l'air au-dessus. */
+    private static boolean surface(ServerLevel monde, BlockPos p) {
+        BlockState eau = monde.getBlockState(p);
+        return eau.is(Blocks.WATER) && eau.getValue(LiquidBlock.LEVEL) == 0 && monde.getBlockState(p.above()).isAir();
     }
 
     /** La glace redevient de l'eau (si elle est encore là : de jour, elle a pu fondre plus tôt d'elle-même). */
