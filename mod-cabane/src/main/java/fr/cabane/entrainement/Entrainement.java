@@ -341,8 +341,9 @@ public final class Entrainement {
             return;
         }
         EntrainementBuilder.Salle s = EntrainementBuilder.salle(salle);
-        titre(joueur, Component.literal(s.nom()).withStyle(ChatFormatting.GOLD),
-                Component.literal(s.temp() + " · ").withStyle(ChatFormatting.YELLOW).append(Component.literal(s.ressenti()).withStyle(ChatFormatting.GRAY)));
+        // le titre et la température au milieu de l'écran ; la phrase, plus longue, dans la barre du bas
+        titre(joueur, Component.literal(s.nom()).withStyle(ChatFormatting.GOLD), Component.literal(s.temp()).withStyle(ChatFormatting.YELLOW));
+        joueur.displayClientMessage(Component.literal(s.ressenti()).withStyle(ChatFormatting.GRAY), true);
     }
 
     // ------------------------------------------------------------------ événements
