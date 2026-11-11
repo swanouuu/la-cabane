@@ -36,7 +36,7 @@ public class CabaneVoicePlugin implements VoicechatPlugin {
         }
         UUID id = sender.getPlayer().getUuid();
         // caché dans le Kamui : personne ne l'entend (ni de près, ni au téléphone)
-        if (VoiceBridge.muet(id)) {
+        if (VoiceBridge.muet(id) && Telepathie.cible(id) == null) {
             event.cancel();
             return;
         }
@@ -49,13 +49,19 @@ public class CabaneVoicePlugin implements VoicechatPlugin {
             }
         }
         // un masque ninja sur la tête : la voix devient grave (à la ceinture, rien ne change)
-        if (fr.cabane.accessoire.Masques.surLaTete(id)) {
+        boolean masque = fr.cabane.accessoire.Masques.surLaTete(id);
+        if (masque) {
             byte[] grave = VoixMasque.grave(event.getVoicechat(), id, event.getPacket().getOpusEncodedData());
             if (grave != null) {
                 event.getPacket().setOpusEncodedData(grave);
             }
         } else {
             VoixMasque.oublier(id);
+        }
+        // /telepatie : la voix (grave) ne part que dans la tête du joueur visé ; ni les voisins, ni le téléphone
+        if (VoixTelepathie.envoyer(event.getVoicechat(), sender, event.getPacket().getOpusEncodedData(), masque)) {
+            event.cancel();
+            return;
         }
         // /vocal echo : on se renvoie sa voix telle que les autres l'entendent, pour l'essayer tout seul
         if (VoiceBridge.echo(id)) {

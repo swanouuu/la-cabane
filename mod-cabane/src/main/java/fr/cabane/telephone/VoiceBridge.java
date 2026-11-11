@@ -42,6 +42,13 @@ public final class VoiceBridge {
         return MUETS.contains(player);
     }
 
+    /** Fin de /telepatie pour cet hôte : on lâche son canal et le traitement de sa voix grave. */
+    static void oublierTelepathie(UUID hote) {
+        if (ModList.get().isLoaded("voicechat")) {
+            VoixTelepathie.oublier(hote);
+        }
+    }
+
     private VoiceBridge() {
     }
 }
