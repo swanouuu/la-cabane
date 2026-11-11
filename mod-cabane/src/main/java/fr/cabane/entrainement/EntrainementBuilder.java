@@ -1,6 +1,5 @@
 package fr.cabane.entrainement;
 
-import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,12 +9,9 @@ import java.util.Random;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
@@ -25,7 +21,6 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.slf4j.Logger;
 
 /**
  * La salle d'entraînement, reprise de la maquette (docs/salle-entrainement/maquette.html) : dix salles fermées de 22 × 24,
@@ -36,9 +31,8 @@ import org.slf4j.Logger;
  * posé dans la dimension avec le décalage {@link #OX}, {@link #SOL}, {@link #OZ}.
  */
 public final class EntrainementBuilder {
-    private static final Logger LOG = LogUtils.getLogger();
     /** À changer après toute modification : la salle se reconstruit à la prochaine visite. */
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     /** Le dessus du sol de la salle. */
     public static final int SOL = 64;
     /** Le plan est centré sur (0, 0) de la dimension. */
@@ -206,7 +200,7 @@ public final class EntrainementBuilder {
     private int osU, osV;
 
     /** Un pnj : où (en coordonnées de la maquette, continues), vers où il regarde, à quelle hauteur. */
-    private record Pnj(double x, double y, double z, double vx, double vz) {
+    private record Pnj(double x, double y, double z, double vx, double vz, boolean flaneur) {
     }
 
     private static long cle(int x, int y, int z) {
@@ -263,7 +257,8 @@ public final class EntrainementBuilder {
     }
 
     private void pnjIci(double u, double v, double y, double vu, double vv) {
-        pnj.add(new Pnj(c.mx(u), y, c.mz(v), c.mx(vu), c.mz(vv)));
+        // au sol, il se promène un peu ; perché (îlot, chaise, perchoir, plongeoir, banc), il reste où il est
+        pnj.add(new Pnj(c.mx(u), y, c.mz(v), c.mx(vu), c.mz(vv), y == 0));
     }
 
     private static final BlockState DALLE = s(Blocks.POLISHED_ANDESITE), POTEAU = s(Blocks.DARK_OAK_FENCE), FOIN = s(Blocks.HAY_BLOCK),
@@ -692,12 +687,12 @@ public final class EntrainementBuilder {
         // le bouton du retour, à côté de l'arrivée
         pose(1, 0, MILIEU - 1, Entrainement.BOUTON.get().defaultBlockState());
         // les pnj de l'allée : l'accueil, l'échauffement sur les tapis, les vestiaires
-        pnj.add(new Pnj(4.5, 0, Z_ALLEE + 0.5, 4.5, MILIEU));
+        pnj.add(new Pnj(4.5, 0, Z_ALLEE + 0.5, 4.5, MILIEU, false));
         for (double[] p : new double[][] {{98.5, Z_ALLEE + 2.5}, {100.5, Z_FIN - 1.5}, {102.5, Z_ALLEE + 2.5}}) {
-            pnj.add(new Pnj(p[0], 0, p[1], 100.5, MILIEU + 0.2));
+            pnj.add(new Pnj(p[0], 0, p[1], 100.5, MILIEU + 0.2, true));
         }
-        pnj.add(new Pnj(100.5, 0, MILIEU + 0.2, 100.5, Z_ALLEE));
-        pnj.add(new Pnj(113.5, 0, Z_ALLEE + 1.5, 113.5, Z_ALLEE));
+        pnj.add(new Pnj(100.5, 0, MILIEU + 0.2, 100.5, Z_ALLEE, true));
+        pnj.add(new Pnj(113.5, 0, Z_ALLEE + 1.5, 113.5, Z_ALLEE, true));
     }
 
     // ---------------------------------------------------------------- la construction
@@ -742,35 +737,23 @@ public final class EntrainementBuilder {
         }
     }
 
-    /** Les variantes de skin des pnj (les skins de base du jeu), à tour de rôle. */
-    private static final String[] VARIANTES = {"STEVE", "ALEX", "ARI", "EFE", "KAI", "MAKENA", "NOOR", "SUNNY", "ZURI"};
-
+    /** Les élèves : un skin au hasard, sans nom, ils encaissent les coups et se promènent un peu (voir PnjEntrainement). */
     private void placerPnj(ServerLevel l, int construction) {
         AABB zone = new AABB(OX - 2, SOL - 14, OZ - 2, OX + LX + 3, SOL + 31, OZ + LZ + 3);
         for (Entity e : l.getEntities((Entity) null, zone, e -> e.getTags().contains(TAG))) {
             e.discard();
         }
-        int k = 0;
         for (Pnj n : pnj) {
-            String snbt = "{id:\"easy_npc:humanoid\",PersistenceRequired:1b,NoAI:1b,Tags:[\"" + TAG + "\",\"" + PNJ + "\",\"" + tagConstruction(construction)
-                    + "\"],EasyNPCVersion:3,VariantType:\"" + VARIANTES[k++ % VARIANTES.length] + "\","
-                    + "attributes:[{id:\"minecraft:generic.knockback_resistance\",base:1.0d}],ObjectiveData:{ObjectiveDataSet:[]},Status:{finalized:1b}}";
-            float lacet = (float) Math.toDegrees(Math.atan2(-(n.vx() - n.x()), n.vz() - n.z()));
-            double x = n.x() + OX, y = n.y() + SOL, z = n.z() + OZ;
-            try {
-                Entity e = EntityType.loadEntityRecursive(TagParser.parseTag(snbt), l, en -> {
-                    en.moveTo(x, y, z, lacet, 0F);
-                    return en;
-                });
-                if (e instanceof LivingEntity vivant) {
-                    vivant.setYHeadRot(lacet);
-                    vivant.setYBodyRot(lacet);
-                    l.addFreshEntity(vivant);
-                }
-            } catch (Exception ex) {
-                LOG.warn("Pnj de la salle d'entraînement impossible à poser (Easy NPC absent ?)", ex);
+            PnjEntrainement e = Entrainement.PNJ.get().create(l);
+            if (e == null) {
                 return;
             }
+            float lacet = (float) Math.toDegrees(Math.atan2(-(n.vx() - n.x()), n.vz() - n.z()));
+            e.preparer(new Vec3(n.x() + OX, n.y() + SOL, n.z() + OZ), lacet, n.flaneur());
+            e.addTag(TAG);
+            e.addTag(PNJ);
+            e.addTag(tagConstruction(construction));
+            l.addFreshEntity(e);
         }
     }
 

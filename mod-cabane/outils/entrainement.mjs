@@ -50,5 +50,6 @@ export function genererEntrainement({ ecrire, lang }) {
   ecrire("assets/cabane/blockstates/bouton_entrainement.json", { variants: { "": { model: "cabane:block/bouton_retour" } } });
   ecrire("assets/cabane/models/item/bouton_entrainement.json", { parent: "cabane:block/bouton_retour" });
   lang["block.cabane.bouton_entrainement"] = "Bouton de retour de la salle d'entraînement";
+  lang["entity.cabane.pnj_entrainement"] = "Élève";
   return SALLES.length;
 }

@@ -47,7 +47,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobDespawnEvent;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
@@ -72,6 +75,11 @@ public final class Entrainement {
             BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(-1F, 3_600_000F).sound(SoundType.METAL).noOcclusion()
                     .lightLevel(s -> 7).noLootTable());
 
+    /** Les élèves de la salle : on peut les taper, ils ne meurent jamais. */
+    private static final DeferredRegister<EntityType<?>> ENTITES = DeferredRegister.create(Registries.ENTITY_TYPE, Cabane.MODID);
+    public static final DeferredHolder<EntityType<?>, EntityType<PnjEntrainement>> PNJ = ENTITES.register("pnj_entrainement",
+            () -> EntityType.Builder.of(PnjEntrainement::new, MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("pnj_entrainement"));
+
     /** La salle où chaque joueur était au dernier passage (pour annoncer celle où il entre). */
     private static final Map<UUID, Integer> SALLES = new HashMap<>();
     private static long prochainEclair;
@@ -80,6 +88,8 @@ public final class Entrainement {
     public static void register(IEventBus modBus) {
         CabaneItems.ITEMS.registerSimpleBlockItem(BOUTON);
         BLOCKS.register(modBus);
+        ENTITES.register(modBus);
+        modBus.addListener((EntityAttributeCreationEvent e) -> e.put(PNJ.get(), PnjEntrainement.attributs().build()));
     }
 
     public static ServerLevel niveau(MinecraftServer server) {
@@ -358,14 +368,6 @@ public final class Entrainement {
         if (source.is(DamageTypeTags.IS_FIRE) || source.is(DamageTypeTags.IS_FALL) || source.is(DamageTypeTags.IS_FREEZING)
                 || source.is(DamageTypes.HOT_FLOOR) || source.is(DamageTypes.LAVA)) {
             event.setCanceled(true);
-        }
-    }
-
-    /** Les pnj de la salle encaissent tout (on voit qu'ils sont touchés) sans jamais tomber ; /kill marche toujours. */
-    @SubscribeEvent
-    public static void encaisser(LivingDamageEvent.Pre event) {
-        if (event.getEntity().getTags().contains(EntrainementBuilder.PNJ) && !event.getSource().is(DamageTypes.GENERIC_KILL)) {
-            event.setNewDamage(0F);
         }
     }
 

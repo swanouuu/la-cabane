@@ -243,6 +243,7 @@
   "biome.cabane.entrainement_os": "Salle d'entraînement — les piliers d'os",
   "biome.cabane.entrainement_voliere": "Salle d'entraînement — la volière",
   "block.cabane.bouton_entrainement": "Bouton de retour de la salle d'entraînement",
+  "entity.cabane.pnj_entrainement": "Élève",
   "biome.cabane.sceau": "Salle du sceau",
   "block.cabane.bouton_sceau": "Bouton de retour de la salle du sceau",
   "item.cabane.parachute": "Parachute",
