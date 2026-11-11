@@ -1,0 +1,1320 @@
+<title>Salle d'entraînement</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Plein écran : la maquette occupe tout, la fiche des postes à gauche, deux boutons en bas. Un seul thème, celui d'une salle de pierre en plein jour. */
+:root {
+  --fond: #15181f; --plaque: #1f2430; --plaque2: #343b4c; --craie: #f1eee6; --brume: #b3b0a6;
+  --ambre: #f0b43c; --ambre-clair: #ffe1a1;
+  --titre: "Pixelify Sans", "Trebuchet MS", sans-serif; --texte: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--fond); color: var(--craie); font-family: var(--texte); overflow: hidden; }
+#scene { position: fixed; inset: 0; background: linear-gradient(#78a6dc 0%, #bcd6ee 55%, #e3ecf3 100%); touch-action: none; }
+#scene canvas { display: block; }
+.plaque { background: color-mix(in srgb, var(--fond) 90%, transparent); border: 2px solid var(--plaque2); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--ambre); outline-offset: 2px; }
+
+#panneau {
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  width: min(330px, calc(100vw - 32px)); max-height: calc(100% - 96px); display: flex; flex-direction: column;
+}
+#bande { height: 6px; flex: none; background: repeating-linear-gradient(90deg, var(--ambre) 0 12px, #2a2f3b 12px 24px); }
+#panneau .corps { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+h1 { font: 700 24px/1.05 var(--titre); margin: 0; letter-spacing: .3px; }
+#sous { font: 500 14px var(--titre); color: var(--ambre); }
+#resume { font-size: 13px; line-height: 1.45; color: var(--brume); margin: 0; }
+#postes { display: flex; flex-direction: column; gap: 3px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+#postes button { display: flex; gap: 8px; align-items: baseline; text-align: left; background: var(--plaque); border: 0; padding: 6px 10px; font-size: 13px; line-height: 1.3; }
+#postes button b { font: 700 13px var(--titre); color: var(--ambre); min-width: 1.4em; }
+#postes button:hover { background: var(--plaque2); }
+#postes button[aria-pressed="true"] { background: var(--ambre); color: var(--fond); }
+#postes button[aria-pressed="true"] b { color: var(--fond); }
+#fiche { border-top: 1px solid var(--plaque2); padding-top: 8px; flex: none; }
+#fiche h2 { font: 700 18px/1.1 var(--titre); margin: 0 0 4px; color: var(--ambre-clair); }
+#fiche p { font-size: 13px; line-height: 1.5; margin: 0; }
+#fiche-ambiance { margin-top: 6px !important; color: var(--ambre-clair); }
+#fiche-taille { color: var(--brume); margin-top: 4px !important; font-size: 12px !important; }
+
+#actions {
+  position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; max-width: calc(100vw - 32px);
+}
+#actions button { padding: 10px 16px; border: 2px solid var(--plaque2); background: var(--plaque); font-weight: 600; font-size: 14px; white-space: nowrap; }
+#actions button[aria-pressed="true"] { border-color: var(--ambre); }
+#aide { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  padding: 8px 12px; font-size: 12px; line-height: 1.5; color: var(--brume); max-width: 260px; }
+
+#etiquettes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.etiquette {
+  position: absolute; left: 0; top: 0; pointer-events: auto; background: var(--fond); border: 1px solid var(--ambre);
+  color: var(--craie); padding: 3px 7px; font-size: 12px; white-space: nowrap; will-change: transform; cursor: pointer;
+}
+.etiquette.choisie { background: var(--ambre); color: var(--fond); }
+
+#fiche-ressenti { margin-top: 6px !important; font-style: italic; }
+#entrer-salle { margin-top: 10px; width: 100%; padding: 9px 12px; background: var(--ambre); color: var(--fond); border: 0; font-weight: 700; font-size: 14px; }
+#entrer { background: var(--ambre) !important; color: var(--fond); border-color: var(--ambre-clair) !important; }
+#voile { position: fixed; inset: 0; pointer-events: none; }
+#viseur { position: fixed; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; pointer-events: none;
+  background: linear-gradient(#fff,#fff) center/2px 14px no-repeat, linear-gradient(#fff,#fff) center/14px 2px no-repeat; mix-blend-mode: difference; }
+#haut-visite { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
+#lieu { padding: 10px 14px; max-width: 380px; }
+#ou { font: 700 20px var(--titre); }
+#temp { display: inline-block; margin-top: 6px; padding: 2px 8px; background: var(--ambre); color: var(--fond); font: 700 15px var(--titre); }
+#ressenti { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--craie); }
+#ressenti.montre { animation: apparait 1.2s ease both; }
+@keyframes apparait { from { transform: translateY(-6px); color: var(--ambre-clair); } to { transform: none; } }
+#sortir { pointer-events: auto; padding: 9px 14px; background: #b8322c; border: 2px solid #f08a8a; font-weight: 600; font-size: 14px; white-space: nowrap; }
+#aide-visite { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 8px 12px; font-size: 12px; color: var(--brume); white-space: nowrap; }
+#tactile { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(60px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; }
+#tactile button { width: 72px; height: 56px; background: color-mix(in srgb, var(--plaque) 85%, transparent); border: 2px solid var(--plaque2); font-weight: 700; font-size: 13px; touch-action: none; }
+#erreur { position: fixed; inset: 0; display: grid; place-items: center; padding-inline: 24px; text-align: center; font-size: 16px; background: var(--fond); }
+
+@media (max-width: 640px) {
+  #panneau { top: auto; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); width: auto; right: max(16px, env(safe-area-inset-right, 0px)); max-height: 46%; }
+  h1 { font-size: 20px; }
+  #resume, #aide, #aide-visite { display: none; }
+  #lieu { max-width: none; }
+  #ressenti { font-size: 13px; }
+  #postes { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none; padding-bottom: 2px; }
+  #postes button { white-space: nowrap; flex: none; }
+  #fiche { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+  .etiquette { font-size: 11px; }
+}
+</style>
+
+<div id="scene" aria-label="Maquette 3D de la salle d'entraînement"></div>
+<div id="voile"></div>
+<div id="etiquettes"></div>
+
+<section id="panneau" class="plaque">
+  <div id="bande"></div>
+  <div class="corps">
+    <h1>Salle d'entraînement</h1>
+    <div id="sous">Maquette · rien n'est construit en jeu</div>
+    <p id="resume">Dix salles fermées autour d'une grande allée, chacune avec son ambiance. Clique sur une salle pour voir son matériel, puis entre dedans pour la visiter à pied.</p>
+    <nav id="postes" aria-label="Postes"></nav>
+    <div id="fiche" hidden aria-live="polite">
+      <h2 id="fiche-nom"></h2>
+      <p id="fiche-texte"></p>
+      <p id="fiche-ressenti"></p>
+      <p id="fiche-ambiance"></p>
+      <p id="fiche-taille"></p>
+      <button id="entrer-salle" type="button">Entrer dans la salle</button>
+    </div>
+  </div>
+</section>
+<div id="aide" class="plaque">Glisse pour tourner, molette pour zoomer, clic droit pour décaler la vue.</div>
+<div id="actions">
+  <button id="entrer" type="button">Entrer dans le bâtiment</button>
+  <button id="ensemble" type="button">Vue d'ensemble</button>
+  <button id="noms" type="button" aria-pressed="true">Noms des postes</button>
+  <button id="soir" type="button" aria-pressed="false">Soir</button>
+</div>
+<div id="visite" hidden>
+  <div id="viseur"></div>
+  <div id="haut-visite">
+    <div id="lieu" class="plaque"><div id="ou"></div><div id="temp"></div><p id="ressenti"></p></div>
+    <button id="sortir" type="button">Sortir</button>
+  </div>
+  <div id="aide-visite" class="plaque">Z Q S D ou flèches pour marcher, glisse pour regarder, Échap pour sortir.</div>
+  <div id="tactile" hidden>
+    <button id="avant" type="button">Avancer</button>
+    <button id="arriere" type="button">Reculer</button>
+  </div>
+</div>
+<div id="erreur" hidden>La 3D ne peut pas démarrer sur cet appareil.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+(function () {
+const erreur = () => { document.getElementById("erreur").hidden = false; };
+if (!window.THREE || !THREE.OrbitControls) { erreur(); return; }
+
+// ================================================================ textures 16 × 16 dessinées à la main
+let graine = 12345;
+const alea = () => { graine = (graine * 16807) % 2147483647; return (graine - 1) / 2147483646; };
+const rvb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const teinte = (h, k) => { const c = rvb(h).map((v) => Math.max(0, Math.min(255, Math.round(v * k)))); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+const px = (g, x, y, css) => { g.fillStyle = css; g.fillRect(x, y, 1, 1); };
+const grain = (g, base, v) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(base, 1 + (alea() - 0.5) * 2 * v)); };
+
+const motif = {
+  bruit: (base, v = 0.1) => (g) => grain(g, base, v),
+  dalles: (base) => (g) => {
+    grain(g, base, 0.05);
+    for (let i = 0; i < 16; i++) { px(g, i, 15, teinte(base, 0.78)); px(g, 15, i, teinte(base, 0.78)); px(g, i, 0, teinte(base, 1.12)); px(g, 0, i, teinte(base, 1.12)); }
+  },
+  briques: (base) => (g) => {
+    grain(g, base, 0.07);
+    for (let y = 0; y < 16; y++) {
+      const rang = y >> 2, decal = rang % 2 ? 4 : 0;
+      for (let x = 0; x < 16; x++) if (y % 4 === 3 || (x + decal) % 8 === 7) px(g, x, y, teinte(base, 0.68));
+    }
+  },
+  planches: (base) => (g) => {
+    grain(g, base, 0.06);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if (y % 4 === 3) px(g, x, y, teinte(base, 0.7));
+      else if (alea() < 0.08) px(g, x, y, teinte(base, 0.85));
+    }
+  },
+  rondin: (base) => (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(base, (x % 4 === 1 ? 0.82 : 1) * (1 + (alea() - 0.5) * 0.12)));
+  },
+  fissures: (base, braise, n = 22) => (g) => {
+    grain(g, base, 0.12);
+    for (let i = 0; i < n; i++) {
+      let x = Math.floor(alea() * 16), y = Math.floor(alea() * 16);
+      for (let k = 0; k < 4; k++) { px(g, x & 15, y & 15, braise); x += alea() < 0.5 ? 1 : 0; y += alea() < 0.5 ? 1 : -1; }
+    }
+  },
+  cible: () => (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      px(g, x, y, d > 7.6 ? "#d8d2c4" : Math.floor(d / 2) % 2 ? "#efe9dc" : "#c8312b");
+    }
+  },
+  foin: () => (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const lien = y >= 6 && y <= 8;
+      px(g, x, y, lien ? teinte("#8f5a22", 1 + (alea() - 0.5) * 0.15) : teinte(x % 3 === 0 ? "#b38d2b" : "#d4b143", 1 + (alea() - 0.5) * 0.18));
+    }
+  },
+  os: (base) => (g) => {
+    grain(g, base, 0.04);
+    for (let i = 0; i < 16; i++) { px(g, i, 0, teinte(base, 0.82)); px(g, i, 15, teinte(base, 0.82)); px(g, 0, i, teinte(base, 0.82)); px(g, 15, i, teinte(base, 0.82)); }
+    for (let y = 3; y < 13; y++) { px(g, 6, y, teinte(base, 0.9)); px(g, 9, y, teinte(base, 0.9)); }
+  },
+  barreaux: () => (g) => {
+    g.clearRect(0, 0, 16, 16);
+    for (let y = 0; y < 16; y++) for (const x of [1, 6, 11]) { px(g, x, y, "#5c5f66"); px(g, x + 1, y, "#8d9199"); }
+    for (let x = 0; x < 16; x++) { px(g, x, 0, "#5c5f66"); px(g, x, 15, "#5c5f66"); }
+  },
+  verre: () => (g) => {
+    g.fillStyle = "rgba(210,236,245,0.18)"; g.fillRect(0, 0, 16, 16);
+    g.fillStyle = "rgba(255,255,255,0.85)";
+    g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16);
+    g.fillRect(3, 4, 1, 3); g.fillRect(4, 3, 1, 1); g.fillRect(11, 10, 1, 2);
+  },
+  grille: () => (g) => {
+    grain(g, "#4a4d52", 0.08);
+    for (let y = 1; y < 16; y += 3) for (let x = 1; x < 16; x += 3) { g.fillStyle = "#15171a"; g.fillRect(x, y, 2, 2); }
+  },
+};
+
+function toile(dessin) {
+  const c = document.createElement("canvas"); c.width = c.height = 16;
+  dessin(c.getContext("2d"));
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 4;
+  t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// ================================================================ les sortes de blocs
+const boite = (sx, sy, sz) => new THREE.BoxGeometry(sx, sy, sz);
+const SORTES = {
+  dalle: { m: motif.dalles("#9e9b93") },
+  pierre: { m: motif.briques("#7c7b78") },
+  pierre_sombre: { m: motif.briques("#5d5c5a") },
+  allee: { m: motif.dalles("#4a4a52") },
+  quartz: { m: motif.dalles("#ece6da") },
+  chene_noir: { m: motif.planches("#45301b") },
+  poteau: { m: motif.planches("#45301b"), geo: boite(0.28, 1, 0.28) },
+  foin: { m: motif.foin() },
+  cible: { m: motif.cible() },
+  prismarine: { m: motif.bruit("#5c9f92", 0.16) },
+  prisma_briques: { m: motif.briques("#66ad9d") },
+  lanterne_mer: { m: motif.dalles("#d6f2ea"), lueur: 0.95 },
+  eau: { m: motif.bruit("#2e62d2", 0.1), opacite: 0.62, ombre: false },
+  bouleau: { m: motif.planches("#dccb8d"), geo: boite(1, 0.25, 1), dy: -0.375 },
+  bois_flotte: { m: motif.rondin("#a98d66") },
+  pierre_noire: { m: motif.bruit("#2d272a", 0.2) },
+  basalte: { m: motif.rondin("#4c4c54") },
+  magma: { m: motif.fissures("#8d3312", "#ffae38"), lueur: 0.55 },
+  lave: { m: motif.fissures("#ff7a1c", "#ffd862", 30), lueur: 1 },
+  obsidienne: { m: motif.bruit("#1c122a", 0.35) },
+  glace: { m: motif.dalles("#a5c3f3") },
+  glace_bleue: { m: motif.bruit("#78a9f6", 0.07) },
+  neige: { m: motif.bruit("#f5f9ff", 0.03) },
+  verre: { m: motif.verre(), opacite: 1, ombre: false },
+  grille: { m: motif.grille() },
+  perchoir: { m: motif.planches("#6b4b2b"), geo: boite(1, 0.5, 1), dy: -0.25 },
+  ardoise: { m: motif.bruit("#3b3b41", 0.2) },
+  laine_rouge: { m: motif.bruit("#b8322c", 0.08) },
+  laine_jaune: { m: motif.bruit("#f2c13a", 0.08) },
+  laine_verte: { m: motif.bruit("#5d9a2c", 0.08) },
+  laine_bleue: { m: motif.bruit("#3a5bc7", 0.08) },
+  laine_violette: { m: motif.bruit("#8a3cb8", 0.08) },
+  laine_orange: { m: motif.bruit("#e8762a", 0.08) },
+  laine_blanche: { m: motif.bruit("#eeeeea", 0.05) },
+  laine_cyan: { m: motif.bruit("#2a9aa6", 0.08) },
+  sable: { m: motif.bruit("#ddce98", 0.07) },
+  gres: { m: motif.rondin("#d6c48a") },
+  gres_taille: { m: motif.dalles("#d2bf84") },
+  cuivre: { m: motif.dalles("#c66e4b") },
+  cuivre_expose: { m: motif.dalles("#a97a5e") },
+  cuivre_oxyde: { m: motif.dalles("#5aa98f") },
+  cuivre_coupe: { m: motif.briques("#c47452") },
+  paratonnerre: { m: motif.bruit("#e0905f", 0.1), geo: boite(0.2, 1, 0.2) },
+  piste: { m: motif.dalles("#b3b3b0") },
+  ligne: { m: motif.bruit("#f6f6f3", 0.02) },
+  calcite: { m: motif.bruit("#e3e2dc", 0.05) },
+  os: { m: motif.os("#e8e0c5") },
+  pointe: { m: motif.bruit("#8c705a", 0.12), geo: new THREE.ConeGeometry(0.34, 1, 4) },
+  barreaux_x: { m: motif.barreaux(), geo: boite(1, 1, 0.08), troue: true, ombre: false },
+  barreaux_z: { m: motif.barreaux(), geo: boite(0.08, 1, 1), troue: true, ombre: false },
+  barreaux_y: { m: motif.barreaux(), geo: boite(1, 0.08, 1), troue: true, ombre: false, dy: 0.46 },
+  purpur: { m: motif.dalles("#a97aa9") },
+  mousse: { m: motif.bruit("#5f8b33", 0.15) },
+  lanterne: { m: motif.bruit("#ffd27a", 0.08), geo: boite(0.4, 0.5, 0.4), dy: -0.25, lueur: 1, ombre: false },
+  lanterne_suspendue: { m: motif.bruit("#ffd27a", 0.08), geo: boite(0.4, 0.5, 0.4), dy: 0.1, lueur: 1, ombre: false },
+  lanterne_murale: { m: motif.bruit("#ffd27a", 0.08), geo: boite(0.4, 0.5, 0.4), lueur: 1, ombre: false },
+  mur_bois: { m: motif.planches("#4a3520") },
+  briques_noires: { m: motif.briques("#2c272a") },
+  briques_glace: { m: motif.briques("#b7d0f2") },
+  beton: { m: motif.dalles("#d6d9dd") },
+  briques_ardoise: { m: motif.briques("#34343b") },
+  metal_sombre: { m: motif.dalles("#3b4148") },
+  briques_os: { m: motif.briques("#d6d1bf") },
+  chaine: { m: motif.bruit("#4a4d55", 0.1), geo: boite(0.07, 1, 0.07), ombre: false },
+  banc: { m: motif.planches("#a27b47"), geo: boite(1, 0.5, 1), dy: -0.25 },
+  comptoir: { m: motif.planches("#7a5a35") },
+  pot: { m: motif.bruit("#a5573a", 0.1), geo: boite(0.45, 0.45, 0.45), dy: -0.275 },
+  feuilles: { m: motif.bruit("#3f7a2a", 0.25), geo: boite(0.75, 0.75, 0.75), dy: -0.65 },
+  tapis_bleu: { m: motif.bruit("#3557b8", 0.06), geo: boite(1, 0.06, 1), dy: -0.47 },
+  tapis_rouge: { m: motif.bruit("#b33a33", 0.06), geo: boite(1, 0.06, 1), dy: -0.47 },
+  tapis_vert: { m: motif.bruit("#4f8f35", 0.06), geo: boite(1, 0.06, 1), dy: -0.47 },
+  casier: { m: (g) => {
+    grain(g, "#7f8a96", 0.04);
+    for (let y = 0; y < 16; y++) { px(g, 0, y, "#5b636d"); px(g, 15, y, "#5b636d"); }
+    for (const y of [2, 4, 6]) for (let x = 4; x < 12; x++) px(g, x, y, "#4a515a");
+    px(g, 12, 9, "#d8dde3"); px(g, 12, 10, "#d8dde3");
+  } },
+  tonneau: { m: (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(x % 4 === 0 ? "#6b4a27" : "#8a6234", 1 + (alea() - 0.5) * 0.12));
+    for (const y of [2, 3, 12, 13]) for (let x = 0; x < 16; x++) px(g, x, y, "#3c3f44");
+  } },
+  coffre: { m: (g) => {
+    grain(g, "#9a6b33", 0.08);
+    for (let i = 0; i < 16; i++) { px(g, i, 0, "#5a3c1a"); px(g, i, 15, "#5a3c1a"); px(g, 0, i, "#5a3c1a"); px(g, 15, i, "#5a3c1a"); px(g, i, 6, "#5a3c1a"); }
+    g.fillStyle = "#c9c9c9"; g.fillRect(7, 5, 2, 3);
+  }, geo: boite(0.88, 0.88, 0.88), dy: -0.06 },
+  enclume: { m: motif.bruit("#45474c", 0.1), geo: boite(0.8, 0.55, 0.55), dy: -0.22 },
+  citrouille: { m: (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(x % 4 === 0 ? "#c4651a" : "#e2862a", 1 + (alea() - 0.5) * 0.1));
+    g.fillStyle = "#3a1d08"; g.fillRect(4, 5, 2, 2); g.fillRect(10, 5, 2, 2); g.fillRect(5, 10, 6, 2);
+  } },
+};
+
+// bannières et tableau, collés au mur du fond (côté nord ou sud)
+const banniere = (c) => (g) => {
+  grain(g, c, 0.06);
+  for (let x = 0; x < 16; x++) { px(g, x, 0, "#3a2a1a"); px(g, x, 14, "#d9a72c"); px(g, x, 15, "#d9a72c"); }
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.abs(x - 7.5) + Math.abs(y - 7) <= 3.5) px(g, x, y, teinte(c, 1.6));
+};
+const tableau = (g) => {
+  grain(g, "#2f4a3a", 0.05);
+  for (let i = 0; i < 16; i++) { px(g, i, 0, "#6b4a27"); px(g, i, 15, "#6b4a27"); px(g, 0, i, "#6b4a27"); px(g, 15, i, "#6b4a27"); }
+  for (const y of [3, 6, 9, 12]) for (let x = 2; x < 4 + Math.floor(alea() * 10); x++) px(g, x, y, "#e8efe9");
+};
+for (const [suf, dz] of [["_n", -0.46], ["_s", 0.46]]) {
+  for (const [nom, c] of Object.entries({ rouge: "#a8322d", bleu: "#2f4fa8", or: "#c9921f", vert: "#3f7d2a", violet: "#6d3399" }))
+    SORTES["banniere_" + nom + suf] = { m: banniere(c), geo: boite(0.9, 2, 0.06), dy: 0.5, dz, ombre: false };
+  SORTES["tableau" + suf] = { m: tableau, geo: boite(1, 1, 0.06), dz, ombre: false };
+}
+
+// ================================================================ la grille de blocs
+const blocs = new Map();
+let posteCourant = -1;
+const cle = (x, y, z) => x + "," + y + "," + z;
+const pose = (x, y, z, t) => blocs.set(cle(x, y, z), { x, y, z, t, p: posteCourant });
+const ote = (x, y, z) => blocs.delete(cle(x, y, z));
+const ordre = (a, b) => (a <= b ? [a, b] : [b, a]);
+function remplit(xa, xb, ya, yb, za, zb, t) {
+  const [x0, x1] = ordre(xa, xb), [y0, y1] = ordre(ya, yb), [z0, z1] = ordre(za, zb);
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) t ? pose(x, y, z, t) : ote(x, y, z);
+}
+
+// La salle : dix salles fermées de 22 × 24, cinq de chaque côté d'une allée centrale de 7 blocs.
+// Chaque salle a ses propres murs (deux murs entre deux salles voisines) et sa hauteur.
+const W = 22, D = 24, PAS = W + 2;
+const LX = 5 * PAS - 1, Z_ALLEE = D + 2, Z_FIN = Z_ALLEE + 6, Z_SUD = Z_FIN + 2, LZ = Z_SUD + D;
+const MILIEU = Z_ALLEE + 3;
+const SALLES = [
+  { h: 22, mur: "mur_bois", fenetres: true },
+  { h: 10, mur: "prisma_briques" },
+  { h: 10, mur: "briques_noires" },
+  { h: 10, mur: "briques_glace" },
+  { h: 26, mur: "beton", fenetres: true },
+  { h: 10, mur: "briques_ardoise" },
+  { h: 10, mur: "gres" },
+  { h: 13, mur: "metal_sombre" },
+  { h: 12, mur: "briques_os" },
+  { h: 23, mur: "quartz", fenetres: true },
+];
+for (let x = 0; x <= LX; x++) for (let z = 0; z <= LZ; z++) {
+  const allee = z >= Z_ALLEE && z <= Z_FIN, bord = z === Z_ALLEE || z === Z_FIN;
+  pose(x, -1, z, allee ? (bord ? "quartz" : "allee") : "dalle");
+}
+SALLES.forEach((s, i) => {
+  const nord = i < 5, cx = 1 + (i % 5) * PAS, x0 = cx - 1, x1 = cx + W;
+  const z0 = nord ? 0 : Z_SUD - 1, z1 = nord ? D + 1 : LZ, zPorte = nord ? z1 : z0;
+  s.x0 = x0; s.x1 = x1; s.z0 = z0; s.z1 = z1;
+  posteCourant = i;
+  for (let y = 0; y < s.h; y++) for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
+    if (x !== x0 && x !== x1 && z !== z0 && z !== z1) continue;
+    const dehors = z === 0 || z === LZ || x === 0 || x === LX;
+    const vitre = s.fenetres && dehors && y >= 3 && y <= s.h - 4 && ((x + z) % 6 === 2 || (x + z) % 6 === 3);
+    pose(x, y, z, vitre ? "verre" : s.mur);
+  }
+  remplit(cx + 9, cx + 12, 0, 3, zPorte, zPorte, null);
+  pose(cx + 8, 3, nord ? zPorte + 1 : zPorte - 1, "lanterne_murale"); pose(cx + 13, 3, nord ? zPorte + 1 : zPorte - 1, "lanterne_murale");
+  posteCourant = -1;
+});
+// les deux bouts de l'allée, avec une porte vers dehors
+for (const x of [0, LX]) { remplit(x, x, 0, 8, Z_ALLEE, Z_FIN, "pierre"); remplit(x, x, 0, 3, MILIEU - 1, MILIEU + 1, null); }
+for (let x = 6; x < LX; x += 9) { pose(x, 0, MILIEU, "poteau"); pose(x, 1, MILIEU, "lanterne"); }
+
+// Une case : u de 0 à 21 le long de l'allée, v de 0 (bord de l'allée) à 23 (fond).
+const POSTES = [];
+let C = null;
+function caseDe(i, nord) {
+  const cx = 1 + i * PAS;
+  return { nord, bloc: (u, v) => [cx + u, nord ? D - v : Z_SUD + v], monde: (u, v) => [cx + u, nord ? D + 1 - v : Z_SUD + v] };
+}
+const b = (u, y, v, t) => { const [x, z] = C.bloc(u, v); t ? pose(x, y, z, t) : ote(x, y, z); };
+function zone(u0, u1, y0, y1, v0, v1, t) { for (let u = u0; u <= u1; u++) for (let v = v0; v <= v1; v++) for (let y = y0; y <= y1; y++) b(u, y, v, t); }
+function anneau(u0, u1, y0, y1, v0, v1, t) {
+  for (let u = u0; u <= u1; u++) for (let v = v0; v <= v1; v++) if (u === u0 || u === u1 || v === v0 || v === v1) for (let y = y0; y <= y1; y++) b(u, y, v, t);
+}
+const extras = [];   // objets hors grille (anneaux, particules…) à rattacher à un poste
+function poste(nom, texte, taille, i, nord, construire) {
+  posteCourant = POSTES.length; C = caseDe(i, nord);
+  POSTES.push({ nom, texte, taille, C });
+  construire(C);
+  posteCourant = -1;
+}
+const TAILLE = "22 × 24 blocs";
+
+// ---------------------------------------------------------------- 1
+poste("Le mannequin géant",
+  "Un mannequin de 20 blocs de haut : corps et bras en bottes de foin, tête en bloc-cible, monté sur une armature de chêne noir. Devant, une ligne de tir en quartz, et quatre petites cibles sur poteaux à 6, 10, 14 et 19 blocs de la ligne.",
+  TAILLE + ", 20 de haut", 0, true, () => {
+  zone(0, 21, -1, -1, 0, 23, "dalle");
+  zone(0, 21, -1, -1, 1, 1, "quartz");
+  zone(5, 16, 0, 0, 15, 21, "chene_noir");
+  zone(10, 11, 1, 5, 18, 18, "chene_noir");
+  zone(7, 14, 6, 14, 17, 19, "foin");
+  zone(2, 6, 12, 13, 18, 18, "foin"); zone(15, 19, 12, 13, 18, 18, "foin");
+  zone(8, 13, 15, 19, 17, 19, "cible");
+  for (const [u, v] of [[2, 7], [19, 11], [2, 15], [20, 20]]) { b(u, 0, v, "poteau"); b(u, 1, v, "poteau"); b(u, 2, v, "cible"); }
+});
+
+// ---------------------------------------------------------------- 2
+poste("Le bassin profond",
+  "Un bassin de 20 × 20 et 8 blocs de fond en prismarine, éclairé par des lanternes aquatiques posées au fond. Sept poteaux de bois flotté sortent de l'eau, et un plongeoir en bouleau avance depuis le bord du fond.",
+  TAILLE + ", 9 de creux", 1, true, () => {
+  zone(0, 21, -1, -1, 0, 23, "dalle");
+  anneau(0, 21, -9, -1, 1, 22, "prisma_briques");
+  for (let u = 1; u <= 20; u++) for (let v = 2; v <= 21; v++) b(u, -9, v, u % 3 === 1 && v % 3 === 2 ? "lanterne_mer" : "prismarine");
+  zone(1, 20, -1, -1, 2, 21, null);
+  zone(1, 20, -8, -2, 2, 21, "eau");
+  for (const [u, v] of [[4, 6], [15, 5], [8, 15], [17, 16], [11, 10], [4, 18], [14, 9]]) zone(u, u, -8, 1, v, v, "bois_flotte");
+  zone(10, 11, 0, 0, 18, 23, "bouleau");
+});
+
+// ---------------------------------------------------------------- 3
+poste("La fonderie",
+  "Un sol en pierre noire traversé par une grande rigole de lave en boucle, avec un passage pour entrer. Au milieu, un damier de dalles de magma ; tout autour, six piliers de basalte ; au fond, quatre gros blocs d'obsidienne de 2 × 2 × 3.",
+  TAILLE, 2, true, () => {
+  zone(0, 21, -1, -1, 0, 23, "pierre_noire");
+  anneau(3, 18, -1, -1, 4, 19, "lave");
+  anneau(3, 18, -2, -2, 4, 19, "basalte");
+  zone(10, 11, -1, -1, 4, 4, "pierre_noire");
+  for (let u = 6; u <= 15; u++) for (let v = 7; v <= 16; v++) if ((u + v) % 2 === 0) b(u, -1, v, "magma");
+  for (const [u, v] of [[0, 1], [21, 1], [0, 12], [21, 12], [0, 23], [21, 23]]) zone(u, u, 0, 5, v, v, "basalte");
+  for (const u of [3, 8, 13, 18]) zone(u, u + 1, 0, 2, 21, 22, "obsidienne");
+});
+
+// ---------------------------------------------------------------- 4
+poste("La chambre froide",
+  "Une grande patinoire en glace compactée, six colonnes de glace bleue de 7 blocs, des tas de neige un peu partout et, au fond, un mur de neige de 20 blocs de large sur 5 de haut.",
+  TAILLE, 3, true, () => {
+  zone(0, 21, -1, -1, 0, 23, "glace");
+  for (const [u, v] of [[4, 5], [17, 5], [4, 11], [17, 11], [4, 17], [17, 17]]) zone(u, u, 0, 6, v, v, "glace_bleue");
+  for (const [u, v, h] of [[9, 3, 0], [10, 3, 1], [11, 3, 0], [1, 8, 0], [20, 13, 1], [20, 14, 0], [9, 13, 0], [12, 8, 0], [13, 8, 1], [8, 18, 0], [14, 16, 0], [1, 15, 1]]) zone(u, u, 0, h, v, v, "neige");
+  zone(1, 20, 0, 4, 21, 23, "neige");
+});
+
+// ---------------------------------------------------------------- 5
+poste("Le tunnel à vent",
+  "Une colonne vitrée de 7 × 7 et 24 blocs de haut. Au sol, une grille de ventilation souffle vers le haut ; dedans, trois perchoirs en sapin à 6, 12 et 18 blocs. Autour, huit mannequins de paille sur poteaux.",
+  TAILLE + ", 24 de haut", 4, true, (c) => {
+  zone(0, 21, -1, -1, 0, 23, "dalle");
+  anneau(7, 13, 0, 23, 8, 14, "verre");
+  zone(10, 10, 0, 1, 8, 8, null);
+  zone(8, 12, -1, -1, 9, 13, "grille");
+  b(8, 6, 13, "perchoir"); b(12, 12, 9, "perchoir"); b(8, 18, 9, "perchoir");
+  for (const [u, v] of [[2, 4], [2, 11], [2, 18], [19, 4], [19, 11], [19, 18], [6, 21], [15, 21]]) { b(u, 0, v, "poteau"); b(u, 1, v, "foin"); b(u, 2, v, "foin"); }
+  extras.push({ type: "vent", poste: posteCourant, min: c.monde(8, 14), max: c.monde(13, 9), haut: 24 });
+});
+
+// ---------------------------------------------------------------- 6
+poste("Les îlots du gouffre",
+  "Un gouffre de 20 × 22 et 10 blocs de fond en ardoise des profondeurs. Huit îlots d'un seul bloc de large en sortent, chacun coiffé d'une laine de couleur, trop loin les uns des autres pour passer en sautant.",
+  TAILLE + ", 11 de creux", 0, false, () => {
+  zone(0, 21, -1, -1, 0, 23, "ardoise");
+  anneau(0, 21, -11, -1, 0, 23, "ardoise");
+  zone(1, 20, -11, -11, 1, 22, "ardoise");
+  zone(1, 20, -10, -1, 1, 22, null);
+  const laines = ["laine_rouge", "laine_jaune", "laine_verte", "laine_bleue", "laine_violette", "laine_orange", "laine_blanche", "laine_cyan"];
+  [[3, 3], [10, 4], [17, 3], [6, 10], [15, 11], [3, 17], [11, 18], [18, 20]].forEach(([u, v], k) => { zone(u, u, -10, -1, v, v, "ardoise"); b(u, 0, v, laines[k]); });
+});
+
+const sableH = (u, v) => Math.max(-4, Math.min(0, Math.round(-1.8 + 1.9 * Math.sin(u * 0.55) * Math.cos(v * 0.4))));
+let OS_PILIER = null;
+
+// ---------------------------------------------------------------- 7
+poste("La fosse de sable",
+  "Une fosse de 20 × 22 remplie de sable sur 4 blocs, creusée de dunes, bordée de grès taillé. Cinq piliers de grès en dépassent, et deux mannequins de paille sont à moitié enterrés.",
+  TAILLE + ", 5 de creux", 1, false, () => {
+  zone(0, 21, -1, -1, 0, 23, "gres_taille");
+  anneau(0, 21, -6, -1, 0, 23, "gres_taille");
+  zone(1, 20, -6, -6, 1, 22, "gres_taille");
+  zone(1, 20, -5, -1, 1, 22, null);
+  for (let u = 1; u <= 20; u++) for (let v = 1; v <= 22; v++) {
+    zone(u, u, -5, sableH(u, v), v, v, "sable");
+  }
+  for (const [u, v, h] of [[4, 16, 3], [16, 6, 2], [11, 19, 4], [5, 5, 2], [17, 15, 5]]) zone(u, u, -5, h, v, v, "gres");
+  b(9, 0, 9, "foin"); b(9, 1, 9, "foin"); b(13, 0, 13, "foin");
+});
+
+// ---------------------------------------------------------------- 8
+poste("Les pylônes de cuivre",
+  "Six pylônes en cuivre taillé de 11 blocs, coiffés de paratonnerres, sur un sol en plaques de cuivre plus ou moins vert-de-gris. Le long du bord, une piste d'élan droite de 24 blocs et 3 de large en pierre lisse, lignes blanches au départ et à l'arrivée.",
+  TAILLE + ", 11 de haut", 2, false, (c) => {
+  const plaques = ["cuivre", "cuivre", "cuivre_expose", "cuivre_oxyde"];
+  for (let u = 0; u <= 18; u++) for (let v = 0; v <= 23; v++) b(u, -1, v, plaques[Math.floor(alea() * 4)]);
+  zone(19, 21, -1, -1, 0, 23, "piste");
+  zone(19, 21, -1, -1, 0, 0, "ligne"); zone(19, 21, -1, -1, 23, 23, "ligne");
+  const pieds = [[4, 5], [14, 5], [4, 12], [14, 12], [4, 19], [14, 19]];
+  for (const [u, v] of pieds) { zone(u, u, 0, 9, v, v, "cuivre_coupe"); b(u, 10, v, "paratonnerre"); }
+  extras.push({ type: "arcs", poste: posteCourant, haut: 10.95, paires: [[0, 1], [1, 3], [3, 5], [5, 4], [4, 2], [2, 0], [0, 3], [2, 5]], sommets: pieds.map(([u, v]) => c.monde(u + 0.5, v + 0.5)) });
+});
+
+// ---------------------------------------------------------------- 9
+poste("Les piliers d'os",
+  "Une forêt d'une trentaine de piliers en blocs d'os, de 2 à 10 blocs de haut, plantés dans un sol de calcite. Entre eux, une vingtaine de pointes de pierre qui sortent du sol.",
+  TAILLE + ", 10 de haut", 3, false, () => {
+  zone(0, 21, -1, -1, 0, 23, "calcite");
+  const pris = new Set(), piliers = [];
+  for (let u = 2; u <= 19; u += 4) for (let v = 2; v <= 22; v += 4) {
+    const pu = u + Math.floor(alea() * 3) - 1, pv = v + Math.floor(alea() * 3) - 1, h = 2 + Math.floor(alea() * 9);
+    zone(pu, pu, 0, h - 1, pv, pv, "os"); pris.add(pu + "," + pv); piliers.push([pu, pv]);
+  }
+  for (let k = 0, n = 0; k < 200 && n < 20; k++) {
+    const u = 1 + Math.floor(alea() * 20), v = 1 + Math.floor(alea() * 22);
+    if (pris.has(u + "," + v)) continue;
+    pris.add(u + "," + v); b(u, 0, v, "pointe"); n++;
+  }
+  OS_PILIER = piliers.find(([u, v]) => v >= 2 && !pris.has(u + "," + (v - 1))) || piliers[0];
+});
+
+// ---------------------------------------------------------------- 10
+poste("La volière",
+  "Une cage en barreaux de fer de 22 × 24 et 22 blocs de haut, avec une porte côté allée. Dedans, sept anneaux dorés suspendus à des hauteurs différentes, trois perchoirs en sapin et trois colonnes torsadées en purpur, sur un sol de mousse.",
+  TAILLE + ", 22 de haut", 4, false, (c) => {
+  zone(0, 21, -1, -1, 0, 23, "mousse");
+  for (let y = 0; y <= 20; y++) {
+    for (let u = 0; u <= 21; u++) { b(u, y, 0, "barreaux_x"); b(u, y, 23, "barreaux_x"); }
+    for (let v = 1; v <= 22; v++) { b(0, y, v, "barreaux_z"); b(21, y, v, "barreaux_z"); }
+  }
+  zone(0, 21, 21, 21, 0, 23, "barreaux_y");
+  zone(10, 11, 0, 2, 0, 0, null);
+  const tour = [[0, 0], [1, 0], [1, 1], [0, 1]];
+  for (const [cu, cv] of [[4, 17], [16, 6], [15, 18]]) for (let y = 0; y <= 19; y++) {
+    const a = tour[y % 4], o = tour[(y + 2) % 4];
+    b(cu + a[0], y, cv + a[1], "purpur"); b(cu + o[0], y, cv + o[1], "purpur");
+  }
+  zone(1, 2, 7, 7, 9, 10, "perchoir"); zone(19, 20, 13, 13, 13, 14, "perchoir"); zone(9, 10, 16, 16, 21, 22, "perchoir");
+  for (const [u, y, v] of [[10.5, 4, 6], [6, 9, 11], [15, 11, 14], [11, 15, 10], [17, 7, 3.5], [5, 16, 5], [12, 18, 19]]) {
+    const [x, z] = c.monde(u, v);
+    extras.push({ type: "anneau", poste: posteCourant, x, y, z, haut: 22 });
+  }
+});
+
+// ================================================================ décor : poutres, bancs, bannières, rangements
+function dans(i, f) { posteCourant = i; C = POSTES[i].C; f(C); posteCourant = -1; }
+const fond = (u, y, t) => b(u, y, 23, t + (C.nord ? "_n" : "_s"));
+// une poutre au-dessus de l'allée pour pendre les lanternes (le toit reste enlevé)
+for (const x of [0, LX]) remplit(x, x, 8, 8, MILIEU, MILIEU, "chene_noir");
+remplit(0, LX, 8, 8, MILIEU, MILIEU, "chene_noir");
+for (let x = 11; x < LX; x += 20) { remplit(x, x, 5, 7, MILIEU, MILIEU, "chaine"); pose(x, 4, MILIEU, "lanterne_suspendue"); }
+// allée : accueil, bancs, plantes, échauffement, vestiaires
+remplit(3, 5, 0, 0, Z_ALLEE + 1, Z_ALLEE + 1, "comptoir");
+pose(2, 0, Z_FIN, "pot"); pose(2, 1, Z_FIN, "feuilles");
+for (const x of [20, 43, 66, 89]) {
+  remplit(x, x + 1, 0, 0, Z_ALLEE + 1, Z_ALLEE + 1, "banc");
+  remplit(x, x + 1, 0, 0, Z_FIN - 1, Z_FIN - 1, "banc");
+  pose(x + 3, 0, Z_ALLEE + 1, "pot"); pose(x + 3, 1, Z_ALLEE + 1, "feuilles");
+}
+remplit(97, 103, 0, 0, Z_ALLEE + 1, Z_FIN - 1, "tapis_bleu");
+remplit(111, 116, 0, 1, Z_ALLEE, Z_ALLEE, "casier");
+remplit(111, 116, 0, 1, Z_FIN, Z_FIN, "casier");
+pose(LX - 1, 0, MILIEU - 2, "tonneau"); pose(LX - 1, 0, MILIEU + 2, "tonneau");
+
+dans(0, () => {
+  b(0, 0, 1, "tonneau"); b(0, 0, 2, "tonneau"); b(21, 0, 1, "coffre");
+  fond(3, 3, "banniere_rouge"); fond(18, 3, "banniere_rouge");
+});
+dans(1, () => {
+  b(0, 0, 12, "poteau"); b(0, 1, 12, "poteau"); b(0, 2, 12, "banc");
+  b(3, 0, 23, "tapis_rouge"); b(5, 0, 23, "tapis_bleu"); b(16, 0, 23, "tapis_vert");
+  b(0, 0, 0, "pot"); b(0, 1, 0, "feuilles"); b(21, 0, 0, "pot"); b(21, 1, 0, "feuilles");
+  fond(7, 3, "banniere_bleu"); fond(14, 3, "banniere_bleu");
+});
+dans(2, () => {
+  b(20, 0, 2, "enclume"); b(21, 0, 3, "tonneau"); b(1, 0, 2, "coffre");
+  fond(10, 4, "banniere_or");
+});
+dans(3, () => {
+  b(19, 0, 2, "neige"); b(19, 1, 2, "neige"); b(19, 2, 2, "citrouille");
+  b(1, 0, 1, "banc"); b(2, 0, 1, "banc");
+  fond(5, 5, "banniere_bleu"); fond(16, 5, "banniere_bleu");
+});
+dans(4, () => {
+  b(4, 0, 1, "banc"); b(5, 0, 1, "banc"); b(16, 0, 1, "banc"); b(17, 0, 1, "banc"); b(21, 0, 23, "coffre");
+  fond(3, 3, "banniere_vert"); fond(18, 3, "banniere_vert");
+});
+dans(5, () => {
+  for (const u of [0, 21]) { b(u, 0, 0, "poteau"); b(u, 1, 0, "lanterne"); }
+  fond(10, 3, "banniere_violet");
+});
+dans(6, () => {
+  b(21, 0, 0, "poteau"); b(21, 1, 0, "poteau"); b(21, 2, 0, "poteau");
+  for (let u = 20; u <= 21; u++) for (let v = 0; v <= 1; v++) b(u, 3, v, (u + v) % 2 ? "laine_rouge" : "laine_blanche");
+  b(0, 0, 0, "tonneau"); b(1, 0, 0, "tonneau");
+  fond(6, 3, "banniere_or"); fond(15, 3, "banniere_or");
+});
+dans(7, () => {
+  fond(9, 3, "tableau"); fond(10, 3, "tableau"); fond(11, 3, "tableau");
+  b(0, 0, 0, "coffre"); b(17, 0, 23, "banc"); b(18, 0, 23, "banc");
+  fond(4, 3, "banniere_rouge"); fond(16, 3, "banniere_rouge");
+});
+dans(8, () => {
+  b(10, 0, 0, "banc"); b(11, 0, 0, "banc");
+  b(0, 0, 0, "pot"); b(0, 1, 0, "feuilles"); b(21, 0, 0, "tonneau");
+  fond(10, 3, "banniere_violet");
+});
+dans(9, () => {
+  for (const [u, v] of [[2, 2], [19, 3], [3, 21], [19, 21], [10, 14]]) { b(u, 0, v, "pot"); b(u, 1, v, "feuilles"); }
+});
+
+// ================================================================ la scène
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { erreur(); return; }
+const hote = document.getElementById("scene");
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+hote.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xd9e6f0, 220, 520);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.3, 900);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.09;
+controls.maxPolarAngle = 1.48; controls.minDistance = 6; controls.maxDistance = 300;
+const CENTRE = new THREE.Vector3((LX + 1) / 2, 0, (LZ + 1) / 2);
+const VUE = new THREE.Vector3(CENTRE.x - 58, 100, CENTRE.z + 132);
+camera.position.copy(VUE); controls.target.copy(CENTRE); controls.update();
+
+const ciel = new THREE.HemisphereLight(0xdfeeff, 0x6b5a45, 0.62);
+scene.add(ciel);
+const soleil = new THREE.DirectionalLight(0xfff3dc, 0.85);
+soleil.position.set(CENTRE.x - 55, 95, CENTRE.z + 48); soleil.target.position.copy(CENTRE);
+soleil.castShadow = true; soleil.shadow.mapSize.set(4096, 4096);
+Object.assign(soleil.shadow.camera, { left: -85, right: 85, top: 85, bottom: -85, near: 1, far: 300 });
+soleil.shadow.bias = -0.0006;
+scene.add(soleil, soleil.target);
+
+// herbe autour de la salle (trouée à l'endroit de la salle)
+{
+  const f = new THREE.Shape([new THREE.Vector2(-250, -300), new THREE.Vector2(370, -300), new THREE.Vector2(370, 250), new THREE.Vector2(-250, 250)]);
+  f.holes.push(new THREE.Path([new THREE.Vector2(0, -(LZ + 1)), new THREE.Vector2(0, 0), new THREE.Vector2(LX + 1, 0), new THREE.Vector2(LX + 1, -(LZ + 1))]));
+  const herbe = toile(motif.bruit("#6aa54c", 0.12));
+  const sol = new THREE.Mesh(new THREE.ShapeGeometry(f), new THREE.MeshLambertMaterial({ map: herbe }));
+  sol.rotation.x = -Math.PI / 2; sol.position.y = -0.02; sol.receiveShadow = true;
+  scene.add(sol);
+}
+
+// les blocs, une InstancedMesh par sorte
+const cubes = boite(1, 1, 1), matrice = new THREE.Matrix4();
+const parSorte = {};
+for (const bl of blocs.values()) (parSorte[bl.t] = parSorte[bl.t] || []).push(bl);
+const visables = [], textures = {};
+const boites = POSTES.map(() => new THREE.Box3());
+for (const [nom, liste] of Object.entries(parSorte)) {
+  const s = SORTES[nom], tex = toile(s.m); textures[nom] = tex;
+  const mat = new THREE.MeshLambertMaterial({ map: tex });
+  if (s.lueur) { mat.emissive = new THREE.Color(0xffffff); mat.emissiveMap = tex; mat.emissiveIntensity = s.lueur; }
+  if (s.opacite) { mat.transparent = true; mat.opacity = s.opacite; mat.depthWrite = false; }
+  if (s.troue) { mat.alphaTest = 0.5; mat.side = THREE.DoubleSide; }
+  const mesh = new THREE.InstancedMesh(s.geo || cubes, mat, liste.length);
+  const postes = new Int16Array(liste.length);
+  liste.forEach((bl, k) => {
+    matrice.makeTranslation(bl.x + 0.5 + (s.dx || 0), bl.y + 0.5 + (s.dy || 0), bl.z + 0.5 + (s.dz || 0));
+    mesh.setMatrixAt(k, matrice); postes[k] = bl.p;
+    if (bl.p >= 0) boites[bl.p].expandByPoint(new THREE.Vector3(bl.x, bl.y, bl.z)).expandByPoint(new THREE.Vector3(bl.x + 1, bl.y + 1, bl.z + 1));
+  });
+  mesh.castShadow = s.ombre !== false; mesh.receiveShadow = true;
+  if (s.opacite) mesh.renderOrder = 2;
+  mesh.userData.postes = postes;
+  scene.add(mesh); visables.push(mesh);
+}
+
+// objets hors grille
+const anime = [];
+const or = new THREE.MeshLambertMaterial({ color: 0xe8b630, emissive: 0x4a3200 });
+const chaine = new THREE.MeshLambertMaterial({ color: 0x5c5f66 });
+for (const e of extras) {
+  if (e.type === "anneau") {
+    const a = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.16, 8, 28), or);
+    a.position.set(e.x, e.y, e.z); a.castShadow = true; a.userData.poste = e.poste;
+    const fil = new THREE.Mesh(boite(0.06, e.haut - e.y - 1.4, 0.06), chaine);
+    fil.position.set(e.x, (e.haut + e.y + 1.4) / 2, e.z);
+    scene.add(a, fil); visables.push(a);
+    anime.push((t) => { a.rotation.y = t * 0.4 + e.x; });
+  } else if (e.type === "vent") {
+    const n = 140, pos = new Float32Array(n * 3), vit = new Float32Array(n);
+    const x0 = Math.min(e.min[0], e.max[0]), x1 = Math.max(e.min[0], e.max[0]), z0 = Math.min(e.min[1], e.max[1]), z1 = Math.max(e.min[1], e.max[1]);
+    for (let k = 0; k < n; k++) { pos[k * 3] = x0 + Math.random() * (x1 - x0); pos[k * 3 + 1] = Math.random() * e.haut; pos[k * 3 + 2] = z0 + Math.random() * (z1 - z0); vit[k] = 3 + Math.random() * 5; }
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 0.14, transparent: true, opacity: 0.75, depthWrite: false }));
+    scene.add(pts);
+    anime.push((t, dt) => { for (let k = 0; k < n; k++) { pos[k * 3 + 1] += vit[k] * dt; if (pos[k * 3 + 1] > e.haut) pos[k * 3 + 1] = 0; } g.attributes.position.needsUpdate = true; });
+  } else if (e.type === "arcs") {
+    const paires = e.paires, lignes = [];
+    const lum = new THREE.PointLight(0x9fd6ff, 0, 26); lum.position.set((e.sommets[0][0] + e.sommets[e.sommets.length - 1][0]) / 2, e.haut, (e.sommets[0][1] + e.sommets[e.sommets.length - 1][1]) / 2); scene.add(lum);
+    for (const [i, j] of paires) {
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(14 * 3), 3));
+      const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xbfe6ff })); scene.add(l);
+      lignes.push({ l, g, a: e.sommets[i], b: e.sommets[j] });
+    }
+    let prochain = 0;
+    anime.push((t) => {
+      if (t < prochain) return;
+      prochain = t + 0.08 + Math.random() * 0.08;
+      let allumes = 0;
+      for (const L of lignes) {
+        L.l.visible = Math.random() < 0.45; if (!L.l.visible) continue; allumes++;
+        const p = L.g.attributes.position.array;
+        for (let k = 0; k < 14; k++) {
+          const f = k / 13, bruit = k === 0 || k === 13 ? 0 : 0.6;
+          p[k * 3] = L.a[0] + (L.b[0] - L.a[0]) * f + (Math.random() - 0.5) * bruit;
+          p[k * 3 + 1] = e.haut + Math.sin(f * Math.PI) * -0.8 + (Math.random() - 0.5) * bruit;
+          p[k * 3 + 2] = L.a[1] + (L.b[1] - L.a[1]) * f + (Math.random() - 0.5) * bruit;
+        }
+        L.g.attributes.position.needsUpdate = true;
+      }
+      lum.intensity = allumes * 0.25;
+    });
+  }
+}
+// lueurs : lave et fond du bassin
+{
+  const [lx, lz] = POSTES[2].C.monde(11, 12), [bx, bz] = POSTES[1].C.monde(11, 12);
+  const feu = new THREE.PointLight(0xff7a2a, 1.3, 22); feu.position.set(lx, 1.5, lz);
+  const eau = new THREE.PointLight(0x4fe0d2, 1, 18); eau.position.set(bx, -4, bz);
+  scene.add(feu, eau);
+  anime.push((t) => { feu.intensity = 1.2 + Math.sin(t * 7) * 0.1 + Math.sin(t * 13) * 0.06; });
+}
+anime.push((t, dt) => {
+  if (textures.eau) { textures.eau.offset.x += dt * 0.04; textures.eau.offset.y += dt * 0.02; }
+  if (textures.lave) textures.lave.offset.y += dt * 0.06;
+});
+
+// ================================================================ les pnj
+const matsCouleur = {};
+const matDe = (c) => matsCouleur[c] || (matsCouleur[c] = new THREE.MeshLambertMaterial({ map: toile(motif.bruit(c, 0.05)) }));
+const lambert = (dessin) => new THREE.MeshLambertMaterial({ map: toile(dessin) });
+function bonhomme(t, poste) {
+  const g = new THREE.Group(); g.rotation.order = "YXZ";
+  const morceaux = [];
+  const morceau = (sx, sy, sz, mat, x, y, z, parent) => {
+    const m = new THREE.Mesh(boite(sx, sy, sz), mat); m.position.set(x, y, z); m.castShadow = true;
+    m.userData.poste = poste; parent.add(m); morceaux.push(m); return m;
+  };
+  const pivot = (x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); g.add(p); return p; };
+  const face = lambert((c) => {
+    grain(c, t.peau, 0.03);
+    for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++) px(c, x, y, teinte(t.cheveux, 1 + (alea() - 0.5) * 0.15));
+    for (const [x, y] of [[0, 4], [1, 4], [14, 4], [15, 4]]) px(c, x, y, t.cheveux);
+    c.fillStyle = "#ffffff"; c.fillRect(2, 8, 2, 2); c.fillRect(12, 8, 2, 2);
+    c.fillStyle = t.yeux; c.fillRect(4, 8, 2, 2); c.fillRect(10, 8, 2, 2);
+    c.fillStyle = teinte(t.peau, 0.72); c.fillRect(6, 12, 4, 1);
+  });
+  const cote = lambert((c) => { grain(c, t.peau, 0.03); for (let x = 0; x < 16; x++) for (let y = 0; y < 6; y++) px(c, x, y, teinte(t.cheveux, 1 + (alea() - 0.5) * 0.15)); });
+  const cheveux = matDe(t.cheveux);
+  morceau(0.5, 0.75, 0.25, matDe(t.haut), 0, 1.125, 0, g);
+  const tete = pivot(0, 1.5, 0);
+  morceau(0.5, 0.5, 0.5, [cote, cote, cheveux, matDe(t.peau), face, cheveux], 0, 0.25, 0, tete);
+  const bras = [-1, 1].map((s) => {
+    const p = pivot(s * 0.375, 1.375, 0);
+    morceau(0.25, 0.55, 0.25, matDe(t.manches === "peau" ? t.peau : (t.manches || t.haut)), 0, -0.15, 0, p);
+    morceau(0.25, 0.2, 0.25, matDe(t.peau), 0, -0.525, 0, p);
+    return p;
+  });
+  const jambes = [-1, 1].map((s) => {
+    const p = pivot(s * 0.125, 0.75, 0);
+    morceau(0.25, 0.6, 0.25, matDe(t.bas), 0, -0.3, 0, p);
+    morceau(0.25, 0.15, 0.25, matDe(t.chaussures), 0, -0.675, 0, p);
+    return p;
+  });
+  // objet tenu dans une main
+  const objets = {
+    carnet: [0.32, 0.42, 0.05, "#c8b48a", 1, -0.6, 0.18],
+    chrono: [0.15, 0.15, 0.08, "#d9d9d9", 1, -0.62, 0.16],
+    arc: [0.06, 1.1, 0.06, "#6b4a27", 1, -0.6, 0.1],
+    balai: [0.06, 1.4, 0.06, "#a27b47", 0, -0.6, 0.2],
+    pelle: [0.06, 1.1, 0.06, "#8a6234", 0, -0.62, 0.12],
+  };
+  if (t.objet) { const [sx, sy, sz, c, main, y, z] = objets[t.objet]; morceau(sx, sy, sz, matDe(c), 0, y, z, bras[main]); }
+  scene.add(g);
+  return { g, tete, bras, jambes, morceaux };
+}
+
+const TEINTS = ["#f1c9a2", "#e0ac84", "#c68a5e", "#8d5a3b", "#5e3b26"];
+const CHEVEUX = ["#2b1d12", "#6b4423", "#d9b25c", "#141414", "#a33b1f", "#4a3020"];
+let nTenue = 0;
+function tenue(haut, bas, extra) {
+  const k = nTenue++;
+  return Object.assign({ peau: TEINTS[(k * 3) % 5], cheveux: CHEVEUX[(k * 5) % 6], yeux: ["#2d4f7a", "#4a3020", "#2f6b3a"][k % 3], haut, bas, chaussures: "#ececec" }, extra);
+}
+const COACH = () => tenue("#c43a31", "#26262e", { manches: "#e9e9e9" });
+
+const PNJ = [];
+function pnj(def) {
+  const corps = bonhomme(def.tenue, def.poste);
+  const p = Object.assign({ phase: Math.random() * 10, y: 0 }, def, corps);
+  p.g.position.set(p.x, p.y, p.z);
+  if (p.vers) p.g.rotation.y = Math.atan2(p.vers[0] - p.x, p.vers[1] - p.z);
+  if (p.chemin) {
+    p.longueurs = []; p.total = 0;
+    const pts = p.boucle ? p.chemin.concat([p.chemin[0]]) : p.chemin;
+    for (let k = 0; k + 1 < pts.length; k++) { const l = Math.hypot(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1]); p.longueurs.push(l); p.total += l; }
+    p.pts = pts;
+  }
+  for (const m of p.morceaux) visables.push(m);
+  PNJ.push(p);
+}
+const ici = (i, u, v) => POSTES[i].C.monde(u, v);
+const auSol = (i, u, v, extra) => { const [x, z] = ici(i, u, v); return Object.assign({ x, z, poste: i }, extra); };
+const vise = (i, u, v) => ici(i, u, v);
+
+// 1 — le mannequin géant
+pnj(auSol(0, 10.5, 1.5, { tenue: tenue("#3f6fb0", "#2b2b33", { objet: "arc" }), action: "tir", vers: vise(0, 10.5, 18) }));
+pnj(auSol(0, 6.5, 1.5, { tenue: tenue("#e0c24a", "#3a3a44", { objet: "arc" }), action: "tir", vers: vise(0, 9, 18) }));
+pnj(auSol(0, 15.5, 2.5, { tenue: Object.assign(COACH(), { objet: "carnet" }), action: "coach", vers: vise(0, 10.5, 16) }));
+// 2 — le bassin profond
+for (const [u, ph] of [[2.5, 0], [19.5, 7]]) {
+  const [x, z] = ici(1, u, 3), [x2, z2] = ici(1, u, 20.5);
+  pnj({ x, z, y: -1.18, poste: 1, tenue: tenue("#1e1e24", "#1e1e24", { manches: "peau" }), action: "nage", chemin: [[x, z], [x2, z2]], vitesse: 1.6, phase: ph });
+}
+pnj(auSol(1, 0.5, 12.5, { y: 2.5, tenue: tenue("#e03b2f", "#e03b2f"), action: "assis", vers: vise(1, 10, 12.5) }));
+pnj(auSol(1, 11, 18.6, { y: 0.25, tenue: tenue("#2a2a2a", "#2a2a2a"), action: "etire", vers: vise(1, 11, 10) }));
+// 3 — la fonderie
+pnj(auSol(2, 9, 20.4, { tenue: tenue("#5a5f66", "#2b2b33"), action: "frappe", vers: vise(2, 9, 22) }));
+pnj(auSol(2, 19.5, 2.5, { tenue: tenue("#6b4a2b", "#3a3028"), action: "regarde", vers: vise(2, 10, 12) }));
+// 4 — la chambre froide
+pnj(auSol(3, 7, 8, { tenue: tenue("#2f9bd6", "#1f3d6b"), action: "patine", boucle: true, vitesse: 2.6, chemin: [ici(3, 7, 8), ici(3, 14, 8), ici(3, 14, 15), ici(3, 7, 15)] }));
+pnj(auSol(3, 2.5, 6.5, { tenue: tenue("#f2f2f2", "#5b6470"), action: "patine", boucle: true, vitesse: 3.4, phase: 20, chemin: [ici(3, 2.5, 6.5), ici(3, 2.5, 19.6), ici(3, 19.5, 19.6), ici(3, 19.5, 6.5)] }));
+pnj(auSol(3, 10.5, 20.3, { tenue: tenue("#8a3cb8", "#2b2b33", { objet: "pelle" }), action: "creuse", vers: vise(3, 10.5, 22) }));
+// 5 — le tunnel à vent
+pnj(auSol(4, 10.5, 11.5, { tenue: tenue("#e8762a", "#2b2b33"), action: "flotte" }));
+pnj(auSol(4, 10.5, 6.6, { tenue: Object.assign(COACH(), { objet: "carnet" }), action: "coach", vers: vise(4, 10.5, 11) }));
+pnj(auSol(4, 14.5, 5, { tenue: tenue("#4f9f4a", "#3a3a44"), action: "regarde", vers: vise(4, 10.5, 11) }));
+// 6 — les îlots du gouffre
+pnj(auSol(5, 17.5, 3.5, { y: 1, tenue: tenue("#d6c13a", "#3a3a44"), action: "regarde", vers: vise(5, 6.5, 10.5) }));
+pnj(auSol(5, 6.5, 10.5, { y: 1, tenue: tenue("#3a5bc7", "#26262e"), action: "etire", vers: vise(5, 15.5, 11.5) }));
+pnj(auSol(5, 10.5, 0.5, { tenue: Object.assign(COACH(), { objet: "carnet" }), action: "coach", vers: vise(5, 10.5, 8) }));
+// 7 — la fosse de sable
+pnj(auSol(6, 8.5, 11.5, { y: sableH(8, 11) + 1, tenue: tenue("#e8e0c5", "#8a6a3a", { objet: "pelle" }), action: "creuse", vers: vise(6, 9, 14) }));
+pnj(auSol(6, 20.5, 0.5, { tenue: tenue("#6b4a2b", "#e8e0c5"), action: "regarde", vers: vise(6, 10, 11) }));
+// 8 — les pylônes de cuivre
+pnj(auSol(7, 20.5, 1, { tenue: tenue("#f2f2f2", "#1f3d6b"), action: "court", vitesse: 6.5, chemin: [ici(7, 20.5, 1.2), ici(7, 20.5, 22.8)] }));
+pnj(auSol(7, 18.5, 0.6, { tenue: Object.assign(COACH(), { objet: "chrono" }), action: "coach", vers: vise(7, 20.5, 12) }));
+pnj(auSol(7, 9.5, 8.5, { tenue: tenue("#2a9aa6", "#26262e"), action: "regarde", vers: vise(7, 4.5, 5.5) }));
+// 9 — les piliers d'os
+{
+  const [pu, pv] = OS_PILIER;
+  pnj(auSol(8, pu + 0.5, pv - 0.4, { tenue: tenue("#b8322c", "#26262e"), action: "frappe", vers: vise(8, pu + 0.5, pv + 0.5) }));
+}
+pnj(auSol(8, 10.5, 0.55, { y: 0.5, tenue: tenue("#5f8b33", "#3a3a44"), action: "assis", vers: vise(8, 10.5, 10) }));
+// 10 — la volière
+pnj(auSol(9, 2.6, 9.5, { y: 7.5, tenue: tenue("#e8b630", "#26262e"), action: "assis", vers: vise(9, 12, 9.5) }));
+pnj(auSol(9, 8, 4, { tenue: tenue("#a97aa9", "#3a3a44"), action: "marche", vitesse: 1.3, boucle: true, chemin: [ici(9, 8, 4), ici(9, 13, 4), ici(9, 13, 13), ici(9, 8, 13)] }));
+pnj(auSol(9, 11, 11, { tenue: tenue("#f2f2f2", "#26262e"), action: "leve", vers: vise(9, 6, 11) }));
+// l'allée : accueil, ménage, promeneurs, bancs, échauffement, vestiaires
+pnj({ x: 4.5, z: Z_ALLEE + 0.5, poste: -1, tenue: tenue("#2f4fa8", "#26262e"), action: "regarde", vers: [4.5, MILIEU] });
+pnj({ x: 8, z: Z_ALLEE + 2.6, poste: -1, tenue: tenue("#6b7f3a", "#4a4f3a", { objet: "balai" }), action: "balaie", vitesse: 0.9, chemin: [[8, Z_ALLEE + 2.6], [94, Z_ALLEE + 2.6]] });
+pnj({ x: 8, z: Z_FIN - 1.5, poste: -1, tenue: tenue("#c43a7a", "#26262e"), action: "marche", vitesse: 1.5, chemin: [[8, Z_FIN - 1.5], [94, Z_FIN - 1.5]] });
+pnj({ x: 8, z: Z_FIN - 1.5, poste: -1, tenue: tenue("#3a3a44", "#1f3d6b"), action: "marche", vitesse: 1.7, phase: 90, chemin: [[8, Z_FIN - 1.5], [94, Z_FIN - 1.5]] });
+pnj({ x: 20.5, z: Z_ALLEE + 1.55, y: 0.5, poste: -1, tenue: tenue("#e0c24a", "#26262e"), action: "assis", vers: [20.5, 10] });
+pnj({ x: 67.5, z: Z_FIN - 0.55, y: 0.5, poste: -1, tenue: tenue("#2a9aa6", "#3a3a44"), action: "assis", vers: [67.5, 50] });
+pnj({ x: 44.5, z: Z_FIN - 0.55, y: 0.5, poste: -1, tenue: tenue("#e8762a", "#26262e"), action: "assis", vers: [44.5, 50] });
+for (const [x, z] of [[98.5, Z_ALLEE + 2.5], [100.5, Z_FIN - 1.5], [102.5, Z_ALLEE + 2.5]]) pnj({ x, z, poste: -1, tenue: tenue("#f2f2f2", "#3557b8"), action: "sauts", vers: [x, MILIEU + 6] });
+pnj({ x: 100.5, z: MILIEU + 0.2, poste: -1, tenue: Object.assign(COACH(), { objet: "chrono" }), action: "coach", vers: [100.5, Z_ALLEE] });
+pnj({ x: 113.5, z: Z_ALLEE + 1.5, poste: -1, tenue: tenue("#5b6470", "#26262e"), action: "regarde", vers: [113.5, Z_ALLEE] });
+
+// ---------------------------------------------------------------- leurs gestes
+const PI = Math.PI;
+function suit(p, t) {
+  let s = (t * p.vitesse + p.phase * 3) % (p.boucle ? p.total : 2 * p.total), sens = 1;
+  if (!p.boucle && s > p.total) { s = 2 * p.total - s; sens = -1; }
+  let k = 0;
+  while (k < p.longueurs.length - 1 && s > p.longueurs[k]) { s -= p.longueurs[k]; k++; }
+  const a = p.pts[k], b2 = p.pts[k + 1], f = p.longueurs[k] ? Math.min(1, s / p.longueurs[k]) : 0;
+  p.g.position.x = a[0] + (b2[0] - a[0]) * f; p.g.position.z = a[1] + (b2[1] - a[1]) * f;
+  p.g.rotation.y = Math.atan2((b2[0] - a[0]) * sens, (b2[1] - a[1]) * sens);
+}
+const pose0 = (p) => { for (const m of [...p.bras, ...p.jambes]) m.rotation.set(0, 0, 0); p.tete.rotation.set(0, 0, 0); };
+function geste(p, t) {
+  const ph = p.phase, [bd, bg] = p.bras, [jd, jg] = p.jambes;
+  pose0(p);
+  switch (p.action) {
+    case "regarde":
+      bd.rotation.set(-1.1, 0, 0.55); bg.rotation.set(-1.1, 0, -0.55);
+      p.tete.rotation.y = Math.sin(t * 0.4 + ph) * 0.6;
+      break;
+    case "coach": {
+      const montre = Math.max(0, Math.sin(t * 0.8 + ph) * 3 - 2);
+      bd.rotation.x = -1.5 * montre; bg.rotation.x = -0.9;
+      p.tete.rotation.y = Math.sin(t * 0.5 + ph) * 0.4;
+      break;
+    }
+    case "tir": {
+      const tire = (t * 0.4 + ph) % 1;
+      bg.rotation.set(-PI / 2, 0, 0); bd.rotation.set(-PI / 2, tire < 0.85 ? -0.2 - tire * 0.5 : 0, 0);
+      break;
+    }
+    case "frappe": {
+      const c = (t * 2.4 + ph) % 2, coup = (x) => Math.max(0, Math.sin(x * PI));
+      bd.rotation.x = -0.4 - 1.2 * (c < 1 ? coup(c) : 0); bg.rotation.x = -0.4 - 1.2 * (c >= 1 ? coup(c - 1) : 0);
+      jd.rotation.x = 0.25; jg.rotation.x = -0.25;
+      break;
+    }
+    case "assis":
+      jd.rotation.x = jg.rotation.x = -PI / 2; bd.rotation.x = bg.rotation.x = -0.5;
+      p.g.position.y = p.y - 0.72;
+      p.tete.rotation.y = Math.sin(t * 0.35 + ph) * 0.5;
+      break;
+    case "etire": {
+      const k = (Math.sin(t * 0.9 + ph) + 1) / 2;
+      bd.rotation.set(-PI + 0.1, 0, -0.15 * k); bg.rotation.set(-PI + 0.1, 0, 0.15 * k);
+      p.g.rotation.z = Math.sin(t * 0.9 + ph) * 0.12;
+      break;
+    }
+    case "leve":
+      p.tete.rotation.x = -0.7; p.tete.rotation.y = Math.sin(t * 0.5) * 0.5;
+      bd.rotation.set(-0.3, 0, 0.2); bg.rotation.set(-0.3, 0, -0.2);
+      break;
+    case "sauts": {
+      const k = Math.abs(Math.sin(t * 3.2 + ph));
+      bd.rotation.z = -(0.15 + 2.7 * k); bg.rotation.z = 0.15 + 2.7 * k;
+      jd.rotation.z = -0.28 * k; jg.rotation.z = 0.28 * k;
+      p.g.position.y = p.y + 0.35 * Math.sin(Math.min(PI, k * PI));
+      break;
+    }
+    case "creuse": {
+      const k = Math.abs(Math.sin(t * 2.2 + ph));
+      bd.rotation.x = bg.rotation.x = -0.4 - 0.9 * k; bd.rotation.z = 0.3; bg.rotation.z = -0.3;
+      break;
+    }
+    case "flotte":
+      p.g.rotation.x = PI / 2; p.g.rotation.y = t * 0.35;
+      bd.rotation.z = -1.3; bg.rotation.z = 1.3; jd.rotation.z = -0.25; jg.rotation.z = 0.25;
+      jd.rotation.x = jg.rotation.x = 0.4;
+      p.g.position.y = 6 + Math.sin(t * 0.6) * 3.5;
+      // le corps tourne autour du milieu de la colonne
+      p.g.position.x = p.x - Math.sin(p.g.rotation.y) * 1; p.g.position.z = p.z - Math.cos(p.g.rotation.y) * 1;
+      break;
+    case "nage": {
+      suit(p, t); p.g.rotation.x = PI / 2;
+      bd.rotation.x = -(t * 4 + ph) % (2 * PI); bg.rotation.x = -(t * 4 + ph + PI) % (2 * PI);
+      jd.rotation.x = Math.sin(t * 10) * 0.3; jg.rotation.x = -Math.sin(t * 10) * 0.3;
+      p.g.position.y = p.y + Math.sin(t * 4) * 0.04;
+      break;
+    }
+    case "marche": case "court": case "balaie": case "patine": {
+      suit(p, t);
+      const f = { marche: 6, court: 13, balaie: 4, patine: 3.5 }[p.action], amp = { marche: 0.6, court: 1.1, balaie: 0.35, patine: 0.45 }[p.action];
+      const s = Math.sin(t * f + ph) * amp;
+      jd.rotation.x = s; jg.rotation.x = -s;
+      if (p.action === "balaie") { bd.rotation.x = -0.7 + s * 0.4; bg.rotation.x = -0.7 - s * 0.4; bd.rotation.z = 0.5; bg.rotation.z = -0.5; }
+      else { bd.rotation.x = -s; bg.rotation.x = s; }
+      if (p.action === "court") p.g.rotation.x = 0.18;
+      if (p.action === "patine") { jd.rotation.z = -Math.max(0, s) * 0.5; jg.rotation.z = Math.max(0, -s) * 0.5; p.g.rotation.z = s * 0.15; bd.rotation.z = -0.4; bg.rotation.z = 0.4; }
+      break;
+    }
+  }
+}
+anime.push((t) => { for (const p of PNJ) geste(p, t); });
+
+// ---------------------------------------------------------------- ambiance du soir
+const lampes = [];
+for (let x = 11; x < LX; x += 20) { const l = new THREE.PointLight(0xffc477, 0, 26, 1.4); l.position.set(x + 0.5, 4, MILIEU + 0.5); scene.add(l); lampes.push(l); }
+POSTES.forEach((p) => { const [x, z] = p.C.monde(11, 12); const l = new THREE.PointLight(0xffc477, 0, 30, 1.4); l.position.set(x, 7, z); scene.add(l); lampes.push(l); });
+function ambiance(soir) {
+  hote.style.background = soir ? "linear-gradient(#141a3a 0%, #3d3463 45%, #c8704a 100%)" : "";
+  ciel.intensity = soir ? 0.22 : 0.62; ciel.color.set(soir ? 0x8a94d0 : 0xdfeeff);
+  soleil.intensity = soir ? 0.28 : 0.85; soleil.color.set(soir ? 0xff9a5a : 0xfff3dc);
+  scene.fog.color.set(soir ? 0x3a3255 : 0xd9e6f0);
+  lampes.forEach((l, k) => { l.color.set(k < 6 ? 0xffc477 : AMB[k - 6].lampe); l.intensity = soir ? (k < 6 ? 1.1 : AMB[k - 6].lampeI * 0.7) : 0; });
+}
+
+const AMBIANCES = [
+  "Deux tireurs à la ligne de tir et une coach qui note tout sur son bloc-notes.",
+  "Deux nageurs qui font des longueurs, un maître-nageur sur sa chaise haute et quelqu'un qui s'étire au bout du plongeoir.",
+  "Un élève qui cogne sur l'obsidienne pendant qu'un surveillant le regarde, bras croisés.",
+  "Deux patineurs qui tournent en rond et un élève qui retape le mur de neige. Un bonhomme de neige garde l'entrée.",
+  "Un élève qui flotte dans la colonne, une coach à la porte et un autre qui attend son tour.",
+  "Un élève debout sur un îlot, un autre qui s'étire sur le sien, et la coach au bord du vide.",
+  "Un élève qui creuse à la pelle et un surveillant à l'ombre du parasol.",
+  "Un coureur qui enchaîne les allers-retours, la coach chrono en main et un élève qui observe les pylônes.",
+  "Un élève qui frappe un pilier et un autre assis sur le banc à l'entrée.",
+  "Un élève assis sur un perchoir, un autre qui fait des tours et un qui regarde les anneaux en l'air.",
+];
+
+// ================================================================ sélection
+const panneauPostes = document.getElementById("postes");
+const fiche = document.getElementById("fiche");
+const calque = document.getElementById("etiquettes");
+const cadreChoix = new THREE.Box3Helper(new THREE.Box3(), 0xf0b43c);
+const cadreSurvol = new THREE.Box3Helper(new THREE.Box3(), 0xffffff);
+cadreChoix.visible = cadreSurvol.visible = false;
+scene.add(cadreChoix, cadreSurvol);
+let choisi = -1;
+
+const boutons = POSTES.map((p, i) => {
+  const bt = document.createElement("button");
+  bt.type = "button"; bt.setAttribute("aria-pressed", "false");
+  bt.innerHTML = `<b>${i + 1}</b><span></span>`; bt.querySelector("span").textContent = p.nom;
+  bt.addEventListener("click", () => choisir(i === choisi ? -1 : i, true));
+  bt.addEventListener("pointerenter", () => survoler(i));
+  bt.addEventListener("pointerleave", () => survoler(-1));
+  panneauPostes.appendChild(bt);
+  return bt;
+});
+const etiquettes = POSTES.map((p, i) => {
+  const el = document.createElement("div");
+  el.className = "etiquette"; el.textContent = `${i + 1}. ${p.nom}`;
+  el.addEventListener("click", () => choisir(i, true));
+  calque.appendChild(el);
+  const bx = boites[i], ancre = new THREE.Vector3((bx.min.x + bx.max.x) / 2, Math.max(bx.max.y, 1) + 1.2, (bx.min.z + bx.max.z) / 2);
+  return { el, ancre };
+});
+
+let vol = null;
+function choisir(i, voler) {
+  choisi = i;
+  boutons.forEach((bt, k) => bt.setAttribute("aria-pressed", String(k === i)));
+  etiquettes.forEach((e, k) => e.el.classList.toggle("choisie", k === i));
+  if (i < 0) { fiche.hidden = true; cadreChoix.visible = false; taille(); return; }
+  const p = POSTES[i];
+  document.getElementById("fiche-nom").textContent = `${i + 1}. ${p.nom}`;
+  document.getElementById("fiche-texte").textContent = p.texte;
+  document.getElementById("fiche-taille").textContent = p.taille;
+  document.getElementById("fiche-ressenti").textContent = p.amb.temp + " · " + p.amb.ressenti;
+  document.getElementById("fiche-ambiance").textContent = "Sur place : " + AMBIANCES[i].charAt(0).toLowerCase() + AMBIANCES[i].slice(1);
+  fiche.hidden = false; taille();
+  cadreChoix.box.copy(boites[i]).expandByScalar(0.08); cadreChoix.visible = true;
+  boutons[i].scrollIntoView({ block: "nearest", inline: "nearest" });
+  if (voler) {
+    const bx = boites[i], cible = new THREE.Vector3();
+    bx.getCenter(cible); cible.y = Math.min(Math.max(cible.y, 0), 5);
+    const dir = camera.position.clone().sub(controls.target); dir.y = 0;
+    if (dir.lengthSq() < 1) dir.set(0, 0, 1);
+    dir.normalize();
+    const taille = bx.getSize(new THREE.Vector3()), d = Math.max(taille.x, taille.y, taille.z) * 0.95 + 9;
+    const pos = cible.clone().add(dir.multiplyScalar(d * 0.85)).add(new THREE.Vector3(0, d * 0.62, 0));
+    allerA(pos, cible);
+  }
+}
+function survoler(i) {
+  if (i < 0 || i === choisi) { cadreSurvol.visible = false; return; }
+  cadreSurvol.box.copy(boites[i]).expandByScalar(0.08); cadreSurvol.visible = true;
+}
+function allerA(pos, cible) {
+  vol = { debut: performance.now(), p0: camera.position.clone(), c0: controls.target.clone(), p1: pos, c1: cible };
+}
+controls.addEventListener("start", () => { vol = null; });
+document.getElementById("ensemble").addEventListener("click", () => { choisir(-1); allerA(VUE.clone(), CENTRE.clone()); });
+const btNoms = document.getElementById("noms");
+btNoms.addEventListener("click", () => {
+  const on = btNoms.getAttribute("aria-pressed") !== "true";
+  btNoms.setAttribute("aria-pressed", String(on)); calque.hidden = !on;
+});
+
+const btSoir = document.getElementById("soir");
+btSoir.addEventListener("click", () => {
+  const on = btSoir.getAttribute("aria-pressed") !== "true";
+  btSoir.setAttribute("aria-pressed", String(on)); ambiance(on);
+});
+
+// clic et survol dans la 3D
+const rayon = new THREE.Raycaster(), souris = new THREE.Vector2();
+function posteSous(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  souris.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  rayon.setFromCamera(souris, camera);
+  const h = rayon.intersectObjects(visables, false)[0];
+  if (!h) return -1;
+  if (h.object.userData.poste !== undefined) return h.object.userData.poste;
+  return h.instanceId !== undefined ? h.object.userData.postes[h.instanceId] : -1;
+}
+let appui = null;
+renderer.domElement.addEventListener("pointerdown", (ev) => { appui = { x: ev.clientX, y: ev.clientY }; });
+renderer.domElement.addEventListener("pointerup", (ev) => {
+  if (visite) { appui = null; return; }
+  if (!appui || Math.hypot(ev.clientX - appui.x, ev.clientY - appui.y) > 6 || ev.button !== 0) { appui = null; return; }
+  appui = null;
+  const i = posteSous(ev);
+  choisir(i, i >= 0);
+});
+renderer.domElement.addEventListener("pointermove", (ev) => {
+  if (visite || appui || ev.pointerType !== "mouse") return;
+  const i = posteSous(ev);
+  renderer.domElement.style.cursor = i >= 0 ? "pointer" : "";
+  survoler(i);
+});
+
+// ================================================================ l'ambiance de chaque salle
+const AMB = [
+  { brume: 0x2a2118, pres: 16, loin: 70, ciel: 0xffe2b0, cielI: 0.55, lampe: 0xffd29a, lampeI: 1.4, voile: "rgba(60,40,15,.35)", temp: "19 °C", ressenti: "Un grand hall en bois qui sent le foin. La lumière tombe d'en haut sur le mannequin." },
+  { brume: 0x0d3a40, pres: 5, loin: 40, ciel: 0x8fe8e0, cielI: 0.4, lampe: 0x4fe0d2, lampeI: 1.6, voile: "rgba(20,120,130,.4)", temp: "27 °C", ressenti: "Humide et tiède. L'eau clapote, une buée flotte au-dessus du bassin." },
+  { brume: 0x2a0c04, pres: 3, loin: 30, ciel: 0xff8040, cielI: 0.35, lampe: 0xff6a1a, lampeI: 2.2, voile: "rgba(200,60,0,.5)", temp: "48 °C", ressenti: "Une chaleur écrasante. Des braises montent de la lave, l'air brûle les yeux." },
+  { brume: 0xcfe3ff, pres: 3, loin: 28, ciel: 0xbfdcff, cielI: 0.6, lampe: 0x9cc8ff, lampeI: 1.2, voile: "rgba(190,225,255,.6)", temp: "−15 °C", ressenti: "Un froid qui mord. La neige tombe du plafond et chaque souffle fait de la buée." },
+  { brume: 0xb9c2cc, pres: 12, loin: 60, ciel: 0xeef4ff, cielI: 0.7, lampe: 0xffffff, lampeI: 1, voile: "rgba(200,210,225,.25)", temp: "12 °C", ressenti: "Un courant d'air permanent qui siffle dans la colonne vitrée." },
+  { brume: 0x05040a, pres: 1, loin: 16, ciel: 0x6a5a9a, cielI: 0.1, lampe: 0x7a4cc8, lampeI: 0.9, voile: "rgba(0,0,0,.75)", temp: "9 °C", ressenti: "Presque le noir complet. On sent le vide juste devant ses pieds." },
+  { brume: 0x8a6a2a, pres: 2, loin: 24, ciel: 0xffd27a, cielI: 0.55, lampe: 0xffb347, lampeI: 1.5, voile: "rgba(190,140,40,.5)", temp: "41 °C", ressenti: "Sec et brûlant. Le sable vole dans une lumière jaune et pique la gorge." },
+  { brume: 0x070b16, pres: 3, loin: 28, ciel: 0x5070b0, cielI: 0.1, lampe: 0x9fd6ff, lampeI: 0.35, voile: "rgba(10,20,60,.6)", temp: "20 °C", ressenti: "Sombre, et ça grésille. Chaque arc éclaire toute la pièce d'un coup." },
+  { brume: 0xc9cdbf, pres: 2, loin: 22, ciel: 0xdfe6d8, cielI: 0.3, lampe: 0xd8f0d0, lampeI: 0.8, voile: "rgba(205,215,195,.5)", temp: "14 °C", ressenti: "Pâle et silencieux. Une brume blanche traîne au ras du sol entre les piliers." },
+  { brume: 0xcfe8c0, pres: 20, loin: 80, ciel: 0xf4fff0, cielI: 0.8, lampe: 0xfff2c8, lampeI: 1, voile: "rgba(160,220,140,.18)", temp: "22 °C", ressenti: "Lumineux et aéré. Des feuilles tombent doucement à travers les barreaux." },
+];
+const AMB_ALLEE = { brume: 0x231f1b, pres: 25, loin: 110, ciel: 0xfff0d8, cielI: 0.45, voile: "rgba(0,0,0,.25)", temp: "", ressenti: "L'allée centrale. On entend les salles à travers les murs." };
+POSTES.forEach((p, i) => { p.amb = AMB[i]; });
+
+// toits : seulement quand on est à l'intérieur
+const toits = [];
+function toit(x0, x1, z0, z1, y, texNom) {
+  const tex = toile(SORTES[texNom].m); tex.repeat.set(x1 - x0, z1 - z0);
+  const m = new THREE.Mesh(boite(x1 - x0, 0.4, z1 - z0), new THREE.MeshLambertMaterial({ map: tex }));
+  m.position.set((x0 + x1) / 2, y + 0.2, (z0 + z1) / 2); m.visible = false; m.castShadow = true; m.receiveShadow = true;
+  scene.add(m); toits.push(m);
+}
+SALLES.forEach((s) => toit(s.x0, s.x1 + 1, s.z0, s.z1 + 1, s.h, s.mur));
+toit(0, LX + 1, Z_ALLEE - 1, Z_FIN + 2, 9, "chene_noir");
+
+// ce qui flotte dans l'air de chaque salle
+const rond = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 32;
+  const g = c.getContext("2d"), d = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  d.addColorStop(0, "rgba(255,255,255,1)"); d.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = d; g.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
+})();
+function nuee(i, o) {
+  const s = SALLES[i], x0 = s.x0 + 1, x1 = s.x1, z0 = s.z0 + 1, z1 = s.z1;
+  const n = o.n, pos = new Float32Array(n * 3);
+  for (let k = 0; k < n; k++) { pos[k * 3] = x0 + Math.random() * (x1 - x0); pos[k * 3 + 1] = o.y0 + Math.random() * (o.y1 - o.y0); pos[k * 3 + 2] = z0 + Math.random() * (z1 - z0); }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color: o.couleur, size: o.taille, transparent: true, opacity: o.opacite ?? 0.85, depthWrite: false });
+  if (o.doux) mat.map = rond;
+  if (o.additif) mat.blending = THREE.AdditiveBlending;
+  scene.add(new THREE.Points(g, mat));
+  const [vx, vy, vz] = o.v, ond = o.ondule || 0;
+  const boucle = (v, a, b) => (v < a ? v + (b - a) : v > b ? v - (b - a) : v);
+  anime.push((t, dt) => {
+    for (let k = 0; k < n; k++) {
+      const j = k * 3, w = Math.sin(t * 1.3 + k) * ond;
+      pos[j] = boucle(pos[j] + (vx + w) * dt, x0, x1);
+      pos[j + 1] = boucle(pos[j + 1] + vy * dt, o.y0, o.y1);
+      pos[j + 2] = boucle(pos[j + 2] + (vz + Math.cos(t * 1.1 + k) * ond) * dt, z0, z1);
+    }
+    g.attributes.position.needsUpdate = true;
+  });
+}
+nuee(0, { n: 140, couleur: 0xffe2a0, taille: 0.08, y0: 0, y1: 16, v: [0, 0.06, 0], ondule: 0.15, opacite: 0.7 });
+nuee(1, { n: 90, couleur: 0xffffff, taille: 1.4, y0: -1, y1: 2.5, v: [0.15, 0.03, 0.05], ondule: 0.1, opacite: 0.16, doux: true });
+nuee(2, { n: 240, couleur: 0xff7a20, taille: 0.13, y0: -1, y1: 9.5, v: [0, 1.6, 0], ondule: 0.6, additif: true, opacite: 1 });
+nuee(3, { n: 450, couleur: 0xffffff, taille: 0.13, y0: 0, y1: 9.8, v: [0, -1.1, 0], ondule: 0.5, opacite: 0.95 });
+nuee(5, { n: 140, couleur: 0x9a6cff, taille: 0.12, y0: -10, y1: 7, v: [0, 0.35, 0], ondule: 0.15, additif: true, opacite: 0.9 });
+nuee(6, { n: 380, couleur: 0xe8c77a, taille: 0.09, y0: 0, y1: 8, v: [2.6, 0, 0.3], ondule: 0.8, opacite: 0.85 });
+nuee(7, { n: 80, couleur: 0x9fd6ff, taille: 0.08, y0: 0, y1: 11, v: [0, 0, 0], ondule: 1.2, additif: true, opacite: 1 });
+nuee(8, { n: 170, couleur: 0xf2f6ea, taille: 1.8, y0: 0, y1: 1.3, v: [0.12, 0, 0.05], ondule: 0.1, opacite: 0.13, doux: true });
+nuee(9, { n: 100, couleur: 0x6aa84f, taille: 0.17, y0: 0, y1: 21, v: [0, -0.7, 0], ondule: 0.9, opacite: 0.95 });
+
+// ================================================================ visite à pied
+const PASSE = new Set(["tapis_bleu", "tapis_rouge", "tapis_vert", "chaine", "lanterne_suspendue", "lanterne_murale"]);
+const solide = (x, y, z) => { const bl = blocs.get(cle(x, y, z)); return !!bl && !PASSE.has(bl.t); };
+function libre(px, pz) {
+  for (const [dx, dz] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) {
+    const x = Math.floor(px + dx), z = Math.floor(pz + dz), sol = blocs.get(cle(x, -1, z));
+    if (!sol || sol.t === "lave" || sol.t === "eau") return false;
+    if (solide(x, 0, z) || solide(x, 1, z)) return false;
+  }
+  return true;
+}
+function zoneDe(x, z) {
+  return SALLES.findIndex((s) => x >= s.x0 + 1 && x < s.x1 && z >= s.z0 + 1 && z < s.z1);
+}
+let visite = null;
+const ecranVisite = document.getElementById("visite"), voile = document.getElementById("voile");
+const touches = new Set();
+const brumeCible = new THREE.Color(), cielCible = new THREE.Color();
+let pres = 25, loin = 110, cielI = 0.45;
+const etat = { cam: null, cible: null };
+
+function entrer(i) {
+  choisir(-1); vol = null;
+  etat.cam = camera.position.clone(); etat.cible = controls.target.clone();
+  let x, z, vx, vz;
+  if (i >= 0) { [x, z] = POSTES[i].C.monde(11, 1.3); [vx, vz] = POSTES[i].C.monde(11, 12); }
+  else { x = 2.5; z = MILIEU + 0.5; vx = LX; vz = MILIEU + 0.5; }
+  visite = { x, z, lacet: Math.atan2(-(vx - x), -(vz - z)), tangage: 0, zone: -2 };
+  controls.enabled = false;
+  camera.fov = 70; camera.rotation.order = "YXZ";
+  for (const m of toits) m.visible = true;
+  soleil.intensity = 0;
+  for (const el of [document.getElementById("panneau"), document.getElementById("actions"), document.getElementById("aide"), calque]) el.hidden = true;
+  ecranVisite.hidden = false;
+  document.getElementById("tactile").hidden = !matchMedia("(pointer: coarse)").matches;
+  lampesVisite();
+  taille();
+}
+function sortir() {
+  if (!visite) return;
+  visite = null; touches.clear();
+  controls.enabled = true; camera.fov = 45; camera.rotation.order = "XYZ";
+  camera.position.copy(etat.cam); controls.target.copy(etat.cible);
+  for (const m of toits) m.visible = false;
+  for (const el of [document.getElementById("panneau"), document.getElementById("actions"), document.getElementById("aide")]) el.hidden = false;
+  calque.hidden = btNoms.getAttribute("aria-pressed") !== "true";
+  ecranVisite.hidden = true; voile.style.background = "";
+  scene.background = null; scene.fog.near = 220; scene.fog.far = 520;
+  ambiance(btSoir.getAttribute("aria-pressed") === "true");
+  taille();
+}
+function lampesVisite() {
+  lampes.forEach((l, k) => {
+    if (k < 6) { l.color.set(0xffc477); l.intensity = 0.9; }
+    else { l.color.set(AMB[k - 6].lampe); l.intensity = AMB[k - 6].lampeI; }
+  });
+}
+function changeZone(i) {
+  visite.zone = i;
+  const a = i >= 0 ? AMB[i] : AMB_ALLEE;
+  brumeCible.set(a.brume); cielCible.set(a.ciel); pres = a.pres; loin = a.loin; cielI = a.cielI;
+  voile.style.background = `radial-gradient(ellipse at center, transparent 40%, ${a.voile} 100%)`;
+  document.getElementById("ou").textContent = i >= 0 ? `${i + 1}. ${POSTES[i].nom}` : "L'allée";
+  document.getElementById("temp").textContent = a.temp; document.getElementById("temp").hidden = !a.temp;
+  const r = document.getElementById("ressenti");
+  r.textContent = a.ressenti; r.classList.remove("montre"); void r.offsetWidth; r.classList.add("montre");
+}
+function marche(dt) {
+  const v = visite;
+  let av = 0, cote = 0;
+  if (touches.has("KeyW") || touches.has("ArrowUp") || touches.has("avant")) av += 1;
+  if (touches.has("KeyS") || touches.has("ArrowDown") || touches.has("arriere")) av -= 1;
+  if (touches.has("KeyA") || touches.has("ArrowLeft")) cote -= 1;
+  if (touches.has("KeyD") || touches.has("ArrowRight")) cote += 1;
+  const sx = -Math.sin(v.lacet), sz = -Math.cos(v.lacet), vit = 4.3 * dt;
+  const dx = (sx * av + -sz * cote) * vit, dz = (sz * av + sx * cote) * vit;
+  if (dx && libre(v.x + dx, v.z)) v.x += dx;
+  if (dz && libre(v.x, v.z + dz)) v.z += dz;
+  const zone = zoneDe(v.x, v.z);
+  if (zone !== v.zone) changeZone(zone);
+  camera.position.set(v.x, 1.62 + Math.sin((v.x + v.z) * 2.2) * 0.03 * (av || cote ? 1 : 0), v.z);
+  camera.rotation.set(v.tangage, v.lacet, 0);
+  // l'air de la salle arrive doucement
+  const k = Math.min(1, dt * 2.5), f = scene.fog;
+  f.color.lerp(brumeCible, k); f.near += (pres - f.near) * k; f.far += (loin - f.far) * k;
+  ciel.color.lerp(cielCible, k); ciel.intensity += (cielI - ciel.intensity) * k;
+  scene.background = f.color;
+}
+addEventListener("keydown", (e) => {
+  if (!visite) return;
+  if (e.code === "Escape") { sortir(); return; }
+  touches.add(e.code);
+  if (e.code.startsWith("Arrow")) e.preventDefault();
+});
+addEventListener("keyup", (e) => touches.delete(e.code));
+addEventListener("blur", () => touches.clear());
+let regard = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { if (visite) { regard = { x: e.clientX, y: e.clientY, id: e.pointerId }; renderer.domElement.setPointerCapture(e.pointerId); } });
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (!visite || !regard || e.pointerId !== regard.id) return;
+  visite.lacet -= (e.clientX - regard.x) * 0.005; visite.tangage = Math.max(-1.3, Math.min(1.3, visite.tangage - (e.clientY - regard.y) * 0.005));
+  regard.x = e.clientX; regard.y = e.clientY;
+});
+renderer.domElement.addEventListener("pointerup", () => { regard = null; });
+for (const [id, nom] of [["avant", "avant"], ["arriere", "arriere"]]) {
+  const bt = document.getElementById(id);
+  bt.addEventListener("pointerdown", (e) => { e.preventDefault(); touches.add(nom); });
+  for (const ev of ["pointerup", "pointerleave", "pointercancel"]) bt.addEventListener(ev, () => touches.delete(nom));
+}
+document.getElementById("sortir").addEventListener("click", sortir);
+document.getElementById("entrer-salle").addEventListener("click", () => { if (choisi >= 0) entrer(choisi); });
+document.getElementById("entrer").addEventListener("click", () => entrer(-1));
+
+// ================================================================ boucle
+function taille() {
+  const w = hote.clientWidth, h = hote.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h;
+  // le centre de la vue est décalé pour ne pas tomber sous le panneau
+  const pan = document.getElementById("panneau").getBoundingClientRect();
+  if (visite) camera.clearViewOffset();
+  else if (w > 640) camera.setViewOffset(w, h, -Math.round((pan.right + 8) / 2), 0, w, h);
+  else camera.setViewOffset(w, h, 0, Math.round((h - pan.top + 8) / 2), w, h);
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", taille); taille();
+
+const horloge = new THREE.Clock(), v3 = new THREE.Vector3();
+function boucle() {
+  const dt = Math.min(horloge.getDelta(), 0.05), t = horloge.elapsedTime;
+  if (visite) marche(dt);
+  else if (vol) {
+    vol.t = Math.min(1, (performance.now() - vol.debut) / 900);
+    const k = vol.t < 0.5 ? 2 * vol.t * vol.t : 1 - Math.pow(-2 * vol.t + 2, 2) / 2;
+    camera.position.lerpVectors(vol.p0, vol.p1, k); controls.target.lerpVectors(vol.c0, vol.c1, k);
+    if (vol.t >= 1) vol = null;
+  }
+  if (!visite) controls.update();
+  for (const f of anime) f(t, dt);
+  renderer.render(scene, camera);
+  if (!calque.hidden) {
+    const w = hote.clientWidth, h = hote.clientHeight;
+    for (const e of etiquettes) {
+      v3.copy(e.ancre).project(camera);
+      if (v3.z > 1 || v3.x < -1.2 || v3.x > 1.2 || v3.y < -1.2 || v3.y > 1.2) { e.el.style.display = "none"; continue; }
+      e.el.style.display = "";
+      e.el.style.transform = `translate(${((v3.x + 1) / 2) * w}px, ${((1 - v3.y) / 2) * h}px) translate(-50%, -100%)`;
+    }
+  }
+  requestAnimationFrame(boucle);
+}
+boucle();
+})();
+</script>

@@ -1,0 +1,27 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.8,
+  "downfall": 0,
+  "effects": {
+    "sky_color": 7907327,
+    "fog_color": 3050646,
+    "water_color": 3127748,
+    "water_fog_color": 329011,
+    "grass_color": 7979098,
+    "foliage_color": 5877296,
+    "particle": {
+      "options": {
+        "type": "minecraft:falling_water"
+      },
+      "probability": 0.006
+    },
+    "additions_sound": {
+      "sound": "minecraft:block.water.ambient",
+      "tick_chance": 0.02
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {},
+  "features": []
+}

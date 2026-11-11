@@ -1,0 +1,13 @@
+{
+  "type": "cabane:entrainement",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:entrainement",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}
