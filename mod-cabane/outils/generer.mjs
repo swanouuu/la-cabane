@@ -18,6 +18,7 @@ import { genererInfiltration } from "./infiltration.mjs";
 import { genererCatch, sonsCatch } from "./catch.mjs";
 import { genererBackrooms, sonsBackrooms } from "./backrooms.mjs";
 import { genererEntrainement } from "./entrainement.mjs";
+import { genererSceau } from "./sceau.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
 import { genererSharingan, sonsSharingan } from "./sharingan.mjs";
@@ -474,6 +475,8 @@ console.log(`Catch : ${genererCatch({ ecrire, lang })} tenues et masques`);
 genererBackrooms({ ecrire, lang });
 // la salle d'entraînement (/entrainement) : dimension, un biome par salle, bouton du retour (voir entrainement/Entrainement.java)
 console.log(`Salle d'entraînement : ${genererEntrainement({ ecrire, lang })} salles`);
+// la salle du sceau (/sceau) : dimension, biome à l'eau rouge, bouton du retour (voir sceau/Sceau.java)
+genererSceau({ ecrire, lang });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",

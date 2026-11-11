@@ -1,0 +1,13 @@
+{
+  "type": "cabane:sceau",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:sceau",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}
