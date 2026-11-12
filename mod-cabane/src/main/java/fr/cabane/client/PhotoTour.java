@@ -235,6 +235,21 @@ public final class PhotoTour {
                 net.minecraft.client.KeyMapping.click(Minecraft.getInstance().options.keyAttack.getKey());
                 return 2;
             }
+            // « act geste » : un coup avec ce qu'on tient, même fenêtre en arrière-plan (frappe ce qu'on vise) ;
+            // « act utiliser » / « act lacher » : utiliser l'objet en main, puis le relâcher (ce qu'on charge)
+            case "geste" -> {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult vise) {
+                    mc.gameMode.attack(mc.player, vise.getEntity());
+                }
+                mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                return 2;
+            }
+            case "lacher" -> {
+                Minecraft mc = Minecraft.getInstance();
+                mc.gameMode.releaseUsingItem(mc.player);
+                return 2;
+            }
             // « act clic-droit » : un vrai clic droit ; « act sauter 1|0 » : appuyer (ou lâcher) la touche pour sauter
             case "clic-droit" -> {
                 net.minecraft.client.KeyMapping.click(Minecraft.getInstance().options.keyUse.getKey());
@@ -242,6 +257,11 @@ public final class PhotoTour {
             }
             case "sauter" -> {
                 Minecraft.getInstance().options.keyJump.setDown(e[2].equals("1"));
+                return 2;
+            }
+            // « act droit 1|0 » : garder (ou lâcher) le clic droit (ce qu'on charge)
+            case "droit" -> {
+                Minecraft.getInstance().options.keyUse.setDown(e[2].equals("1"));
                 return 2;
             }
             // « act courir 1|0 » : garder (ou lâcher) la touche pour courir ; dans l'eau, il nage

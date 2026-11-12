@@ -44,6 +44,7 @@ public class Cabane {
         fr.cabane.backrooms.Backrooms.register(modBus);
         fr.cabane.entrainement.Entrainement.register(modBus);
         fr.cabane.sceau.Sceau.register(modBus);
+        fr.cabane.lames.Lames.register(modBus);
         modBus.addListener(fr.cabane.hub.Corps::register);
         modBus.addListener(PhoneNetwork::register);
         modBus.addListener(Economie::register);

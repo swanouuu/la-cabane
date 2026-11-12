@@ -132,6 +132,8 @@ dependencies {
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
     // API de Curios : les accessoires (queue de Saiyan, détecteurs…) ; le mod est dans le pack et dans run/mods
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    // playerAnimator, livré dans Emotecraft (le pack l'a) : les coups articulés des lames de la Brume
+    compileOnly files("libs/player-animation-lib-forge-2.0.1+1.21.1.jar")
     compileOnly "maven.modrinth:corpse:SElnDbg1"
     compileOnly "maven.modrinth:jade:eYz2YBGT"
     // Example optional mod dependency with JEI

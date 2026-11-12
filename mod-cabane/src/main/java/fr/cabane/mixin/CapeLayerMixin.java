@@ -13,8 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Pas de cape tant qu'un pouvoir est éveillé (Susano, Hachibi, la marque, Minato, la combinaison d'une espionne, un
- * fruit du démon…), ni en tenue de catch, même celle que Create Stuff Additions remet dans la peau après nous ; elle
- * revient quand le pouvoir se rendort.
+ * fruit du démon…), ni en tenue de catch, même celle que Create Stuff Additions remet dans la peau après nous, ni avec
+ * une lame de la Brume (en main ou rangée dans le dos : la cape passerait à travers) ; elle revient quand le pouvoir se rendort.
  */
 @Mixin(CapeLayer.class)
 public abstract class CapeLayerMixin {
@@ -23,7 +23,8 @@ public abstract class CapeLayerMixin {
     private void cabane$transforme(PoseStack ps, MultiBufferSource buffers, int lumiere, AbstractClientPlayer joueur, float a, float b, float c,
             float d, float e, float f, CallbackInfo ci) {
         if (ClientEspionne.enTenue(joueur) || ClientSusano.transforme(joueur) || fr.cabane.client.lutte.CorpsCatcheur.enTenue(joueur)
-                || fr.cabane.client.pouvoir.ClientSharingan.niveau(joueur.getUUID()) > 0) {
+                || fr.cabane.client.pouvoir.ClientSharingan.niveau(joueur.getUUID()) > 0
+                || fr.cabane.client.pouvoir.ClientLames.aUneLame(joueur)) {
             ci.cancel();
         }
     }
