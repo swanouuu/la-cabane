@@ -2,6 +2,12 @@ package fr.cabane.pouvoir;
 
 import fr.cabane.Cabane;
 import io.netty.buffer.ByteBuf;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -61,18 +67,42 @@ public final class Geants {
         }));
     }
 
-    /** Le coup part sur le joueur dans le géant, s'il est vraiment à portée de la boîte (comme un coup normal). */
+    /** Le dernier coup de pouvoir de chacun sur un géant (en ticks du serveur), pour la recharge. */
+    private static final Map<UUID, Integer> DERNIER = new HashMap<>();
+
+    /**
+     * Le coup part sur le joueur dans le géant, s'il est vraiment à portée de la boîte. Sans pouvoir éveillé, c'est un
+     * coup normal (l'arme en main) ; pouvoir éveillé, c'est le coup du pouvoir (sa force et sa portée selon le niveau),
+     * parce que ses propres coups visent autour du petit joueur caché dedans et ne trouvent pas le géant.
+     */
     private static void frapper(ServerPlayer a, int cible) {
-        if (!a.isAlive() || a.isSpectator() || !(a.serverLevel().getEntity(cible) instanceof ServerPlayer g) || g == a) {
+        if (!a.isAlive() || a.isSpectator() || !(a.serverLevel().getEntity(cible) instanceof ServerPlayer g) || g == a || sorte(a) != AUCUN) {
             return;
         }
         AABB b = boite(g.position(), sorte(g));
         if (b == null) {
             return;
         }
-        double portee = a.entityInteractionRange() + 2;
-        if (distance2(b, a.getEyePosition()) <= portee * portee) {
+        int niveau = Pouvoirs.niveau(a);
+        Pouvoirs.Force f = niveau > 0 ? Pouvoirs.force(niveau) : null;
+        double portee = f == null ? a.entityInteractionRange() + 2 : Math.max(a.entityInteractionRange() + 2, f.portee() + 1);
+        if (distance2(b, a.getEyePosition()) > portee * portee) {
+            return;
+        }
+        if (f == null) {
             a.attack(g);
+            return;
+        }
+        int maintenant = a.server.getTickCount();
+        if (maintenant - DERNIER.getOrDefault(a.getUUID(), -100) < f.recharge()) {
+            return;
+        }
+        DERNIER.put(a.getUUID(), maintenant);
+        if (g.hurt(a.damageSources().playerAttack(a), f.frappe())) {
+            Vec3 c = b.getCenter();
+            a.serverLevel().sendParticles(ParticleTypes.SWEEP_ATTACK, Math.clamp(a.getX(), b.minX, b.maxX), Math.clamp(a.getEyeY(), b.minY, b.maxY),
+                    Math.clamp(a.getZ(), b.minZ, b.maxZ), 1, 0, 0, 0, 0);
+            a.serverLevel().playSound(null, c.x, a.getEyeY(), c.z, SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.4F, 0.8F);
         }
     }
 

@@ -120,7 +120,7 @@ public final class Pouvoirs {
     }
 
     /** Ce que le Susano fait selon son niveau : le niveau 2 frappe plus fort, plus loin et plus vite. */
-    private record Force(double portee, float frappe, int recharge, int portePrise, float broie, float jet, double elanJet,
+    record Force(double portee, float frappe, int recharge, int portePrise, float broie, float jet, double elanJet,
                          float charge, double elanCharge) {
     }
 
@@ -131,7 +131,7 @@ public final class Pouvoirs {
     private static final float ECRASEMENT = 16;
     private static final float ONDE = 6;
 
-    private static Force force(int niveau) {
+    static Force force(int niveau) {
         return niveau >= 3 ? NIVEAU_3 : niveau >= 2 ? NIVEAU_2 : NIVEAU_1;
     }
 

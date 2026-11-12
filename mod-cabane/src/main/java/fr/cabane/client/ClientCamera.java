@@ -38,6 +38,12 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
  */
 public final class ClientCamera {
     static boolean actif;
+
+    /** Le téléphone est sorti : son clic gauche prend la photo, il ne frappe personne. */
+    public static boolean sorti() {
+        return actif;
+    }
+
     /** 0 photo (paysage), 1 portrait, 2 selfie (debout, objectif de face). */
     static int mode;
     private static final String[] MODES = {"PHOTO", "PORTRAIT", "SELFIE"};

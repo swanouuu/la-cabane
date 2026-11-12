@@ -1,6 +1,7 @@
 package fr.cabane.client.pouvoir;
 
 import fr.cabane.Cabane;
+import fr.cabane.client.ClientCamera;
 import fr.cabane.client.hachibi4.ClientHachibi4;
 import fr.cabane.pouvoir.Geants;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -29,14 +31,21 @@ public final class ClientGeants {
 
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
     public static final class Evenements {
-        @SubscribeEvent
+        /**
+         * En dernier, et même quand un pouvoir a déjà pris le clic (le Susano, Hachibi, les fruits… annulent l'événement
+         * pour frapper à leur façon) : leurs coups visent autour du petit joueur caché dans le géant et ne le trouvent
+         * pas, alors c'est ici que le coup part sur le géant. Le serveur décide de la force (normale, ou celle du pouvoir).
+         */
+        @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
         public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
             Minecraft mc = Minecraft.getInstance();
-            if (!event.isAttack() || mc.player == null || mc.level == null || mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.ENTITY) {
+            if (!event.isAttack() || mc.player == null || mc.level == null || mc.screen != null || ClientCamera.sorti()
+                    || mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.ENTITY || sorte(mc.player) != Geants.AUCUN) {
                 return;
             }
+            boolean pouvoir = event.isCanceled();
             Vec3 oeil = mc.player.getEyePosition();
-            double portee = mc.player.entityInteractionRange() + 1.5;
+            double portee = mc.player.entityInteractionRange() + 1.5 + (pouvoir ? 5 : 0);
             Vec3 bout = oeil.add(mc.player.getViewVector(1F).scale(portee));
             double bloc = mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK ? mc.hitResult.getLocation().distanceTo(oeil) : Double.MAX_VALUE;
             Player vise = null;
@@ -63,10 +72,13 @@ public final class ClientGeants {
                 }
             }
             if (vise != null) {
-                event.setCanceled(true);
-                event.setSwingHand(true);
+                if (!pouvoir) {
+                    // un coup normal : on le prend (le jeu, lui, ne voit que du vide ou un bloc)
+                    event.setCanceled(true);
+                    event.setSwingHand(true);
+                    mc.player.resetAttackStrengthTicker();
+                }
                 PacketDistributor.sendToServer(new Geants.Frappe(vise.getId()));
-                mc.player.resetAttackStrengthTicker();
             }
         }
 
