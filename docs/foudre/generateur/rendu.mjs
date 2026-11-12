@@ -658,7 +658,11 @@ const NIVEAU_2 = [
   "LISTES : FOUDRE (NIVEAU 1 SEULEMENT) ET FOUDRE2 (NIVEAU 1 PUIS 2). REPOS : 1 MIN S'IL EST MONTE AU NIVEAU 2",
 ];
 
-const quoi = process.argv[2];
+// les briques servent aussi aux planches du niveau 3 (docs/foudre3)
+export { finir, zigzag, trait, eclair, crepite, pointSur, manteau, nuage, brulure, anneau, dessus, foudreTombe, dome, oeil, repere, LUEURS, BLANC, CIEL, AURA, NUIT, MEMBRES, ZURI, CW, CH, M, rect };
+
+const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const quoi = PRINCIPAL ? process.argv[2] : "aucune";
 if (!quoi || quoi === "1") {
   planche("planche-foudre.png", "FOUDRE : EVEIL 1", NIVEAU_1, [
     ["EVEIL : LA FOUDRE LE FRAPPE", eveil, { lacet: -24, tangage: 12, echelle: 6.2, pied: 450, centre: [0, 10, 0] }],

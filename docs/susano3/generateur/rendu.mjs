@@ -749,8 +749,12 @@ const brule = (pos, n = 18) => [
   ...Array.from({ length: 10 }, (_, i) => [add(pos, [Math.cos(i * 0.63) * (0.9 + hache(i, 5, 5)), 0, Math.sin(i * 0.63) * (0.9 + hache(i, 6, 6))]), 0.3 + hache(i, 7, 7) * 0.25, i + 40]),
 ];
 
+// importé (par le niveau 4) : seulement les briques, pas la planche
+const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 const CW = 440, CH = 520, M = 34;
-if (process.argv.includes("anim")) {
+if (!PRINCIPAL) {
+  // rien
+} else if (process.argv.includes("anim")) {
   const dossier = path.join(ICI, "images");
   fs.rmSync(dossier, { recursive: true, force: true });
   fs.mkdirSync(dossier, { recursive: true });
@@ -833,3 +837,5 @@ if (process.argv.includes("anim")) {
   ecrirePng(path.join(ICI, "..", "planche-susano3.png"), W, H, planche);
   console.log("ok", W, H);
 }
+
+export { style, ecran, polygone, opaque, melange, ligne, briller, sol, joueur, boite, seg, axesLe, coins, dessinerChakra, ruban, casque, lame, susano, flammes, COULEURS, DROIT, FINI, POSES };

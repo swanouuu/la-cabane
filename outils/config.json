@@ -2,6 +2,6 @@
   "nomDuPack": "SakaiMod",
   "urlDuPack": "https://raw.githubusercontent.com/swanouuu/la-cabane/main/pack/pack.toml",
   "instancePrism": "%APPDATA%/PrismLauncher/instances/La Cabane",
-  "adresseServeur": "",
-  "memoireMaxMo": 8192
+  "adresseServeur": "91.197.6.185:29970",
+  "memoireMaxMo": 6144
 }
