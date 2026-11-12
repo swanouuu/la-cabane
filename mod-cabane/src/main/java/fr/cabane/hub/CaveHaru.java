@@ -101,7 +101,8 @@ public final class CaveHaru {
 
     /** La porte camouflée dans le couvercle du fût n°2, et l'intérieur du fût (coordonnées du plan). */
     private static final int[][] PORTE = {{16, -4, 5}, {16, -3, 5}};
-    private static final int OUVERTE_TICKS = 80;
+    /** Le couvercle reste ouvert 3 s, puis se referme dès que personne n'est dans le passage. */
+    private static final int OUVERTE_TICKS = 60;
 
     private static Chantier chantier;
     private static long fermerA = -1;
@@ -633,9 +634,13 @@ public final class CaveHaru {
         return c[0] == 16 && c[2] == 5 && (c[1] == -4 || c[1] == -3);
     }
 
-    /** Dans le fût creux ou sur l'échelle juste derrière la porte (coordonnées du plan, pieds du joueur). */
-    private static boolean derriere(int[] c) {
-        return c[0] >= 15 && c[0] <= 17 && c[1] >= -5 && c[1] <= -2 && c[2] >= 6 && c[2] <= 8;
+    /**
+     * En train de remonter l'échelle, juste sous le fond du fût (coordonnées du plan, pieds du joueur). Celui qui se tient
+     * dans le fût n'ouvre rien tout seul : sinon le couvercle restait ouvert tant qu'on était dedans, et tout le monde voyait
+     * le passage. De l'intérieur, un clic droit sur le couvercle l'ouvre.
+     */
+    private static boolean remonte(int[] c) {
+        return c[0] == 16 && c[2] == 8 && c[1] >= -7 && c[1] <= -5;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -667,7 +672,7 @@ public final class CaveHaru {
         }
     }
 
-    /** Ouvre la porte devant ceux qui sortent, la referme quand le passage est libre, la remet si elle a disparu. */
+    /** Ouvre la porte devant ceux qui remontent l'échelle, la referme quand le passage est libre, la remet si elle a disparu. */
     private static void garder(MinecraftServer server) {
         if (++compteur % 10 != 0) {
             return;
@@ -683,7 +688,7 @@ public final class CaveHaru {
             return;
         }
         for (ServerPlayer p : level.players()) {
-            if (!p.isSpectator() && p.distanceToSqr(bas.getCenter()) < 16 && derriere(pose.plan(p.blockPosition()))) {
+            if (!p.isSpectator() && p.distanceToSqr(bas.getCenter()) < 30 && remonte(pose.plan(p.blockPosition())) && fermerA < 0) {
                 ouvrir(level, pose, p);
             }
         }
