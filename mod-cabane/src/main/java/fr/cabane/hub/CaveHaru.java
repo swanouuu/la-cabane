@@ -24,7 +24,6 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -39,7 +38,6 @@ import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.decoration.Painting;
@@ -588,7 +586,6 @@ public final class CaveHaru {
                 tableau.addTag(TAG);
                 level.addFreshEntity(tableau);
             }
-            barman(o.getAsJsonArray("haru"));
             // le râtelier du bar : une boisson par colonne
             for (JsonElement t : o.getAsJsonArray("tonneaux")) {
                 JsonArray a = t.getAsJsonArray();
@@ -606,35 +603,17 @@ public final class CaveHaru {
                 }
             }
         }
-
-        /** Haru derrière son comptoir : un PNJ immobile qui porte son skin. */
-        private void barman(JsonArray h) {
-            Vec3 v = pose.point(h.get(0).getAsDouble(), h.get(1).getAsDouble(), h.get(2).getAsDouble());
-            float lacet = pose.yaw(h.get(3).getAsFloat());
-            String snbt = "{id:\"easy_npc:humanoid\",CustomName:'{\"text\":\"Haru\"}',CustomNameVisible:0b,PersistenceRequired:1b,Invulnerable:1b,"
-                    + "NoAI:1b,Tags:[\"" + TAG + "\"],EasyNPCVersion:3,VariantType:\"STEVE\","
-                    + "SkinData:{Type:\"RESOURCE_LOCATION\",Texture:\"cabane:textures/entity/pnj/haru.png\"},"
-                    + "attributes:[{id:\"minecraft:generic.knockback_resistance\",base:1.0d}],ObjectiveData:{ObjectiveDataSet:[]},Status:{finalized:1b}}";
-            try {
-                Entity e = EntityType.loadEntityRecursive(TagParser.parseTag(snbt), level, x -> {
-                    x.moveTo(v.x, v.y, v.z, lacet, 0F);
-                    return x;
-                });
-                if (e instanceof LivingEntity l) {
-                    l.setYHeadRot(lacet);
-                    l.setYBodyRot(lacet);
-                    level.addFreshEntity(l);
-                }
-            } catch (com.mojang.brigadier.exceptions.CommandSyntaxException ex) {
-                LOG.error("Barman de la cave illisible", ex);
-            }
-        }
     }
 
-    /** Un tableau ou le barman de la cave qui se recharge alors que la cave a été enlevée (pas encore chargé pendant l'annulation). */
+    /**
+     * Ce qui se recharge alors qu'il ne devrait plus être là : un tableau de la cave après une annulation (pas encore chargé
+     * pendant l'annulation), et le barman Haru des premières caves (le PNJ a été retiré à la demande du joueur).
+     */
     @SubscribeEvent
     public static void rejoint(EntityJoinLevelEvent event) {
-        if (event.getEntity().getTags().contains(TAG) && event.getLevel() instanceof ServerLevel l && !Donnees.get(l.getServer()).present) {
+        Entity e = event.getEntity();
+        if (e.getTags().contains(TAG) && event.getLevel() instanceof ServerLevel l
+                && (!(e instanceof Painting) || !Donnees.get(l.getServer()).present)) {
             event.setCanceled(true);
         }
     }

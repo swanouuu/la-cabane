@@ -198,7 +198,7 @@ pose(9, 1, 0, 'porte', 'porte', 'n', false, 'bas_g'); pose(9, 2, 0, 'porte', 'po
 pose(10, 1, 0, 'porte', 'porte', 'n', false, 'bas_d'); pose(10, 2, 0, 'porte', 'porte', 'n', false, 'haut_d');
 for (const x of [9, 10]) pose(x, 0, -1, 'ep_esc', 'esc', 's');
 for (let x = 8; x <= 11; x++) pose(x, 3, 0, 'buche', 'cube', 'x');
-affiche('enseigne', 8, 4, -1, 'n');
+affiche('enseigne', 7, 4, -1, 'n'); // 6 × 2, d'un poteau à l'autre, centrée sur la porte
 // fûts dehors
 pose(6, 0, -1, 'tonneau', 'cube', 'y'); pose(6, 1, -1, 'lanterne', 'petit');
 pose(13, 0, -1, 'tonneau', 'cube', 'y'); pose(13, 1, -1, 'tonneau', 'cube', 'y'); pose(13, 2, -1, 'lanterne', 'petit');
@@ -229,9 +229,8 @@ for (const x of [12, 13]) { pose(x, 4, 8, 'cn_dalle', 'dalle'); deco(x, 4, 8, 'b
 affiche('carte', 17, 4, 8, 'n');
 for (const x of [13, 15, 17]) pose(x, 2, 7, 'robinet', 'robinet', 'n');
 affiche('happy', 14, 4, 8, 'n');
-// une estrade derrière le comptoir : le barman dépasse
+// une estrade derrière le comptoir : celui qui sert dépasse du comptoir
 for (let x = 12; x <= 18; x++) for (const z of [6, 7]) pose(x, 1, z, 'ep_dalle', 'dalle');
-haru(15.5, 1.5, 6.6, 180);
 // tables
 function table(x, z) { pose(x, 1, z, 'barriere', 'poteau'); pose(x, 2, z, 'plaque', 'plaque'); }
 table(3, 2); pose(2, 1, 2, 'cn_esc', 'esc', 'w'); pose(4, 1, 2, 'cn_esc', 'esc', 'e');
@@ -690,11 +689,14 @@ function ruban(g, x, y, w, h, coul, texteR, tCoul) {
 
 // tailles en blocs entiers : ce sont de vrais tableaux dans le jeu
 const AFFICHES = {
-  enseigne: { titre: "L'enseigne (dehors, au-dessus de la porte)", w: 5, h: 1, dessin(g, W, H) {
-    bois(g, W, H, [70, 42, 24]); cadre(g, W, H, '#c89a52', 8, 6); cadre(g, W, H, '#3a2210', 3, 18);
-    texte(g, 'LA CAVE À HARU', W / 2, H * 0.43, 84, RYE, '#f2c14e', { contour: '#3a1a08', ep: 10, maxW: W - 260 });
-    texte(g, 'bières · vins · secrets', W / 2, H * 0.8, 24, FELL, '#f1e3c6');
-    chope(g, 40, H * 0.22, 8); chope(g, W - 112, H * 0.22, 8);
+  enseigne: { titre: "L'enseigne (dehors, au-dessus de la porte)", w: 6, h: 2, dessin(g, W, H) {
+    bois(g, W, H, [70, 42, 24]); cadre(g, W, H, '#c89a52', 12, 8); cadre(g, W, H, '#3a2210', 4, 28);
+    // petits clous dorés dans les coins
+    g.fillStyle = '#e8c068'; for (const [x, y] of [[44, 44], [W - 52, 44], [44, H - 52], [W - 52, H - 52]]) g.fillRect(x, y, 8, 8);
+    texte(g, 'LA CAVE À HARU', W / 2, H * 0.42, 150, RYE, '#f2c14e', { contour: '#3a1a08', ep: 16, maxW: W - 500, ombre: 'rgba(0,0,0,0.45)' });
+    g.fillStyle = '#c89a52'; g.fillRect(W / 2 - 300, H * 0.66, 600, 3);
+    texte(g, 'bières · vins · secrets', W / 2, H * 0.78, 44, FELL, '#f1e3c6');
+    chope(g, 76, H * 0.3, 13); chope(g, W - 196, H * 0.3, 13, '#c0451e');
   } },
   cave: { titre: 'La Cave à Haru (au-dessus de la cheminée)', w: 2, h: 2, dessin(g, W, H) {
     papier(g, W, H, '#ead6a6'); cadre(g, W, H, '#5a2a14', 6, 8); cadre(g, W, H, '#8b1e1e', 2, 20);
@@ -986,7 +988,7 @@ function boucle() { requestAnimationFrame(boucle); controles.update(); const t =
   preparerSkin(await charge('skin-haru.png'));
   dessinerAffiches();
   for (const a of AFFS) accroche(a);
-  statueHaru();
+  if (HARU) statueHaru();
   choisirVue('dehors');
   window.cave = { camera, controles, scene, etat, construire };
   $('chargement').remove();
