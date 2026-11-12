@@ -64,6 +64,11 @@ public final class ClientLames {
 
     private static final Map<Integer, Integer> PORTEES = new HashMap<>();
     private static final Set<Integer> AVALES = new HashSet<>();
+    /**
+     * Les joueurs vraiment dessinés à cette image (la couche des lames est passée sur eux). Les autres (cachés dans le
+     * Kamui, en corbeaux, dans une cinématique, invisibles…) n'ont pas de traînée non plus : elle trahirait où ils sont.
+     */
+    private static final Set<Integer> DESSINES = new HashSet<>();
 
     public static void portees(Lames.Portees p) {
         PORTEES.put(p.entite(), p.masque());
@@ -307,6 +312,7 @@ public final class ClientLames {
             if (j.isInvisible() || AVALES.contains(j.getId())) {
                 return;
             }
+            DESSINES.add(j.getId());
             PlayerModel<AbstractClientPlayer> modele = getParentModel();
             ItemStack main = j.getMainHandItem(), autre = j.getOffhandItem();
             Sorte enMain = Lames.sorte(main), enAutre = Lames.sorte(autre);
@@ -412,11 +418,18 @@ public final class ClientLames {
      */
     @SubscribeEvent
     public static void trainees(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || ETATS.isEmpty()) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return;
         }
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null) {
+        try {
+            trainees(event, Minecraft.getInstance());
+        } finally {
+            DESSINES.clear();
+        }
+    }
+
+    private static void trainees(RenderLevelStageEvent event, Minecraft mc) {
+        if (ETATS.isEmpty() || mc.level == null) {
             return;
         }
         float partiel = event.getPartialTick().getGameTimeDeltaPartialTick(false);
@@ -429,6 +442,11 @@ public final class ClientLames {
         for (Player j : mc.level.players()) {
             CombosLames.Coup coup = enCours(j, partiel, tt);
             if (coup == null || AVALES.contains(j.getId()) || tt[0] <= coup.trace0()) {
+                continue;
+            }
+            // seulement ceux qu'on voit (et soi-même à la première personne, si on n'est pas invisible)
+            boolean moi = j == mc.getCameraEntity() && mc.options.getCameraType().isFirstPerson();
+            if (moi ? j.isInvisible() : !DESSINES.contains(j.getId())) {
                 continue;
             }
             Sorte s = Lames.sorte(j.getMainHandItem());
