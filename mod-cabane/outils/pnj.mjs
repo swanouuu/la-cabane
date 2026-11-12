@@ -421,6 +421,25 @@ export function genererPnj(ecrire) {
     { label: "sait", titre: "Eren", texte: "Ah non. Ça, on dit rien. … Mais voilà. On sait.", boutons: [RETOUR, BYE("…D'accord")] },
   ] });
 
+  // ------------------------------------------------------------ Sung Jin-woo, sur l'avenue du sud : un portail de rang S vient de s'ouvrir
+  // « On y entre » : tout le groupe autour de lui voit la cinématique du portail (donjon/Donjon.java, client/donjon/ClientPortail),
+  // puis se retrouve dans le donjon
+  pnj({ fichier: "jinwoo", nom: "Sung Jin-woo", couleur: "dark_purple", objectifs: IMMOBILE, dialogues: [
+    { label: "default", titre: "Sung Jin-woo", texte: [
+      "Vous sentez ça ? Non… Vous, vous sentez rien. Moi, si. Il y a quelque chose sous l'avenue.",
+      "Je m'appelle Sung Jin-woo. Chasseur. Avant, j'étais le plus faible de tous. Maintenant… on dit plus ça.",
+      "Les gens de Beauvais ne voient pas les portails. Vous, si. C'est pour ça que je vous parle.",
+      "Je ne suis pas là pour vous faire peur. Je suis là pour que vous reveniez vivants.",
+      "Un portail, ça ne prévient pas. Ça s'ouvre, et si personne n'y entre, ce qu'il y a dedans finit par sortir.",
+      "Entraînez vos pouvoirs. Niveau 2, niveau 3. En dessous, dans un rang S, vous servez de casse-croûte.",
+      "Seul, je pourrais. Mais ce donjon-là, il est pour vous. Vous avez besoin de monter en niveau.",
+      "Mon ombre bouge toute seule ? Non. C'est la lumière du lampadaire. Sûrement.",
+      "Le Président m'a demandé si j'étais « du coin ». Je lui ai dit oui. Il a eu l'air soulagé. Il n'aurait pas dû.",
+      "Brokk m'a proposé une épée. J'ai dit non merci. Il l'a mal pris. Il prend tout mal.",
+      "Vegeta m'a défié. Je l'ai regardé. Il est reparti s'entraîner. C'est mieux comme ça.",
+    ], boutons: [{ texte: "Le portail ?", action: "jinwoo_portail" }, BYE("Plus tard")] },
+  ] });
+
   // ------------------------------------------------------------ les habitants : ils se baladent et se méfient des nouveaux
   const habitants = [
     ["jean", "Jean", ["Mon petit frère est parti « à la capitale ». Il n'a même pas pris son chapeau. Il ne sortait jamais sans son chapeau.", "Hm. Encore un de l'avion. Ici on n'aime pas trop les nouveaux, faut le temps qu'on vous connaisse.", "Mon grand-père a planté cet arbre. Mon père l'a coupé. Moi je le regarde. C'est une tradition.", "Tu marches trop vite. Ici, on marche lentement. Ça énerve les touristes, c'est le but."], "Bonne journée quand même"],

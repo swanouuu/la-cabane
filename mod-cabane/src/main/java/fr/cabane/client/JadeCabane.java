@@ -28,6 +28,11 @@ public class JadeCabane implements IWailaPlugin {
                 bulle.replace(JadeIds.CORE_OBJECT_NAME, IThemeHelper.get().title(Component.literal("Corbeau")));
                 bulle.remove(JadeIds.MC_ENTITY_ARMOR);
             }
+            // Ugrak : sa vraie vie (1 000) n'est pas celle de sa barre (4 000) ; la barre de boss suffit
+            if (cible instanceof EntityAccessor e && e.getEntity() instanceof fr.cabane.donjon.Ogre) {
+                boite.getTooltip().remove(JadeIds.MC_ENTITY_HEALTH);
+                boite.getTooltip().remove(JadeIds.MC_ENTITY_ARMOR);
+            }
         });
     }
 }

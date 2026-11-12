@@ -1,0 +1,39 @@
+{
+  "qui": "jinwoo",
+  "ordre": 0,
+  "evenement_hote": "jinwoo",
+  "titre": "Le portail de rang S",
+  "pitch": "Un portail de rang S s'est ouvert au-dessus de l'avenue. Si personne n'y entre, ce qu'il y a dedans finira par sortir. Entrez-y, trouvez le chemin, ouvrez la porte des sceaux, et abattez le maître du donjon. Venez à cinq. Et revenez vivants : c'est un ordre.",
+  "objectifs": [
+    {
+      "type": "evenement",
+      "cible": "portail",
+      "nombre": 1,
+      "texte": "Entrer dans le portail de rang S"
+    },
+    {
+      "type": "evenement",
+      "cible": "sceaux",
+      "nombre": 1,
+      "texte": "Ouvrir la porte des sceaux"
+    },
+    {
+      "type": "evenement",
+      "cible": "ugrak",
+      "nombre": 1,
+      "texte": "Vaincre le boss du donjon"
+    }
+  ],
+  "rappel": "Le portail est toujours ouvert. Regroupez-vous près de moi, et dites « On y va ».",
+  "merci": "Vous êtes revenus. Tous ? … Bien. Un ogre de rang S. Pas mal, pour des gens tombés d'un avion. Vous avez gagné un niveau, et pas seulement sur le papier. Tenez. Et reposez-vous : des portails, il y en aura d'autres.",
+  "recompense": {
+    "argent": 3000,
+    "objets": [
+      [
+        "minecraft:golden_apple",
+        2
+      ]
+    ],
+    "xp": 10
+  }
+}

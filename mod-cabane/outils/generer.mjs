@@ -20,6 +20,7 @@ import { genererBackrooms, sonsBackrooms } from "./backrooms.mjs";
 import { genererEntrainement } from "./entrainement.mjs";
 import { genererArene } from "./arene.mjs";
 import { genererSceau } from "./sceau.mjs";
+import { genererDonjon } from "./donjon.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
 import { genererSharingan, sonsSharingan } from "./sharingan.mjs";
@@ -480,6 +481,8 @@ console.log(`Salle d'entraînement : ${genererEntrainement({ ecrire, lang })} sa
 console.log(`Arène : ${genererArene({ ecrire, lang })} boutons`);
 // la salle du sceau (/sceau) : dimension, biome à l'eau rouge, bouton du retour (voir sceau/Sceau.java)
 genererSceau({ ecrire, lang });
+// le donjon de rang S de Sung Jin-woo (le portail) : dimension et biome (voir donjon/Donjon.java)
+genererDonjon({ ecrire });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
@@ -488,7 +491,7 @@ Object.assign(lang, {
   "block.cabane.etal": "Étal", "block.cabane.machine_a_sous": "Machine à sous", "block.cabane.table_roulette": "Table de roulette",
   "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
-  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi", "entity.cabane.titan": "Titan",
+  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi", "entity.cabane.titan": "Titan", "entity.cabane.ogre": "Ugrak, l'Ogre Écarlate", "entity.cabane.gobelin": "Gobelin", "death.attack.cabane.donjon": "%1$s a été écrasé par %2$s", "death.attack.cabane.donjon.player": "%1$s a été écrasé par %2$s", "entity.cabane.brute": "Brute",
   "item.cabane.puff_rose": "Puff rose (goût surprise)", "item.cabane.puff_bleue": "Puff bleue (goût surprise)", "item.cabane.puff_menthe": "Puff verte (goût surprise)",
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",

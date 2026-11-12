@@ -96,6 +96,8 @@ export function skinsPerso() {
     majin.px.set([18, 18, 22, 255], ((8 + y) * 64 + 40 + x) * 4);
   }
   ecrire(path.join(DOSSIER, "majin_vegeta.png"), majin);
+  // Sung Jin-woo (Solo Leveling), sur l'avenue du sud : le skin fourni, bras larges
+  ecrire(path.join(DOSSIER, "jinwoo.png"), lire(path.join(SOURCES, "jinwoo.png")));
   // les mannequins du stand de tir du commissariat (Rachid, Mamadou, Mouloud) : trois skins de gens du serveur RP,
   // tirés au hasard à chaque apparition
   for (const n of [1, 2, 3]) ecrire(path.join(DOSSIER, `cible_${n}.png`), lire(path.join(SOURCES, `cible_${n}.png`)));
@@ -106,7 +108,7 @@ export function skinsPerso() {
     meche.px.set([v, v, v, 255], i * 4);
   }
   ecrire(path.join(DOSSIER, "..", "cheveux.png"), meche);
-  console.log("Skins fournis copiés : vegeta, goku_ssj2, goku_base, majin_vegeta, eren, erwin, soldat_1 à 5, cible_1 à 3");
+  console.log("Skins fournis copiés : vegeta, goku_ssj2, goku_base, majin_vegeta, eren, erwin, jinwoo, soldat_1 à 5, cible_1 à 3");
 }
 
 /**

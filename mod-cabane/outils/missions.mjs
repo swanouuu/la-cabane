@@ -52,6 +52,19 @@ const MISSIONS = {
     merci: "Te voilà Beauvaisien. Enfin… presque. Les gens se méfient encore, mais ils t'ont vu. C'est un début. Tiens, de quoi manger.",
     recompense: argent(200, [["minecraft:cooked_beef", 4]]) },
 
+  // ------------------------------------------------------------ Sung Jin-woo : le portail de rang S (seulement quand l'hôte a lancé
+  // l'événement, /cabane evenement jinwoo). Chaque étape compte pour tout le groupe (donjon/Donjon, Enigmes, Boss).
+  portail_rang_s: { qui: "jinwoo", ordre: 0, evenement_hote: "jinwoo", titre: "Le portail de rang S",
+    pitch: "Un portail de rang S s'est ouvert au-dessus de l'avenue. Si personne n'y entre, ce qu'il y a dedans finira par sortir. Entrez-y, trouvez le chemin, ouvrez la porte des sceaux, et abattez le maître du donjon. Venez à cinq. Et revenez vivants : c'est un ordre.",
+    objectifs: [
+      evenement("portail", 1, "Entrer dans le portail de rang S"),
+      evenement("sceaux", 1, "Ouvrir la porte des sceaux"),
+      evenement("ugrak", 1, "Vaincre le boss du donjon"),
+    ],
+    rappel: "Le portail est toujours ouvert. Regroupez-vous près de moi, et dites « On y va ».",
+    merci: "Vous êtes revenus. Tous ? … Bien. Un ogre de rang S. Pas mal, pour des gens tombés d'un avion. Vous avez gagné un niveau, et pas seulement sur le papier. Tenez. Et reposez-vous : des portails, il y en aura d'autres.",
+    recompense: argent(3000, [["minecraft:golden_apple", 2]], 10) },
+
   // ------------------------------------------------------------ « Où est Pierre ? » : Sylvie cherche son mari
   ou_est_pierre: { qui: "sylvie", ordre: 1, quand: -1, partie: 2, titre: "Où est Pierre ?",
     pitch: "Excusez-moi… Vous n'auriez pas vu mon mari ? Pierre. Il y a trois semaines, il est allé à la Mairie avec une pétition contre les Pillards. Le soir, il n'est pas rentré. Le Président dit qu'il est « parti travailler à la capitale ». Pierre ne serait jamais parti sans embrasser Lucas. Jamais. Je vous en supplie, demandez autour de vous : son frère Jean, Martine qui habite en face de la Mairie… et Gribbs. Gribbs entend tout.",

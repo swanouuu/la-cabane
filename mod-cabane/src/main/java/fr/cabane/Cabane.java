@@ -41,6 +41,7 @@ public class Cabane {
         fr.cabane.costume.Costumes.register(modBus);
         fr.cabane.lutte.Lutte.register(modBus);
         fr.cabane.titans.Titans.register(modBus);
+        fr.cabane.donjon.Donjon.register(modBus);
         fr.cabane.backrooms.Backrooms.register(modBus);
         fr.cabane.entrainement.Entrainement.register(modBus);
         fr.cabane.arene.Arene.register(modBus);

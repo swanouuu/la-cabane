@@ -75,7 +75,16 @@ public final class Missions extends SimpleJsonResourceReloadListener {
      */
     public record Mission(String id, String qui, String titre, String pitch, String rappel, String merci, List<Objectif> objectifs,
             long argent, int xp, List<ItemStack> objets, List<String> apres, int quand, int repetable, List<ItemStack> donnes, int ordre, String ftb,
-            Semaine semaine, int partie) {
+            Semaine semaine, int partie, String evenementHote) {
+    }
+
+    /** Une mission réservée à un événement que l'hôte a lancé (« jinwoo » : le portail de rang S). */
+    private static boolean evenementLance(net.minecraft.server.MinecraftServer server, String nom) {
+        return switch (nom) {
+            case "" -> true;
+            case "jinwoo" -> fr.cabane.donjon.DonjonData.get(server).evenement();
+            default -> false;
+        };
     }
 
     /**
@@ -146,7 +155,7 @@ public final class Missions extends SimpleJsonResourceReloadListener {
                         List.copyOf(objectifs), GsonHelper.getAsLong(r, "argent", 0), GsonHelper.getAsInt(r, "xp", 0), objets(r, "objets"),
                         List.copyOf(apres), GsonHelper.getAsInt(o, "quand", 0), GsonHelper.getAsInt(o, "repetable", 0), objets(o, "donne"),
                         GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsString(o, "ftb", ""), semaine(o),
-                        GsonHelper.getAsInt(o, "partie", 1)));
+                        GsonHelper.getAsInt(o, "partie", 1), GsonHelper.getAsString(o, "evenement_hote", "")));
             } catch (Exception e) {
                 Cabane.LOGGER.info("Mission {} ignorée : {}", id, e.getMessage());
             }
@@ -409,7 +418,7 @@ public final class Missions extends SimpleJsonResourceReloadListener {
             }
         }
         HubData hub = HubData.get(joueur.server);
-        if (hub.partie() < m.partie()) {
+        if (hub.partie() < m.partie() || !evenementLance(joueur.server, m.evenementHote())) {
             return false;
         }
         return m.quand() == 0 || (m.quand() > 0) == hub.libere();

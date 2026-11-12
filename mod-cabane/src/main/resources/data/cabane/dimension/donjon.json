@@ -1,0 +1,13 @@
+{
+  "type": "cabane:donjon",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:donjon",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

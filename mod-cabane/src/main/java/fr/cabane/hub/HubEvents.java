@@ -86,6 +86,8 @@ public final class HubEvents {
             new Pnj("vegeta", -30.5, 42.5, 90F),
             // Eren, caché juste derrière la forge, dos au mur de la cascade de lave, face au boulevard : il sait des choses
             new Pnj("eren", 70.5, 0.5, -90F),
+            // Sung Jin-woo, au bord de l'avenue du sud, tourné vers elle : c'est là que s'ouvre le portail de rang S (donjon/Donjon)
+            new Pnj("jinwoo", 6.5, 46.5, 90F),
             // Jean-Mi, derrière le comptoir de sa boutique de cartes, sur la grande allée (la porte donne à l'est)
             new Pnj("vendeur_cartes", HubBuilder.BOUTIQUE_CARTES[0] - 4.5, HubBuilder.BOUTIQUE_CARTES[1] + 0.5, -90F),
             new Pnj("orque_1", 55.5, -12.5, 180F),     // devant les hauts-fourneaux
@@ -126,7 +128,7 @@ public final class HubEvents {
     private static long debutConstruction;
 
     /** À augmenter quand les PNJ changent (dialogues, skins, nouveaux venus) : ils sont remplacés au démarrage suivant. */
-    public static final int VERSION_PNJ = 20;
+    public static final int VERSION_PNJ = 21;
     private static int rafraichir = -1;
 
     public static void onServerStarted(MinecraftServer server) {

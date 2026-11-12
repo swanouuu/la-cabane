@@ -475,7 +475,7 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
 
     /** Ces actions ouvrent un autre écran (la conversation se ferme) ; les autres répondent par une page. */
     private static boolean ecran(String action) {
-        return !action.startsWith("hejj_") && !action.equals("soigner") && !action.startsWith("payer:");
+        return !action.startsWith("hejj_") && !action.equals("soigner") && !action.startsWith("payer:") && !action.equals("jinwoo_portail");
     }
 
     private static void action(ServerPlayer joueur, Session s, String action) {
@@ -496,6 +496,27 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
                 envoyer(joueur, s, "La demande du jour", fr.cabane.hub.DemandesHejj.livrerTexte(joueur), choix, suites);
             }
             case "soigner" -> soigner(joueur, s);
+            // Sung Jin-woo : le portail est-il ouvert ? (l'hôte lance l'événement avec /cabane evenement jinwoo)
+            case "jinwoo_portail" -> {
+                List<Choix> choix = new ArrayList<>();
+                List<Suite> suites = new ArrayList<>();
+                String texte;
+                if (fr.cabane.donjon.DonjonData.get(joueur.server).evenement()) {
+                    texte = "Le voilà. Un portail de rang S, juste là, au-dessus de l'avenue. Derrière : un donjon, des énigmes, des culs-de-sac, "
+                            + "et au fond, un boss. Venez au moins à cinq, vos pouvoirs réveillés, niveau 2 ou 3. Il faudra vous séparer, à un moment. "
+                            + "Et vous retrouver tous devant la dernière porte. Quand vous êtes prêts, regroupez-vous à côté de moi.";
+                    choix.add(new Choix("On y va (tout le groupe)", DISPO));
+                    suites.add((j, ss) -> {
+                        fermer(j);
+                        fr.cabane.donjon.Donjon.depuisJinwoo(j);
+                    });
+                } else {
+                    texte = "Pas encore. L'air est lourd, ça tremble sous l'avenue… mais rien ne s'est ouvert. Quand le portail apparaîtra, "
+                            + "tout Beauvais le sentira. Revenez me voir à ce moment-là. Et d'ici là : entraînez-vous.";
+                }
+                retourEtAuRevoir(choix, suites);
+                envoyer(joueur, s, "Le portail de rang S", texte, choix, suites);
+            }
             // payer:<prix>:<page> : un service payant (un secret de Gribbs…), puis la page qui va avec
             case "payer" -> {
                 long prix = Long.parseLong(a[1]);
@@ -529,6 +550,8 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
             case "fourgue" -> fr.cabane.drogue.MarcheNoir.ouvrir(joueur);
             case "fourgue_vendre" -> fr.cabane.drogue.MarcheNoir.vendre(joueur);
             case "mcbeauvais" -> fr.cabane.bouffe.FastFood.ouvrir(joueur, null);
+            // Sung Jin-woo : tout le groupe autour de lui entre dans le portail de rang S
+            case "donjon" -> fr.cabane.donjon.Donjon.depuisJinwoo(joueur);
             // le livre de quêtes, ouvert au bon chapitre (ou là où on l'avait laissé, si ce chapitre n'existe pas)
             case "livre" -> {
                 if (a.length < 2 || !ftb(joueur, "ftbquests open_book " + a[1], false)) {
