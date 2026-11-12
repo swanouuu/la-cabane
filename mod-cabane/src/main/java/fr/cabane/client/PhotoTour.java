@@ -222,6 +222,11 @@ public final class PhotoTour {
                 Minecraft.getInstance().options.keyUp.setDown(e[2].equals("1"));
                 return 2;
             }
+            // « act touche key.keyboard.period » : un appui sur cette touche du clavier, comme le ferait le joueur
+            case "touche" -> {
+                net.minecraft.client.KeyMapping.click(com.mojang.blaze3d.platform.InputConstants.getKey(e[2]));
+                return 2;
+            }
             case "gauche" -> {
                 Minecraft.getInstance().options.keyLeft.setDown(e[2].equals("1"));
                 return 2;
