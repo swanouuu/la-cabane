@@ -45,6 +45,7 @@ import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.decoration.Painting;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -62,6 +63,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
@@ -86,8 +88,11 @@ public final class CaveHaru {
     private static final ResourceLocation PLAN = ResourceLocation.fromNamespaceAndPath(Cabane.MODID, "cave_haru/plan.json");
     private static final ResourceLocation AVANT = ResourceLocation.fromNamespaceAndPath(Cabane.MODID, "cave_haru_avant");
 
-    /** Les deux terrains (coordonnées du plan) ; sous terre, seulement sous le bâtiment. */
-    private static final int X_MIN = -1, X_MAX = 20, Z_MIN = -2, Z_MAX = 9, Y_MIN = -13, Y_MAX = 14;
+    /**
+     * Les deux terrains (coordonnées du plan) ; sous terre, seulement sous le bâtiment. Le premier rang côté rue (z -2)
+     * reste comme il est : Martine y a sa place, devant la rangée nord.
+     */
+    private static final int X_MIN = -1, X_MAX = 20, Z_MIN = -1, Z_MAX = 9, Y_MIN = -13, Y_MAX = 14;
     private static final int BLOCS_PAR_TICK = 12, DEBLAI_PAR_TICK = 300;
 
     /** Les deux paires de maisons de la rue : leurs terrains dans {@link HubBuilder#lotsAVendre()}, et où tombe le plan. */
@@ -157,27 +162,33 @@ public final class CaveHaru {
             return 0;
         }
 
-        // les deux terrains les plus proches du joueur
+        // les deux rangées de la rue se font face : d'abord celle dont les deux terrains sont au même joueur, sinon la plus proche
         List<int[]> lots = HubBuilder.lotsAVendre();
         Rangee rangee = null;
         double meilleure = Double.MAX_VALUE;
+        boolean achetee = false;
         for (Rangee r : RANGEES) {
             int[] a = lots.get(r.lotA()), b = lots.get(r.lotB());
             double x0 = c.getX() + Math.min(a[0], b[0]), x1 = c.getX() + Math.max(a[2], b[2]) + 1;
             double z0 = c.getZ() + Math.min(a[1], b[1]), z1 = c.getZ() + Math.max(a[3], b[3]) + 1;
             double dx = Math.max(0, Math.max(x0 - ou.x, ou.x - x1)), dz = Math.max(0, Math.max(z0 - ou.z, ou.z - z1));
             double d = Math.hypot(dx, dz);
-            if (d < meilleure) {
+            if (d > 20) {
+                continue;
+            }
+            UUID pa = proprietaire(level, c, a), pb = proprietaire(level, c, b);
+            boolean memeProprio = pa != null && pa.equals(pb);
+            if ((memeProprio && !achetee) || (memeProprio == achetee && d < meilleure)) {
                 meilleure = d;
                 rangee = r;
+                achetee = memeProprio;
             }
         }
-        if (rangee == null || meilleure > 20) {
-            source.sendFailure(Component.literal("Mets-toi devant les deux maisons de la rue (les deux terrains côte à côte), puis relance."));
+        if (rangee == null) {
+            source.sendFailure(Component.literal("Mets-toi dans la rue, devant les deux maisons (les deux terrains côte à côte), puis relance."));
             return 0;
         }
-        UUID proprioA = proprietaire(level, c, lots.get(rangee.lotA())), proprioB = proprietaire(level, c, lots.get(rangee.lotB()));
-        if (!forcer && (proprioA == null || !proprioA.equals(proprioB))) {
+        if (!forcer && !achetee) {
             source.sendFailure(Component.literal("Les deux terrains doivent être achetés par le même joueur (ajoute « forcer » pour construire quand même)."));
             return 0;
         }
@@ -244,7 +255,16 @@ public final class CaveHaru {
         for (Entity e : level.getEntities((Entity) null, zone, x -> x.getTags().contains(TAG) || x instanceof HangingEntity || x instanceof ItemEntity)) {
             e.discard();
         }
+        // les tonneaux et coffres de la cave se vident sans rien jeter par terre, puis les maisons reviennent
+        for (BlockPos p : BlockPos.betweenClosed(min, min.offset(taille.getX() - 1, taille.getY() - 1, taille.getZ() - 1))) {
+            if (level.getBlockEntity(p) instanceof Container coffre) {
+                coffre.clearContent();
+            }
+        }
         photo.get().placeInWorld(level, min, min, new StructurePlaceSettings(), level.getRandom(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        for (Entity e : level.getEntities((Entity) null, zone, x -> x instanceof ItemEntity)) {
+            e.discard(); // les bougies et lanternes décrochées
+        }
         d.effacer();
         fermerA = -1;
         source.sendSuccess(() -> Component.literal("Cave à Haru enlevée, les maisons sont revenues.").withStyle(ChatFormatting.GOLD), true);
@@ -569,6 +589,22 @@ public final class CaveHaru {
                 level.addFreshEntity(tableau);
             }
             barman(o.getAsJsonArray("haru"));
+            // le râtelier du bar : une boisson par colonne
+            for (JsonElement t : o.getAsJsonArray("tonneaux")) {
+                JsonArray a = t.getAsJsonArray();
+                BlockPos p = pose.bloc(a.get(0).getAsInt(), a.get(1).getAsInt(), a.get(2).getAsInt());
+                var objet = BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(a.get(3).getAsString()));
+                if (objet.isPresent() && level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.BarrelBlockEntity tonneau) {
+                    ItemStack pile = new ItemStack(objet.get(), a.get(4).getAsInt());
+                    for (int slot = 0; !pile.isEmpty() && slot < tonneau.getContainerSize(); slot++) {
+                        ItemStack morceau = pile.split(Math.min(pile.getCount(), pile.getMaxStackSize()));
+                        tonneau.setItem(slot, morceau);
+                    }
+                    tonneau.setChanged();
+                } else {
+                    LOG.warn("Tonneau de la cave introuvable en {} ({})", p, a.get(3).getAsString());
+                }
+            }
         }
 
         /** Haru derrière son comptoir : un PNJ immobile qui porte son skin. */
@@ -592,6 +628,14 @@ public final class CaveHaru {
             } catch (com.mojang.brigadier.exceptions.CommandSyntaxException ex) {
                 LOG.error("Barman de la cave illisible", ex);
             }
+        }
+    }
+
+    /** Un tableau ou le barman de la cave qui se recharge alors que la cave a été enlevée (pas encore chargé pendant l'annulation). */
+    @SubscribeEvent
+    public static void rejoint(EntityJoinLevelEvent event) {
+        if (event.getEntity().getTags().contains(TAG) && event.getLevel() instanceof ServerLevel l && !Donnees.get(l.getServer()).present) {
+            event.setCanceled(true);
         }
     }
 

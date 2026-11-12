@@ -1,7 +1,7 @@
 // Transforme le croquis de la Cave à Haru (docs/cave-haru/cave.html) en plan de blocs pour /caveharu.
 // node outils/cave-haru.mjs → src/main/resources/data/cabane/cave_haru/plan.json
 //   + les tableaux (affiches dessinées par le croquis, docs/cave-haru/affiches/*.png, 128 px par bloc)
-//   + le skin d'Haru pour le barman.
+//   + le skin d'Haru pour le barman, et ce qu'il y a dans les tonneaux du bar.
 //
 // Le croquis reste la source : on rejoue tel quel le bloc « PLAN » qui pose ses blocs, puis on traduit chaque case en bloc du jeu.
 import fs from "node:fs";
@@ -23,6 +23,7 @@ const cases = new Map();
 const cle = (x, y, z) => x + "," + y + "," + z;
 const affiches = [];
 let haru = null;
+const tonneaux = [];
 function h3(x, y, z) { const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return n - Math.floor(n); }
 const contexte = {
   pose(x, y, z, t, f = "cube", d = null, plafond = false, e = null) { cases.set(cle(x, y, z), { x, y, z, t, f, d, e }); },
@@ -30,6 +31,7 @@ const contexte = {
   deco() {}, // les chopes et bouteilles posées : rien dans le jeu
   affiche(nom, x, y, z, face) { affiches.push({ nom, x, y, z, face }); },
   haru(x, y, z, yaw) { haru = [x, y, z, yaw]; },
+  remplir(x, y, z, objet, nombre) { tonneaux.push([x, y, z, objet, nombre]); },
   h3,
   pierreMix(x, y, z, mousse) { const r = h3(x, y, z); return r < mousse ? "pierre_m" : r < mousse + 0.13 ? "pierre_f" : "pierre"; },
   Math,
@@ -120,5 +122,5 @@ fs.copyFileSync(path.join(docs, "skin-haru.png"), path.join(res, "assets/cabane/
 
 const sortie = path.join(res, "data/cabane/cave_haru/plan.json");
 fs.mkdirSync(path.dirname(sortie), { recursive: true });
-fs.writeFileSync(sortie, JSON.stringify({ palette, structure, finitions, tableaux, haru }) + "\n");
+fs.writeFileSync(sortie, JSON.stringify({ palette, structure, finitions, tableaux, haru, tonneaux }) + "\n");
 console.log(`${structure.length / 4} blocs + ${finitions.length / 4} finitions, ${palette.length} sortes, ${tableaux.length} tableaux → ${path.relative(process.cwd(), sortie)}`);
