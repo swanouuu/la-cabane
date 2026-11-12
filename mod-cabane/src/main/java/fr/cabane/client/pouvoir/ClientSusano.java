@@ -105,6 +105,8 @@ public final class ClientSusano {
     private static final Map<UUID, Susano> SUSANOS = new HashMap<>();
     /** Ceux dont le pouvoir est éveillé en ce moment, quel qu'il soit (tous les états passent par ici). */
     private static final Set<UUID> TRANSFORMES = new HashSet<>();
+    /** Parmi eux, ceux qui ont un fruit du démon (leur armure reste dessinée : la matière la recouvre). */
+    private static final Set<UUID> FRUITS = new HashSet<>();
     private static long dernierClic;
     private static long derniereCharge;
     private static boolean accroupiAvant;
@@ -168,6 +170,15 @@ public final class ClientSusano {
         return TRANSFORMES.contains(joueur.getUUID());
     }
 
+    /**
+     * Éveillé, on ne voit plus son armure (elle protège toujours) : tous les pouvoirs, les yeux du Sharingan compris,
+     * sauf les fruits du démon, dont la lave ou la glace la recouvre déjà.
+     */
+    public static boolean sansArmure(Player joueur) {
+        UUID id = joueur.getUUID();
+        return (TRANSFORMES.contains(id) && !FRUITS.contains(id)) || ClientSharingan.niveau(id) > 0;
+    }
+
     /** Le niveau du Susano du joueur local (0 : endormi). */
     public static int niveauLocal() {
         Minecraft mc = Minecraft.getInstance();
@@ -184,8 +195,14 @@ public final class ClientSusano {
         ClientSharingan.recevoir(p);
         if (p.eveille()) {
             TRANSFORMES.add(p.joueur());
+            if (fr.cabane.pouvoir.Fruit.est(p.pouvoir())) {
+                FRUITS.add(p.joueur());
+            } else {
+                FRUITS.remove(p.joueur());
+            }
         } else {
             TRANSFORMES.remove(p.joueur());
+            FRUITS.remove(p.joueur());
         }
         // Hachibi, la marque maudite, Minato, les fruits du démon, Ichibi, la foudre, le vent et Kaguya ont leur propre dessin
         if (fr.cabane.pouvoir.Kaguya.est(p.pouvoir())) {
@@ -1275,6 +1292,7 @@ public final class ClientSusano {
             if (mc.level == null || mc.player == null) {
                 SUSANOS.clear();
                 TRANSFORMES.clear();
+                FRUITS.clear();
                 return;
             }
             while (EVEIL.consumeClick()) {

@@ -23,6 +23,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -81,7 +82,8 @@ import org.joml.Vector3f;
  * kunai-là est indépendant de la marque posée (accroupi + clic droit), qu'on rejoint en s'accroupissant deux fois vite.
  * <p>
  * Minato 2 (liste blanche « minato2 ») : la touche Éveil donne d'abord ce Minato-là (niveau 1), puis le mode Kurama
- * (niveau 2, voir docs/minato2). Chaque coup qui touche le téléporte autour de sa cible (huit places) et sa vue reste
+ * (niveau 2, voir docs/minato2), qui court comme une flèche. Chaque coup qui touche le téléporte autour de sa cible (huit
+ * places ; 10 fois, puis 10 secondes de coups normaux avant que ses 10 charges reviennent) et sa vue reste
  * bloquée sur elle tant qu'il frappe (une seconde sans frapper la libère) ; accroupi + clic droit, il se téléporte là
  * où il regarde ; s'accroupir une fois plante un kunai à ses pieds, deux fois l'y ramène ; le clic droit lance la Bijuu
  * Dama : il se téléporte sur ce qu'il vise et frappe, et si ça touche, Kurama apparaît derrière lui et tire (12,5 s de
@@ -421,18 +423,54 @@ public final class Minato {
     // ================================================================ s'éveiller, s'endormir
 
     private static final ResourceLocation COURSE = Cabane.id("minato_vitesse");
-    /** Éveillé, il court bien plus vite : +55 %, juste en dessous de la bête de Hachibi (+65 %) ; en mode Kurama, +80 %. */
-    private static final double BONUS_VITESSE = 0.55, BONUS_VITESSE_2 = 0.8;
+    private static final ResourceLocation PAS = Cabane.id("minato_pas");
+    /**
+     * Éveillé, il court bien plus vite : +55 %, juste en dessous de la bête de Hachibi (+65 %) ; en mode Kurama, +160 %,
+     * une flèche, et il enjambe un bloc entier sans sauter pour ne pas buter dessus à cette vitesse.
+     */
+    private static final double BONUS_VITESSE = 0.55, BONUS_VITESSE_2 = 1.6, BONUS_PAS_2 = 0.5;
 
     private static void vitesse(ServerPlayer joueur, int niveau) {
         AttributeInstance a = joueur.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (a == null) {
-            return;
+        if (a != null) {
+            a.removeModifier(COURSE);
+            if (niveau > 0) {
+                a.addTransientModifier(new AttributeModifier(COURSE, niveau >= 2 ? BONUS_VITESSE_2 : BONUS_VITESSE, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+            }
         }
-        a.removeModifier(COURSE);
-        if (niveau > 0) {
-            a.addTransientModifier(new AttributeModifier(COURSE, niveau >= 2 ? BONUS_VITESSE_2 : BONUS_VITESSE, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        AttributeInstance pas = joueur.getAttribute(Attributes.STEP_HEIGHT);
+        if (pas != null) {
+            pas.removeModifier(PAS);
+            if (niveau >= 2) {
+                pas.addTransientModifier(new AttributeModifier(PAS, BONUS_PAS_2, AttributeModifier.Operation.ADD_VALUE));
+            }
         }
+    }
+
+    /**
+     * Mode Kurama : 10 téléportations au clic gauche (une par coup qui touche). Les 10 parties, il frappe normalement
+     * pendant 10 secondes, sans se téléporter, puis elles reviennent toutes.
+     */
+    private static final int CHARGES_TP = 10, RECHARGE_TP = 10 * 20;
+    private static final Map<UUID, Integer> TP_RESTANTES = new HashMap<>();
+    private static final Map<UUID, Integer> TP_RETOUR = new HashMap<>();
+
+    /** Un coup qui touche en mode Kurama : vrai s'il lui reste une téléportation (et elle est prise). */
+    private static boolean prendreCharge(ServerPlayer joueur, int maintenant) {
+        UUID id = joueur.getUUID();
+        if (TP_RETOUR.containsKey(id)) {
+            return false;
+        }
+        int reste = TP_RESTANTES.getOrDefault(id, CHARGES_TP) - 1;
+        if (reste <= 0) {
+            TP_RESTANTES.remove(id);
+            TP_RETOUR.put(id, maintenant + RECHARGE_TP);
+            joueur.displayClientMessage(Component.literal("Plus de téléportation : 10 s de coups normaux").withStyle(ChatFormatting.RED), true);
+        } else {
+            TP_RESTANTES.put(id, reste);
+            joueur.displayClientMessage(Component.literal("Téléportations : " + reste + "/" + CHARGES_TP).withStyle(ChatFormatting.YELLOW), true);
+        }
+        return true;
     }
 
     /** Le kunai qu'il a en main, éveillé : un objet sans recette ni onglet, juste pour le dessiner (assets/cabane/models/item). */
@@ -500,6 +538,8 @@ public final class Minato {
     static void endormir(ServerPlayer joueur) {
         ELUS.remove(joueur.getUUID());
         NIVEAUX.remove(joueur.getUUID());
+        TP_RESTANTES.remove(joueur.getUUID());
+        TP_RETOUR.remove(joueur.getUUID());
         liberer(joueur);
         vitesse(joueur, 0);
         arme(joueur, 0);
@@ -1303,10 +1343,26 @@ public final class Minato {
             ServerPlayer joueur = server.getPlayerList().getPlayer(e.getKey());
             if (joueur != null && niveau(e.getKey()) >= 2 && !fige(joueur) && joueur.serverLevel().getEntity(e.getValue()) instanceof LivingEntity cible
                     && cible.isAlive()) {
-                autour(joueur, cible, maintenant);
+                if (prendreCharge(joueur, maintenant)) {
+                    autour(joueur, cible, maintenant);
+                } else {
+                    // plus de charge : il frappe comme tout le monde, au sol, la vue libre
+                    liberer(joueur);
+                }
             }
         }
         FRAPPES.clear();
+        // les 10 secondes passées, les 10 téléportations reviennent
+        TP_RETOUR.entrySet().removeIf(en -> {
+            if (en.getValue() > maintenant) {
+                return false;
+            }
+            ServerPlayer joueur = server.getPlayerList().getPlayer(en.getKey());
+            if (joueur != null && niveau(en.getKey()) >= 2) {
+                joueur.displayClientMessage(Component.literal("Téléportations rechargées : " + CHARGES_TP + "/" + CHARGES_TP).withStyle(ChatFormatting.GOLD), true);
+            }
+            return true;
+        });
         // une seconde sans frapper (ou la cible partie, morte, trop loin) : la vue se libère et il retombe
         for (Map.Entry<UUID, Verrou> e : new ArrayList<>(VERROUS.entrySet())) {
             ServerPlayer joueur = server.getPlayerList().getPlayer(e.getKey());
@@ -1470,6 +1526,8 @@ public final class Minato {
         }
         VERROUS.clear();
         FRAPPES.clear();
+        TP_RESTANTES.clear();
+        TP_RETOUR.clear();
         BIJUUS.clear();
         NIVEAUX.clear();
         PRET_ECLAIR.clear();

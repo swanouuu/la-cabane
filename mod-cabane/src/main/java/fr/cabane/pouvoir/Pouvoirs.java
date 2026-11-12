@@ -51,6 +51,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -900,6 +901,17 @@ public final class Pouvoirs {
         joueur.setDeltaMovement(direction.scale(force(niveau).elanCharge()).add(0, 0.12, 0));
         joueur.hurtMarked = true;
         geste(joueur, CHARGE, -1);
+    }
+
+    /**
+     * Éveillé (n'importe quel pouvoir, ou juste les yeux du Sharingan), la faim ne baisse plus : la fatigue est remise à
+     * zéro juste avant que le joueur ne la compte.
+     */
+    @SubscribeEvent
+    public static void faim(PlayerTickEvent.Pre event) {
+        if (event.getEntity() instanceof ServerPlayer joueur && (EVEILLES.containsKey(joueur.getUUID()) || YEUX.containsKey(joueur.getUUID()))) {
+            joueur.getFoodData().setExhaustion(0);
+        }
     }
 
     @SubscribeEvent
