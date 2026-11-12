@@ -354,6 +354,16 @@ public final class PhotoTour {
                 fr.cabane.client.pouvoir.ClientBijuuDama.demo();
                 return 2;
             }
+            // le contre de Minato : « act contre » (la touche L, la vraie garde), « act contre-vu » (la vision, c'est moi qui
+            // frappe la créature la plus proche), « act contre-dehors » (vu de dehors : la deuxième créature frappe la première)
+            case "contre" -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Contre.Activer());
+                return 2;
+            }
+            case "contre-vu", "contre-dehors" -> {
+                fr.cabane.client.pouvoir.ClientContre.demo(e[1].equals("contre-vu"));
+                return 2;
+            }
             // « act chidori » : le clic droit de la marque maudite niveau 2
             case "chidori" -> {
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Maudit.Lancer());

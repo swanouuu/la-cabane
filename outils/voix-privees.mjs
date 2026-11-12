@@ -163,9 +163,10 @@ export function packVoix() {
       sons[evenement] = { replace: true, subtitle: `subtitles.cabane.${evenement}`, sounds: [{ name: `cabane:effets/${nom}` }] };
     }
   }
-  // Kurama (ModeleKurama : assets/cabane/kurama/modele.json et textures/entity/kurama/kurama.png)
+  // Kurama (ModeleKurama : assets/cabane/kurama/modele.json, textures/entity/kurama/kurama.png, et kurama_orange.png pour le contre de Minato)
   const kurama = path.join(RACINE, "voix", "kurama");
-  for (const [fichier, dans] of [["modele.json", "assets/cabane/kurama/modele.json"], ["kurama.png", "assets/cabane/textures/entity/kurama/kurama.png"]]) {
+  for (const [fichier, dans] of [["modele.json", "assets/cabane/kurama/modele.json"], ["kurama.png", "assets/cabane/textures/entity/kurama/kurama.png"],
+    ["kurama_orange.png", "assets/cabane/textures/entity/kurama/kurama_orange.png"]]) {
     if (fs.existsSync(path.join(kurama, fichier))) fichiers.push([dans, fs.readFileSync(path.join(kurama, fichier))]);
   }
   musique(fichiers, sons);

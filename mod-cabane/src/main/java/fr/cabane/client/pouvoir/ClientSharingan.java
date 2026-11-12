@@ -518,6 +518,9 @@ public final class ClientSharingan {
             // (L ouvre aussi les progrès : avec le Mangekyo, l'écran ne s'ouvre pas, voir ecranOuvert)
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_KAMUI));
+            } else if (mc.screen == null) {
+                // Minato éveillé : L le met en garde (le contre de Kurama)
+                ClientContre.touche();
             }
         }
         while (METEORITE.consumeClick()) {
@@ -694,7 +697,8 @@ public final class ClientSharingan {
                 return;
             }
             int n = niveau(mc.player.getUUID());
-            boolean kamui = n >= 2 && KAMUI.isDown() && event.getNewScreen() instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
+            boolean kamui = (n >= 2 || ClientMinato.eveille()) && KAMUI.isDown()
+                    && event.getNewScreen() instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
             if (kamui) {
                 event.setCanceled(true);
             }

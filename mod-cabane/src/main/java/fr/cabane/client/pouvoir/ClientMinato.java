@@ -108,6 +108,12 @@ public final class ClientMinato {
         return NIVEAUX.getOrDefault(joueur, 0);
     }
 
+    /** Suis-je un Minato éveillé (niveau 1 ou 2) ? Pour la touche du contre (L). */
+    public static boolean eveille() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && niveau(mc.player.getUUID()) >= 1;
+    }
+
     /** Un Minato est-il en train de jouer une cinématique (le combo ou la Bijuu Dama), avec moi dedans ? */
     private static boolean enScene() {
         return ClientMinatoCombo.participant() || ClientBijuuDama.participant();
@@ -460,12 +466,14 @@ public final class ClientMinato {
         String[][] lignes = kurama
                 ? new String[][] {{Clavier.gauche(), "Coup éclair"}, {Clavier.droite(), kunai},
                         {Clavier.accroupi() + " + " + Clavier.droite(), resteEclair > 0 ? String.format("TP (%.0f s)", Math.ceil(resteEclair)) : "TP"},
-                        {Clavier.accroupi() + " + " + Clavier.gauche(), jet}, {Clavier.nom(ClientSharingan.SUSANO), m == null ? "Planter un kunai" : marque}, {eveil, "Rendormir"}}
+                        {Clavier.accroupi() + " + " + Clavier.gauche(), jet}, {Clavier.nom(ClientSharingan.SUSANO), m == null ? "Planter un kunai" : marque},
+                        {Clavier.nom(ClientSharingan.KAMUI), ClientContre.ligne()}, {eveil, "Rendormir"}}
                 : new String[][] {{Clavier.gauche(), "Coup de kunai"}, {Clavier.droite(), kunai}, {Clavier.accroupi() + " + " + Clavier.gauche(), jet},
-                        {Clavier.accroupi() + " + " + Clavier.droite(), "Poser la marque"}, {Clavier.nom(ClientSharingan.SUSANO), marque}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
+                        {Clavier.accroupi() + " + " + Clavier.droite(), "Poser la marque"}, {Clavier.nom(ClientSharingan.SUSANO), marque},
+                        {Clavier.nom(ClientSharingan.KAMUI), ClientContre.ligne()}, {eveil, monte ? "Mode Kurama" : "Rendormir"}};
         boolean[] gris = kurama
-                ? new boolean[] {false, reste > 0, resteEclair > 0, !envol && lance == null && resteJet > 0, false, m == null, false}
-                : new boolean[] {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, false};
+                ? new boolean[] {false, reste > 0, resteEclair > 0, !envol && lance == null && resteJet > 0, false, ClientContre.grise(), false}
+                : new boolean[] {false, vol || reste > 0, !envol && lance == null && resteJet > 0, false, m == null, ClientContre.grise(), false};
         PanneauPouvoir.dessiner(g, mc.font, titre, kurama ? 0xFFFF9A2A : 0xFFFFD23A, lignes, gris);
     }
 
