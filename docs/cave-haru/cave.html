@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>La Cave à Haru</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0a08; overflow: hidden; font-family: system-ui, sans-serif; color: #f1e3c6; }
+  #outils { position: fixed; left: 10px; top: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 3; max-width: calc(100% - 20px); }
+  h1 { margin: 0 0 2px; font: 26px 'Rye', serif; color: #f2c14e; text-shadow: 0 2px 0 #4a1a10, 0 0 14px #000; }
+  .barre { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+  button { background: #2a1d14; color: #f1e3c6; border: 1px solid #6b4a2b; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: #c89a52; }
+  button.actif { background: #8b2a1e; border-color: #e0794f; }
+  label.case { font-size: 13px; background: #2a1d14; border: 1px solid #6b4a2b; border-radius: 6px; padding: 4px 8px; display: flex; gap: 6px; align-items: center; }
+  #couche-val { min-width: 92px; display: inline-block; }
+  #aide { position: fixed; left: 12px; bottom: 10px; color: #a68a64; font-size: 12px; z-index: 3; }
+  .panneau { position: fixed; right: 10px; top: 10px; bottom: 10px; width: 400px; background: rgba(20,14,10,0.94); border: 1px solid #6b4a2b; border-radius: 10px; padding: 12px; overflow: auto; z-index: 4; display: none; font-size: 13px; }
+  .panneau h2 { font: 20px 'Rye', serif; color: #f2c14e; margin: 0 0 8px; }
+  .panneau table { width: 100%; border-collapse: collapse; }
+  .panneau td { padding: 3px 4px; border-bottom: 1px solid #3a2a1c; }
+  .panneau td.n { text-align: right; font-variant-numeric: tabular-nums; color: #f2c14e; }
+  .pastille { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1px solid #0006; }
+  .fermer { float: right; }
+  #galerie { position: fixed; inset: 0; background: rgba(10,7,5,0.95); z-index: 5; display: none; overflow: auto; padding: 20px; }
+  #galerie .grille { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+  #galerie figure { margin: 0; text-align: center; }
+  #galerie canvas { image-rendering: pixelated; box-shadow: 0 6px 18px #000; max-width: 92vw; }
+  #galerie figcaption { font-size: 12px; color: #c9ad84; margin-top: 4px; }
+  #galerie a { color: #f2c14e; }
+  .etiquette { font: 12px system-ui, sans-serif; color: #fff4dc; background: rgba(40,20,10,0.78); border: 1px solid #c89a52; padding: 2px 7px; border-radius: 10px; white-space: nowrap; pointer-events: none; }
+  .etiquette.secret { border-color: #e0574f; color: #ffd0c8; }
+  #carte { image-rendering: pixelated; display: block; margin: 6px 0; border: 1px solid #6b4a2b; }
+  #bulle { position: fixed; pointer-events: none; background: #000c; padding: 2px 6px; border-radius: 4px; font-size: 12px; z-index: 6; display: none; }
+  #chargement { position: fixed; inset: 0; display: grid; place-items: center; font: 22px 'Rye', serif; color: #f2c14e; z-index: 9; background: #0d0a08; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="chargement">On met les fûts en perce…</div>
+<div id="outils">
+  <h1>La Cave à Haru</h1>
+  <div class="barre" id="vues">
+    <button data-vue="dehors">Dehors</button>
+    <button data-vue="bar">Le bar</button>
+    <button data-vue="cave">La cave</button>
+    <button data-vue="secret">Salle au trésor</button>
+  </div>
+  <div class="barre">
+    <label class="case"><input type="checkbox" id="toit"> Toit / plafonds</label>
+    <label class="case"><input type="checkbox" id="coupe"> Enlever le mur de devant</label>
+    <label class="case"><input type="checkbox" id="etiq" checked> Étiquettes</label>
+    <button id="jour">Soir</button>
+  </div>
+  <div class="barre">
+    <label class="case"><input type="checkbox" id="couche-on"> Construire couche par couche</label>
+    <input type="range" id="couche" min="-6" max="14" value="0" disabled>
+    <span id="couche-val"></span>
+  </div>
+  <div class="barre">
+    <button id="b-affiches">Les affiches</button>
+    <button id="b-blocs">Liste des blocs</button>
+  </div>
+</div>
+<div id="aide">clic gauche : tourner · clic droit : déplacer · molette : zoomer</div>
+<div class="panneau" id="p-couche"><h2>Couche <span id="pc-y"></span></h2><div id="pc-info"></div><canvas id="carte"></canvas><div style="color:#a68a64;font-size:12px">↓ côté rue (devant) · chaque case = 1 bloc · le trait clair d'un escalier = son côté haut</div><table id="pc-liste"></table></div>
+<div class="panneau" id="p-blocs"><button class="fermer" id="f-blocs">×</button><h2>Liste des blocs</h2><div id="pb-contenu"></div></div>
+<div id="galerie"><button class="fermer" id="f-galerie">Fermer</button><h2 style="font:28px 'Rye',serif;color:#f2c14e;margin:0 0 12px">Les affiches de la cave</h2><div class="grille" id="g-grille"></div></div>
+<div id="bulle"></div>
+<script type="module">
+// Croquis de « La Cave à Haru » : un bar 20 × 10 façon vieille cave à vin (rez-de-chaussée), une cave voûtée en
+// dessous avec deux fûts géants dont un cache une porte vers la salle secrète d'Haru. Chaque bloc est posé dans une
+// grille (pose), puis affiché en cubes ; les affiches sont dessinées à partir du skin d'Haru (skin-haru.png).
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ---------------------------------------------------------------- les blocs
+const T = {
+  pierre:   { nom: 'Pierres taillées', c: '#7f7f7f', m: 'briques' },
+  pierre_m: { nom: 'Pierres taillées moussues', c: '#727a68', m: 'briques', mousse: true },
+  pierre_f: { nom: 'Pierres taillées fissurées', c: '#787878', m: 'briques', fissure: true },
+  pave:     { nom: 'Pierre (pavés)', c: '#6c6c6c', m: 'pave' },
+  pave_m:   { nom: 'Pavés moussus', c: '#5f6a58', m: 'pave', mousse: true },
+  buche:    { nom: 'Bûche de chêne noir', c: '#3e2c1c', m: 'buche', axe: true },
+  cn_pl:    { nom: 'Planches de chêne noir', c: '#4b3321', m: 'planches' },
+  cn_dalle: { nom: 'Dalle de chêne noir', c: '#4b3321', m: 'planches' },
+  cn_esc:   { nom: 'Escalier en chêne noir', c: '#4b3321', m: 'planches' },
+  ep_pl:    { nom: "Planches d'épicéa", c: '#71502e', m: 'planches' },
+  ep_dalle: { nom: "Dalle d'épicéa (tabouret)", c: '#71502e', m: 'planches' },
+  ep_esc:   { nom: "Escalier en épicéa", c: '#71502e', m: 'planches' },
+  ep_ec:    { nom: "Bois d'épicéa écorcé", c: '#8d6943', m: 'ecorce' },
+  tuile_esc:   { nom: "Escalier en tuiles d'ardoise des abîmes", c: '#38383e', m: 'tuiles' },
+  tuile_dalle: { nom: "Dalle de tuiles d'ardoise des abîmes", c: '#38383e', m: 'tuiles' },
+  briques:  { nom: 'Briques', c: '#94503a', m: 'briques_rouges' },
+  ardoise:  { nom: 'Ardoise des abîmes polie', c: '#4a4a50', m: 'lisse' },
+  tonneau:  { nom: 'Tonneau', c: '#6d4b2c', m: 'tonneau', axe: true },
+  vitre:    { nom: 'Vitre', c: '#a9d3e4', m: 'verre', transp: 0.35 },
+  lanterne: { nom: 'Lanterne', c: '#ffb347', m: 'lanterne', lum: 1.6 },
+  bougie:   { nom: 'Bougies', c: '#efe0bd', m: 'bougie', lum: 0.9 },
+  chaine:   { nom: 'Chaîne', c: '#3b3f48', m: 'lisse' },
+  feu:      { nom: 'Feu de camp', c: '#ff7a1a', m: 'feu', lum: 1.4 },
+  porte:    { nom: 'Porte en chêne noir', c: '#40291a', m: 'porte' },
+  porte_s:  { nom: "Porte camouflée (FramedBlocks, en bois d'épicéa écorcé)", c: '#8d6943', m: 'ecorce' },
+  barriere: { nom: 'Barrière en chêne noir', c: '#40291a', m: 'planches' },
+  plaque:   { nom: 'Plaque de pression en chêne noir', c: '#4b3321', m: 'planches' },
+  tapis:    { nom: 'Tapis rouge', c: '#9c2828', m: 'laine' },
+  casier:   { nom: 'Casier à bouteilles (étagère + bouteilles)', c: '#3d2818', m: 'casier' },
+  cuivre:   { nom: 'Cuivre taillé', c: '#c56f46', m: 'cuivre' },
+  tuyau:    { nom: 'Paratonnerre (tuyau en cuivre)', c: '#cd7d54', m: 'lisse' },
+  chaudron: { nom: 'Chaudron', c: '#3b3b40', m: 'chaudron' },
+  robinet:  { nom: 'Robinet (Supplementaries)', c: '#9097a0', m: 'lisse' },
+  coffre:   { nom: 'Coffre', c: '#8f5d2c', m: 'coffre' },
+  or:       { nom: "Bloc d'or", c: '#f0c22f', m: 'or' },
+  toile:    { nom: "Toile d'araignée", c: '#e8e8e8', m: 'toile', transp: 0.6 },
+  foin:     { nom: 'Botte de foin (le houblon)', c: '#c7a33a', m: 'foin', axe: true },
+  chope:    { nom: 'Chope posée (déco)', c: '#e2a332', m: 'chope' },
+  bouteille:{ nom: 'Bouteille posée (déco)', c: '#2f6b3a', m: 'bouteille' },
+  noir_br:  { nom: 'Briques de roche noire polie', c: '#2e2a30', m: 'briques' },
+  dore:     { nom: 'Roche noire dorée', c: '#5a4a2a', m: 'dore' },
+  quartz:   { nom: 'Bloc de quartz', c: '#ebe5dc', m: 'lisse' },
+  quartz_p: { nom: 'Pilier de quartz', c: '#e6dfd4', m: 'buche_q' },
+  fer:      { nom: 'Bloc de fer', c: '#d8d8d8', m: 'or' },
+  diamant:  { nom: 'Bloc de diamant', c: '#5fe0d8', m: 'or' },
+  emeraude: { nom: "Bloc d'émeraude", c: '#3ccf6a', m: 'or' },
+  or_brut:  { nom: "Bloc d'or brut", c: '#d9a62a', m: 'pave' },
+  echelle:  { nom: 'Échelle', c: '#8a6a3c', m: 'echelle', transp: 0.5 },
+};
+
+// formes : morceaux [x, y, z, largeur, hauteur, profondeur] dans le bloc
+function morceaux(f, d) {
+  switch (f) {
+    case 'dalle': return [[0, 0, 0, 1, .5, 1]];
+    case 'dalle_h': return [[0, .5, 0, 1, .5, 1]];
+    case 'esc': {
+      const haut = { n: [0, .5, 0, 1, .5, .5], s: [0, .5, .5, 1, .5, .5], e: [.5, .5, 0, .5, .5, 1], w: [0, .5, 0, .5, .5, 1] }[d];
+      return [[0, 0, 0, 1, .5, 1], haut];
+    }
+    case 'poteau': return [[.375, 0, .375, .25, 1, .25]];
+    case 'plaque': return [[.0625, 0, .0625, .875, .0625, .875]];
+    case 'tapis': return [[0, 0, 0, 1, .0625, 1]];
+    case 'petit': return [[.31, 0, .31, .38, .46, .38], [.37, .46, .37, .26, .1, .26]];
+    case 'petit_h': return [[.31, .32, .31, .38, .46, .38], [.45, .78, .45, .1, .22, .1]];
+    case 'bougies': return [[.2, 0, .25, .14, .42, .14], [.56, 0, .32, .14, .3, .14], [.36, 0, .6, .14, .52, .14]];
+    case 'chaine': return [[.45, 0, .45, .1, 1, .1]];
+    case 'vitre': return d === 'x' ? [[0, 0, .44, 1, 1, .12]] : [[.44, 0, 0, .12, 1, 1]];
+    case 'porte': return d === 'n' || d === 's' ? [[0, 0, .41, 1, 1, .18]] : [[.41, 0, 0, .18, 1, 1]];
+    case 'feu': return [[0, 0, 0, 1, .44, 1]];
+    case 'robinet': return d === 'n' ? [[.38, .35, .5, .24, .28, .5], [.42, .17, .52, .16, .2, .16]] : [[.38, .35, 0, .24, .28, .5], [.42, .17, .32, .16, .2, .16]];
+    case 'echelle': return { n: [[0, 0, .9, 1, 1, .1]], s: [[0, 0, 0, 1, 1, .1]], e: [[0, 0, 0, .1, 1, 1]], w: [[.9, 0, 0, .1, 1, 1]] }[d];
+    case 'tuyau': return d === 'x' ? [[0, .4, .4, 1, .2, .2]] : d === 'z' ? [[.4, .4, 0, .2, .2, 1]] : [[.4, 0, .4, .2, 1, .2]];
+    case 'coffre': return [[.06, 0, .06, .88, .88, .88]];
+    case 'toile': return [[.05, .05, .47, .9, .9, .06], [.47, .05, .05, .06, .9, .9]];
+    case 'chope': return [[.36, 0, .36, .28, .36, .28]];
+    case 'chope_d': return [[.36, .5, .36, .28, .36, .28]];
+    case 'bouteille_d': return [[.42, .5, .42, .16, .46, .16], [.46, .96, .46, .08, .04, .08]];
+    default: return [[0, 0, 0, 1, 1, 1]];
+  }
+}
+
+const MAP = new Map();
+const DECO = [];
+const cle = (x, y, z) => x + ',' + y + ',' + z;
+function pose(x, y, z, t, f = 'cube', d = null, plafond = false, e = null) { MAP.set(cle(x, y, z), { x, y, z, t, f, d, plafond, e }); }
+const AFFS = [];
+function affiche(nom, x, y, z, face) { AFFS.push({ nom, x, y, z, face }); }
+let HARU = null;
+function haru(x, y, z, yaw) { HARU = { x, y, z, yaw }; }
+function deco(x, y, z, t, f = 'cube', d = null) { DECO.push({ x, y, z, t, f, d }); }
+function vide(x, y, z) { MAP.delete(cle(x, y, z)); }
+function h3(x, y, z) { const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return n - Math.floor(n); }
+function pierreMix(x, y, z, mousse) { const r = h3(x, y, z); return r < mousse ? 'pierre_m' : r < mousse + 0.13 ? 'pierre_f' : 'pierre'; }
+
+// ================================================================ PLAN : début (outils/cave-haru.mjs rejoue tout ce bloc)
+// Repère du plan : x 0..19 le long de la façade, z 0..9 vers le fond (la rue est côté z négatif), y 0 = sol du bar
+// (un bloc au-dessus du sol dehors). affiche(nom, x0, y0, z0, face) : les cases que l'affiche couvre, côté pièce.
+
+// ---------------------------------------------------------------- le rez-de-chaussée (le bar)
+for (let x = 0; x <= 19; x++) for (let z = 0; z <= 9; z++) {
+  const bord = x === 0 || x === 19 || z === 0 || z === 9;
+  pose(x, 0, z, bord ? 'pave' : 'ep_pl');
+  if (bord) for (let y = 1; y <= 5; y++) pose(x, y, z, pierreMix(x, y, z, 0.1));
+}
+for (const px of [0, 6, 13, 19]) for (let y = 0; y <= 5; y++) { pose(px, y, 0, 'buche', 'cube', 'y'); pose(px, y, 9, 'buche', 'cube', 'y'); }
+for (let x = 0; x <= 19; x++) { pose(x, 5, 0, 'buche', 'cube', 'x'); pose(x, 5, 9, 'buche', 'cube', 'x'); }
+for (let z = 1; z <= 8; z++) { pose(0, 5, z, 'buche', 'cube', 'z'); pose(19, 5, z, 'buche', 'cube', 'z'); }
+for (const px of [6, 13]) for (let z = 1; z <= 8; z++) pose(px, 5, z, 'buche', 'cube', 'z'); // poutres du plafond
+// fenêtres
+for (const x of [2, 3, 16, 17]) for (const y of [2, 3]) pose(x, y, 0, 'vitre', 'vitre', 'x');
+for (const x of [1, 2, 3, 4, 15, 16, 17, 18]) pose(x, 4, 0, 'buche', 'cube', 'x');
+for (const z of [3, 4]) for (const y of [2, 3]) pose(19, y, z, 'vitre', 'vitre', 'z');
+// porte + linteau + marches
+pose(9, 1, 0, 'porte', 'porte', 'n', false, 'bas_g'); pose(9, 2, 0, 'porte', 'porte', 'n', false, 'haut_g');
+pose(10, 1, 0, 'porte', 'porte', 'n', false, 'bas_d'); pose(10, 2, 0, 'porte', 'porte', 'n', false, 'haut_d');
+for (const x of [9, 10]) pose(x, 0, -1, 'ep_esc', 'esc', 's');
+for (let x = 8; x <= 11; x++) pose(x, 3, 0, 'buche', 'cube', 'x');
+affiche('enseigne', 8, 4, -1, 'n');
+// fûts dehors
+pose(6, 0, -1, 'tonneau', 'cube', 'y'); pose(6, 1, -1, 'lanterne', 'petit');
+pose(13, 0, -1, 'tonneau', 'cube', 'y'); pose(13, 1, -1, 'tonneau', 'cube', 'y'); pose(13, 2, -1, 'lanterne', 'petit');
+// plafond
+for (let x = 0; x <= 19; x++) for (let z = 0; z <= 9; z++) pose(x, 6, z, 'cn_pl');
+// cheminée
+for (let y = 1; y <= 5; y++) { pose(1, y, 3, 'briques'); pose(1, y, 6, 'briques'); pose(0, y, 4, 'briques'); pose(0, y, 5, 'briques'); }
+for (let y = 3; y <= 5; y++) { pose(1, y, 4, 'briques'); pose(1, y, 5, 'briques'); }
+pose(1, 1, 4, 'feu', 'feu', 'e'); pose(1, 1, 5, 'feu', 'feu', 'e');
+for (let z = 3; z <= 6; z++) pose(2, 3, z, 'cn_dalle', 'dalle_h');
+pose(2, 4, 3, 'bougie', 'bougies'); pose(2, 4, 6, 'bougie', 'bougies');
+affiche('cave', 2, 4, 4, 'e');
+// escalier vers la cave (descend vers l'est)
+for (let k = 0; k <= 5; k++) for (const z of [7, 8]) pose(2 + k, -k, z, 'ep_esc', 'esc', 'w');
+for (let x = 3; x <= 7; x++) for (const z of [7, 8]) vide(x, 0, z);
+for (let x = 2; x <= 7; x++) pose(x, 1, 6, 'barriere', 'poteau');
+for (const z of [7, 8]) pose(8, 1, z, 'barriere', 'poteau');
+// comptoir en fûts
+for (let x = 11; x <= 17; x++) { pose(x, 1, 5, 'tonneau', 'cube', 'z'); pose(x, 2, 5, 'cn_dalle', 'dalle'); }
+for (let z = 6; z <= 8; z++) { pose(11, 1, z, 'tonneau', 'cube', 'x'); pose(11, 2, z, 'cn_dalle', 'dalle'); }
+deco(12, 2, 5, 'chope', 'chope_d'); deco(15, 2, 5, 'chope', 'chope_d'); deco(11, 2, 7, 'chope', 'chope_d');
+for (const x of [12, 14, 16]) pose(x, 1, 4, 'ep_dalle', 'dalle');
+// râtelier à fûts derrière le comptoir, l'affiche au-dessus
+for (let x = 12; x <= 18; x++) for (let y = 1; y <= 3; y++) pose(x, y, 8, 'tonneau', 'cube', 'z');
+for (const x of [12, 13, 17, 18]) pose(x, 4, 8, 'cn_dalle', 'dalle');
+for (const x of [12, 18]) deco(x, 4, 8, 'bouteille', 'bouteille_d');
+for (const x of [13, 15, 17]) pose(x, 2, 7, 'robinet', 'robinet', 'n');
+affiche('happy', 14, 4, 8, 'n');
+// une estrade derrière le comptoir : le barman dépasse
+for (let x = 12; x <= 18; x++) for (const z of [6, 7]) pose(x, 1, z, 'ep_dalle', 'dalle');
+haru(15.5, 1.5, 6.6, 180);
+// tables
+function table(x, z) { pose(x, 1, z, 'barriere', 'poteau'); pose(x, 2, z, 'plaque', 'plaque'); }
+table(3, 2); pose(2, 1, 2, 'cn_esc', 'esc', 'w'); pose(4, 1, 2, 'cn_esc', 'esc', 'e');
+table(7, 2); pose(6, 1, 2, 'cn_esc', 'esc', 'w'); pose(8, 1, 2, 'cn_esc', 'esc', 'e');
+function tableFut(x, z, tabourets) { pose(x, 1, z, 'tonneau', 'cube', 'y'); pose(x, 2, z, 'bougie', 'bougies'); for (const [tx, tz] of tabourets) pose(tx, 1, tz, 'ep_dalle', 'dalle'); }
+tableFut(5, 4, [[4, 4], [6, 4], [5, 5]]);
+tableFut(8, 4, [[8, 5], [8, 3]]);
+tableFut(17, 2, [[16, 2], [18, 2]]);
+for (const x of [9, 10]) for (let z = 1; z <= 4; z++) pose(x, 1, z, 'tapis', 'tapis');
+affiche('blonde', 7, 2, 1, 's');
+affiche('rousse', 11, 2, 1, 's');
+affiche('wanted', 18, 2, 6, 'w');
+// lanternes suspendues
+for (const [x, z] of [[3, 3], [8, 5], [10, 2], [15, 3], [16, 7], [4, 7]]) { pose(x, 5, z, 'chaine', 'chaine'); pose(x, 4, z, 'lanterne', 'petit_h'); }
+
+// ---------------------------------------------------------------- la cave
+for (let x = 0; x <= 19; x++) for (let z = 0; z <= 9; z++) {
+  pose(x, -6, z, h3(x, -6, z) < 0.3 ? 'pave_m' : 'pave');
+  if (x === 0 || x === 19 || z === 0 || z === 9) for (let y = -5; y <= -1; y++) pose(x, y, z, pierreMix(x, y, z, 0.35));
+}
+// voûte en briques (devant partout, derrière sauf l'escalier et les fûts géants)
+for (let x = 1; x <= 18; x++) {
+  pose(x, -1, 1, 'briques'); pose(x, -2, 1, 'briques'); pose(x, -1, 2, 'briques');
+  if (!(x >= 2 && x <= 7) && !(x >= 9)) { pose(x, -1, 8, 'briques'); pose(x, -2, 8, 'briques'); pose(x, -1, 7, 'briques'); }
+}
+// arcs en ardoise
+for (const xr of [4, 8]) {
+  for (let z = 3; z <= 6; z++) pose(xr, -1, z, 'ardoise');
+  pose(xr, -2, 1, 'ardoise'); pose(xr, -1, 1, 'ardoise'); pose(xr, -1, 2, 'ardoise');
+  for (let y = -5; y <= -3; y++) pose(xr, y, 1, 'ardoise');
+  if (xr === 8) { pose(xr, -1, 7, 'ardoise'); pose(xr, -2, 8, 'ardoise'); pose(xr, -1, 8, 'ardoise'); }
+}
+// casiers à bouteilles
+for (const x of [1, 2, 3, 5, 6, 7, 9, 10, 11, 12]) for (let y = -5; y <= -3; y++) pose(x, y, 1, 'casier', 'cube', 's');
+for (let z = 2; z <= 6; z++) for (let y = -5; y <= -3; y++) pose(1, y, z, 'casier', 'cube', 'e');
+pose(1, -2, 2, 'bougie', 'bougies'); pose(1, -2, 6, 'bougie', 'bougies');
+affiche('noire', 1, -2, 3, 'e');
+for (const z of [7, 8]) { pose(1, -5, z, 'tonneau', 'cube', 'x'); pose(1, -4, z, 'tonneau', 'cube', 'x'); }
+// réserve sous l'escalier
+for (let x = 3; x <= 6; x++) for (let y = -5; y <= -(x - 2) - 1; y++) for (const z of [7, 8]) pose(x, y, z, 'tonneau', 'cube', 'z');
+// table de dégustation
+for (let x = 3; x <= 7; x++) { pose(x, -5, 4, 'cn_dalle', 'dalle_h'); pose(x, -5, 5, 'cn_dalle', 'dalle_h'); pose(x, -5, 3, 'ep_esc', 'esc', 'n'); pose(x, -5, 6, 'ep_esc', 'esc', 's'); }
+pose(4, -4, 4, 'bougie', 'bougies'); pose(6, -4, 5, 'bougie', 'bougies');
+deco(3, -4, 5, 'chope', 'chope'); deco(7, -4, 4, 'chope', 'chope'); deco(5, -4, 5, 'bouteille', 'bouteille_d');
+// fûts géants (axe vers le mur du fond)
+function grosFut(cx) {
+  for (let z = 5; z <= 8; z++) for (let y = -5; y <= -1; y++) {
+    const dy = y + 3, demi = Math.abs(dy) === 2 ? 1 : 2;
+    for (let dx = -demi; dx <= demi; dx++) {
+      const bord = Math.abs(dx) === demi || Math.abs(dy) === 2;
+      const t = z === 5 ? (bord ? 'cn_pl' : 'ep_ec') : (z === 6 || z === 8) ? (bord ? 'ardoise' : 'ep_pl') : 'ep_pl';
+      pose(cx + dx, y, z, t);
+    }
+  }
+}
+grosFut(11); grosFut(16);
+pose(11, -4, 4, 'robinet', 'robinet', 'n'); pose(11, -5, 4, 'chaudron');
+pose(15, -4, 4, 'robinet', 'robinet', 'n'); pose(15, -5, 4, 'chaudron');
+affiche('fut1', 10, -2, 4, 'n');
+affiche('fut2', 15, -2, 4, 'n');
+// le fût n°2 est creux : sa porte camouflée s'ouvre, une échelle descend à la salle au trésor
+for (const y of [-4, -3]) pose(16, y, 5, 'porte_s');
+for (let x = 15; x <= 17; x++) for (let y = -4; y <= -2; y++) for (let z = 6; z <= 8; z++) vide(x, y, z);
+pose(16, -2, 7, 'lanterne', 'petit_h');
+// cuve de brassage en cuivre
+pose(16, -5, 2, 'feu', 'feu', 's'); pose(17, -5, 2, 'feu', 'feu', 's'); pose(16, -5, 3, 'cuivre'); pose(17, -5, 3, 'cuivre');
+for (let y = -4; y <= -3; y++) for (let x = 16; x <= 17; x++) for (let z = 2; z <= 3; z++) pose(x, y, z, 'cuivre');
+pose(16, -2, 3, 'chaudron'); pose(17, -2, 3, 'tuyau', 'tuyau', 'y'); pose(17, -1, 3, 'tuyau', 'tuyau', 'y'); pose(17, -1, 4, 'tuyau', 'tuyau', 'z');
+// houblon, toiles
+for (const [x, y] of [[13, -5], [14, -5], [15, -5], [14, -4]]) pose(x, y, 1, 'foin', 'cube', 'x');
+pose(18, -3, 1, 'toile', 'toile'); pose(1, -3, 8, 'toile', 'toile'); pose(12, -2, 3, 'toile', 'toile');
+// lanternes de la cave
+for (const [x, z] of [[5, 4], [7, 5], [10, 3], [14, 3], [18, 4]]) { pose(x, -1, z, 'chaine', 'chaine'); pose(x, -2, z, 'lanterne', 'petit_h'); }
+pose(9, -5, 6, 'lanterne', 'petit');
+
+// ---------------------------------------------------------------- la salle au trésor d'Haru (sous la cave, façon Picsou)
+// sol y -13, salle y -12..-8, plafond y -7 (juste sous le sol de la cave)
+for (let x = 0; x <= 19; x++) for (let z = 0; z <= 9; z++) {
+  const bord = x === 0 || x === 19 || z === 0 || z === 9;
+  pose(x, -13, z, bord ? 'noir_br' : ((x + z) % 2 ? 'quartz' : 'ardoise'));
+  pose(x, -7, z, bord ? 'noir_br' : 'noir_br', 'cube', null, true);
+  if (bord) for (let y = -12; y <= -8; y++) pose(x, y, z, y === -8 ? 'dore' : 'noir_br');
+}
+for (const [x, z] of [[1, 1], [1, 8], [18, 1], [18, 8], [10, 1], [10, 8]]) { for (let y = -12; y <= -9; y++) pose(x, y, z, 'quartz_p'); pose(x, -8, z, 'or'); }
+// l'échelle depuis le fût n°2 (contre le mur du fond)
+for (const y of [-5, -6, -7]) vide(16, y, 8);
+for (let y = -12; y <= -3; y++) pose(16, y, 8, 'echelle', 'echelle', 'n');
+// la montagne de pièces d'or
+for (let x = 2; x <= 9; x++) for (let z = 2; z <= 7; z++) {
+  const d = Math.hypot((x - 5.5) * 0.85, z - 4.5), h = Math.max(1, Math.min(3, Math.round(3.4 - d * 0.65)));
+  for (let k = 0; k < h; k++) {
+    const r = h3(x, k, z), y = -12 + k;
+    pose(x, y, z, k < h - 1 ? 'or' : r < 0.05 ? 'diamant' : r < 0.1 ? 'emeraude' : r < 0.45 ? 'or_brut' : 'or');
+  }
+}
+// le plongeoir
+for (const x of [11, 12]) for (const z of [4, 5]) for (const y of [-12, -11]) pose(x, y, z, 'quartz');
+for (const y of [-12, -11]) pose(13, y, 4, 'echelle', 'echelle', 'e');
+for (const x of [8, 9, 10]) pose(x, -10, 4, 'ep_dalle', 'dalle');
+pose(12, -10, 5, 'barriere', 'poteau'); pose(11, -10, 5, 'barriere', 'poteau');
+// le trône du patron et son portrait
+for (let x = 14; x <= 17; x++) pose(x, -12, 4, 'tapis', 'tapis');
+pose(18, -12, 4, 'cn_esc', 'esc', 'e');
+for (const z of [3, 5]) { pose(18, -12, z, 'or'); pose(18, -11, z, 'lanterne', 'petit'); }
+affiche('patron', 18, -10, 4, 'w');
+// coffre-fort géant dans le mur ouest
+for (let y = -12; y <= -8; y++) for (let z = 2; z <= 7; z++) { const r = Math.hypot(z - 4.5, y + 10); if (r < 2.9 && r > 1.6) pose(0, y, z, 'fer'); }
+pose(0, -10, 4, 'ardoise'); pose(0, -10, 5, 'ardoise');
+// vitrines, coffres
+for (const [x, t] of [[13, 'diamant'], [15, 'emeraude'], [17, 'diamant']]) { pose(x, -12, 1, 'quartz_p'); pose(x, -11, 1, t); }
+for (let x = 11; x <= 14; x++) pose(x, -12, 8, 'coffre', 'coffre', 'n');
+affiche('interdit', 15, -11, 8, 'n');
+pose(12, -11, 8, 'bougie', 'bougies'); pose(13, -11, 8, 'bougie', 'bougies');
+for (const [x, z] of [[6, 1], [6, 8], [14, 2], [14, 6]]) { pose(x, -8, z, 'chaine', 'chaine'); pose(x, -9, z, 'lanterne', 'petit_h'); }
+
+// ---------------------------------------------------------------- le toit
+const toitY = (z) => z <= 4 ? 7 + z : 7 + (9 - z);
+for (let x = -1; x <= 20; x++) for (let z = -1; z <= 10; z++) {
+  if (z === 4 || z === 5) pose(x, 11, z, 'tuile_dalle', 'dalle');
+  else pose(x, toitY(z), z, 'tuile_esc', 'esc', z < 4 ? 's' : 'n');
+}
+for (const x of [0, 19]) for (let z = 0; z <= 9; z++) for (let y = 7; y < toitY(z); y++) pose(x, y, z, z === 4 || z === 5 ? 'buche' : 'ep_pl', 'cube', 'y');
+for (const x of [0, 19]) for (const z of [4, 5]) pose(x, 9, z, 'vitre', 'vitre', 'z');
+for (let y = 6; y <= 13; y++) { pose(1, y, 4, 'briques'); pose(1, y, 5, 'briques'); }
+// ================================================================ PLAN : fin
+
+// ---------------------------------------------------------------- tout ça en liste
+const BLOCS = [...MAP.values(), ...DECO];
+const zoneDe = (b) => b.y >= 6 ? 'toit' : b.y >= 0 ? 'rdc' : b.y >= -6 ? 'cave' : 'tresor';
+
+// ---------------------------------------------------------------- textures 16×16
+function rng(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hex = (c) => { const n = parseInt(c.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const fois = (c, f) => c.map(v => Math.max(0, Math.min(255, Math.round(v * f))));
+function toile16(fn) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d'); const img = g.createImageData(16, 16);
+  fn((x, y, col, a = 255) => { const i = (y * 16 + x) * 4; img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a; });
+  g.putImageData(img, 0, 0); return c;
+}
+function tourne(c) { const r = document.createElement('canvas'); r.width = r.height = 16; const g = r.getContext('2d'); g.translate(16, 0); g.rotate(Math.PI / 2); g.drawImage(c, 0, 0); return r; }
+
+function dessinsDe(nom, t) {
+  const b = hex(t.c); const R = rng(nom.length * 977 + b[0] * 7 + b[1]);
+  const bruit = (a = 0.12) => 1 - a / 2 + R() * a;
+  const mousse = [79, 107, 58];
+  switch (t.m) {
+    case 'briques': {
+      const crack = new Set(); if (t.fissure) { let x = 3 + Math.floor(R() * 8); for (let y = 1; y < 15; y++) { crack.add(x + ',' + y); x += Math.floor(R() * 3) - 1; x = Math.max(1, Math.min(14, x)); } }
+      return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const rang = y >> 3, joint = y % 8 === 7 || x === (rang ? 7 : 15);
+        let c = fois(b, joint ? 0.66 : (y % 8 === 0 ? 1.1 : bruit(0.16)));
+        if (t.mousse && !joint && R() < (y % 8 > 3 ? 0.4 : 0.12)) c = fois(mousse, bruit(0.3));
+        if (crack.has(x + ',' + y)) c = fois(b, 0.45);
+        px(x, y, c);
+      } }) };
+    }
+    case 'briques_rouges': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const rang = y >> 2, joint = y % 4 === 3 || (x + (rang % 2) * 4) % 8 === 7;
+      px(x, y, joint ? [168, 160, 150] : fois(b, bruit(0.2)));
+    } }) };
+    case 'pave': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const v = Math.sin(x * 1.3 + Math.sin(y * 0.9) * 2) * Math.cos(y * 1.1 + Math.sin(x * 0.7) * 2);
+      let c = fois(b, v > 0.55 || v < -0.6 ? 0.68 : bruit(0.25));
+      if (t.mousse && R() < 0.3) c = fois(mousse, bruit(0.3));
+      px(x, y, c);
+    } }) };
+    case 'planches': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const ligne = y % 4 === 3, coupe = x === ((y >> 2) * 5 + 3) % 16;
+      px(x, y, fois(b, ligne || coupe ? 0.68 : bruit(0.12) * (1 + 0.05 * Math.sin(x * 0.8 + y))));
+    } }) };
+    case 'buche': case 'ecorce': {
+      const cote = toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, (x % 4 === 0 ? 0.72 : 1) * bruit(t.m === 'ecorce' ? 0.1 : 0.22))); });
+      const bout = toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const r = Math.hypot(x - 7.5, y - 7.5); px(x, y, r > 6.8 ? fois(b, 0.75) : fois([166, 128, 82], (Math.floor(r) % 2 ? 0.85 : 1) * bruit(0.08))); } });
+      return { cote, bout };
+    }
+    case 'tuiles': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const rang = y >> 2, joint = y % 4 === 3 || (x + (rang % 2) * 2) % 4 === 3;
+      px(x, y, fois(b, joint ? 0.6 : bruit(0.14)));
+    } }) };
+    case 'tonneau': {
+      const cote = toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const cercle = y === 2 || y === 3 || y === 12 || y === 13;
+        px(x, y, cercle ? fois([70, 70, 76], bruit(0.2)) : fois(b, (x % 4 === 0 ? 0.7 : 1) * bruit(0.12)));
+      } });
+      const bout = toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const r = Math.hypot(x - 7.5, y - 7.5);
+        let c = fois(b, (y % 4 === 0 ? 0.75 : 1.05) * bruit(0.1));
+        if (r > 6.3) c = fois([70, 70, 76], bruit(0.2));
+        if (r < 1.1) c = [40, 28, 18];
+        px(x, y, c);
+      } });
+      return { cote, bout };
+    }
+    case 'foin': {
+      const cote = toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, (y === 3 || y === 12) ? [120, 40, 30] : fois(b, (x % 3 === 0 ? 0.8 : 1) * bruit(0.2))); });
+      const bout = toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, bruit(0.35))); });
+      return { cote, bout };
+    }
+    case 'verre': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const bord = x === 0 || y === 0 || x === 15 || y === 15, reflet = x - y === 4 || x - y === 6;
+      px(x, y, bord ? [215, 235, 240] : reflet ? [240, 250, 255] : b, bord ? 255 : reflet ? 200 : 90);
+    } }) };
+    case 'lanterne': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const cadre = x < 2 || x > 13 || y < 2 || y > 13;
+      px(x, y, cadre ? [50, 52, 60] : fois([255, 190, 90], 1 - Math.hypot(x - 7.5, y - 8) / 18));
+    } }) };
+    case 'bougie': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, y < 3 ? [255, 210, 110] : fois(b, bruit(0.08))); }) };
+    case 'feu': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const bois = y > 11 || (y > 8 && x % 5 < 2);
+      px(x, y, bois ? fois([70, 45, 25], bruit(0.2)) : (y < 4 + Math.sin(x) * 2 ? [255, 220, 90] : fois([255, 110, 25], bruit(0.2))));
+    } }) };
+    case 'porte': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const fenetre = y > 2 && y < 7 && x > 2 && x < 13 && x !== 7 && x !== 8;
+      px(x, y, fenetre ? [40, 30, 20] : fois(b, (x % 4 === 0 ? 0.7 : 1) * bruit(0.12)));
+    } }) };
+    case 'laine': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, ((x + y) % 2 ? 0.94 : 1.04) * bruit(0.1) * (x === 1 || x === 14 ? 1.25 : 1))); }) };
+    case 'casier': {
+      const teintes = [[40, 90, 50], [120, 30, 40], [150, 95, 30], [30, 60, 40]];
+      return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const grille = x % 4 === 0 || y % 4 === 0;
+        if (grille) { px(x, y, fois(b, bruit(0.15))); continue; }
+        const cx = (x >> 2) * 4 + 2, cy = (y >> 2) * 4 + 2, col = teintes[((x >> 2) * 3 + (y >> 2) * 5) % 4];
+        px(x, y, (x === cx - 1 && y === cy - 1) ? [220, 230, 210] : Math.hypot(x - cx, y - cy) < 1.6 ? col : [20, 14, 10]);
+      } }) };
+    }
+    case 'cuivre': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const joint = x % 8 === 7 || y % 8 === 7;
+      px(x, y, R() < 0.06 ? [80, 160, 130] : fois(b, joint ? 0.72 : (x % 8 === 0 || y % 8 === 0 ? 1.15 : bruit(0.1))));
+    } }) };
+    case 'chaudron': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, (y < 2 || x < 1 || x > 14) ? 1.4 : bruit(0.15))); }) };
+    case 'coffre': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const bande = y === 5 || y === 6, loquet = (x === 7 || x === 8) && y > 4 && y < 9;
+      px(x, y, loquet ? [200, 200, 205] : bande ? [60, 40, 20] : fois(b, (y % 4 === 0 ? 0.8 : 1) * bruit(0.1)));
+    } }) };
+    case 'dore': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, R() < 0.25 ? [240, 190, 50] : fois([46, 42, 48], bruit(0.3))); }) };
+    case 'buche_q': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, x % 5 === 0 ? 0.88 : bruit(0.05))); }) };
+    case 'echelle': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const m = x === 2 || x === 3 || x === 12 || x === 13 || y % 4 === 1; px(x, y, fois(b, bruit(0.15)), m ? 255 : 0); } }) };
+    case 'or': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, x === 0 || y === 0 ? 1.25 : x === 15 || y === 15 ? 0.75 : bruit(0.12))); }) };
+    case 'toile': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const fil = x === y || x === 15 - y || x === 8 || y === 8 || Math.round(Math.hypot(x - 8, y - 8)) % 4 === 0; px(x, y, [235, 235, 235], fil ? 230 : 0); } }) };
+    case 'chope': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, y < 4 ? [250, 245, 225] : fois(b, bruit(0.15))); }) };
+    case 'bouteille': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, y > 6 && y < 11 ? [225, 210, 170] : fois(b, bruit(0.2))); }) };
+    default: return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, bruit(0.1))); }) };
+  }
+}
+function texDe(c) { const tx = new THREE.CanvasTexture(c); tx.magFilter = THREE.NearestFilter; tx.minFilter = THREE.NearestFilter; tx.colorSpace = THREE.SRGBColorSpace; return tx; }
+const DESSINS = {}; for (const [n, t] of Object.entries(T)) DESSINS[n] = dessinsDe(n, t);
+const matCache = new Map();
+function matDe(t, axe) {
+  const k = t + '|' + (axe || '');
+  if (matCache.has(k)) return matCache.get(k);
+  const def = T[t], d = DESSINS[t];
+  const fabrique = (canvas) => {
+    const map = texDe(canvas);
+    const m = new THREE.MeshStandardMaterial({ map, roughness: 0.92, metalness: 0 });
+    if (def.transp) { m.transparent = true; m.opacity = 1; m.alphaTest = 0.05; m.depthWrite = def.m !== 'verre'; if (def.m === 'verre') m.opacity = 0.9; }
+    if (def.lum) { m.emissive = new THREE.Color(1, 1, 1); m.emissiveMap = map; m.emissiveIntensity = def.lum; }
+    if (def.m === 'or' || def.m === 'cuivre') { m.metalness = 0.6; m.roughness = 0.4; }
+    return m;
+  };
+  let mat;
+  if (def.axe && d.bout) {
+    const cote = fabrique(d.cote), coteR = fabrique(tourne(d.cote)), bout = fabrique(d.bout);
+    const a = axe || 'y';
+    if (a === 'y') mat = [cote, cote, bout, bout, cote, cote];
+    else if (a === 'x') mat = [bout, bout, coteR, coteR, coteR, coteR];
+    else mat = [coteR, coteR, cote, cote, bout, bout];
+  } else mat = fabrique(d.cote);
+  matCache.set(k, mat);
+  return mat;
+}
+
+// ---------------------------------------------------------------- la scène
+const rendu = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
+rendu.setSize(innerWidth, innerHeight);
+rendu.toneMapping = THREE.ACESFilmicToneMapping;
+rendu.toneMappingExposure = 1.1;
+document.body.appendChild(rendu.domElement);
+const etiqRendu = new CSS2DRenderer();
+etiqRendu.setSize(innerWidth, innerHeight);
+Object.assign(etiqRendu.domElement.style, { position: 'fixed', top: '0', left: '0', pointerEvents: 'none', zIndex: 2 });
+document.body.appendChild(etiqRendu.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 400);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.enableDamping = true;
+const ciel = new THREE.HemisphereLight(0xb8a890, 0x2a2018, 0.7);
+const lune = new THREE.DirectionalLight(0xc8ccd8, 1.0); lune.position.set(-20, 40, -30);
+scene.add(ciel, lune);
+
+// sol d'herbe avec un trou pour la maison
+const forme = new THREE.Shape(); forme.moveTo(-40, -40); forme.lineTo(60, -40); forme.lineTo(60, 50); forme.lineTo(-40, 50); forme.lineTo(-40, -40);
+const trou = new THREE.Path(); trou.moveTo(0, 0); trou.lineTo(20, 0); trou.lineTo(20, 10); trou.lineTo(0, 10); trou.lineTo(0, 0); forme.holes.push(trou);
+const herbeTex = texDe(toile16(px => { const R = rng(4); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois([92, 140, 60], 0.85 + R() * 0.3)); }));
+herbeTex.wrapS = herbeTex.wrapT = THREE.RepeatWrapping; herbeTex.repeat.set(1, 1);
+const herbeGeo = new THREE.ShapeGeometry(forme);
+const uvH = herbeGeo.attributes.uv, posH = herbeGeo.attributes.position; for (let i = 0; i < uvH.count; i++) uvH.setXY(i, posH.getX(i), posH.getY(i));
+const herbeMat = new THREE.MeshStandardMaterial({ map: herbeTex, roughness: 1, transparent: true, side: THREE.DoubleSide });
+const herbe = new THREE.Mesh(herbeGeo, herbeMat); herbe.rotation.x = Math.PI / 2; herbe.position.y = 0.002; // (x, y) du dessin → (x, z) du monde
+scene.add(herbe);
+// chemin devant la porte
+const chemin = new THREE.Mesh(new THREE.PlaneGeometry(2, 7), new THREE.MeshStandardMaterial({ color: 0x8a7350, roughness: 1 }));
+chemin.rotation.x = -Math.PI / 2; chemin.position.set(10, 0.01, -4.5); scene.add(chemin);
+
+// ---------------------------------------------------------------- affichage des blocs
+const etat = { vue: 'dehors', toit: true, coupe: false, etiq: true, jour: false, couche: null };
+let groupeBlocs = new THREE.Group(); scene.add(groupeBlocs);
+const lumieres = [];
+const cube = new THREE.BoxGeometry(1, 1, 1);
+function visible(b) {
+  if (etat.couche !== null) { if (b.y > etat.couche) return false; return !(etat.coupe && b.z <= 0); }
+  const zone = zoneDe(b);
+  if (etat.vue === 'cave' && zone !== 'cave' && zone !== 'tresor') return false;
+  if (etat.vue === 'tresor' && zone !== 'tresor') return false;
+  if (etat.vue === 'bar' && (zone === 'cave' || zone === 'tresor')) return false;
+  if (!etat.toit && (zone === 'toit' || b.plafond)) return false;
+  if (etat.coupe && b.z <= 0) return false;
+  return true;
+}
+function construire() {
+  scene.remove(groupeBlocs);
+  groupeBlocs.traverse(o => { if (o.isInstancedMesh) o.dispose(); });
+  groupeBlocs = new THREE.Group();
+  const paquets = new Map();
+  for (const b of BLOCS) {
+    if (!visible(b)) continue;
+    const k = b.t + '|' + (T[b.t].axe ? (b.d || 'y') : '');
+    if (!paquets.has(k)) paquets.set(k, []);
+    for (const [ox, oy, oz, sx, sy, sz] of morceaux(b.f, b.d)) paquets.get(k).push([b.x + ox + sx / 2, b.y + oy + sy / 2, b.z + oz + sz / 2, sx, sy, sz]);
+  }
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
+  for (const [k, liste] of paquets) {
+    const [t, axe] = k.split('|');
+    const im = new THREE.InstancedMesh(cube, matDe(t, axe), liste.length);
+    liste.forEach((e, i) => { p.set(e[0], e[1], e[2]); s.set(e[3], e[4], e[5]); m.compose(p, q, s); im.setMatrixAt(i, m); });
+    if (T[t].transp) im.renderOrder = 2;
+    groupeBlocs.add(im);
+  }
+  scene.add(groupeBlocs);
+  for (const l of lumieres) l.visible = visible(l.userData.b);
+  for (const a of decors) a.visible = visible(a.userData.b);
+  for (const e of etiquettes) e.visible = etat.etiq && visible(e.userData.b) && (etat.couche !== null || etat.vue !== 'tout' || e.userData.b.z < 0);
+  herbeMat.opacity = ((etat.vue !== 'tout' && etat.vue !== 'bar') || (etat.couche !== null && etat.couche < 0)) ? 0.15 : 1;
+  chemin.visible = herbeMat.opacity === 1;
+}
+// lumières des lanternes et des feux
+for (const b of BLOCS) {
+  if (b.t !== 'lanterne' && b.t !== 'feu') continue;
+  const l = new THREE.PointLight(b.t === 'feu' ? 0xff7a2a : 0xffa850, b.t === 'feu' ? 7 : 5, 10, 1.6);
+  l.position.set(b.x + 0.5, b.y + (b.f === 'petit_h' ? 0.5 : 0.6), b.z + 0.5);
+  l.userData.b = b; lumieres.push(l); scene.add(l);
+}
+
+// ---------------------------------------------------------------- étiquettes
+const etiquettes = [];
+function etiquette(texte, x, y, z, secret = false) {
+  const div = document.createElement('div'); div.className = 'etiquette' + (secret ? ' secret' : ''); div.textContent = texte;
+  const o = new CSS2DObject(div); o.position.set(x, y, z); o.userData.b = { x: Math.floor(x), y: Math.floor(y), z: Math.floor(z) };
+  etiquettes.push(o); scene.add(o);
+}
+etiquette('Entrée', 10, 3.6, -1.4);
+etiquette('Cheminée', 1.7, 2.6, 5);
+etiquette('Comptoir en fûts', 14, 3, 4.4);
+etiquette('Fûts en perce + robinets', 15.5, 4.1, 7.6);
+etiquette('Haru, le patron', 15.5, 3.3, 6.5);
+etiquette('Escalier vers la cave', 5, 1.8, 7.5);
+etiquette('Tables-tonneaux', 6.5, 2.7, 4.5);
+etiquette('Casiers à bouteilles', 6.5, -2.4, 1.5);
+etiquette('Table de dégustation', 5, -3.4, 4.5);
+etiquette('Fût n°1 · la blonde', 11.5, -0.4, 4.6);
+etiquette('Fût n°2 · porte secrète !', 16.5, -0.4, 4.6, true);
+etiquette('Cuve de brassage', 17, -2.3, 2.5);
+etiquette("Réserve sous l'escalier", 4.5, -3.6, 7.6);
+etiquette('Houblon', 14.2, -3.4, 1.5);
+etiquette('Échelle vers le trésor', 16.5, -3.2, 7.5, true);
+etiquette("La montagne d'or", 5.5, -8.6, 4.5, true);
+etiquette('Le plongeoir', 10, -9.2, 4.5, true);
+etiquette('Le trône du patron', 18, -10.8, 4.5, true);
+etiquette('Coffre-fort', 0.8, -9.5, 4.5, true);
+etiquette('Vitrines', 15, -10.2, 1.5, true);
+etiquette('Coffres', 12.5, -11.2, 8.4, true);
+
+// ---------------------------------------------------------------- le skin d'Haru : affiches + statue
+const decors = [];
+function charge(src) { return new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = src; }); }
+function toile(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; }
+
+let SKIN, FIG, TETE;
+function preparerSkin(img) {
+  SKIN = img;
+  const [f, g] = toile(16, 32);
+  const d = (sx, sy, w, h, dx, dy) => g.drawImage(img, sx, sy, w, h, dx, dy, w, h);
+  d(4, 20, 4, 12, 4, 20); d(4, 36, 4, 12, 4, 20);
+  d(20, 52, 4, 12, 8, 20); d(4, 52, 4, 12, 8, 20);
+  d(20, 20, 8, 12, 4, 8); d(20, 36, 8, 12, 4, 8);
+  d(44, 20, 4, 12, 0, 8); d(44, 36, 4, 12, 0, 8);
+  d(36, 52, 4, 12, 12, 8); d(52, 52, 4, 12, 12, 8);
+  d(8, 8, 8, 8, 4, 0); d(40, 8, 8, 8, 4, 0);
+  FIG = f;
+  const [t, gt] = toile(8, 8); gt.drawImage(img, 8, 8, 8, 8, 0, 0, 8, 8); gt.drawImage(img, 40, 8, 8, 8, 0, 0, 8, 8);
+  TETE = t;
+}
+
+// petits outils de dessin
+function papier(g, W, H, fond, tache = 'rgba(90,55,20,') {
+  g.fillStyle = fond; g.fillRect(0, 0, W, H);
+  const R = rng(W * 31 + H);
+  for (let i = 0; i < W * H / 40; i++) { g.fillStyle = tache + (R() * 0.08) + ')'; g.fillRect(R() * W, R() * H, 2, 2); }
+  for (let i = 0; i < 5; i++) { const x = R() * W, y = R() * H, r = 10 + R() * 40; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, tache + '0.10)'); gr.addColorStop(1, tache + '0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+  const v = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(40,20,5,0.45)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+}
+function bois(g, W, H, base = [92, 58, 32]) {
+  const R = rng(W + H * 7), hp = Math.max(18, Math.round(H / 4));
+  for (let y = 0; y < H; y += hp) {
+    const f = 0.85 + R() * 0.25; g.fillStyle = `rgb(${fois(base, f).join(',')})`; g.fillRect(0, y, W, hp);
+    for (let i = 0; i < W / 6; i++) { g.fillStyle = `rgba(30,15,5,${R() * 0.25})`; g.fillRect(R() * W, y + R() * hp, 10 + R() * 30, 1); }
+    g.fillStyle = 'rgba(20,10,4,0.7)'; g.fillRect(0, y + hp - 2, W, 2);
+  }
+}
+function cadre(g, W, H, coul, ep, marge = 0) { g.strokeStyle = coul; g.lineWidth = ep; g.strokeRect(marge + ep / 2, marge + ep / 2, W - 2 * marge - ep, H - 2 * marge - ep); }
+function texte(g, s, x, y, taille, police, coul, { contour = null, ep = 4, align = 'center', maxW = 0, ombre = null } = {}) {
+  g.font = `${taille}px ${police}`; g.textAlign = align; g.textBaseline = 'middle';
+  if (maxW) { const w = g.measureText(s).width; if (w > maxW) { taille = Math.floor(taille * maxW / w); g.font = `${taille}px ${police}`; } }
+  if (ombre) { g.fillStyle = ombre; g.fillText(s, x + 3, y + 3); }
+  if (contour) { g.strokeStyle = contour; g.lineWidth = ep; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.fillStyle = coul; g.fillText(s, x, y);
+}
+const RYE = "'Rye', Georgia, serif", FELL = "'IM Fell English SC', Georgia, serif";
+function perso(g, x, y, s) { g.imageSmoothingEnabled = false; g.drawImage(FIG, x, y, 16 * s, 32 * s); }
+function tete(g, x, y, s) { g.imageSmoothingEnabled = false; g.drawImage(TETE, x, y, 8 * s, 8 * s); }
+function chope(g, x, y, s, biere = '#f0b429', mousse = '#fff6dc') {
+  const P = (px, py, w, h, c) => { g.fillStyle = c; g.fillRect(x + px * s, y + py * s, w * s, h * s); };
+  P(6, 3, 3, 1, '#c9d2d8'); P(8, 3, 1, 5, '#c9d2d8'); P(6, 7, 3, 1, '#c9d2d8'); // anse
+  P(0, 2, 7, 9, '#c9d2d8'); P(1, 3, 5, 7, biere); P(1, 3, 1, 7, 'rgba(255,255,255,0.35)'); P(4, 4, 1, 1, 'rgba(255,255,255,0.5)'); P(2, 7, 1, 1, 'rgba(255,255,255,0.4)');
+  P(0, 0, 7, 3, mousse); P(1, -1, 2, 1, mousse); P(4, -1, 2, 1, mousse); P(0, 3, 1, 1, mousse); P(6, 3, 1, 2, mousse);
+  P(0, 10, 7, 1, '#9aa4ab');
+}
+function tonneauDessin(g, x, y, w, h) {
+  g.fillStyle = '#6d4b2c'; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(0,0,0,0.25)'; for (let i = 1; i < 5; i++) g.fillRect(x + i * w / 5, y + 4, 2, h - 8);
+  g.fillStyle = '#4a4a50'; g.fillRect(x + w * 0.04, y + h * 0.22, w * 0.92, h * 0.08); g.fillRect(x + w * 0.04, y + h * 0.7, w * 0.92, h * 0.08);
+}
+function rayons(g, cx, cy, W, H, c1, c2, n = 18) {
+  g.fillStyle = c1; g.fillRect(0, 0, W, H); g.fillStyle = c2;
+  for (let i = 0; i < n; i++) { const a = i * Math.PI * 2 / n; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, W + H, a, a + Math.PI / n); g.fill(); }
+}
+function ruban(g, x, y, w, h, coul, texteR, tCoul) {
+  g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(x + 4, y + 4, w, h);
+  g.fillStyle = coul; g.fillRect(x, y, w, h);
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x - h * 0.6, y + h / 2); g.lineTo(x, y + h); g.fill();
+  g.beginPath(); g.moveTo(x + w, y); g.lineTo(x + w + h * 0.6, y + h / 2); g.lineTo(x + w, y + h); g.fill();
+  texte(g, texteR, x + w / 2, y + h / 2 + 1, Math.round(h * 0.55), FELL, tCoul, { maxW: w - 10 });
+}
+
+// tailles en blocs entiers : ce sont de vrais tableaux dans le jeu
+const AFFICHES = {
+  enseigne: { titre: "L'enseigne (dehors, au-dessus de la porte)", w: 5, h: 1, dessin(g, W, H) {
+    bois(g, W, H, [70, 42, 24]); cadre(g, W, H, '#c89a52', 8, 6); cadre(g, W, H, '#3a2210', 3, 18);
+    texte(g, 'LA CAVE À HARU', W / 2, H * 0.43, 84, RYE, '#f2c14e', { contour: '#3a1a08', ep: 10, maxW: W - 260 });
+    texte(g, 'bières · vins · secrets', W / 2, H * 0.8, 24, FELL, '#f1e3c6');
+    chope(g, 40, H * 0.22, 8); chope(g, W - 112, H * 0.22, 8);
+  } },
+  cave: { titre: 'La Cave à Haru (au-dessus de la cheminée)', w: 2, h: 2, dessin(g, W, H) {
+    papier(g, W, H, '#ead6a6'); cadre(g, W, H, '#5a2a14', 6, 8); cadre(g, W, H, '#8b1e1e', 2, 20);
+    texte(g, 'LA CAVE', W / 2, 60, 56, RYE, '#8b1e1e', { contour: '#2a1008', ep: 4, maxW: W - 60 });
+    texte(g, 'À HARU', W / 2, 110, 44, RYE, '#2a1810', { maxW: W - 60 });
+    const s = 4.6, fx = W / 2 - 8 * s + 10, fy = 134;
+    tonneauDessin(g, W - 116, H - 142, 76, 70);
+    perso(g, fx, fy, s); chope(g, fx - 34, fy + 13 * s, 4.2);
+    ruban(g, 56, H - 58, W - 112, 30, '#8b1e1e', 'BIÈRES · VINS · SECRETS', '#f6e7c4');
+    texte(g, 'dep. 2026', 64, H - 78, 15, FELL, '#5a2a14');
+  } },
+  happy: { titre: 'Happy Hour (au-dessus des fûts du bar)', w: 3, h: 2, dessin(g, W, H) {
+    bois(g, W, H, [96, 26, 22]); cadre(g, W, H, '#f2c14e', 6, 8);
+    tete(g, 34, 84, 20);
+    texte(g, 'HAPPY HOUR', W * 0.63, 82, 66, RYE, '#f2c14e', { contour: '#2a0808', ep: 8, maxW: W * 0.6 });
+    texte(g, '18h – 20h', W * 0.63, 160, 46, FELL, '#fff1d0');
+    texte(g, '2 pintes = 1 Haru content', W * 0.63, 218, 28, FELL, '#f6d9a0', { maxW: W * 0.6 });
+    chope(g, W * 0.47, 254, 6); chope(g, W * 0.71, 254, 6, '#c0451e');
+    texte(g, 'tchin !', W * 0.63, 350, 26, RYE, '#f2c14e');
+  } },
+  blonde: { titre: "La Blonde d'Haru (mur de devant)", w: 1, h: 2, dessin(g, W, H) {
+    rayons(g, W / 2, H * 0.55, W, H, '#f6c445', '#f9dd7a', 20); cadre(g, W, H, '#5a3510', 6, 6);
+    texte(g, 'LA BLONDE', W / 2, 42, 34, RYE, '#5a2a10', { contour: '#fff3c8', ep: 5, maxW: W - 24 });
+    texte(g, "D'HARU", W / 2, 80, 30, RYE, '#8b1e1e', { contour: '#fff3c8', ep: 5 });
+    tete(g, W / 2 - 36, 110, 9);
+    chope(g, W / 2 - 52, 160, 12);
+    texte(g, 'douce comme Haru', W / 2, H - 50, 18, FELL, '#3a1a08', { maxW: W - 20 });
+    texte(g, "(c'est faux)", W / 2, H - 26, 15, FELL, '#8b1e1e');
+  } },
+  rousse: { titre: 'La Rousse qui cogne (mur de devant)', w: 1, h: 2, dessin(g, W, H) {
+    g.fillStyle = '#a3281f'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(0,0,0,0.12)'; for (let i = -H; i < W; i += 26) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 13, 0); g.lineTo(i + 13 + H, H); g.lineTo(i + H, H); g.fill(); }
+    cadre(g, W, H, '#f2c14e', 5, 6);
+    texte(g, 'LA ROUSSE', W / 2, 42, 33, RYE, '#fff1d0', { contour: '#3a0808', ep: 6, maxW: W - 24 });
+    texte(g, 'QUI COGNE', W / 2, 78, 27, RYE, '#f2c14e', { contour: '#3a0808', ep: 6, maxW: W - 24 });
+    const s = 5.4; perso(g, W / 2 - 8 * s + 14, 104, s); chope(g, W / 2 - 8 * s - 18, 104 + 14 * s, 4, '#c0451e');
+    texte(g, '7,5° · à boire assis', W / 2, H - 26, 17, FELL, '#fff1d0', { maxW: W - 20 });
+  } },
+  wanted: { titre: 'Wanted (derrière le comptoir)', w: 1, h: 2, dessin(g, W, H) {
+    papier(g, W, H, '#e2c993'); cadre(g, W, H, '#3a2010', 4, 8);
+    texte(g, 'WANTED', W / 2, 50, 40, RYE, '#2a1408', { maxW: W - 30 });
+    texte(g, 'RECHERCHÉ', W / 2, 88, 18, FELL, '#2a1408');
+    g.fillStyle = '#3a2010'; g.fillRect(W / 2 - 58, 108, 116, 116); tete(g, W / 2 - 52, 114, 13);
+    texte(g, 'a vidé', W / 2, 254, 20, FELL, '#2a1408');
+    texte(g, 'le fût n°2', W / 2, 280, 20, FELL, '#2a1408');
+    texte(g, 'RÉCOMPENSE', W / 2, 322, 17, FELL, '#8b1e1e');
+    texte(g, '1 PINTE', W / 2, 348, 24, RYE, '#8b1e1e');
+  } },
+  noire: { titre: 'La Noire du fond de la cave (cave, au-dessus des casiers)', w: 3, h: 2, dessin(g, W, H) {
+    g.fillStyle = '#141522'; g.fillRect(0, 0, W, H);
+    const R = rng(9); for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,240,200,${R() * 0.5})`; g.fillRect(R() * W, R() * H, 2, 2); }
+    cadre(g, W, H, '#7a6a9a', 4, 8);
+    const gl = g.createRadialGradient(110, H / 2, 10, 110, H / 2, 140); gl.addColorStop(0, 'rgba(200,170,255,0.45)'); gl.addColorStop(1, 'rgba(200,170,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, 260, H);
+    tete(g, 38, H / 2 - 76, 19);
+    texte(g, 'LA NOIRE', W * 0.6, 92, 66, RYE, '#e8d9b0', { contour: '#000', ep: 6, maxW: W * 0.46 });
+    texte(g, 'DU FOND DE LA CAVE', W * 0.6, 160, 28, FELL, '#c8b6f0', { maxW: W * 0.46 });
+    texte(g, 'brassée dans le noir.', W * 0.6, 220, 21, FELL, '#a99cc4', { maxW: W * 0.46 });
+    texte(g, "on sait pas ce qu'il y a dedans.", W * 0.6, 250, 21, FELL, '#a99cc4', { maxW: W * 0.46 });
+    chope(g, W * 0.6 - 30, 282, 8, '#2a1408', '#d8c49a');
+  } },
+  patron: { titre: 'Le Patron (salle au trésor, au-dessus du trône)', w: 2, h: 2, dessin(g, W, H) {
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#6a1218'); gr.addColorStop(1, '#2a0508'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    cadre(g, W, H, '#d9a830', 20); cadre(g, W, H, '#7a5510', 4, 20);
+    const gl = g.createRadialGradient(W / 2, 140, 10, W / 2, 140, 170); gl.addColorStop(0, 'rgba(255,210,90,0.35)'); gl.addColorStop(1, 'rgba(255,210,90,0)'); g.fillStyle = gl; g.fillRect(0, 0, W, H);
+    tete(g, W / 2 - 88, 46, 22);
+    g.fillStyle = '#d9a830'; g.fillRect(W / 2 - 110, H - 98, 220, 46);
+    g.fillStyle = '#7a5510'; g.fillRect(W / 2 - 110, H - 56, 220, 4);
+    texte(g, 'LE PATRON', W / 2, H - 74, 32, RYE, '#3a1a04');
+  } },
+  interdit: { titre: 'Entrée interdite (salle au trésor, à côté de l\'échelle)', w: 1, h: 2, dessin(g, W, H) {
+    papier(g, W, H, '#efe2c2');
+    g.save(); g.beginPath(); g.rect(0, 0, W, H); g.rect(14, 14, W - 28, H - 28); g.clip('evenodd');
+    for (let i = -H; i < W + H; i += 20) { g.fillStyle = (i / 20) % 2 ? '#b8231c' : '#f2e6c8'; g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 10, 0); g.lineTo(i + 10 + H, H); g.lineTo(i + H, H); g.fill(); }
+    g.restore();
+    texte(g, 'ENTRÉE', W / 2, 52, 32, RYE, '#b8231c', { maxW: W - 40 });
+    texte(g, 'INTERDITE', W / 2, 88, 27, RYE, '#b8231c', { maxW: W - 40 });
+    tete(g, W / 2 - 44, 112, 11);
+    g.fillStyle = '#1a0a04'; g.fillRect(W / 2 - 34, 140, 26, 6); g.fillRect(W / 2 + 8, 140, 26, 6);
+    texte(g, 'sauf Haru', W / 2, 238, 22, FELL, '#2a1408');
+    texte(g, '(et ceux qui', W / 2, 280, 16, FELL, '#5a3a20', { maxW: W - 36 });
+    texte(g, 'ramènent', W / 2, 302, 16, FELL, '#5a3a20');
+    texte(g, 'à boire)', W / 2, 324, 16, FELL, '#5a3a20');
+  } },
+  fut1: { titre: 'Plaque du fût n°1', w: 3, h: 1, dessin(g, W, H) {
+    bois(g, W, H, [120, 82, 44]); cadre(g, W, H, '#3a2010', 6);
+    texte(g, 'FÛT N°1', W / 2, H * 0.37, 56, RYE, '#fff1d0', { contour: '#2a1408', ep: 6 });
+    texte(g, 'LA BLONDE', W / 2, H * 0.76, 34, FELL, '#f6d58a');
+  } },
+  fut2: { titre: 'Plaque du fût n°2 (la porte secrète)', w: 3, h: 1, dessin(g, W, H) {
+    bois(g, W, H, [120, 82, 44]); cadre(g, W, H, '#3a2010', 6);
+    texte(g, 'FÛT N°2', W / 2, H * 0.37, 56, RYE, '#fff1d0', { contour: '#2a1408', ep: 6 });
+    texte(g, 'PAS TOUCHE — Haru', W / 2, H * 0.76, 34, FELL, '#ff9a80', { maxW: W - 40 });
+  } },
+};
+const CANVAS = {};
+function dessinerAffiches() {
+  for (const [nom, a] of Object.entries(AFFICHES)) {
+    const [c, g] = toile(a.w * 192, a.h * 192);
+    a.dessin(g, c.width, c.height);
+    CANVAS[nom] = c;
+  }
+}
+// (x, y, z) : la case du coin bas, côté le plus petit ; face : vers où regarde l'affiche (s = +z, n = -z, e = +x, w = -x)
+function accroche({ nom, x, y, z, face }) {
+  const a = AFFICHES[nom], tx = new THREE.CanvasTexture(CANVAS[nom]); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(a.w, a.h), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.85 }));
+  const cy = y + a.h / 2;
+  if (face === 's') m.position.set(x + a.w / 2, cy, z + 0.03);
+  if (face === 'n') m.position.set(x + a.w / 2, cy, z + 0.97);
+  if (face === 'e') m.position.set(x + 0.03, cy, z + a.w / 2);
+  if (face === 'w') m.position.set(x + 0.97, cy, z + a.w / 2);
+  m.rotation.y = { s: 0, n: Math.PI, e: Math.PI / 2, w: -Math.PI / 2 }[face];
+  m.userData.b = { x, y, z };
+  decors.push(m); scene.add(m);
+}
+
+// la statue d'Haru en cubes (même découpe que le vrai skin)
+function partie(tex, w, h, d, u, v, gonfle, transp) {
+  const geo = new THREE.BoxGeometry(w + gonfle, h + gonfle, d + gonfle);
+  const uv = geo.attributes.uv;
+  const rects = [[u + d + w, v + d, d, h], [u, v + d, d, h], [u + d, v, w, d], [u + d + w, v, w, d], [u + d, v + d, w, h], [u + 2 * d + w, v + d, w, h]];
+  rects.forEach(([x0, y0, rw, rh], i) => {
+    const U0 = x0 / 64, U1 = (x0 + rw) / 64, V0 = 1 - y0 / 64, V1 = 1 - (y0 + rh) / 64;
+    uv.setXY(i * 4, U0, V0); uv.setXY(i * 4 + 1, U1, V0); uv.setXY(i * 4 + 2, U0, V1); uv.setXY(i * 4 + 3, U1, V1);
+  });
+  return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, transparent: transp, alphaTest: transp ? 0.5 : 0.1, roughness: 0.8, side: transp ? THREE.DoubleSide : THREE.FrontSide }));
+}
+function statueHaru() {
+  const tex = new THREE.Texture(SKIN); tex.needsUpdate = true; tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+  const g = new THREE.Group();
+  const ajoute = (parent, w, h, d, u, v, ou, uo, vo, gonfle) => {
+    const a = partie(tex, w, h, d, u, v, 0, false); a.position.copy(ou); parent.add(a);
+    const b = partie(tex, w, h, d, uo, vo, gonfle, true); b.position.copy(ou); parent.add(b);
+  };
+  ajoute(g, 8, 8, 8, 0, 0, new THREE.Vector3(0, 28, 0), 32, 0, 1);
+  ajoute(g, 8, 12, 4, 16, 16, new THREE.Vector3(0, 18, 0), 16, 32, 0.5);
+  ajoute(g, 4, 12, 4, 0, 16, new THREE.Vector3(-2, 6, 0), 0, 32, 0.5);
+  ajoute(g, 4, 12, 4, 16, 48, new THREE.Vector3(2, 6, 0), 0, 48, 0.5);
+  const brasD = new THREE.Group(); brasD.position.set(-6, 22, 0); g.add(brasD);
+  ajoute(brasD, 4, 12, 4, 40, 16, new THREE.Vector3(0, -4, 0), 40, 32, 0.5);
+  brasD.rotation.x = -0.5; brasD.rotation.z = -0.25;
+  const verre = new THREE.Group(); verre.position.set(0, -11, 1.5); verre.rotation.x = 0.5; verre.rotation.z = 0.25; brasD.add(verre);
+  const corps = new THREE.Mesh(new THREE.BoxGeometry(3.4, 4.4, 3.4), new THREE.MeshStandardMaterial({ color: 0xf0a828, emissive: 0x3a2000, roughness: 0.4 }));
+  corps.position.y = 1.6; verre.add(corps);
+  const mousse = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.2, 3.6), new THREE.MeshStandardMaterial({ color: 0xfff4da, roughness: 0.9 }));
+  mousse.position.y = 4.2; verre.add(mousse);
+  const brasG = new THREE.Group(); brasG.position.set(6, 22, 0); g.add(brasG);
+  ajoute(brasG, 4, 12, 4, 32, 48, new THREE.Vector3(0, -4, 0), 48, 48, 0.5);
+  brasG.rotation.z = 0.08;
+  g.scale.setScalar(0.94 / 16);
+  g.position.set(HARU.x, HARU.y, HARU.z); g.rotation.y = HARU.yaw * Math.PI / 180;
+  g.userData.b = { x: Math.floor(HARU.x), y: HARU.y, z: Math.floor(HARU.z) };
+  decors.push(g); scene.add(g);
+}
+
+// ---------------------------------------------------------------- interface
+const CAMS = {
+  dehors: [[-9, 13, -17], [10, 3, 5]],
+  bar: [[10, 13, -8], [10, 1.5, 5]],
+  cave: [[10, 15, -0.5], [10, -5, 5]],
+  secret: [[10, 3, -7], [10, -11.5, 4.5]],
+};
+const REGLAGES = { dehors: { vue: 'tout', toit: true, coupe: false }, bar: { vue: 'bar', toit: false, coupe: true }, cave: { vue: 'cave', toit: true, coupe: true }, secret: { vue: 'tresor', toit: false, coupe: true } };
+const $ = (id) => document.getElementById(id);
+function choisirVue(nom, bouger = true) {
+  const r = REGLAGES[nom]; etat.vue = r.vue; etat.toit = r.toit; etat.coupe = r.coupe;
+  $('toit').checked = etat.toit; $('coupe').checked = etat.coupe;
+  document.querySelectorAll('#vues button').forEach(b => b.classList.toggle('actif', b.dataset.vue === nom));
+  if (bouger) { camera.position.set(...CAMS[nom][0]); controles.target.set(...CAMS[nom][1]); controles.update(); }
+  construire();
+}
+document.querySelectorAll('#vues button').forEach(b => b.onclick = () => { if (etat.couche !== null) { $('couche-on').checked = false; finCouche(); } choisirVue(b.dataset.vue); });
+$('toit').onchange = (e) => { etat.toit = e.target.checked; construire(); };
+$('coupe').onchange = (e) => { etat.coupe = e.target.checked; construire(); };
+$('etiq').onchange = (e) => { etat.etiq = e.target.checked; construire(); };
+$('jour').onclick = () => {
+  etat.jour = !etat.jour; $('jour').textContent = etat.jour ? 'Jour' : 'Soir';
+  ciel.intensity = etat.jour ? 1.5 : 0.7; lune.intensity = etat.jour ? 2.2 : 1.0; lune.color.set(etat.jour ? 0xfff2d8 : 0xc8ccd8);
+  scene.background = new THREE.Color(etat.jour ? 0x9cc8ec : 0x0d0a08);
+};
+scene.background = new THREE.Color(0x0d0a08);
+
+// couche par couche
+function nomCouche(y) { return y === 0 ? 'y 0 · sol du bar' : y === -6 ? 'y −6 · sol de la cave' : y === 6 ? 'y 6 · plafond du bar' : y > 6 ? `y ${y} · toit` : y > 0 ? `y ${y} · bar` : `y ${y} · cave`; }
+function majCouche() {
+  const y = +$('couche').value; etat.couche = y; $('couche-val').textContent = nomCouche(y).replace('−', '-');
+  construire(); dessinerCouche(y);
+}
+function finCouche() { etat.couche = null; $('couche').disabled = true; $('p-couche').style.display = 'none'; $('couche-val').textContent = ''; construire(); }
+$('couche-on').onchange = (e) => {
+  if (e.target.checked) { $('couche').disabled = false; $('p-couche').style.display = 'block'; $('p-blocs').style.display = 'none'; majCouche(); }
+  else finCouche();
+};
+$('couche').oninput = majCouche;
+const CASE = 17, X0 = -1, X1 = 20, Z0 = -1, Z1 = 14;
+function dessinerCouche(y) {
+  const c = $('carte'), g = c.getContext('2d');
+  c.width = (X1 - X0 + 1) * CASE; c.height = (Z1 - Z0 + 1) * CASE;
+  g.fillStyle = '#17110c'; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = '#2a2018'; for (let i = 0; i <= X1 - X0 + 1; i++) { g.beginPath(); g.moveTo(i * CASE + .5, 0); g.lineTo(i * CASE + .5, c.height); g.stroke(); }
+  for (let i = 0; i <= Z1 - Z0 + 1; i++) { g.beginPath(); g.moveTo(0, i * CASE + .5); g.lineTo(c.width, i * CASE + .5); g.stroke(); }
+  g.strokeStyle = '#c89a52'; g.setLineDash([4, 3]); g.strokeRect((X1 - 19) * CASE + .5, (Z1 - 9) * CASE + .5, 20 * CASE, 10 * CASE); g.setLineDash([]);
+  const compte = new Map(), ici = BLOCS.filter(b => b.y === y);
+  c._ici = ici;
+  for (const b of ici) {
+    const px = (X1 - b.x) * CASE, py = (Z1 - b.z) * CASE, def = T[b.t];
+    compte.set(b.t, (compte.get(b.t) || 0) + 1);
+    g.fillStyle = def.c;
+    const plein = b.f === 'cube' || b.f === 'dalle' || b.f === 'dalle_h' || b.f === 'esc' || b.f === 'feu' || b.f === 'tapis' || b.f === 'coffre';
+    if (plein) g.fillRect(px + 1, py + 1, CASE - 1, CASE - 1); else { g.beginPath(); g.arc(px + CASE / 2 + .5, py + CASE / 2 + .5, 4.5, 0, Math.PI * 2); g.fill(); }
+    if (b.f === 'dalle' || b.f === 'dalle_h') { g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(px + 1, py + (b.f === 'dalle' ? 1 : CASE / 2), CASE - 1, CASE / 2); }
+    if (b.f === 'esc') {
+      g.fillStyle = 'rgba(255,240,200,0.9)';
+      if (b.d === 'n') g.fillRect(px + 1, py + CASE - 4, CASE - 1, 3);
+      if (b.d === 's') g.fillRect(px + 1, py + 1, CASE - 1, 3);
+      if (b.d === 'w') g.fillRect(px + CASE - 4, py + 1, 3, CASE - 1);
+      if (b.d === 'e') g.fillRect(px + 1, py + 1, 3, CASE - 1);
+    }
+  }
+  $('pc-y').textContent = nomCouche(y);
+  $('pc-info').textContent = ici.length ? `${ici.length} blocs sur cette couche` : 'rien sur cette couche';
+  $('pc-liste').innerHTML = [...compte].sort((a, b) => b[1] - a[1]).map(([t, n]) => `<tr><td><span class="pastille" style="background:${T[t].c}"></span>${T[t].nom}</td><td class="n">${n}</td></tr>`).join('');
+}
+$('carte').onmousemove = (e) => {
+  const r = e.target.getBoundingClientRect(), x = X1 - Math.floor((e.clientX - r.left) / CASE), z = Z1 - Math.floor((e.clientY - r.top) / CASE);
+  const ici = (e.target._ici || []).filter(b => b.x === x && b.z === z);
+  const bulle = $('bulle');
+  if (!ici.length) { bulle.style.display = 'none'; return; }
+  bulle.style.display = 'block'; bulle.style.left = e.clientX + 12 + 'px'; bulle.style.top = e.clientY + 12 + 'px';
+  bulle.textContent = ici.map(b => T[b.t].nom).join(' + ') + `  (x ${x}, z ${z})`;
+};
+$('carte').onmouseleave = () => { $('bulle').style.display = 'none'; };
+
+// liste des blocs
+$('b-blocs').onclick = () => {
+  const zones = { rdc: 'Le bar', cave: 'La cave + salle secrète', toit: 'Plafond, toit et cheminée' };
+  let html = '';
+  const total = new Map();
+  for (const [z, nom] of Object.entries(zones)) {
+    const c = new Map(); for (const b of BLOCS) if (zoneDe(b) === z) { c.set(b.t, (c.get(b.t) || 0) + 1); total.set(b.t, (total.get(b.t) || 0) + 1); }
+    html += `<h3 style="color:#e0794f;margin:12px 0 4px">${nom}</h3><table>` + [...c].sort((a, b) => b[1] - a[1]).map(([t, n]) => `<tr><td><span class="pastille" style="background:${T[t].c}"></span>${T[t].nom}</td><td class="n">${n}</td><td class="n" style="color:#a68a64">${n >= 64 ? Math.floor(n / 64) + ' st' + (n % 64 ? ' + ' + n % 64 : '') : ''}</td></tr>`).join('') + '</table>';
+  }
+  html += `<h3 style="color:#e0794f;margin:12px 0 4px">Total</h3><table>` + [...total].sort((a, b) => b[1] - a[1]).map(([t, n]) => `<tr><td><span class="pastille" style="background:${T[t].c}"></span>${T[t].nom}</td><td class="n">${n}</td><td class="n" style="color:#a68a64">${n >= 64 ? Math.floor(n / 64) + ' st' + (n % 64 ? ' + ' + n % 64 : '') : ''}</td></tr>`).join('') + '</table>';
+  html += '<p style="color:#a68a64">st = stacks de 64. Les escaliers et dalles sont comptés à la pièce.</p>';
+  $('pb-contenu').innerHTML = html; $('p-blocs').style.display = 'block';
+};
+$('f-blocs').onclick = () => { $('p-blocs').style.display = 'none'; };
+
+// galerie des affiches
+$('b-affiches').onclick = () => {
+  const gr = $('g-grille'); gr.innerHTML = '';
+  for (const [nom, a] of Object.entries(AFFICHES)) {
+    const fig = document.createElement('figure');
+    const c = document.createElement('canvas'); c.width = CANVAS[nom].width; c.height = CANVAS[nom].height; c.getContext('2d').drawImage(CANVAS[nom], 0, 0);
+    c.style.width = Math.min(c.width * 1.3, innerWidth * 0.9) + 'px';
+    const cap = document.createElement('figcaption'); cap.innerHTML = `${a.titre} · <a download="affiche-${nom}.png" href="${CANVAS[nom].toDataURL()}">télécharger</a>`;
+    fig.append(c, cap); gr.append(fig);
+  }
+  $('galerie').style.display = 'block';
+};
+$('f-galerie').onclick = () => { $('galerie').style.display = 'none'; };
+window.envoyerAffiches = async () => { for (const nom of Object.keys(AFFICHES)) { const a = AFFICHES[nom], [c, g] = toile(a.w * 128, a.h * 128); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(CANVAS[nom], 0, 0, c.width, c.height); const b = await new Promise(ok => c.toBlob(ok)); await fetch(`affiches/${nom}.png`, { method: 'PUT', body: b }); } return Object.keys(AFFICHES); };
+
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); rendu.setSize(innerWidth, innerHeight); etiqRendu.setSize(innerWidth, innerHeight); });
+function boucle() { requestAnimationFrame(boucle); controles.update(); const t = performance.now() / 1000; for (const l of lumieres) l.intensity = (l.userData.b.t === 'feu' ? 7 : 5) * (0.9 + 0.1 * Math.sin(t * 7 + l.position.x * 3) * Math.sin(t * 3.1 + l.position.z)); rendu.render(scene, camera); etiqRendu.render(scene, camera); }
+
+// ---------------------------------------------------------------- départ
+(async () => {
+  try { await Promise.race([Promise.all([document.fonts.load("40px 'Rye'"), document.fonts.load("20px 'IM Fell English SC'")]), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
+  preparerSkin(await charge('skin-haru.png'));
+  dessinerAffiches();
+  for (const a of AFFS) accroche(a);
+  statueHaru();
+  choisirVue('dehors');
+  window.cave = { camera, controles, scene, etat, construire };
+  $('chargement').remove();
+  boucle();
+})();
+</script>
+</body>
+</html>
