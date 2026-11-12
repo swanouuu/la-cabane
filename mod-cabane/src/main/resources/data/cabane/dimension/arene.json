@@ -1,0 +1,13 @@
+{
+  "type": "cabane:arene",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "cabane:arene",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

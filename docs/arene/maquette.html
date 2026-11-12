@@ -1,0 +1,1085 @@
+<title>L'Arène</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Plein écran : l'arène en 3D, la fiche à gauche, les vues en bas. Un seul thème (ciel de jour ou de soir derrière). */
+:root {
+  --fond: #15181f; --plaque: #1f2430; --plaque2: #343b4c; --craie: #f1eee6; --brume: #b3b0a6;
+  --or: #f0b43c; --or-clair: #ffe1a1; --bleu: #4f7cf0; --rouge: #e0473f;
+  --titre: "Pixelify Sans", "Trebuchet MS", sans-serif; --texte: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--fond); color: var(--craie); font-family: var(--texte); overflow: hidden; }
+#scene { position: fixed; inset: 0; background: linear-gradient(#6f9fd8 0%, #b9d3ec 55%, #e6eef4 100%); touch-action: none; }
+#scene canvas { display: block; }
+.plaque { background: color-mix(in srgb, var(--fond) 90%, transparent); border: 2px solid var(--plaque2); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+
+#panneau {
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  width: min(350px, calc(100vw - 32px)); max-height: calc(100% - 96px); display: flex; flex-direction: column;
+}
+#bande { height: 6px; flex: none; background: linear-gradient(90deg, var(--bleu) 0 50%, var(--rouge) 50% 100%); }
+#panneau .corps { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+h1 { font: 700 26px/1.05 var(--titre); margin: 0; }
+#sous { font: 500 14px var(--titre); color: var(--or); }
+#onglets { display: flex; gap: 4px; flex: none; }
+#onglets button { flex: 1; padding: 7px 6px; background: var(--plaque); border: 0; font-weight: 600; font-size: 13px; }
+#onglets button[aria-selected="true"] { background: var(--or); color: var(--fond); }
+.page { overflow-y: auto; min-height: 0; font-size: 13px; line-height: 1.5; display: flex; flex-direction: column; gap: 8px; }
+.page p { margin: 0; }
+.page ul { margin: 0; padding-left: 18px; }
+.page li { margin: 2px 0; }
+.page h2 { font: 700 15px var(--titre); color: var(--or-clair); margin: 4px 0 0; }
+code { font-family: ui-monospace, Consolas, monospace; background: var(--plaque); padding: 1px 5px; color: var(--or-clair); }
+.note { color: var(--brume); font-size: 12px; }
+
+/* boutons pour faire défiler les états de la salle d'entrée */
+#demo-salle { background: var(--plaque); border: 1px solid var(--plaque2); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+#demo-salle .titre { font: 700 14px var(--titre); color: var(--or-clair); margin-bottom: 2px; }
+#demo-salle button { text-align: left; padding: 6px 9px; background: #2a3040; border: 1px solid var(--plaque2); font-size: 13px; }
+#demo-salle button:hover { background: var(--plaque2); }
+#demo-salle button[aria-pressed="true"] { background: var(--or); color: var(--fond); border-color: var(--or); }
+
+.kit { display: grid; grid-template-columns: 22px 1fr; gap: 3px 8px; align-items: center; }
+.kit i { width: 18px; height: 18px; display: block; image-rendering: pixelated; border: 1px solid #0006; }
+
+#actions {
+  position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; max-width: calc(100vw - 32px); overflow-x: auto;
+}
+#actions button { padding: 10px 14px; border: 2px solid var(--plaque2); background: var(--plaque); font-weight: 600; font-size: 14px; white-space: nowrap; }
+#actions button[aria-pressed="true"] { border-color: var(--or); }
+#aide { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  padding: 8px 12px; font-size: 12px; line-height: 1.5; color: var(--brume); max-width: 250px; }
+
+#etiquettes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.etiquette { position: absolute; left: 0; top: 0; background: var(--fond); border: 1px solid var(--or); color: var(--craie);
+  padding: 3px 7px; font-size: 12px; white-space: nowrap; will-change: transform; }
+
+#victoire { position: fixed; left: 50%; top: 18%; transform: translate(-50%, 0); text-align: center; pointer-events: none;
+  font: 700 54px/1 var(--titre); color: var(--or); text-shadow: 3px 3px 0 #3a2a00, 0 0 24px #0008; opacity: 0; transition: opacity .25s; }
+#victoire small { display: block; font: 700 26px var(--titre); color: #fff; margin-top: 6px; text-shadow: 2px 2px 0 #000a; }
+#victoire.montre { opacity: 1; }
+#erreur { position: fixed; inset: 0; display: grid; place-items: center; padding-inline: 24px; text-align: center; font-size: 16px; background: var(--fond); }
+
+@media (max-width: 640px) {
+  #panneau { top: auto; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); width: auto; right: max(16px, env(safe-area-inset-right, 0px)); max-height: 48%; }
+  h1 { font-size: 21px; }
+  #aide { display: none; }
+  #victoire { font-size: 34px; top: 10%; }
+  #victoire small { font-size: 18px; }
+  #actions { left: 16px; right: 16px; transform: none; }
+}
+</style>
+
+<div id="scene" aria-label="Croquis 3D de l'arène"></div>
+<div id="etiquettes"></div>
+<div id="victoire" aria-live="polite">VICTOIRE<small></small></div>
+
+<section id="panneau" class="plaque">
+  <div id="bande"></div>
+  <div class="corps">
+    <h1>L'Arène</h1>
+    <div id="sous">Croquis · rien n'est construit en jeu</div>
+    <div id="onglets" role="tablist">
+      <button type="button" role="tab" aria-selected="true" data-page="p-aller">Y aller</button>
+      <button type="button" role="tab" aria-selected="false" data-page="p-stuff">Le stuff</button>
+      <button type="button" role="tab" aria-selected="false" data-page="p-regles">Les règles</button>
+    </div>
+
+    <div class="page" id="p-aller" role="tabpanel">
+      <p><code>/arene</code> t'amène dans la <b>salle d'entrée</b>, juste derrière la loge royale. Toi, l'hôte, tu peux y envoyer des potes avec <code>/arene envoyer &lt;joueurs&gt;</code>. Personne ne peut taper là-dedans et ton stuff ne bouge pas.</p>
+      <p>Trois portes, chacune avec son bouton sur une borne :</p>
+      <ul>
+        <li><b style="color:#8fb0ff">À gauche, la porte bleue</b> : tu appuies, ton pseudo s'affiche au-dessus et tu attends sur le tapis bleu.</li>
+        <li><b style="color:#ff8a80">À droite, la porte rouge</b> : pareil côté rouge.</li>
+        <li><b style="color:#ffd27a">En face, la porte des gradins</b> : le bouton doré t'envoie dans la loge royale pour regarder.</li>
+      </ul>
+      <h2>La file d'attente</h2>
+      <ul>
+        <li>S'il n'y a du monde que d'un côté, son panneau affiche <b>« En attente d'un adversaire… »</b>.</li>
+        <li>Dès qu'il y a au moins un joueur de chaque côté : compte à rebours de 10 s (on peut encore rejoindre), puis tous les inscrits partent dans leur base avec le kit.</li>
+        <li>Pendant un combat, appuyer sur un côté t'y envoie direct.</li>
+        <li>Ré-appuyer sur ton bouton = tu sors de la file.</li>
+      </ul>
+      <div id="demo-salle">
+        <div class="titre">Essaie les panneaux de la salle</div>
+        <button type="button">1. Personne</button>
+        <button type="button">2. Le rouge attend un adversaire</button>
+        <button type="button">3. Le bleu arrive : compte à rebours</button>
+        <button type="button">4. Combat lancé</button>
+      </div>
+      <p class="note">Ça défile aussi tout seul. Au-dessus de la porte des gradins, un petit écran montre le combat pour patienter. Les pointillés montrent où chaque porte t'envoie.</p>
+      <h2>Repartir</h2>
+      <p>Le bouton rouge des bases et de la loge te ramène dans la salle d'entrée, avec ton stuff rendu. Le bouton rouge de la salle (près de l'arrivée) te ramène pile là où tu étais avant <code>/arene</code>.</p>
+    </div>
+
+    <div class="page" id="p-stuff" role="tabpanel" hidden>
+      <p>Seulement pour ceux qui vont côté bleu ou rouge. En entrant, ton inventaire est mis de côté (sauvegardé, même si le jeu plante) et <b>tout le monde reçoit le même kit</b> :</p>
+      <div class="kit">
+        <i style="background:#d8d8d8"></i><span>Armure en fer complète, Protection II</span>
+        <i style="background:#e6e6e6"></i><span>Épée en fer</span>
+        <i style="background:#8a6234"></i><span>Bouclier</span>
+        <i style="background:#6b4a27"></i><span>Arc Puissance I + 32 flèches</span>
+        <i style="background:#f2c13a"></i><span>3 pommes dorées</span>
+        <i style="background:#a5573a"></i><span>16 steaks</span>
+      </div>
+      <h2>Ce que tu gardes</h2>
+      <ul>
+        <li>Les 7 lames de la Brume, si tu en as.</li>
+        <li>Les armes que donne ton éveil, si ton éveil en donne.</li>
+      </ul>
+      <p>Tout le reste attend dehors.</p>
+      <h2>En sortant</h2>
+      <p>Le kit disparaît et tu récupères exactement ce que tu avais en arrivant.</p>
+      <p class="note">But : un duel sans pouvoir qui dure 1 à 2 minutes. Je règle les chiffres après un vrai essai.</p>
+    </div>
+
+    <div class="page" id="p-regles" role="tabpanel" hidden>
+      <h2>Rien ne se casse</h2>
+      <p>Pas un bloc ne bouge : ni à la main, ni avec un pouvoir, ni à l'explosion. On ne peut rien poser non plus. Les murets, palissades, tonneaux, tours de guet et ruines sont là pour se cacher.</p>
+      <h2>Quand on meurt</h2>
+      <ul>
+        <li>Tu ne lâches rien par terre.</li>
+        <li>Tout le monde dans l'arène voit en grand <b>VICTOIRE</b> avec le pseudo du gagnant. Ça s'affiche aussi sur l'écran, et son camp prend +1.</li>
+        <li>3 secondes après, tu réapparais dans ta base avec un kit tout neuf.</li>
+        <li>Pendant 3 secondes en sortant de la base, personne ne peut te toucher (pas de spawn-kill).</li>
+      </ul>
+      <h2>Les gradins</h2>
+      <p>Une grille en fer court tout autour du rempart : rien ne touche les spectateurs et ils ne peuvent pas descendre. Les gradins en bois montent jusqu'à 32 blocs, et la loge royale tout en haut sert d'arrivée.</p>
+      <h2>L'écran géant</h2>
+      <p>Il est pendu par des chaînes aux 4 grandes tours, au-dessus du milieu. Il a 4 faces de 24 blocs de large, donc on le voit de partout, même du haut des gradins. Il montre une caméra qui suit le combat, avec les pseudos, les cœurs, le score et le chrono.</p>
+    </div>
+  </div>
+</section>
+<div id="aide" class="plaque">Glisse pour tourner, molette pour zoomer, clic droit pour décaler la vue. Le combat tourne tout seul pour l'exemple.</div>
+<div id="actions">
+  <button id="ensemble" type="button">Vue d'ensemble</button>
+  <button id="salle" type="button">Salle d'entrée</button>
+  <button id="vue-gradins" type="button">Gradins</button>
+  <button id="ecran" type="button">Écran géant</button>
+  <button id="noms" type="button" aria-pressed="true">Noms</button>
+  <button id="soir" type="button" aria-pressed="false">Soir</button>
+</div>
+<div id="erreur" hidden>La 3D ne peut pas démarrer sur cet appareil.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+(function () {
+const erreur = () => { document.getElementById("erreur").hidden = false; };
+if (!window.THREE || !THREE.OrbitControls) { erreur(); return; }
+
+// ================================================================ textures 16 × 16
+let graine = 4242;
+const alea = () => { graine = (graine * 16807) % 2147483647; return (graine - 1) / 2147483646; };
+const rvb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const teinte = (h, k) => { const c = rvb(h).map((v) => Math.max(0, Math.min(255, Math.round(v * k)))); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+const px = (g, x, y, css) => { g.fillStyle = css; g.fillRect(x, y, 1, 1); };
+const grain = (g, base, v) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(base, 1 + (alea() - 0.5) * 2 * v)); };
+const bord = (g, c) => { for (let i = 0; i < 16; i++) { px(g, i, 0, c); px(g, i, 15, c); px(g, 0, i, c); px(g, 15, i, c); } };
+
+const motif = {
+  bruit: (base, v = 0.1) => (g) => grain(g, base, v),
+  dalles: (base) => (g) => {
+    grain(g, base, 0.05);
+    for (let i = 0; i < 16; i++) { px(g, i, 15, teinte(base, 0.78)); px(g, 15, i, teinte(base, 0.78)); px(g, i, 0, teinte(base, 1.12)); px(g, 0, i, teinte(base, 1.12)); }
+  },
+  briques: (base) => (g) => {
+    grain(g, base, 0.07);
+    for (let y = 0; y < 16; y++) { const decal = (y >> 2) % 2 ? 4 : 0; for (let x = 0; x < 16; x++) if (y % 4 === 3 || (x + decal) % 8 === 7) px(g, x, y, teinte(base, 0.68)); }
+  },
+  planches: (base) => (g) => {
+    grain(g, base, 0.06);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { if (y % 4 === 3) px(g, x, y, teinte(base, 0.7)); else if (alea() < 0.08) px(g, x, y, teinte(base, 0.85)); }
+  },
+  beton: (base) => (g) => { grain(g, base, 0.035); },
+  caisse: () => (g) => {
+    grain(g, "#a07a45", 0.07); bord(g, "#5e4322");
+    for (let i = 1; i < 15; i++) { px(g, i, i, "#6e4f29"); px(g, i, 15 - i, "#6e4f29"); }
+  },
+  foin: () => (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const lien = y >= 6 && y <= 8;
+      px(g, x, y, lien ? teinte("#8f5a22", 1 + (alea() - 0.5) * 0.15) : teinte(x % 3 === 0 ? "#b38d2b" : "#d4b143", 1 + (alea() - 0.5) * 0.18));
+    }
+  },
+  verre: () => (g) => {
+    g.fillStyle = "rgba(210,236,245,0.12)"; g.fillRect(0, 0, 16, 16);
+    g.fillStyle = "rgba(255,255,255,0.7)"; g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1);
+    g.fillRect(3, 4, 1, 3); g.fillRect(4, 3, 1, 1); g.fillRect(11, 10, 1, 2);
+  },
+  grille: () => (g) => { grain(g, "#4a4d52", 0.08); for (let y = 1; y < 16; y += 3) for (let x = 1; x < 16; x += 3) { g.fillStyle = "#15171a"; g.fillRect(x, y, 2, 2); } },
+  laine: (base) => (g) => { grain(g, base, 0.08); for (let y = 2; y < 16; y += 4) for (let x = 0; x < 16; x++) if ((x + y) % 3 === 0) px(g, x, y, teinte(base, 0.86)); },
+  rondin: (base) => (g) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(base, (x % 4 === 1 ? 0.8 : 1) * (1 + (alea() - 0.5) * 0.12))); },
+  mousse: (base) => (g) => {
+    grain(g, base, 0.07);
+    for (let y = 0; y < 16; y++) { const decal = (y >> 2) % 2 ? 4 : 0; for (let x = 0; x < 16; x++) if (y % 4 === 3 || (x + decal) % 8 === 7) px(g, x, y, teinte(base, 0.68)); }
+    for (let i = 0; i < 40; i++) px(g, Math.floor(alea() * 16), Math.floor(alea() * 16), teinte("#5f7f34", 1 + (alea() - 0.5) * 0.3));
+  },
+  tonneau: () => (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(x % 4 === 0 ? "#6b4a27" : "#8a6234", 1 + (alea() - 0.5) * 0.12));
+    for (const y of [2, 3, 12, 13]) for (let x = 0; x < 16; x++) px(g, x, y, "#3c3f44");
+  },
+  barreaux: () => (g) => {
+    g.clearRect(0, 0, 16, 16);
+    for (let y = 0; y < 16; y++) for (const x of [1, 6, 11]) { px(g, x, y, "#3c3e44"); px(g, x + 1, y, "#6d7078"); }
+    for (const y of [0, 8]) for (let x = 0; x < 16; x++) { px(g, x, y, "#3c3e44"); }
+  },
+  voile: (base) => (g) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const v = 0.55 + 0.45 * Math.sin((x + y * 0.6) * 0.9 + Math.sin(y * 0.7) * 2);
+      px(g, x, y, teinte(base, 0.55 + v * 0.75 + (alea() - 0.5) * 0.1));
+    }
+  },
+  feu: () => (g) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, teinte(alea() < 0.5 ? "#ff9a2a" : "#ffd25a", 1 + (alea() - 0.5) * 0.3)); },
+};
+
+function toile(dessin) {
+  const c = document.createElement("canvas"); c.width = c.height = 16;
+  dessin(c.getContext("2d"));
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 4;
+  t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+const boite = (sx, sy, sz) => new THREE.BoxGeometry(sx, sy, sz);
+const SORTES = {
+  sable: { m: motif.bruit("#cdb27c", 0.09) },
+  terre: { m: motif.bruit("#8a6a48", 0.14) },
+  herbe: { m: motif.bruit("#6f9f45", 0.14) },
+  quartz: { m: motif.dalles("#ece6da") },
+  pierre: { m: motif.briques("#7c7b78") },
+  pierre_taillee: { m: motif.dalles("#9e9b93") },
+  pierre_sombre: { m: motif.briques("#5a5957") },
+  ombre: { m: motif.bruit("#1e1c1b", 0.15) },
+  barreaux: { m: motif.barreaux(), troue: true, ombre: false },
+  pierre_moussue: { m: motif.mousse("#76746f") },
+  chene: { m: motif.planches("#a07c4a") }, sapin: { m: motif.planches("#6b4f2e") },
+  drap_bleu: { m: motif.laine("#3a5bc7") }, drap_rouge: { m: motif.laine("#b8322c") }, drap_or: { m: motif.laine("#d9a72c") },
+  marche: { m: motif.dalles("#a9a59b") },
+  rondin: { m: motif.rondin("#6b4f2e") },
+  pieu: { m: motif.rondin("#6b4f2e"), geo: new THREE.ConeGeometry(0.4, 1, 6) },
+  tonneau: { m: motif.tonneau() },
+  brasero: { m: motif.feu(), geo: boite(0.6, 0.5, 0.6), dy: -0.25, lueur: 1, ombre: false },
+  flamme: { m: motif.feu(), geo: new THREE.ConeGeometry(0.45, 1.1, 5), dy: 0.05, lueur: 1, ombre: false },
+  laine_bleue: { m: motif.laine("#3a5bc7") }, laine_rouge: { m: motif.laine("#b8322c") },
+  lanterne_mer: { m: motif.dalles("#d6f2ea"), lueur: 0.9 },
+  caisse: { m: motif.caisse() },
+  foin: { m: motif.foin() },
+  feuilles: { m: motif.bruit("#3f7a2a", 0.28) },
+  poteau: { m: motif.planches("#5a3f22"), geo: boite(0.3, 1, 0.3) },
+  plancher: { m: motif.planches("#8a6234") },
+  metal: { m: motif.dalles("#3b4148") },
+  grille: { m: motif.grille() },
+  or: { m: motif.dalles("#e8b630"), lueur: 0.15 },
+  projecteur: { m: motif.dalles("#fff6d8"), lueur: 1, ombre: false },
+  tapis_rouge: { m: motif.bruit("#a3302b", 0.06), geo: boite(1, 0.06, 1), dy: -0.47 },
+  bouton: { m: motif.bruit("#e0302a", 0.05), geo: boite(0.45, 0.3, 0.45), dy: -0.35, lueur: 0.35 },
+  bouton_bleu: { m: motif.bruit("#4f7cf0", 0.05), geo: boite(0.45, 0.3, 0.45), dy: -0.35, lueur: 0.5 },
+  bouton_rouge: { m: motif.bruit("#ff5a4f", 0.05), geo: boite(0.45, 0.3, 0.45), dy: -0.35, lueur: 0.5 },
+  bouton_or: { m: motif.bruit("#f0b43c", 0.05), geo: boite(0.45, 0.3, 0.45), dy: -0.35, lueur: 0.5 },
+  tapis_bleu: { m: motif.bruit("#2f4fa8", 0.06), geo: boite(1, 0.06, 1), dy: -0.47 },
+  tapis_or: { m: motif.bruit("#c9921f", 0.06), geo: boite(1, 0.06, 1), dy: -0.47 },
+  voile_bleu: { m: motif.voile("#2f5bd8"), lueur: 0.75, ombre: false },
+  voile_rouge: { m: motif.voile("#d8352c"), lueur: 0.75, ombre: false },
+  voile_or: { m: motif.voile("#e0a22a"), lueur: 0.75, ombre: false },
+  banc: { m: motif.planches("#a27b47"), geo: boite(1, 0.5, 1), dy: -0.25 },
+  porte: { m: motif.planches("#4a3018") },
+  echelle: { m: motif.planches("#9a7040"), geo: boite(1, 1, 0.1), dz: 0.45, ombre: false },
+};
+
+// ================================================================ la grille de blocs
+const blocs = new Map();
+const cle = (x, y, z) => x + "," + y + "," + z;
+const pose = (x, y, z, t) => blocs.set(cle(x, y, z), { x, y, z, t });
+const ote = (x, y, z) => blocs.delete(cle(x, y, z));
+const ordre = (a, b) => (a <= b ? [a, b] : [b, a]);
+function remplit(xa, xb, ya, yb, za, zb, t) {
+  const [x0, x1] = ordre(xa, xb), [y0, y1] = ordre(ya, yb), [z0, z1] = ordre(za, zb);
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) t ? pose(x, y, z, t) : ote(x, y, z);
+}
+// les deux moitiés sont identiques : ce qu'on pose à gauche est aussi posé à droite (miroir), et parfois au nord/sud
+const marchable = new Set();
+function quatre(xa, xb, ya, yb, za, zb, t, nordSud) {
+  const [x0, x1] = ordre(xa, xb), [z0, z1] = ordre(za, zb);
+  remplit(x0, x1, ya, yb, z0, z1, t);
+  remplit(-x1 - 1, -x0 - 1, ya, yb, z0, z1, t);
+  if (nordSud) { remplit(x0, x1, ya, yb, -z1 - 1, -z0 - 1, t); remplit(-x1 - 1, -x0 - 1, ya, yb, -z1 - 1, -z0 - 1, t); }
+}
+
+// L'arène : un stade façon château (deux demi-cercles reliés par deux lignes droites), sol de 96 × 52.
+// Autour : le rempart et sa grille, une allée avec des braseros, 28 rangs de gradins en bois qui montent jusqu'à 32 blocs,
+// une allée haute, la muraille crénelée et ses 12 tours. Les 4 tours des coins tiennent l'écran par des chaînes.
+const L = 22, R = 26, N = 28;
+const ecart = (cx, cz) => Math.hypot(Math.max(Math.abs(cx) - L, 0), cz) - R;   // < 0 : dans l'arène
+const rang = (d) => (d < 1.4 ? 0 : Math.floor(d - 0.4));                    // 0 rempart, 1 allée basse, 2..N+1 gradins
+const HAUT_ALLEE = 3 + N + 1;                                                // allée du haut (bloc), dessus à HAUT_ALLEE + 1
+const HAUT_MUR = HAUT_ALLEE + 5;                                             // haut de la muraille
+const FACADE = N + 5;
+const mod = (a, n) => ((a % n) + n) % n;
+const hache = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
+const vieux = (x, y, z, t) => (hache(x, y, z) < 0.22 ? "pierre_moussue" : t);   // un peu de mousse partout
+// position le long de l'anneau (pour les motifs)
+const longueurAnneau = (cx, cz, d) => (Math.abs(cx) <= L ? cx : Math.atan2(cz, Math.abs(cx) - L) * (R + d));
+const drapDe = (cx) => (cx < -4.5 ? "drap_bleu" : cx > 4.5 ? "drap_rouge" : "drap_or");
+const bruitSol = (x, z) => Math.sin(x * 0.21 + Math.cos(z * 0.17) * 2.1) + Math.sin(z * 0.27 + x * 0.06) * 0.9 + Math.sin((x + z) * 0.11) * 0.6;
+const XMAX = L + R + FACADE + 3, ZMAX = R + FACADE + 3;
+for (let x = -XMAX; x < XMAX; x++) for (let z = -ZMAX; z < ZMAX; z++) {
+  const cx = x + 0.5, cz = z + 0.5, d = ecart(cx, cz);
+  if (d < 0) {
+    const n = bruitSol(x, z), rond = Math.abs(Math.hypot(cx, cz) - 10.5) < 0.5;
+    pose(x, -1, z, rond ? "pierre_taillee" : n > 1.35 ? "herbe" : n < -1.3 ? "terre" : "sable");
+    continue;
+  }
+  const k = rang(d);
+  if (k > FACADE) continue;
+  const s = longueurAnneau(cx, cz, d);
+  if (k === 0) {
+    // rempart avec tentures aux couleurs du côté, puis une grille en fer pour protéger le public
+    const tenture = mod(Math.floor(s), 8) >= 3 && mod(Math.floor(s), 8) <= 4;
+    for (let y = -1; y <= 3; y++) pose(x, y, z, tenture && y >= 0 && y <= 2 ? drapDe(cx) : y === 3 ? "pierre_taillee" : vieux(x, y, z, "pierre"));
+    for (let y = 4; y <= 6; y++) pose(x, y, z, "barreaux");
+  } else if (k === 1) {
+    pose(x, 3, z, "pierre_taillee");
+    if (mod(Math.floor(s), 10) === 0 && rang(ecart(cx, cz)) === 1) { pose(x, 4, z, "brasero"); pose(x, 5, z, "flamme"); }
+  } else if (k <= N + 1) {
+    const j = k - 1;
+    const allee = Math.abs(cx) <= L ? Math.abs(cx / 14 - Math.round(cx / 14)) * 14 < 0.75
+      : (() => { const a = Math.atan2(cz, Math.abs(cx) - L) / (Math.PI / 4); return Math.abs(a - Math.round(a)) * (Math.PI / 4) * (R + d) < 0.75; })();
+    pose(x, 3 + j, z, allee ? "marche" : j % 5 === 0 ? drapDe(cx) : j % 2 ? "chene" : "sapin");
+  } else if (k < FACADE) {
+    pose(x, HAUT_ALLEE, z, "pierre_taillee");
+  } else {
+    // la muraille : grandes arches en bas, meurtrières, bandeaux, créneaux
+    const m = mod(Math.floor(s), 6);
+    for (let y = -1; y <= HAUT_MUR; y++) {
+      const arche = (m === 2 || m === 3) && y >= 0 && y <= 4;
+      const meurtriere = m === 3 && ((y >= 11 && y <= 14) || (y >= 23 && y <= 26));
+      pose(x, y, z, arche || meurtriere ? "ombre" : y === 9 || y === 20 || y === HAUT_MUR ? "pierre_sombre" : y <= 1 ? "pierre_moussue" : vieux(x, y, z, "pierre"));
+    }
+    if (mod(Math.floor(s), 2) === 0) pose(x, HAUT_MUR + 1, z, "pierre");
+  }
+}
+
+// ---------------------------------------------------------------- les deux bases (gauche bleue, droite rouge)
+function base(signe, drap) {
+  const X = (a) => (signe < 0 ? a : -a - 1);
+  for (let x = -46; x <= -38; x++) for (let z = -4; z <= 3; z++) {
+    const xx = X(x), bordure = x === -46 || x === -38 || z === -4 || z === 3, tapis = x >= -44 && x <= -40 && z >= -2 && z <= 1;
+    pose(xx, 0, z, bordure ? "pierre_sombre" : tapis ? drap : "pierre_taillee"); marchable.add(xx + "," + z);
+  }
+  // porte du fort : deux piliers, la herse relevée, le linteau aux couleurs, des créneaux
+  for (const z of [-4, 3]) { remplit(X(-37), X(-37), 0, 6, z, z, "pierre"); pose(X(-37), 3, z, drap); pose(X(-37), 4, z, drap); }
+  remplit(X(-37), X(-37), 5, 5, -3, 2, "barreaux");
+  remplit(X(-37), X(-37), 6, 6, -4, 3, drap);
+  for (const z of [-4, -2, 0, 2]) pose(X(-37), 7, z, "pierre");
+  for (const z of [-5, 4]) remplit(X(-46), X(-39), 0, 1, z, z, "pierre_moussue");
+  pose(X(-46), 1, 3, "pierre_taillee"); pose(X(-46), 2, 3, "bouton");
+  for (const z of [-4, 3]) { pose(X(-39), 1, z, "brasero"); pose(X(-39), 2, z, "flamme"); }
+}
+base(-1, "drap_bleu");
+base(1, "drap_rouge");
+
+// ---------------------------------------------------------------- de quoi se cacher (pareil des deux côtés)
+quatre(-32, -32, 0, 1, -3, 2, "pierre_moussue");                       // muret devant la base
+quatre(-24, -24, 0, 1, 8, 12, "rondin", true); quatre(-24, -24, 2, 2, 8, 12, "pieu", true);   // palissades de flanc
+quatre(-17, -16, 0, 1, -1, 0, "tonneau"); quatre(-17, -17, 2, 2, -1, -1, "tonneau");          // tonneaux
+quatre(-14, -10, 0, 2, 19, 19, "pierre", true); quatre(-10, -10, 0, 2, 16, 18, "pierre", true);  // murs en L
+quatre(-30, -29, 0, 4, 15, 16, "pierre_taillee", true); quatre(-30, -30, 5, 5, 15, 15, "brasero", true); quatre(-30, -30, 6, 6, 15, 15, "flamme", true);  // piliers à brasero
+quatre(-37, -36, 0, 1, 10, 11, "foin", true); quatre(-37, -37, 2, 2, 10, 10, "foin", true);
+quatre(-20, -19, 0, 1, 22, 22, "feuilles", true); quatre(-6, -5, 0, 1, 22, 23, "feuilles", true); quatre(-41, -40, 0, 1, 12, 13, "feuilles", true);
+quatre(-21, -20, 0, 0, -6, -5, "caisse", true); quatre(-21, -21, 1, 1, -6, -6, "caisse", true);
+// tours de guet en bois : 4 poteaux, plancher à 4, garde-corps, échelle
+function guet(x0, z0) {
+  for (const [dx, dz] of [[0, 0], [2, 0], [0, 2], [2, 2]]) remplit(x0 + dx, x0 + dx, 0, 5, z0 + dz, z0 + dz, "poteau");
+  remplit(x0, x0 + 2, 4, 4, z0, z0 + 2, "plancher");
+  for (let dx = 0; dx <= 2; dx++) for (let dz = 0; dz <= 2; dz++) if ((dx !== 1 || dz !== 1) && (dx !== 1 || dz !== 0)) pose(x0 + dx, 5, z0 + dz, "rondin");
+  for (let y = 0; y <= 4; y++) pose(x0 + 1, y, z0 - 1, "echelle");
+}
+guet(-28, 20); guet(-28, -23); guet(25, 20); guet(25, -23);
+// les ruines du milieu : estrade ronde, 8 piliers cassés, deux bouts de mur
+for (let x = -4; x < 4; x++) for (let z = -4; z < 4; z++) if (Math.hypot(x + 0.5, z + 0.5) <= 3.2) { pose(x, 0, z, "pierre_taillee"); marchable.add(x + "," + z); }
+const HAUTEURS = [5, 3, 3, 5, 4, 2, 2, 4];
+HAUTEURS.forEach((h, k) => {
+  const a = Math.PI / 8 + (k * Math.PI) / 4, x = Math.round(7 * Math.cos(a)), z = Math.round(7 * Math.sin(a));
+  remplit(x - 1, x, 0, h - 1, z - 1, z, k % 2 ? "pierre_moussue" : "pierre");
+});
+remplit(-2, 1, 0, 1, 6, 6, "pierre_moussue"); ote(1, 1, 6);
+remplit(-2, 1, 0, 1, -7, -7, "pierre_moussue"); ote(-2, 1, -7);
+
+// ---------------------------------------------------------------- la loge royale en haut (arrivée des spectateurs)
+const ZL = R + N + 2;   // allée du haut côté nord : ZL à ZL + 2 ; muraille à ZL + 3
+for (let x = -8; x <= 7; x++) {
+  for (const z of [ZL, ZL + 1, ZL + 2]) pose(x, HAUT_ALLEE + 1, z, "tapis_rouge");
+  if (x < -1 || x > 0) pose(x, HAUT_ALLEE + 1, ZL, "barreaux");
+  for (let z = ZL - 1; z <= ZL + 2; z++) pose(x, HAUT_MUR + 1, z, z === ZL - 1 ? "drap_or" : mod(x, 2) ? "drap_rouge" : "drap_or");
+}
+for (const x of [-8, 7]) remplit(x, x, HAUT_ALLEE, HAUT_MUR, ZL - 1, ZL - 1, "pierre_taillee");
+pose(-3, HAUT_ALLEE + 1, ZL + 2, "bouton");
+pose(1, HAUT_ALLEE + 1, ZL + 2, "or"); pose(-2, HAUT_ALLEE + 1, ZL + 2, "or");
+
+// ---------------------------------------------------------------- 12 tours sur la muraille (les 4 des coins tiennent l'écran)
+const RT = R + FACADE + 3.5;
+const TOURS = [];
+for (const sx of [-1, 1]) for (const sz of [-1, 1]) TOURS.push({ x: sx * L, z: sz * RT, h: 60, ecran: true });
+for (const sz of [-1, 1]) TOURS.push({ x: 0, z: sz * RT, h: 46 });
+for (const sx of [-1, 1]) {
+  TOURS.push({ x: sx * (L + RT), z: 0, h: 50 });
+  for (const sz of [-1, 1]) TOURS.push({ x: sx * (L + RT * Math.SQRT1_2), z: sz * RT * Math.SQRT1_2, h: 46 });
+}
+for (const t of TOURS) {
+  const x0 = Math.round(t.x) - 3, z0 = Math.round(t.z) - 3, h = t.h;
+  t.haut = h + 1;
+  for (let y = -1; y <= h; y++) for (let dx = 0; dx <= 6; dx++) for (let dz = 0; dz <= 6; dz++) {
+    if (dx > 0 && dx < 6 && dz > 0 && dz < 6) { if (y === h) pose(x0 + dx, y, z0 + dz, "pierre_taillee"); continue; }
+    const fente = (dx === 3 || dz === 3) && mod(y, 9) >= 4 && mod(y, 9) <= 6 && y > 8;
+    pose(x0 + dx, y, z0 + dz, fente ? "ombre" : y % 12 === 0 ? "pierre_sombre" : vieux(x0 + dx, y, z0 + dz, "pierre"));
+  }
+  // couronne qui déborde + créneaux
+  for (let dx = -1; dx <= 7; dx++) for (let dz = -1; dz <= 7; dz++) {
+    const bordure = dx === -1 || dx === 7 || dz === -1 || dz === 7;
+    if (!bordure) continue;
+    pose(x0 + dx, h + 1, z0 + dz, "pierre_sombre");
+    if (mod(dx + dz, 2) === 0) pose(x0 + dx, h + 2, z0 + dz, "pierre");
+  }
+  if (t.ecran) {
+    // grand brasero en haut, d'où partent les chaînes
+    remplit(x0 + 2, x0 + 4, h + 1, h + 1, z0 + 2, z0 + 4, "pierre_sombre");
+    pose(x0 + 3, h + 2, z0 + 3, "brasero"); pose(x0 + 3, h + 3, z0 + 3, "flamme");
+  } else {
+    // mât et bannière aux couleurs du côté
+    remplit(x0 + 3, x0 + 3, h + 1, h + 8, z0 + 3, z0 + 3, "poteau");
+    const drap = drapDe(t.x);
+    remplit(x0 + 4, x0 + 6, h + 6, h + 8, z0 + 3, z0 + 3, drap);
+    pose(x0 + 7, h + 7, z0 + 3, drap);
+  }
+}
+const TOURS_ECRAN = TOURS.filter((t) => t.ecran);
+
+// ---------------------------------------------------------------- la salle d'entrée, juste derrière la loge royale
+// /arene t'amène ici. On regarde vers l'arène (le sud) : porte bleue à gauche, porte rouge à droite, porte des gradins en face.
+// Chaque porte a son bouton sur une borne. Personne ne peut taper dans la salle et ton stuff n'y bouge pas.
+const SZ0 = 76, SZ1 = 96;   // mur côté arène, mur du fond (arrivée)
+for (let x = -13; x <= 12; x++) for (let z = SZ0; z <= SZ1; z++) {
+  const mur = x === -13 || x === 12 || z === SZ0 || z === SZ1;
+  pose(x, -1, z, mur ? "pierre" : mod(x + z, 2) ? "pierre_taillee" : "marche");
+  if (!mur) continue;
+  for (let y = 0; y <= 9; y++) pose(x, y, z, y === 0 || y === 9 ? "pierre_sombre" : vieux(x, y, z, "pierre"));
+  if (mod(x + z, 2) === 0) pose(x, 10, z, "pierre");
+}
+for (let z = SZ0 + 1; z < SZ1; z++) for (const x of [-1, 0]) pose(x, 0, z, "tapis_or");
+for (let x = -12; x <= -9; x++) for (let z = 84; z <= 88; z++) { pose(x, 0, z, "tapis_bleu"); pose(-x - 1, 0, z, "tapis_rouge"); }   // tapis d'attente
+function porteCote(xMur, drap, voile) {
+  remplit(xMur, xMur, 0, 3, 85, 87, voile);
+  for (const z of [84, 88]) remplit(xMur, xMur, 0, 4, z, z, "pierre_sombre");
+  remplit(xMur, xMur, 4, 4, 84, 88, drap);
+}
+porteCote(-13, "drap_bleu", "voile_bleu"); porteCote(12, "drap_rouge", "voile_rouge");
+remplit(-2, 1, 0, 3, SZ0, SZ0, "voile_or"); remplit(-3, 2, 4, 4, SZ0, SZ0, "drap_or"); for (const x of [-3, 2]) remplit(x, x, 0, 3, SZ0, SZ0, "pierre_sombre");
+remplit(-2, 1, 0, 4, SZ1, SZ1, "porte");                                  // grande porte fermée (on arrive par TP)
+const BORNES = [[-12, 89, "bouton_bleu"], [11, 89, "bouton_rouge"], [3, 77, "bouton_or"], [-4, 95, "bouton"]];
+for (const [x, z, b] of BORNES) { pose(x, 0, z, "pierre_taillee"); pose(x, 1, z, b); }
+for (const z of [78, 79, 80, 92, 93, 94]) { pose(-12, 0, z, "banc"); pose(11, 0, z, "banc"); }
+for (const x of [-9, 8]) remplit(x, x, 0, 5, 86, 86, "poteau");             // poteaux des panneaux d'attente
+for (const [x, z] of [[-12, 77], [11, 77], [-12, 95], [11, 95]]) { pose(x, 0, z, "brasero"); pose(x, 1, z, "flamme"); }
+
+// ================================================================ la scène
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { erreur(); return; }
+const hote = document.getElementById("scene");
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+hote.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xd9e6f0, 260, 620);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 900);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.09;
+controls.maxPolarAngle = 1.5; controls.minDistance = 3; controls.maxDistance = 420;
+const CENTRE = new THREE.Vector3(0, 2, 16);
+const VUE = new THREE.Vector3(85, 155, 175);
+camera.position.copy(VUE); controls.target.copy(CENTRE); controls.update();
+
+const ciel = new THREE.HemisphereLight(0xdfeeff, 0x6b5a45, 0.62);
+const soleil = new THREE.DirectionalLight(0xfff3dc, 0.85);
+soleil.position.set(-70, 150, 90); soleil.target.position.set(0, 0, 0);
+soleil.castShadow = true; soleil.shadow.mapSize.set(4096, 4096);
+Object.assign(soleil.shadow.camera, { left: -125, right: 125, top: 125, bottom: -125, near: 1, far: 420 });
+soleil.shadow.bias = -0.0006;
+scene.add(ciel, soleil, soleil.target);
+
+{
+  const herbe = toile(motif.bruit("#6aa54c", 0.12));
+  herbe.repeat.set(160, 160);
+  const sol = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ map: herbe }));
+  sol.rotation.x = -Math.PI / 2; sol.position.y = -0.06; sol.receiveShadow = true;
+  scene.add(sol);
+}
+
+const cubes = boite(1, 1, 1), matrice = new THREE.Matrix4();
+const parSorte = {};
+for (const bl of blocs.values()) (parSorte[bl.t] = parSorte[bl.t] || []).push(bl);
+const textures = {}, matsBlocs = {};
+for (const [nom, liste] of Object.entries(parSorte)) {
+  const s = SORTES[nom], tex = toile(s.m); textures[nom] = tex;
+  const mat = new THREE.MeshLambertMaterial({ map: tex });
+  if (s.lueur) { mat.emissive = new THREE.Color(0xffffff); mat.emissiveMap = tex; mat.emissiveIntensity = s.lueur; }
+  if (s.opacite) { mat.transparent = true; mat.opacity = s.opacite; mat.depthWrite = false; }
+  if (s.troue) { mat.alphaTest = 0.5; mat.side = THREE.DoubleSide; }
+  matsBlocs[nom] = mat;
+  const mesh = new THREE.InstancedMesh(s.geo || cubes, mat, liste.length);
+  liste.forEach((bl, k) => { matrice.makeTranslation(bl.x + 0.5 + (s.dx || 0), bl.y + 0.5 + (s.dy || 0), bl.z + 0.5 + (s.dz || 0)); mesh.setMatrixAt(k, matrice); });
+  mesh.castShadow = s.ombre !== false; mesh.receiveShadow = true;
+  if (s.opacite) mesh.renderOrder = 2;
+  scene.add(mesh);
+}
+
+// ---------------------------------------------------------------- l'écran géant (4 faces de 24 × 13,5) pendu par des chaînes aux 4 tours des coins
+const ECRAN_Y = 50, DEMI = 13;   // centre de l'écran, demi-largeur du caisson
+const drone = new THREE.PerspectiveCamera(50, 16 / 9, 0.3, 400);
+drone.position.set(0, 8, 14);
+const film = new THREE.WebGLRenderTarget(800, 450);
+film.texture.encoding = THREE.sRGBEncoding;
+const hudToile = document.createElement("canvas"); hudToile.width = 640; hudToile.height = 360;
+const hudG = hudToile.getContext("2d");
+const hudTex = new THREE.CanvasTexture(hudToile); hudTex.encoding = THREE.sRGBEncoding;
+const ecrans = new THREE.Group();
+{
+  // caisson en bois sombre cerclé d'or, avec une couronne de créneaux dorés dessus
+  const bois = new THREE.MeshLambertMaterial({ map: toile(motif.planches("#3d2a17")) });
+  bois.map.repeat.set(6, 4);
+  const caisson = new THREE.Mesh(boite(2 * DEMI, 15, 2 * DEMI), bois);
+  caisson.position.set(0, ECRAN_Y, 0); caisson.castShadow = true; scene.add(caisson);
+  const or = new THREE.MeshLambertMaterial({ color: 0xe8b630, emissive: 0x3a2800 });
+  for (const dy of [-7.6, 7.6]) { const c = new THREE.Mesh(boite(2 * DEMI + 1, 0.8, 2 * DEMI + 1), or); c.position.set(0, ECRAN_Y + dy, 0); scene.add(c); }
+  for (let k = -DEMI; k <= DEMI; k += 2) for (const [x, z] of [[k, -DEMI], [k, DEMI], [-DEMI, k], [DEMI, k]]) {
+    const c = new THREE.Mesh(boite(1, 1, 1), or); c.position.set(x, ECRAN_Y + 8.5, z); scene.add(c);
+  }
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {   // piliers d'angle dorés
+    const p = new THREE.Mesh(boite(1.2, 15.6, 1.2), or); p.position.set(x * (DEMI + 0.1), ECRAN_Y, z * (DEMI + 0.1)); scene.add(p);
+  }
+  const matFilm = new THREE.MeshBasicMaterial({ map: film.texture, toneMapped: false });
+  const matHud = new THREE.MeshBasicMaterial({ map: hudTex, transparent: true, toneMapped: false });
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2;
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(24, 13.5), matFilm);
+    face.position.set(Math.sin(a) * (DEMI + 0.03), ECRAN_Y, Math.cos(a) * (DEMI + 0.03)); face.rotation.y = a;
+    const hud = new THREE.Mesh(new THREE.PlaneGeometry(24, 13.5), matHud);
+    hud.position.set(Math.sin(a) * (DEMI + 0.06), ECRAN_Y, Math.cos(a) * (DEMI + 0.06)); hud.rotation.y = a;
+    ecrans.add(face, hud);
+  }
+  scene.add(ecrans);
+  // les chaînes : des maillons qui alternent de 90°
+  const maillon = new THREE.TorusGeometry(0.32, 0.09, 6, 12);
+  const liens = [];
+  for (const t of TOURS_ECRAN) {
+    const a = new THREE.Vector3(t.x, t.haut + 0.6, t.z), b = new THREE.Vector3(Math.sign(t.x) * (DEMI - 0.5), ECRAN_Y + 8, Math.sign(t.z) * (DEMI - 0.5));
+    const dir = b.clone().sub(a), n = Math.floor(dir.length() / 0.55);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    for (let i = 0; i <= n; i++) {
+      const tourne = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), i % 2 ? Math.PI / 2 : 0);
+      const m = new THREE.Matrix4().compose(a.clone().lerp(b, i / n).add(new THREE.Vector3(0, -Math.sin((i / n) * Math.PI) * 2.5, 0)), q.clone().multiply(tourne), new THREE.Vector3(1, 1.5, 1));
+      liens.push(m);
+    }
+  }
+  const chaines = new THREE.InstancedMesh(maillon, new THREE.MeshLambertMaterial({ color: 0x3a3c42 }), liens.length);
+  liens.forEach((m, i) => chaines.setMatrixAt(i, m));
+  chaines.castShadow = true; scene.add(chaines);
+}
+
+// ================================================================ les bonshommes
+const matsCouleur = {};
+const matDe = (c) => matsCouleur[c] || (matsCouleur[c] = new THREE.MeshLambertMaterial({ map: toile(motif.bruit(c, 0.05)) }));
+const lambert = (dessin) => new THREE.MeshLambertMaterial({ map: toile(dessin) });
+function bonhomme(t) {
+  const g = new THREE.Group(); g.rotation.order = "YXZ";
+  const morceau = (sx, sy, sz, mat, x, y, z, parent) => { const m = new THREE.Mesh(boite(sx, sy, sz), mat); m.position.set(x, y, z); m.castShadow = !!t.ombre; parent.add(m); return m; };
+  const pivot = (x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); g.add(p); return p; };
+  const face = lambert((c) => {
+    grain(c, t.peau, 0.03);
+    for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++) px(c, x, y, teinte(t.cheveux, 1 + (alea() - 0.5) * 0.15));
+    c.fillStyle = "#ffffff"; c.fillRect(2, 8, 2, 2); c.fillRect(12, 8, 2, 2);
+    c.fillStyle = t.yeux; c.fillRect(4, 8, 2, 2); c.fillRect(10, 8, 2, 2);
+    c.fillStyle = teinte(t.peau, 0.72); c.fillRect(6, 12, 4, 1);
+  });
+  const cheveux = matDe(t.cheveux), cote = matDe(t.peau);
+  morceau(0.5, 0.75, 0.25, matDe(t.haut), 0, 1.125, 0, g);
+  const tete = pivot(0, 1.5, 0);
+  morceau(0.5, 0.5, 0.5, [cote, cote, cheveux, cote, face, cheveux], 0, 0.25, 0, tete);
+  if (t.casque) morceau(0.56, 0.24, 0.56, matDe(t.casque), 0, 0.42, -0.01, tete);
+  const bras = [-1, 1].map((s) => { const p = pivot(s * 0.375, 1.375, 0); morceau(0.25, 0.55, 0.25, matDe(t.manches || t.haut), 0, -0.15, 0, p); morceau(0.25, 0.2, 0.25, matDe(t.peau), 0, -0.525, 0, p); return p; });
+  const jambes = [-1, 1].map((s) => { const p = pivot(s * 0.125, 0.75, 0); morceau(0.25, 0.6, 0.25, matDe(t.bas), 0, -0.3, 0, p); morceau(0.25, 0.15, 0.25, matDe(t.chaussures), 0, -0.675, 0, p); return p; });
+  if (t.epee) { morceau(0.07, 0.07, 1.0, matDe("#e3e7ec"), 0, -0.62, 0.5, bras[0]); morceau(0.3, 0.07, 0.07, matDe("#6b4a27"), 0, -0.62, 0.08, bras[0]); }
+  if (t.bouclier) morceau(0.08, 0.72, 0.56, matDe(t.bouclier), 0.17, -0.42, 0.08, bras[1]);
+  scene.add(g);
+  return { g, tete, bras, jambes };
+}
+const TEINTS = ["#f1c9a2", "#e0ac84", "#c68a5e", "#8d5a3b", "#5e3b26"];
+const CHEVEUX = ["#2b1d12", "#6b4423", "#d9b25c", "#141414", "#a33b1f", "#4a3020"];
+const HABITS = ["#3a5bc7", "#b8322c", "#e8762a", "#5d9a2c", "#8a3cb8", "#2a9aa6", "#f2c13a", "#eeeeea", "#26262e", "#c43a7a"];
+const choix = (l) => l[Math.floor(alea() * l.length)];
+
+// ---------------------------------------------------------------- les spectateurs, assis face à l'arène
+function pointAnneau(d, u) {
+  const Ls = 2 * L, A = Math.PI * (R + d), P = 2 * Ls + 2 * A;
+  let s = u * P;
+  if (s < Ls) return [-L + s, R + d];
+  s -= Ls; if (s < A) { const a = Math.PI / 2 - s / (R + d); return [L + (R + d) * Math.cos(a), (R + d) * Math.sin(a)]; }
+  s -= A; if (s < Ls) return [L - s, -(R + d)];
+  s -= Ls; const a = -Math.PI / 2 - s / (R + d); return [-L + (R + d) * Math.cos(a), (R + d) * Math.sin(a)];
+}
+const PUBLIC = [];
+for (let n = 0, essais = 0; n < 130 && essais < 900; essais++) {
+  const k = 2 + Math.floor(alea() * (N - 2)), [x, z] = pointAnneau(k + 1.05, alea());
+  const bl = blocs.get(cle(Math.floor(x), 3 + (k - 1), Math.floor(z)));
+  if (!bl || bl.t === "marche" || bl.t === "pierre_taillee") continue;
+  const c = bonhomme({ peau: choix(TEINTS), cheveux: choix(CHEVEUX), yeux: "#2d4f7a", haut: choix(HABITS), bas: choix(["#26262e", "#3557b8", "#4a4f3a"]), chaussures: "#ececec" });
+  c.g.position.set(x, 3 + k - 0.72, z);
+  c.g.rotation.y = Math.atan2(Math.max(-L, Math.min(L, x)) - x, -z);
+  c.jambes.forEach((j) => (j.rotation.x = -Math.PI / 2));
+  c.bras.forEach((b) => (b.rotation.x = -0.5));
+  PUBLIC.push(Object.assign(c, { y0: c.g.position.y, phase: alea() * 10 }));
+  n++;
+}
+// trois dans la loge, debout
+for (const x of [-4.5, 2.5, 4.5]) {
+  const c = bonhomme({ peau: choix(TEINTS), cheveux: choix(CHEVEUX), yeux: "#4a3020", haut: choix(HABITS), bas: "#26262e", chaussures: "#ececec" });
+  c.g.position.set(x, HAUT_ALLEE + 1, ZL + 0.6); c.g.rotation.y = Math.PI;
+  c.bras.forEach((b) => (b.rotation.x = -0.3));
+  PUBLIC.push(Object.assign(c, { y0: c.g.position.y, phase: alea() * 10, debout: true }));
+}
+
+// ================================================================ le combat d'exemple
+const sol = (x, z) => (marchable.has(Math.floor(x) + "," + Math.floor(z)) ? 1 : 0);
+// chemins du côté bleu (gauche), avec des pauses derrière les couverts ; le rouge fait le miroir
+const VOIES = [
+  { pts: [[-41.5, 0, 1], [-36.4, 0, 0], [-33.6, 0.4, 1.6], [-33.6, -4.6, 0], [-28, -4.6, 0], [-18.6, -0.3, 1.4], [-18.4, 2.6, 0], [-14.5, 2.6, 0], [-9.5, 0.4, 0]], reprise: 5 },
+  { pts: [[-41.5, 0, 1], [-36.4, 0, 0], [-33, 6.5, 0], [-25.6, 10.5, 1.6], [-25.6, 14.5, 0], [-11.6, 17.5, 1.6], [-11.6, 14.6, 0], [-8.6, 6.5, 0]], reprise: 5 },
+];
+VOIES.push({ pts: VOIES[1].pts.map(([x, z, p]) => [x, -z, p]), reprise: 5 });
+const COMBATTANTS = [
+  { nom: "Joueur 1", camp: 0, couleur: "#3a5bc7", css: "#6f95ff" },
+  { nom: "Joueur 2", camp: 1, couleur: "#b8322c", css: "#ff6a5f" },
+].map((f) => {
+  const c = bonhomme({ peau: f.camp ? "#e0ac84" : "#f1c9a2", cheveux: f.camp ? "#141414" : "#6b4423", yeux: "#2d4f7a", haut: f.couleur, manches: "#c9ccd1",
+    bas: "#b4b9c0", chaussures: "#8a8f96", casque: "#c9ccd1", epee: true, bouclier: "#7a5a35", ombre: true });
+  return Object.assign(f, c, { pv: 20, x: 0, z: 0, yaw: 0, etat: "route", route: [], i: 0, pause: 0, coup: 0, recharge: 1, depuis: 0 });
+});
+const [B1, B2] = COMBATTANTS;
+const autre = (f) => (f === B1 ? B2 : B1);
+const score = [0, 0];
+let debutManche = 0, victoire = null, acclame = 0, duel = null;
+
+function partir(f, depuisBase) {
+  const v = VOIES[Math.floor(Math.random() * VOIES.length)], m = f.camp ? -1 : 1;
+  f.route = (depuisBase ? v.pts : v.pts.slice(v.reprise)).map(([x, z, p]) => [x * m, z, p]);
+  f.i = 0; f.pause = 0; f.etat = "route";
+  if (depuisBase) { f.x = f.route[0][0]; f.z = f.route[0][1]; f.pv = 20; f.yaw = f.camp ? -Math.PI / 2 : Math.PI / 2; }
+}
+partir(B1, true); partir(B2, true);
+window.arene = { COMBATTANTS, score, camera, controls, blocs };   // pour inspecter le combat depuis la console
+
+const PI = Math.PI;
+function pose0(f) { for (const m of [...f.bras, ...f.jambes]) m.rotation.set(0, 0, 0); f.tete.rotation.set(0, 0, 0); f.g.rotation.x = 0; f.g.rotation.z = 0; }
+function avance(f, tx, tz, v, dt) {
+  const dx = tx - f.x, dz = tz - f.z, d = Math.hypot(dx, dz);
+  if (d < 0.05) return true;
+  const pas = Math.min(d, v * dt);
+  f.x += (dx / d) * pas; f.z += (dz / d) * pas;
+  const cible = Math.atan2(dx, dz);
+  let e = cible - f.yaw; e = Math.atan2(Math.sin(e), Math.cos(e)); f.yaw += e * Math.min(1, dt * 10);
+  return d <= v * dt;
+}
+function regarde(f, cible, dt) {
+  const c = Math.atan2(cible.x - f.x, cible.z - f.z);
+  let e = c - f.yaw; e = Math.atan2(Math.sin(e), Math.cos(e)); f.yaw += e * Math.min(1, dt * 8);
+}
+const marcheAnim = (f, t, vit) => { const s = Math.sin(t * vit) * 0.75; f.jambes[0].rotation.x = s; f.jambes[1].rotation.x = -s; f.bras[1].rotation.x = s * 0.6 - 0.4; f.bras[0].rotation.x = -s * 0.6 - 0.3; };
+
+function ko(perdant, t) {
+  const gagnant = autre(perdant);
+  perdant.etat = "ko"; perdant.depuis = t; gagnant.etat = "gagne"; gagnant.depuis = t; duel = null;
+  score[gagnant.camp]++;
+  victoire = { nom: gagnant.nom, css: gagnant.css, t };
+  acclame = t + 2.6;
+  const v = document.getElementById("victoire");
+  v.querySelector("small").textContent = gagnant.nom; v.style.color = gagnant.css; v.classList.add("montre");
+  setTimeout(() => v.classList.remove("montre"), 2600);
+}
+
+function combat(t, dt) {
+  for (const f of COMBATTANTS) {
+    pose0(f);
+    const ennemi = autre(f);
+    switch (f.etat) {
+      case "route": {
+        if (f.pause > 0) {
+          f.pause -= dt; regarde(f, ennemi, dt);
+          f.g.rotation.x = 0.2; f.tete.rotation.y = Math.sin(t * 2.3 + f.camp) * 0.5; f.bras[1].rotation.x = -1.1;   // accroupi, bouclier levé, il guette
+          break;
+        }
+        const [tx, tz, p] = f.route[f.i];
+        if (avance(f, tx, tz, 5.2, dt)) { f.pause = p; f.i++; if (f.i >= f.route.length) f.etat = "attend"; }
+        marcheAnim(f, t, 11);
+        break;
+      }
+      case "attend":
+        regarde(f, ennemi, dt); f.bras[1].rotation.x = -1.1; f.bras[0].rotation.x = -0.5;
+        if (ennemi.etat === "attend" || ennemi.etat === "approche") f.etat = "approche";
+        break;
+      case "approche": {
+        const d = Math.hypot(ennemi.x - f.x, ennemi.z - f.z);
+        if (d < 2.6) {
+          if (!duel) duel = { cx: (f.x + ennemi.x) / 2, cz: (f.z + ennemi.z) / 2, a: Math.atan2(f.z - ennemi.z, f.x - ennemi.x) - (f === B1 ? 0 : PI) };
+          f.etat = "duel"; ennemi.etat = "duel";
+        } else { avance(f, ennemi.x, ennemi.z, 5.6, dt); marcheAnim(f, t, 13); f.g.rotation.x = 0.12; }
+        break;
+      }
+      case "duel": {
+        // ils tournent l'un autour de l'autre et frappent
+        const a = duel.a + (f === B1 ? 0 : PI);
+        const tx = duel.cx + Math.cos(a) * 1.25, tz = duel.cz + Math.sin(a) * 1.25;
+        f.x += (tx - f.x) * Math.min(1, dt * 6); f.z += (tz - f.z) * Math.min(1, dt * 6);
+        regarde(f, ennemi, dt * 2);
+        marcheAnim(f, t, 7);
+        f.recharge -= dt;
+        if (f.coup > 0) {
+          f.coup -= dt; const k = 1 - f.coup / 0.32;
+          f.bras[0].rotation.x = -2.4 + k * 2.2; f.bras[0].rotation.z = 0.3;
+          if (k > 0.5 && !f.touche) {
+            f.touche = true;
+            const bloque = ennemi.coup <= 0 && Math.random() < 0.3;
+            if (!bloque && Math.random() < 0.7) { ennemi.pv -= 1.5 + Math.random() * 1.6; ennemi.recul = 0.2; if (ennemi.pv <= 0) { ennemi.pv = 0; ko(ennemi, t); } }
+          }
+        } else {
+          f.bras[1].rotation.x = -1.0; f.bras[0].rotation.x = -0.5;
+          if (f.recharge <= 0) { f.coup = 0.32; f.touche = false; f.recharge = 0.62 + Math.random() * 0.35; }
+        }
+        if (f.recul > 0) { f.recul -= dt; f.g.rotation.x = -0.2; }
+        break;
+      }
+      case "ko": {
+        const k = Math.min(1, (t - f.depuis) / 0.35);
+        f.g.rotation.x = -k * PI / 2;
+        if (t - f.depuis > 3) partir(f, true);   // il réapparaît dans sa base avec le kit neuf
+        break;
+      }
+      case "gagne": {
+        f.bras[0].rotation.x = -PI + 0.2; f.bras[0].rotation.z = 0.2;
+        if (t - f.depuis > 3) { f.pv = Math.min(20, f.pv + 6); partir(f, false); debutManche = t; }
+        break;
+      }
+    }
+    if (duel && f.etat === "duel") duel.a += dt * 0.5 / 2;
+    f.g.position.set(f.x, sol(f.x, f.z) + (f.etat === "ko" ? 0.15 : 0), f.z);
+    f.g.rotation.y = f.yaw;
+  }
+}
+
+// ---------------------------------------------------------------- l'image de l'écran : caméra qui suit + pseudos, cœurs, score, chrono
+const viseDrone = new THREE.Vector3(), voulu = new THREE.Vector3();
+function suitCombat(t, dt) {
+  // loin l'un de l'autre : la caméra suit un joueur à la fois ; proches : elle les cadre tous les deux
+  const ecartC = Math.hypot(B1.x - B2.x, B1.z - B2.z);
+  const vivants = ecartC > 16 ? [Math.floor(t / 7) % 2 ? B2 : B1] : COMBATTANTS.filter((f) => f.etat !== "ko");
+  const mx = vivants.reduce((s, f) => s + f.x, 0) / vivants.length, mz = vivants.reduce((s, f) => s + f.z, 0) / vivants.length;
+  const a = t * 0.12, dist = ecartC > 16 ? 7 : 6 + ecartC * 0.6;
+  voulu.set(mx + Math.sin(a) * dist, 3.5 + dist * 0.38, mz + Math.cos(a) * dist);
+  drone.position.lerp(voulu, Math.min(1, dt * 1.2));
+  viseDrone.lerp(new THREE.Vector3(mx, 1.2, mz), Math.min(1, dt * 2.2));
+  drone.lookAt(viseDrone);
+}
+function coeurs(g, x, y, pv, droite) {
+  for (let k = 0; k < 10; k++) {
+    const plein = Math.max(0, Math.min(1, (pv - k * 2) / 2)), xx = droite ? x - k * 19 : x + k * 19;
+    g.fillStyle = "#2a0a0a"; g.fillRect(xx, y, 16, 14);
+    g.fillStyle = "#e5302a"; g.fillRect(xx + 1, y + 1, 14 * plein, 12);
+  }
+}
+let hudProchain = 0;
+function dessineHud(t) {
+  if (t < hudProchain) return; hudProchain = t + 0.1;
+  const g = hudG; g.clearRect(0, 0, 640, 360);
+  g.fillStyle = "rgba(10,12,20,0.8)"; g.fillRect(0, 0, 640, 62);
+  g.fillStyle = "#3a5bc7"; g.fillRect(0, 0, 8, 62); g.fillStyle = "#b8322c"; g.fillRect(632, 0, 8, 62);
+  g.font = "700 22px 'Pixelify Sans', sans-serif"; g.textBaseline = "top";
+  g.fillStyle = "#9fb8ff"; g.textAlign = "left"; g.fillText(B1.nom, 18, 8);
+  g.fillStyle = "#ffa49d"; g.textAlign = "right"; g.fillText(B2.nom, 622, 8);
+  coeurs(g, 18, 36, B1.pv, false); coeurs(g, 606, 36, B2.pv, true);
+  g.textAlign = "center"; g.fillStyle = "#fff"; g.font = "700 34px 'Pixelify Sans', sans-serif";
+  g.fillText(score[0] + " – " + score[1], 320, 4);
+  const s = Math.max(0, Math.floor(t - debutManche));
+  g.font = "500 17px 'Pixelify Sans', sans-serif"; g.fillStyle = "#ffe1a1";
+  g.fillText(Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"), 320, 40);
+  // pastille en direct
+  g.fillStyle = "rgba(10,12,20,0.75)"; g.fillRect(12, 318, 150, 30);
+  g.fillStyle = Math.floor(t * 2) % 2 ? "#e5302a" : "#7a1a16"; g.beginPath(); g.arc(28, 333, 6, 0, 7); g.fill();
+  g.fillStyle = "#fff"; g.textAlign = "left"; g.font = "700 16px 'Pixelify Sans', sans-serif"; g.fillText("EN DIRECT · ARÈNE", 40, 325);
+  if (victoire && t - victoire.t < 3) {
+    g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, 130, 640, 110);
+    g.textAlign = "center"; g.fillStyle = "#f0b43c"; g.font = "700 58px 'Pixelify Sans', sans-serif"; g.fillText("VICTOIRE", 320, 138);
+    g.fillStyle = victoire.css; g.font = "700 28px 'Pixelify Sans', sans-serif"; g.fillText(victoire.nom, 320, 200);
+  }
+  hudTex.needsUpdate = true;
+}
+
+// ================================================================ soir : projecteurs des pylônes
+const projecteurs = TOURS_ECRAN.map((t) => {
+  const l = new THREE.SpotLight(0xffc27a, 0, 200, 0.45, 0.6, 1.2);
+  l.position.set(t.x, t.haut + 3, t.z); l.target.position.set(t.x * 0.2, 0, t.z * 0.2);
+  scene.add(l, l.target); return l;
+});
+const anime = [], feux = [];
+for (let k = 0; k < 10; k++) { const [x, z] = pointAnneau(1.5, k / 10); const l = new THREE.PointLight(0xff9a3a, 0, 22, 1.5); l.position.set(x, 6, z); scene.add(l); feux.push(l); }
+for (const sx of [-1, 1]) { const l = new THREE.PointLight(0xff9a3a, 0, 18, 1.5); l.position.set(sx * 41.5, 4, 0); scene.add(l); feux.push(l); }
+anime.push((t) => { for (const [i, l] of feux.entries()) if (l.intensity) l.intensity = 1.1 + Math.sin(t * 9 + i) * 0.12 + Math.sin(t * 15 + i * 2) * 0.08; });
+const lueurEcran = new THREE.PointLight(0x9fc0ff, 0, 60); lueurEcran.position.set(0, ECRAN_Y - 10, 0); scene.add(lueurEcran);
+function ambiance(soir) {
+  hote.style.background = soir ? "linear-gradient(#0f1533 0%, #2d2a55 50%, #a8603f 100%)" : "";
+  ciel.intensity = soir ? 0.2 : 0.62; ciel.color.set(soir ? 0x8a94d0 : 0xdfeeff);
+  soleil.intensity = soir ? 0.12 : 0.85; soleil.color.set(soir ? 0xff9a5a : 0xfff3dc);
+  scene.fog.color.set(soir ? 0x2a2648 : 0xd9e6f0);
+  projecteurs.forEach((l) => (l.intensity = soir ? 2.4 : 0));
+  feux.forEach((l) => (l.intensity = soir ? 1.1 : 0));
+  lueurEcran.intensity = soir ? 0.8 : 0;
+}
+
+// ================================================================ la salle d'entrée : panneaux, écran, file d'attente
+// 0 personne · 1 le rouge attend un adversaire · 2 le bleu arrive, compte à rebours · 3 combat lancé (ils sont partis)
+const SALLE = { etat: 0, depuis: 0, t: 0 };
+const DUREES = [4, 7, 10, 8], REBOURS = 10;
+const ETATS_DEMO = [...document.querySelectorAll("#demo-salle button")];
+function etatSalle(e) {
+  SALLE.etat = e; SALLE.depuis = SALLE.t;
+  ETATS_DEMO.forEach((bt, k) => bt.setAttribute("aria-pressed", String(k === e)));
+}
+ETATS_DEMO.forEach((bt, k) => bt.addEventListener("click", () => { etatSalle(k); allerA("salle"); }));
+
+function plaque(l, h, larg, haut) {
+  const c = document.createElement("canvas"); c.width = l; c.height = h;
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(larg, haut), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  scene.add(m);
+  return { g: c.getContext("2d"), tex, m, l, h };
+}
+function cadre(p, fond) {
+  const { g, l, h } = p;
+  g.fillStyle = fond; g.fillRect(0, 0, l, h);
+  g.strokeStyle = "#d9a72c"; g.lineWidth = 10; g.strokeRect(5, 5, l - 10, h - 10);
+  g.strokeStyle = "#5a3c1a"; g.lineWidth = 4; g.strokeRect(14, 14, l - 28, h - 28);
+}
+const PANNEAUX = [0, 1].map((camp) => {
+  const p = plaque(600, 260, 9, 3.9);
+  // sur un poteau au bord du tapis d'attente, tournés vers l'arrivée pour qu'on les lise en entrant
+  const x = camp ? 8.5 : -8.5, cx = 0;
+  p.m.rotation.order = "YXZ"; p.m.position.set(x, 6.6, 86.5); p.m.rotation.set(-0.3, Math.atan2(cx - x, 95 - 86.5), 0);
+  return Object.assign(p, { camp });
+});
+const ecriture = (g, txt, x, y, taille, coul, poids = 700) => { g.font = `${poids} ${taille}px 'Pixelify Sans', sans-serif`; g.fillStyle = coul; g.fillText(txt, x, y); };
+function dessinePanneau(p, t) {
+  const { g } = p, bleu = p.camp === 0, e = SALLE.etat, ecoule = t - SALLE.depuis;
+  cadre(p, "#2a1d10");
+  g.fillStyle = bleu ? "#2f4fa8" : "#a52c27"; g.fillRect(20, 20, 560, 62);
+  g.textAlign = "center"; g.textBaseline = "middle";
+  ecriture(g, bleu ? "CÔTÉ BLEU" : "CÔTÉ ROUGE", 300, 53, 44, "#fff");
+  const inscrits = e === 1 ? (bleu ? [] : ["Joueur 2"]) : e === 2 ? [bleu ? "Joueur 1" : "Joueur 2"] : [];
+  ecriture(g, inscrits.length ? inscrits.join(", ") : e === 3 ? "Dans l'arène" : "Personne", 300, 122, 36, inscrits.length ? "#ffe1a1" : "#b3a58a");
+  let statut, coul = "#f1eee6";
+  if (e === 0) statut = "Appuie sur le bouton pour combattre";
+  else if (e === 1 && !bleu) { statut = "En attente d'un adversaire" + ".".repeat(1 + (Math.floor(t * 2) % 3)); coul = "#ffd27a"; }
+  else if (e === 1) { statut = "Un adversaire t'attend ! Appuie"; coul = "#9fd0ff"; }
+  else if (e === 2) { statut = "Combat dans " + Math.max(1, Math.ceil(REBOURS - ecoule)); coul = "#ffb04a"; }
+  else { statut = "Combat en cours " + score[0] + " – " + score[1] + " · appuie pour y aller"; coul = "#9fe08a"; }
+  ecriture(g, statut, 300, 198, e === 2 ? 46 : 30, coul);
+  p.tex.needsUpdate = true;
+}
+// enseigne des gradins, sur le linteau de la porte du fond
+{
+  const p = plaque(600, 90, 6, 0.9);
+  p.m.position.set(0, 4.5, SZ0 + 1.03);
+  cadre(p, "#2a1d10"); p.g.textAlign = "center"; p.g.textBaseline = "middle";
+  const ecrit = () => { cadre(p, "#2a1d10"); ecriture(p.g, "GRADINS · appuie sur le bouton doré", 300, 47, 34, "#ffe1a1"); p.tex.needsUpdate = true; };
+  ecrit(); document.fonts && document.fonts.ready.then(ecrit);
+}
+// tableau du kit, au mur de l'arrivée
+{
+  const p = plaque(620, 360, 6.2, 3.6);
+  p.m.position.set(6, 3.4, SZ1 - 0.03); p.m.rotation.y = Math.PI;
+  const ecrit = () => {
+    const g = p.g; cadre(p, "#2a1d10"); g.textAlign = "left"; g.textBaseline = "top";
+    ecriture(g, "POUR COMBATTRE", 40, 30, 34, "#ffe1a1");
+    const lignes = ["Tout le monde reçoit le même kit :", "armure en fer, épée, bouclier, arc,", "pommes dorées et steaks.", "Tu gardes : les lames de la Brume", "et les armes de ton éveil.", "Le reste t'est rendu en revenant ici."];
+    lignes.forEach((l, k) => ecriture(g, l, 40, 86 + k * 41, 27, k === 3 || k === 4 ? "#9fe08a" : "#f1eee6", 500));
+    p.tex.needsUpdate = true;
+  };
+  ecrit(); document.fonts && document.fonts.ready.then(ecrit);
+}
+// petit écran du combat au-dessus de la porte des gradins (pour patienter)
+{
+  const e = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 4.16), new THREE.MeshBasicMaterial({ map: film.texture, toneMapped: false }));
+  e.position.set(0, 7.2, SZ0 + 1.13);
+  const h = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 4.16), new THREE.MeshBasicMaterial({ map: hudTex, transparent: true, toneMapped: false }));
+  h.position.set(0, 7.2, SZ0 + 1.16);
+  ecrans.add(e, h);
+  const bord = new THREE.Mesh(boite(8, 4.8, 0.2), new THREE.MeshLambertMaterial({ color: 0xc9921f, emissive: 0x2a1c00 }));
+  bord.position.set(0, 7.2, SZ0 + 1.0); scene.add(bord);
+}
+// les gens de la salle
+const habit = () => ({ peau: choix(TEINTS), cheveux: choix(CHEVEUX), yeux: "#2d4f7a", haut: choix(HABITS), bas: choix(["#26262e", "#3557b8", "#4a4f3a"]), chaussures: "#ececec" });
+const attendRouge = bonhomme(Object.assign(habit(), { haut: "#b8322c" }));
+attendRouge.g.position.set(9.5, 0.06, 86.5); attendRouge.g.rotation.y = Math.PI / 2;
+const attendBleu = bonhomme(Object.assign(habit(), { haut: "#3a5bc7" }));
+attendBleu.g.position.set(-9.5, 0.06, 86.5); attendBleu.g.rotation.y = -Math.PI / 2;
+const versGradins = bonhomme(habit());
+const assis = bonhomme(habit());
+assis.g.position.set(-11.5, 0.5 - 0.72, 79.5); assis.g.rotation.y = Math.PI / 2;
+assis.jambes.forEach((j) => (j.rotation.x = -Math.PI / 2)); assis.bras.forEach((b) => (b.rotation.x = -0.5));
+let prochainPanneau = 0;
+anime.push((t, dt) => {
+  SALLE.t = t;
+  if (t - SALLE.depuis > DUREES[SALLE.etat]) etatSalle((SALLE.etat + 1) % 4);
+  if (t > prochainPanneau) { prochainPanneau = t + 0.25; PANNEAUX.forEach((p) => dessinePanneau(p, t)); }
+  const e = SALLE.etat;
+  attendRouge.g.visible = e === 1 || e === 2; attendBleu.g.visible = e === 2;
+  for (const c of [attendRouge, attendBleu]) {
+    // ils piétinent devant leur porte et jettent un œil au panneau d'en face
+    c.tete.rotation.y = Math.sin(t * 0.8 + c.g.position.x) * 0.9;
+    c.bras.forEach((b, k) => (b.rotation.x = -0.15 + Math.sin(t * 1.5 + k) * 0.08));
+  }
+  // quelqu'un traverse la salle vers la porte des gradins, appuie et disparaît
+  const cyc = (t * 2.2) % 22, z = SZ1 - 2.5 - Math.min(cyc, 15.5);
+  versGradins.g.position.set(1.6, 0.06, z); versGradins.g.rotation.y = Math.PI;
+  versGradins.g.visible = cyc < 17;
+  const s = cyc < 15.5 ? Math.sin(t * 10) * 0.6 : 0;
+  versGradins.jambes[0].rotation.x = s; versGradins.jambes[1].rotation.x = -s;
+  versGradins.bras[0].rotation.x = cyc >= 15.5 ? -1.3 : -s; versGradins.bras[1].rotation.x = s;
+  assis.tete.rotation.y = Math.sin(t * 0.4) * 0.6 - 0.3;
+});
+etatSalle(0);
+
+// les trajets de téléportation, en pointillés : portes → bases, porte du fond → loge
+{
+  const trajet = (a, c, b, couleur) => {
+    const pts = new THREE.QuadraticBezierCurve3(a, c, b).getPoints(80);
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: couleur, dashSize: 1.6, gapSize: 1.1 }));
+    l.computeLineDistances(); scene.add(l); return l;
+  };
+  [
+    trajet(new THREE.Vector3(-13, 2, 86.5), new THREE.Vector3(-45, 75, 55), new THREE.Vector3(-41.5, 2, 0), 0x6f95ff),
+    trajet(new THREE.Vector3(12, 2, 86.5), new THREE.Vector3(45, 75, 55), new THREE.Vector3(41.5, 2, 0), 0xff6a5f),
+    trajet(new THREE.Vector3(-0.5, 2, SZ0), new THREE.Vector3(-0.5, 48, 68), new THREE.Vector3(-0.5, HAUT_ALLEE + 2, ZL + 1), 0xf0b43c),
+  ];
+}
+
+// ================================================================ vues et panneau
+const VUES = {
+  ensemble: [VUE.clone(), CENTRE.clone()],
+  salle: [new THREE.Vector3(0, 30, 108), new THREE.Vector3(0, 1, 85)],
+  bleu: [new THREE.Vector3(-47, 4.6, 0.5), new THREE.Vector3(-26, 2, 0.5)],
+  rouge: [new THREE.Vector3(47, 4.6, -0.5), new THREE.Vector3(26, 2, -0.5)],
+  gradins: [new THREE.Vector3(-0.5, HAUT_ALLEE + 2.6, ZL + 1.6), new THREE.Vector3(0, 3, 2)],
+  ecran: [new THREE.Vector3(0, 40, 47), new THREE.Vector3(0, ECRAN_Y - 1, DEMI)],
+};
+let vol = null;
+function allerA(nom) {
+  const [p, c] = VUES[nom], fin = p.clone();
+  // la salle d'entrée est large : sur un écran étroit (panneau à gauche), on recule pour la voir en entier
+  if (nom === "salle") {
+    const libre = hote.clientWidth > 640 ? hote.clientWidth - document.getElementById("panneau").getBoundingClientRect().right : hote.clientWidth;
+    fin.sub(c).multiplyScalar(Math.max(1, 820 / Math.max(libre, 200))).add(c);
+  }
+  vol = { debut: performance.now(), p0: camera.position.clone(), c0: controls.target.clone(), p1: fin, c1: c.clone() };
+}
+controls.addEventListener("start", () => { vol = null; });
+document.getElementById("ensemble").addEventListener("click", () => allerA("ensemble"));
+document.getElementById("salle").addEventListener("click", () => allerA("salle"));
+document.getElementById("vue-gradins").addEventListener("click", () => allerA("gradins"));
+document.getElementById("ecran").addEventListener("click", () => allerA("ecran"));
+const onglets = [...document.querySelectorAll("#onglets button")];
+onglets.forEach((bt) => bt.addEventListener("click", () => {
+  onglets.forEach((o) => { o.setAttribute("aria-selected", String(o === bt)); document.getElementById(o.dataset.page).hidden = o !== bt; });
+  taille();
+}));
+const calque = document.getElementById("etiquettes");
+const ETIQUETTES = [
+  ["Base bleue (gauche)", -41.5, 8, 0], ["Base rouge (droite)", 41.5, 8, 0], ["Écran géant (4 faces de 24 blocs)", 0, ECRAN_Y + 11, 0],
+  ["Ruines du milieu", 0, 7, 0], ["Tour de guet", -26.5, 8, 21.5], ["Palissade", -23.5, 4.5, 10.5], ["Loge royale · arrivée des spectateurs", 0, HAUT_MUR + 3, ZL + 1],
+  ["Gradins (32 blocs de haut)", 0, 24, -(R + 20)], ["Grille de protection", -20, 8, -27], ["Tour qui tient l'écran", L, 64, R + FACADE + 3.5], ["Bouton de sortie", -45.5, 3.4, 3.5],
+  ["Salle d'entrée", -0.5, 13, 86], ["Porte bleue + bouton", -12, 6, 89.5], ["Porte rouge + bouton", 11.5, 6, 89.5], ["Porte des gradins", 3.5, 3, 77.5], ["Arrivée · bouton Repartir", -4, 3, 94.5],
+].map(([txt, x, y, z]) => { const el = document.createElement("div"); el.className = "etiquette"; el.textContent = txt; calque.appendChild(el); return { el, ancre: new THREE.Vector3(x, y, z) }; });
+const btNoms = document.getElementById("noms");
+btNoms.addEventListener("click", () => { const on = btNoms.getAttribute("aria-pressed") !== "true"; btNoms.setAttribute("aria-pressed", String(on)); calque.hidden = !on; });
+const btSoir = document.getElementById("soir");
+btSoir.addEventListener("click", () => { const on = btSoir.getAttribute("aria-pressed") !== "true"; btSoir.setAttribute("aria-pressed", String(on)); ambiance(on); });
+
+// ================================================================ boucle
+function taille() {
+  const w = hote.clientWidth, h = hote.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h;
+  const pan = document.getElementById("panneau").getBoundingClientRect();
+  if (w > 640) camera.setViewOffset(w, h, -Math.round((pan.right + 8) / 2), 0, w, h);
+  else camera.setViewOffset(w, h, 0, Math.round((h - pan.top + 8) / 2), w, h);
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", taille); taille();
+
+const horloge = new THREE.Clock(), v3 = new THREE.Vector3();
+function boucle() {
+  const dt = Math.min(horloge.getDelta(), 0.05), t = horloge.elapsedTime;
+  if (vol) {
+    vol.t = Math.min(1, (performance.now() - vol.debut) / 1100);
+    const k = vol.t < 0.5 ? 2 * vol.t * vol.t : 1 - Math.pow(-2 * vol.t + 2, 2) / 2;
+    camera.position.lerpVectors(vol.p0, vol.p1, k); controls.target.lerpVectors(vol.c0, vol.c1, k);
+    if (vol.t >= 1) vol = null;
+  }
+  controls.update();
+  combat(t, dt);
+  for (const f of anime) f(t, dt);
+  // le public suit le combat des yeux et se lève à chaque victoire
+  const mx = (B1.x + B2.x) / 2, mz = (B1.z + B2.z) / 2, fete = t < acclame;
+  for (const p of PUBLIC) {
+    const c = Math.atan2(mx - p.g.position.x, mz - p.g.position.z);
+    let e = c - p.g.rotation.y; e = Math.atan2(Math.sin(e), Math.cos(e));
+    p.tete.rotation.y = Math.max(-1, Math.min(1, e));
+    if (fete) {
+      const saut = Math.abs(Math.sin(t * 7 + p.phase));
+      p.bras[0].rotation.x = p.bras[1].rotation.x = -PI + 0.3; p.bras[0].rotation.z = -0.3 * saut; p.bras[1].rotation.z = 0.3 * saut;
+      if (!p.debout) { p.jambes.forEach((j) => (j.rotation.x = 0)); p.g.position.y = p.y0 + 0.72 + saut * 0.3; }
+      else p.g.position.y = p.y0 + saut * 0.3;
+    } else {
+      p.bras[0].rotation.z = p.bras[1].rotation.z = 0;
+      p.bras[0].rotation.x = p.bras[1].rotation.x = p.debout ? -0.3 : -0.5;
+      if (!p.debout) p.jambes.forEach((j) => (j.rotation.x = -PI / 2));
+      p.g.position.y = p.y0;
+    }
+  }
+  // l'écran : on filme sans l'écran lui-même
+  suitCombat(t, dt); dessineHud(t);
+  ecrans.visible = false;
+  renderer.setRenderTarget(film); renderer.render(scene, drone); renderer.setRenderTarget(null);
+  ecrans.visible = true;
+  renderer.render(scene, camera);
+  if (!calque.hidden) {
+    const w = hote.clientWidth, h = hote.clientHeight;
+    for (const e of ETIQUETTES) {
+      v3.copy(e.ancre).project(camera);
+      if (v3.z > 1 || v3.x < -1.1 || v3.x > 1.1 || v3.y < -1.1 || v3.y > 1.1) { e.el.style.display = "none"; continue; }
+      e.el.style.display = "";
+      e.el.style.transform = `translate(${((v3.x + 1) / 2) * w}px, ${((1 - v3.y) / 2) * h}px) translate(-50%, -100%)`;
+    }
+  }
+  requestAnimationFrame(boucle);
+}
+boucle();
+})();
+</script>

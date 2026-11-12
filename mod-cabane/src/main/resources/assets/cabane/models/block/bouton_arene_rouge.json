@@ -1,0 +1,6 @@
+{
+  "parent": "cabane:block/bouton_retour",
+  "textures": {
+    "bouton": "minecraft:block/red_concrete"
+  }
+}
