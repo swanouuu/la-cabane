@@ -688,6 +688,9 @@ public final class ClientHachibi4 {
                 fr.cabane.client.pouvoir.ClientSharingan.toucheUlti();
                 // et au dinosaure d os de Kaguya (niveau 3)
                 fr.cabane.client.pouvoir.ClientKaguya.toucheUlti();
+                // et à l Éclipse des Ténèbres, au Jugement de la Lumière (niveau 3)
+                fr.cabane.client.pouvoir.ClientTenebres.toucheUlti();
+                fr.cabane.client.pouvoir.ClientLumiere.toucheUlti();
                 PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.ULTI));
             }
         }

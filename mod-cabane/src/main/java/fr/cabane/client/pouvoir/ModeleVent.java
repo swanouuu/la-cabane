@@ -26,7 +26,9 @@ import org.joml.Vector3f;
 final class ModeleVent {
     static final ResourceLocation BLANC = Cabane.id("textures/marque/blanc.png");
     /** Les lueurs des cœurs : le vent, le vent doux (la fée), les paillettes. */
-    private static final float[][] LUEURS = {{80 / 255F, 1F, 150 / 255F}, {110 / 255F, 240 / 255F, 170 / 255F}, {1F, 230 / 255F, 120 / 255F}};
+    private static final float[][] LUEURS = {{80 / 255F, 1F, 150 / 255F}, {110 / 255F, 240 / 255F, 170 / 255F}, {1F, 230 / 255F, 120 / 255F},
+            // les Ténèbres (sorte 5) et la Lumière (sorte 6)
+            {150 / 255F, 60 / 255F, 1F}, {1F, 190 / 255F, 60 / 255F}};
 
     private final float[] coins;
     private final float[] normales;
@@ -126,7 +128,7 @@ final class ModeleVent {
         Vector3f p = new Vector3f();
         for (int f = 0; f < n; f++) {
             int sorte = couleurs[f * 4 + 3] & 255;
-            if (sorte < 2 || sorte > 4) {
+            if (sorte < 2 || sorte > 6) {
                 continue;
             }
             float[] c = LUEURS[sorte - 2];

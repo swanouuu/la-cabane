@@ -40,6 +40,9 @@ public abstract class PlayerModelMixin {
             fr.cabane.client.pouvoir.ClientSerpentGeant.poser((PlayerModel<?>) (Object) this, joueur);
             // Kaguya : pliée à l éveil, la main dans le dos pour l épée, le saule, la main au sol et sur le dinosaure
             fr.cabane.client.pouvoir.ClientKaguya.poser((PlayerModel<?>) (Object) this, joueur);
+            // les Ténèbres et la Lumière : les poses des éveils, le bras tendu pour viser, les bras levés à l ulti
+            fr.cabane.client.pouvoir.ClientTenebres.poser((PlayerModel<?>) (Object) this, joueur);
+            fr.cabane.client.pouvoir.ClientLumiere.poser((PlayerModel<?>) (Object) this, joueur);
             // les lames de la Brume : à deux mains, et le geste de chacune
             fr.cabane.client.pouvoir.ClientLames.poser((PlayerModel<?>) (Object) this, joueur);
         }

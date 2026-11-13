@@ -204,6 +204,28 @@ public final class ClientSusano {
             TRANSFORMES.remove(p.joueur());
             FRUITS.remove(p.joueur());
         }
+        // les Ténèbres et la Lumière ont leur propre dessin (ClientTenebres, ClientLumiere)
+        if (fr.cabane.pouvoir.Tenebres.est(p.pouvoir()) || fr.cabane.pouvoir.Lumiere.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.oublier(p.joueur());
+            ClientMinato.oublier(p.joueur());
+            ClientFruit.oublier(p.joueur());
+            ClientIchibi.oublier(p.joueur());
+            ClientFoudre.oublier(p.joueur());
+            ClientVent.oublier(p.joueur());
+            ClientKaguya.oublier(p.joueur());
+            if (fr.cabane.pouvoir.Tenebres.est(p.pouvoir())) {
+                ClientLumiere.oublier(p.joueur());
+                ClientTenebres.recevoir(p);
+            } else {
+                ClientTenebres.oublier(p.joueur());
+                ClientLumiere.recevoir(p);
+            }
+            return;
+        }
+        ClientTenebres.oublier(p.joueur());
+        ClientLumiere.oublier(p.joueur());
         // Hachibi, la marque maudite, Minato, les fruits du démon, Ichibi, la foudre, le vent et Kaguya ont leur propre dessin
         if (fr.cabane.pouvoir.Kaguya.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());
