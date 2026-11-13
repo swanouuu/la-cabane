@@ -41,7 +41,7 @@ import org.joml.Vector3f;
 
 /**
  * Le contre de Minato (voir {@link Contre}), chez chaque joueur à portée, d'après l'aperçu validé
- * (docs/minato2/apercu-contre-kurama.mp4). En garde, ses yeux brillent en rouge. Quand un joueur le frappe :
+ * (docs/minato2/apercu-contre-kurama.mp4). En garde, rien ne se voit (sinon le contre est grillé). Quand un joueur le frappe :
  * <ul>
  * <li>l'attaquant passe en cinématique : la caméra reste dans ses yeux et serre sur ceux de Minato (0 à 2,4 s, « Calme-toi. »),
  * tout le reste s'efface dans le noir ; un éclair orange ; puis Kurama, énorme, accroupi, la tête basse, ouvre la gueule
@@ -60,7 +60,7 @@ public final class ClientContre {
     private static final DustParticleOptions ROUGE = new DustParticleOptions(new Vector3f(1F, 0.25F, 0.08F), 0.7F);
     private static final DustParticleOptions ORANGE = new DustParticleOptions(new Vector3f(1F, 0.5F, 0.1F), 2.5F);
 
-    /** Les Minato en garde (leurs yeux brillent). */
+    /** Les Minato en garde (rien ne se voit ; seul leur panneau affiche « En garde ! »). */
     private static final Set<UUID> GARDES = new HashSet<>();
     /** Quand je pourrai me remettre en garde (System.nanoTime), -1 : tout de suite. */
     private static long pret = -1;
@@ -351,14 +351,8 @@ public final class ClientContre {
     private static void dessiner(PoseStack pose, Vec3 cam, float partiel) {
         Minecraft mc = Minecraft.getInstance();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-        // les yeux rouges : en garde, et pendant la prise
+        // les yeux rouges : seulement pendant la prise (en garde, rien ne se voit : sinon le contre est grillé)
         Set<LivingEntity> rouges = new HashSet<>();
-        for (UUID id : GARDES) {
-            Player p = mc.level.getPlayerByUUID(id);
-            if (p != null) {
-                rouges.add(p);
-            }
-        }
         for (Scene s : SCENES.values()) {
             LivingEntity m = minato(s);
             if (t(s) < 2.6 && m != null) {
@@ -506,14 +500,6 @@ public final class ClientContre {
                         Vec3 q = point(s, t, ModeleKurama.auHasard(p, HASARD));
                         mc.level.addParticle(ORANGE, q.x, q.y, q.z, 0, 0.05, 0);
                     }
-                }
-            }
-            // les yeux en garde : quelques étincelles rouges
-            for (UUID id : GARDES) {
-                Player p = mc.level.getPlayerByUUID(id);
-                if (p != null && HASARD.nextInt(3) == 0) {
-                    Vec3 o = p.getEyePosition();
-                    mc.level.addParticle(ROUGE, o.x + (HASARD.nextDouble() - 0.5) * 0.5, o.y - 0.2, o.z + (HASARD.nextDouble() - 0.5) * 0.5, 0, 0.02, 0);
                 }
             }
             if (vue != null && mc.player.isDeadOrDying()) {

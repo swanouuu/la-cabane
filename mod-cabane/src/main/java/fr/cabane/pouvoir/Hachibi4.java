@@ -227,6 +227,11 @@ public final class Hachibi4 {
             IchibiTempete.ulti(joueur);
             return;
         }
+        // et le mode rouge de Minato 3 (puis, dans le mode, Mille Flashs)
+        if (action == ULTI && Pouvoirs.pouvoir(joueur).equals(Minato.NOM3)) {
+            MinatoRouge.ulti(joueur);
+            return;
+        }
         // et le grand serpent de la marque 3
         if (action == ULTI && Pouvoirs.pouvoir(joueur).equals(Maudit.NOM3)) {
             Marque3.ulti(joueur);

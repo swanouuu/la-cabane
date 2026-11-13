@@ -124,6 +124,11 @@ public final class ClientKurama {
 
     /** Appelé à chaque {@code getSkin()} (AbstractClientPlayerMixin) : la peau du mode Kurama, jusqu'où elle est posée. */
     public static PlayerSkin peau(AbstractClientPlayer joueur, PlayerSkin skin) {
+        // en mode rouge (Minato 3), la peau rouge
+        PlayerSkin rouge = ClientMinatoRouge.peau(joueur, skin);
+        if (rouge != null) {
+            return rouge;
+        }
         if (MODES.isEmpty() && DESCENTES.isEmpty()) {
             return skin;
         }
@@ -191,7 +196,7 @@ public final class ClientKurama {
     /** La hauteur du milieu de chaque pixel (en pixels de peau, 0 aux pieds), NaN s'il ne sert à rien. */
     static final float[] HAUTEUR = new float[64 * 64];
     static final byte[] PARTIE = new byte[64 * 64];
-    private static final boolean[] COUCHE_1 = new boolean[64 * 64];
+    static final boolean[] COUCHE_1 = new boolean[64 * 64];
 
     static {
         Arrays.fill(HAUTEUR, Float.NaN);
@@ -227,27 +232,27 @@ public final class ClientKurama {
 
     // ---- les couleurs (ABGR, comme NativeImage)
 
-    private static int r(int c) {
+    static int r(int c) {
         return c & 255;
     }
 
-    private static int g(int c) {
+    static int g(int c) {
         return c >> 8 & 255;
     }
 
-    private static int b(int c) {
+    static int b(int c) {
         return c >> 16 & 255;
     }
 
-    private static int a(int c) {
+    static int a(int c) {
         return c >>> 24;
     }
 
-    private static double lum(int c) {
+    static double lum(int c) {
         return 0.3 * r(c) + 0.59 * g(c) + 0.11 * b(c);
     }
 
-    private static int abgr(double r, double g, double b) {
+    static int abgr(double r, double g, double b) {
         return 0xFF000000 | (int) Mth.clamp(Math.round(b), 0, 255) << 16 | (int) Mth.clamp(Math.round(g), 0, 255) << 8 | (int) Mth.clamp(Math.round(r), 0, 255);
     }
 
@@ -257,7 +262,7 @@ public final class ClientKurama {
     /** Les cheveux (et tout ce qui n'est pas la peau du visage), du plus sombre au plus clair : le jaune des cheveux du skin. */
     private static final double[][] CHEVEUX = {{0, 140, 104, 10}, {0.18, 222, 172, 22}, {0.42, 250, 212, 44}, {0.68, 255, 234, 86}, {1, 255, 248, 156}};
 
-    private static int dore(int c) {
+    static int dore(int c) {
         double l = lum(c) / 255;
         for (int k = 1; k < CHEVEUX.length; k++) {
             if (l <= CHEVEUX[k][0] || k == CHEVEUX.length - 1) {
@@ -270,7 +275,7 @@ public final class ClientKurama {
     }
 
     /** La couleur de la peau du joueur : la médiane du bas de son visage (sous les yeux, hors bouche). */
-    private static int teintePeau(int[] base) {
+    static int teintePeau(int[] base) {
         int[][] ou = {{9, 13}, {10, 13}, {13, 13}, {14, 13}, {9, 14}, {10, 14}, {13, 14}, {14, 14}, {9, 15}, {14, 15}};
         int[] rs = new int[ou.length], gs = new int[ou.length], bs = new int[ou.length];
         int n = 0;
@@ -292,7 +297,7 @@ public final class ClientKurama {
         return abgr(rs[n / 2], gs[n / 2], bs[n / 2]);
     }
 
-    private static boolean estPeau(int c, int peau) {
+    static boolean estPeau(int c, int peau) {
         double dr = r(c) - r(peau), dg = g(c) - g(peau), db = b(c) - b(peau);
         return Math.sqrt(dr * dr + dg * dg + db * db) < 52;
     }

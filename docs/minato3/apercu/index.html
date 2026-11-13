@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Minato 3 : le mode rouge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #2a1414; overflow: hidden; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #barre { position: fixed; left: 10px; top: 8px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 3; }
+  #scenes, #outils { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  button, select { background: #3a1010cc; color: #ffe6de; border: 1px solid #a03a2a; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  button.actif { background: #c0281a; border-color: #ffb09a; color: #fff; }
+  #temps { width: 260px; accent-color: #e0402a; }
+  #horloge { color: #ffe6de; font-size: 13px; background: #3a1010cc; padding: 5px 8px; border-radius: 6px; min-width: 52px; text-align: center; }
+  #legende { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); color: #fff; font-size: 21px; font-weight: 600;
+    text-shadow: 0 2px 6px #000c, 0 0 2px #000; text-align: center; pointer-events: none; z-index: 2; max-width: 80vw; }
+  #titre { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); color: #fff; font-size: 44px; font-weight: 900; letter-spacing: 3px;
+    text-shadow: 0 0 18px #ff2a10, 0 3px 0 #5a0a04; opacity: 0; pointer-events: none; z-index: 2; white-space: nowrap; }
+  #panneau { position: fixed; right: 12px; top: 120px; background: #1a0606d9; color: #ffd9cf; border: 1px solid #c0402a; border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; line-height: 1.7; z-index: 2; min-width: 250px; }
+  #panneau b { color: #fff; display: flex; justify-content: space-between; margin-bottom: 4px; letter-spacing: 1px; }
+  #panneau .l { display: flex; gap: 10px; }
+  #panneau .t { color: #ff8a6a; min-width: 128px; }
+  #panneau .on { color: #fff; font-weight: 700; }
+  #panneau .on .t { color: #ffd23a; }
+  #degats { position: fixed; left: 12px; bottom: 12px; color: #ffd9cf; background: #1a0606c0; border-radius: 6px; padding: 6px 10px; font-size: 12px; z-index: 2; max-width: 46vw; }
+  #aide { position: fixed; right: 12px; bottom: 8px; color: #fff; font-size: 12px; text-shadow: 0 1px 3px #000; z-index: 2; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="barre">
+<div id="scenes"></div>
+<div id="outils">
+  <button id="lecture" class="actif">Pause</button>
+  <button id="debut">Recommencer</button>
+  <button id="ralenti">Ralenti</button>
+  <input id="temps" type="range" min="0" max="10" step="0.01" value="0">
+  <span id="horloge">0,0 s</span>
+  <button id="camLibre">Caméra libre</button>
+  <button id="manteau" class="actif">Manteau : oui</button>
+  <button id="son" class="actif">Son : oui</button>
+  <select id="skin"><option value="moi">Skin : toi</option><option value="kai">Skin : Kai</option><option value="efe">Skin : Efe</option><option value="steve">Skin : Steve</option></select>
+</div>
+</div>
+<div id="titre"></div>
+<div id="legende"></div>
+<div id="panneau"></div>
+<div id="degats"></div>
+<div id="aide">caméra libre : clic gauche tourner · clic droit déplacer · molette zoomer</div>
+<script type="module">
+// Minato 3 : au niveau 2 (mode Kurama), la touche J le met 1 minute en MODE ROUGE (le skin du niveau 2 en rouge, les
+// traits du mode Baryon, un manteau de chakra rouge et 6 flammes dans le dos), avec ses propres attaques, puis il
+// redevient normal. Tout se calcule à partir du temps t de la scène choisie : on peut avancer, reculer, ralentir.
+// Unités : 1 = 1 pixel du modèle (un bloc = 16), les pieds à y = 0, l'avant du joueur vers +z, sa gauche vers +x.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const $ = (id) => document.getElementById(id);
+const B = 16;
+const TOUR = Math.PI * 2;
+const seg = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+const lisse = (u) => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
+const entre = (a, b, u) => (Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * u) : a + (b - a) * u);
+const elastique = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : 1 - Math.cos(u * Math.PI * 2.5) * Math.exp(-u * 5.5));
+const hache = (i, j = 0, k = 0) => { let h = (i * 374761393 + j * 668265263 + k * 2147483647) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+const vers = (a, b) => Math.atan2(b[0] - a[0], b[2] - a[2]);
+
+// ------------------------------------------------------------------ rendu, ciel, sol
+const rendu = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+rendu.setPixelRatio(Math.min(2, devicePixelRatio));
+rendu.setSize(innerWidth, innerHeight);
+document.body.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const BRUME = new THREE.Color('#9a6650');
+scene.fog = new THREE.Fog(BRUME.clone(), 900, 3400);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 1, 9000);
+const controles = new OrbitControls(camera, rendu.domElement);
+controles.enabled = false;
+scene.add(new THREE.HemisphereLight(0xfff0e6, 0x6a4a3a, 2.2));
+const soleil = new THREE.DirectionalLight(0xffe2c8, 2.0);
+soleil.position.set(-300, 500, 420);
+scene.add(soleil);
+
+// le ciel du coucher de soleil, comme l'image de référence
+const ciel = new THREE.Mesh(new THREE.SphereGeometry(6000, 32, 16), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { uSombre: { value: 0 } },
+  vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uSombre; varying vec3 vP;
+    void main(){ float h = normalize(vP).y;
+      vec3 bas = vec3(0.85, 0.42, 0.20), milieu = vec3(0.42, 0.13, 0.08), haut = vec3(0.10, 0.03, 0.04);
+      vec3 c = h < 0.0 ? bas * 0.6 : mix(mix(bas, milieu, smoothstep(0.0, 0.18, h)), haut, smoothstep(0.18, 0.7, h));
+      gl_FragColor = vec4(c * (1.0 - 0.55 * uSombre), 1.0); }`,
+}));
+scene.add(ciel);
+
+function texturePixels(taille, couleur) {
+  const c = document.createElement('canvas');
+  c.width = c.height = taille;
+  const g = c.getContext('2d');
+  for (let y = 0; y < taille; y++) for (let x = 0; x < taille; x++) { g.fillStyle = couleur(x, y); g.fillRect(x, y, 1, 1); }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestMipmapLinearFilter;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+// une plaine de terre battue et de cailloux (le champ de bataille de la référence)
+const TERRE = texturePixels(64, (x, y) => {
+  const bloc = hache(Math.floor(x / 16), Math.floor(y / 16), 7), p = hache(x, y, 3);
+  const base = bloc < 0.25 ? [128, 112, 98] : [150, 118, 88];
+  const k = 0.82 + 0.3 * p;
+  return `rgb(${base.map((v) => Math.round(v * k)).join(',')})`;
+});
+TERRE.repeat.set(6000 / 64, 6000 / 64);
+const sol = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.MeshLambertMaterial({ map: TERRE }));
+sol.rotation.x = -Math.PI / 2;
+scene.add(sol);
+// des rochers en blocs et des montagnes au loin
+const PIERRE = new THREE.MeshLambertMaterial({ color: '#8a7a6a' });
+for (let q = 0; q < 46; q++) {
+  const a = hache(q, 1, 40) * TOUR, d = 700 + 1500 * hache(q, 2, 40), s = 16 * (1 + Math.floor(3 * hache(q, 3, 40)));
+  const m = new THREE.Mesh(new THREE.BoxGeometry(s * (1 + hache(q, 4)), s * (0.6 + hache(q, 5)), s), PIERRE);
+  m.position.set(Math.cos(a) * d, s * 0.3, Math.sin(a) * d);
+  m.rotation.y = a;
+  scene.add(m);
+}
+const MONT = new THREE.MeshLambertMaterial({ color: '#5a3a30' });
+for (let q = 0; q < 14; q++) {
+  const a = (q / 14) * TOUR + hache(q, 9) * 0.3, h = 500 + 600 * hache(q, 8);
+  const m = new THREE.Mesh(new THREE.ConeGeometry(900 + 500 * hache(q, 7), h, 5), MONT);
+  m.position.set(Math.cos(a) * 3600, h / 2 - 40, Math.sin(a) * 3600);
+  scene.add(m);
+}
+
+// ------------------------------------------------------------------ les joueurs (modèle Minecraft, skin 64×64)
+const chargeur = new THREE.TextureLoader();
+const SKINS = {};
+function skin(nom) {
+  if (!SKINS[nom]) {
+    const t = chargeur.load('skins/' + nom + '.png');
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    SKINS[nom] = t;
+  }
+  return SKINS[nom];
+}
+const PARTIES = {
+  tete: { b: [-4, 24, -4, 4, 32, 4], p: [0, 24, 0], uv: [0, 0], uv2: [32, 0], g: 0.5 },
+  corps: { b: [-4, 12, -2, 4, 24, 2], p: [0, 12, 0], uv: [16, 16], uv2: [16, 32], g: 0.25 },
+  brasD: { b: [-8, 12, -2, -4, 24, 2], p: [-6, 22, 0], uv: [40, 16], uv2: [40, 32], g: 0.25 },
+  brasG: { b: [4, 12, -2, 8, 24, 2], p: [6, 22, 0], uv: [32, 48], uv2: [48, 48], g: 0.25 },
+  jambeD: { b: [-4, 0, -2, 0, 12, 2], p: [-2, 12, 0], uv: [0, 16], uv2: [0, 32], g: 0.25 },
+  jambeG: { b: [0, 0, -2, 4, 12, 2], p: [2, 12, 0], uv: [16, 48], uv2: [0, 48], g: 0.25 },
+};
+/** Une boîte aux UV du skin (faces +x, -x, +y, -y, +z, -z de three = gauche, droite, dessus, dessous, devant, dos). */
+function boite(w, h, d, u, v, g) {
+  const geo = new THREE.BoxGeometry(w + 2 * g, h + 2 * g, d + 2 * g);
+  const faces = [[u + d + w, v + d, d, h], [u, v + d, d, h], [u + d, v, w, d], [u + d + w, v, w, d], [u + d, v + d, w, h], [u + d + w + d, v + d, w, h]];
+  const uv = geo.attributes.uv;
+  for (let f = 0; f < 6; f++) {
+    const [x0, y0, fw, fh] = faces[f];
+    for (let k = 0; k < 4; k++) {
+      const i = f * 4 + k, a = uv.getX(i), b = uv.getY(i);
+      uv.setXY(i, (x0 + a * fw) / 64, 1 - (y0 + (1 - b) * fh) / 64);
+    }
+  }
+  return geo;
+}
+function creerJoueur(tex, fantome = false) {
+  const racine = new THREE.Group();
+  const m1 = fantome
+    ? new THREE.MeshBasicMaterial({ color: '#ff3018', transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending })
+    : new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5 });
+  const m2 = fantome ? null : new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, transparent: true });
+  const J = { racine, m1, m2, parts: {} };
+  for (const [nom, P] of Object.entries(PARTIES)) {
+    const [x0, y0, z0, x1, y1, z1] = P.b, w = x1 - x0, h = y1 - y0, d = z1 - z0;
+    const piv = new THREE.Group();
+    piv.position.set(...P.p);
+    racine.add(piv);
+    const c = [(x0 + x1) / 2 - P.p[0], (y0 + y1) / 2 - P.p[1], (z0 + z1) / 2 - P.p[2]];
+    const a = new THREE.Mesh(boite(w, h, d, P.uv[0], P.uv[1], 0), m1);
+    a.position.set(...c);
+    piv.add(a);
+    if (m2) {
+      const b = new THREE.Mesh(boite(w, h, d, P.uv2[0], P.uv2[1], P.g), m2);
+      b.position.set(...c);
+      piv.add(b);
+    }
+    J.parts[nom] = piv;
+  }
+  scene.add(racine);
+  return J;
+}
+/** Pose : o.pos, o.lacet (0 = regarde +z), o.penche (en avant +), o.roule, o.brasD = [rx, rz, ry]… (rx négatif = vers l'avant). */
+function poser(J, o) {
+  J.racine.visible = o.visible !== false;
+  J.racine.position.set(...(o.pos ?? [0, 0, 0]));
+  J.racine.rotation.set(o.penche ?? 0, o.lacet ?? 0, o.roule ?? 0, 'YXZ');
+  for (const n of ['brasD', 'brasG', 'jambeD', 'jambeG', 'tete']) {
+    const v = o[n] ?? [0, 0, 0];
+    J.parts[n].rotation.set(v[0] ?? 0, v[2] ?? 0, v[1] ?? 0);
+  }
+  J.racine.updateMatrixWorld(true);
+}
+const main = (J) => J.parts.brasD.localToWorld(new THREE.Vector3(0, -12.5, 0.5));
+const torse = (o) => [o[0], (o[1] ?? 0) + 18, o[2]];
+
+// les poses
+const P = {
+  repos: { brasD: [0.05, -0.08], brasG: [0.05, 0.08] },
+  garde: { brasD: [-1.0, -0.35], brasG: [-0.5, 0.45], jambeD: [0.25], jambeG: [-0.3] },
+  fier: { brasD: [0.15, -0.28], brasG: [0.15, 0.28], tete: [-0.08] },
+  bras: { brasD: [-0.25, -1.1], brasG: [-0.25, 1.1], tete: [-0.15] },
+  accroupi: { penche: 0.25, brasD: [-0.7, -0.55], brasG: [-0.7, 0.55], jambeD: [-0.6], jambeG: [-0.3], tete: [-0.35] },
+  lancer: { brasD: [-2.6, -0.25], brasG: [0.5, 0.3], jambeD: [0.4], jambeG: [-0.4] },
+  tendu: { brasD: [-1.55, 0.05], brasG: [0.5, 0.2], jambeD: [0.35], jambeG: [-0.35] },
+  leve: { brasD: [-3.0, -0.05], brasG: [-0.3, 0.4] },
+  croise: { brasD: [-1.3, 0.75], brasG: [-1.3, -0.75], tete: [0.25] },
+  pied: { brasD: [-0.6, -0.9], brasG: [-0.6, 0.9], jambeD: [-2.3], jambeG: [0.3], penche: -0.2 },
+  dash: { penche: 0.55, brasD: [1.1, -0.2], brasG: [1.1, 0.2], jambeD: [-0.7], jambeG: [0.6] },
+  apres: { brasD: [-0.2, -1.35, 0.3], brasG: [0.1, 0.2], tete: [0.05] },
+};
+/** Le coup de kunai : u de 0 (bras armé en haut à droite) à 1 (fin du geste, en bas à gauche). */
+const frappe = (u) => ({ brasD: [entre(-2.6, -0.6, u), entre(-0.9, 0.7, u)], brasG: [0.4, 0.3], jambeD: [0.35], jambeG: [-0.35], penche: 0.1 });
+const course = (ph) => ({ penche: 0.3, brasD: [Math.sin(ph) * 1.1, -0.1], brasG: [-Math.sin(ph) * 1.1, 0.1], jambeD: [-Math.sin(ph) * 1.0], jambeG: [Math.sin(ph) * 1.0] });
+const aTerre = { penche: -Math.PI / 2, brasD: [-0.3, -0.5], brasG: [-0.3, 0.5] };
+
+// ------------------------------------------------------------------ le chakra rouge (manteau, flammes, Rasengan, dôme)
+const vChakra = `uniform float uTemps; uniform float uOndule; varying vec3 vN; varying vec3 vVue; varying vec3 vPos;
+  void main(){ vec3 p = position + normal * sin(uTemps * 4.0 + position.y * 0.25 + position.x * 0.2) * uOndule;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0); vN = normalize(normalMatrix * normal); vVue = normalize(-mv.xyz); vPos = p;
+    gl_Position = projectionMatrix * mv; }`;
+const fChakra = `uniform float uTemps; uniform float uAlpha; uniform float uPaillettes; uniform vec3 uCoeur; uniform vec3 uBord; varying vec3 vN; varying vec3 vVue; varying vec3 vPos;
+  float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+  void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vVue))), 1.7);
+    vec3 c = mix(uCoeur, uBord, f);
+    float s = step(0.996, h(floor(vPos * 2.2 + vec3(0.0, -uTemps * 6.0, 0.0)))) * uPaillettes;
+    c += vec3(1.0, 0.85, 0.7) * s * 1.6;
+    gl_FragColor = vec4(c, clamp(uAlpha * (0.6 + 0.4 * f) + s * 0.6, 0.0, 1.0)); }`;
+const CHAKRAS = [];
+function matChakra(o = {}) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      uTemps: { value: 0 }, uAlpha: { value: o.alpha ?? 0.85 }, uOndule: { value: o.ondule ?? 0.2 }, uPaillettes: { value: o.paillettes ?? 1 },
+      uCoeur: { value: new THREE.Color(o.coeur ?? '#e0140a') }, uBord: { value: new THREE.Color(o.bord ?? '#ffc2b4') },
+    },
+    vertexShader: vChakra, fragmentShader: fChakra, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    blending: o.additif ? THREE.AdditiveBlending : THREE.NormalBlending,
+  });
+  m.alphaBase = o.alpha ?? 0.85;
+  CHAKRAS.push(m);
+  return m;
+}
+
+// Le manteau Baryon, d'après les images de référence : UN manteau de chakra (col haut, fermé sur la poitrine par la
+// spirale, ouvert en V dessous) d'où sortent de grandes langues souples qui ondulent derrière lui, comme un manteau dans
+// le vent. Dessin d'anime : un rouge plein, un large bord crème qui brille, des traits noirs qui suivent le tissu.
+const vBaryon = `attribute float aBord; attribute float aU; attribute float aRaie; attribute vec3 aDir;
+  uniform float uTemps; uniform float uOnde; uniform float uPhase;
+  varying float vBord; varying float vRaie; varying vec3 vN; varying vec3 vVue;
+  void main(){ vBord = aBord; vRaie = aRaie;
+    vec3 p = position + aDir * sin(uTemps * 2.6 + aU * 5.5 + uPhase) * uOnde * aU * aU;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0); vN = normalize(normalMatrix * normal); vVue = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv; }`;
+const fBaryon = `uniform float uContour; uniform float uAlpha; uniform vec3 uCoeur; uniform vec3 uVif; uniform vec3 uBord;
+  varying float vBord; varying float vRaie; varying vec3 vN; varying vec3 vVue;
+  void main(){
+    float f = pow(1.0 - abs(dot(normalize(vN), normalize(vVue))), 2.0);
+    vec3 c = mix(uCoeur, uVif, clamp(smoothstep(0.15, 0.75, vBord) + 0.3 * f, 0.0, 1.0));
+    float b = smoothstep(0.7, 0.88, max(vBord, f * uContour));
+    c = mix(c, uBord, b);
+    float raie = 1.0 - smoothstep(0.03, 0.065, abs(vRaie));
+    c = mix(c, vec3(0.09, 0.012, 0.008), raie * 0.92 * (1.0 - b));
+    gl_FragColor = vec4(c, uAlpha * mix(0.88, 1.0, b)); }`;
+function matBaryon(phase = 0, onde = 2.4, plein = false, contour = 1.15) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      uTemps: { value: 0 }, uOnde: { value: onde }, uPhase: { value: phase }, uAlpha: { value: 0.92 }, uContour: { value: contour },
+      uCoeur: { value: new THREE.Color('#c40e08') }, uVif: { value: new THREE.Color('#ff3c1e') }, uBord: { value: new THREE.Color('#ffe4d2') },
+    },
+    vertexShader: vBaryon, fragmentShader: fBaryon, transparent: true, depthWrite: plein, side: THREE.DoubleSide,
+  });
+  CHAKRAS.push(m);
+  return m;
+}
+
+/** Une surface en grille : f(u, v) → { p, bord (0 dedans, 1 au bord), raie (distance au trait noir), onde }. */
+function grille(NU, NV, f) {
+  const pos = [], bord = [], onde = [], raie = [], dir = [], idx = [];
+  for (let i = 0; i <= NU; i++) for (let j = 0; j <= NV; j++) {
+    const r = f(i / NU, j / NV);
+    pos.push(...r.p); bord.push(Math.max(0, Math.min(1, r.bord))); onde.push(r.onde ?? i / NU); raie.push(r.raie ?? 9); dir.push(...(r.dir ?? [0, 0, 0]));
+  }
+  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
+    const a = i * (NV + 1) + j, b = a + NV + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aBord', new THREE.Float32BufferAttribute(bord, 1));
+  g.setAttribute('aU', new THREE.Float32BufferAttribute(onde, 1));
+  g.setAttribute('aRaie', new THREE.Float32BufferAttribute(raie, 1));
+  g.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * Une langue de chakra en volume : une section ovale le long d'une courbe (pts, la racine en premier, cachée sous le
+ * manteau), étroite à la racine, large aux deux cinquièmes, puis en pointe ; épaisse au milieu comme une vraie flamme.
+ * n0 : vers où elle fait face (sa face large).
+ */
+function langueGeo(pts, W, n0, raie, tordre = 0) {
+  const courbe = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, 'centripetal');
+  const N0 = new THREE.Vector3(...n0).normalize();
+  const largeur = (u) => W * (u < 0.4 ? 0.4 + 0.6 * Math.sin((u / 0.4) * Math.PI / 2) : Math.pow(1 - (u - 0.4) / 0.6, 0.8));
+  return grille(64, 28, (u, v) => {
+    const c = courbe.getPointAt(u), T = courbe.getTangentAt(u);
+    const cote = new THREE.Vector3().crossVectors(T, N0.clone().applyAxisAngle(T, tordre * u)).normalize();
+    const nrm = new THREE.Vector3().crossVectors(cote, T).normalize();
+    const phi = v * TOUR, w = largeur(u), cx = Math.cos(phi), sy = Math.sin(phi);
+    // épaisse au milieu, et la section se creuse un peu vers l'avant, comme un pétale de flamme
+    const ep = 0.2 * w * (0.35 + 0.65 * Math.sin(Math.min(1, u * 1.4) * Math.PI / 2));
+    const p = c.clone().addScaledVector(cote, (cx * w) / 2).addScaledVector(nrm, sy * ep + 0.12 * w * (1 - cx * cx));
+    const bord = Math.max(cx * cx, u > 0.93 ? (u - 0.93) * 14 : 0) * Math.min(1, u / 0.12);
+    const rr = raie === null || u < 0.14 || u > 0.82 ? 9 : cx - (raie + 0.18 * Math.sin(u * 4));
+    return { p: p.toArray(), bord, raie: rr, dir: nrm.toArray() };
+  });
+}
+// les langues du côté gauche (+x) ; la droite en miroir. Elles partent dans tous les sens en 3D : vers le haut et
+// l'arrière, sur le côté, en s'enroulant vers l'avant autour de l'épaule, à l'horizontale vers l'arrière, et en bas en
+// balayant le sol derrière lui ; chacune se tord sur elle-même en avançant (tordre, en radians sur toute sa longueur).
+// [points, largeur, face au départ, trait noir (place en travers) ou null, tordre]
+const LANGUES = [
+  [[[1.5, 23, -4.6], [3, 32, -9], [4.5, 41, -16], [3.5, 49, -24], [7, 53, -33]], 12, [0.6, 0, 0.8], -0.25, 1.0],
+  [[[3, 22, -4.6], [10, 29, -11], [17, 37, -18], [22, 45, -25], [30, 48, -29]], 13, [0.4, 0, 1], 0.2, 0.9],
+  [[[5, 21, -3.5], [12, 24, 1], [18, 28, 5], [23, 35, 4], [27, 42, -2]], 10, [-0.6, 0.3, 0.7], null, 0.8],
+  [[[4, 18, -5], [13, 19, -13], [21, 21, -22], [27, 25, -31], [35, 30, -35]], 11, [0.5, 0.6, 0.6], -0.2, 1.2],
+  [[[4, 13, -6], [10, 9, -15], [15, 5, -25], [19, 4, -35], [26, 8, -44]], 12, [1, 0.4, 0], 0.15, 1.0],
+];
+
+/** Le manteau : les épaules, puis il tombe jusqu'aux genoux en s'évasant, ouvert en V sous la spirale. */
+function manteauGeo() {
+  return grille(36, 56, (a, b) => {
+    const s = -0.25 + 1.25 * a;
+    let rx, rz, y, tm;
+    if (s < 0) {
+      const u = (s + 0.25) / 0.25;
+      rx = entre(4.4, 8.9, u); rz = entre(2.6, 3.9, u); y = entre(25.8, 24.6, u); tm = Math.PI - 0.08;
+    } else {
+      rx = 8.9 + 4.6 * s; rz = 3.9 + 5.6 * s; y = 24.6 - 17.6 * s; tm = Math.PI - (0.08 + 1.35 * Math.pow(s, 0.8));
+    }
+    const th = -tm + 2 * tm * b;
+    // le bas se découpe en pointes, comme des flammes
+    if (s > 0.6) y -= 3.2 * Math.pow(Math.max(0, Math.sin(th * 3.5 + 0.6)), 3) * ((s - 0.6) / 0.4) ** 2;
+    const bordV = 1 - ((tm - Math.abs(th)) * rx) / 7;
+    const bordH = s > 0 ? 1 - ((1 - s) * 17.6) / 7 : 0;
+    const raie = Math.min(Math.abs(s - (0.1 + 0.2 * Math.cos(th) ** 2)), Math.abs(s - (0.45 + 0.14 * Math.sin(2 * th)))) * 3;
+    return { p: [rx * Math.sin(th), y, -rz * Math.cos(th)], bord: Math.max(bordV, bordH), raie: s > 0.02 ? raie : 9, onde: Math.max(0, s) * 0.6, dir: [Math.sin(th), 0, -Math.cos(th)] };
+  });
+}
+/** Le col haut, qui s'évase vers le haut, ses deux pointes devant. */
+function colGeo() {
+  const tm = Math.PI - 0.5;
+  return grille(10, 44, (a, b) => {
+    const th = -tm + 2 * tm * b;
+    const rx = 4.9 + 1.9 * a * a, rz = 3.0 + 1.9 * a * a;
+    const hc = 6.2 + 1.2 * Math.cos(th) + 2.6 * Math.pow(Math.abs(th) / tm, 6);
+    const bord = Math.max(1 - ((1 - a) * hc) / 6, 1 - ((tm - Math.abs(th)) * rx) / 6);
+    return { p: [rx * Math.sin(th), 24.9 + a * hc, -rz * Math.cos(th)], bord, onde: 0 };
+  });
+}
+/** La spirale du fermoir, sur la poitrine. */
+function spiraleGeo() {
+  const pts = [];
+  for (let q = 0; q <= 60; q++) { const a = (q / 60) * TOUR * 1.6, r = 0.3 + (q / 60) * 1.9; pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0)); }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.3, 5, false);
+}
+
+/** Le kunai de Minato (trois pointes) : la pointe vers +y. */
+function creerKunai() {
+  const g = new THREE.Group();
+  const acier = new THREE.MeshLambertMaterial({ color: '#c8ccd6' }), manche = new THREE.MeshLambertMaterial({ color: '#3a2a22' });
+  const lame = new THREE.Mesh(new THREE.ConeGeometry(1.1, 6, 4), acier); lame.position.y = 3; g.add(lame);
+  for (const s of [-1, 1]) { const d = new THREE.Mesh(new THREE.ConeGeometry(0.5, 2.6, 4), acier); d.position.set(s * 1.1, 0.8, 0); d.rotation.z = -s * 0.7; g.add(d); }
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 4, 6), manche); m.position.y = -2; g.add(m);
+  const a = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.25, 5, 10), acier); a.position.y = -4.8; g.add(a);
+  return g;
+}
+
+// ------------------------------------------------------------------ Minato
+const M = creerJoueur(skin('moi-niv3'));
+const manteau = new THREE.Group();
+M.racine.add(manteau);
+const matManteau = matBaryon(0, 0.8, false, 0.7);
+const cape = new THREE.Mesh(manteauGeo(), matManteau);
+const col = new THREE.Mesh(colGeo(), matManteau);
+cape.renderOrder = 2;
+col.renderOrder = 3;
+manteau.add(cape, col);
+const spirale = new THREE.Mesh(spiraleGeo(), new THREE.MeshBasicMaterial({ color: '#1e0402' }));
+spirale.position.set(0, 21.8, 4.15);
+spirale.scale.setScalar(0.75);
+spirale.renderOrder = 4;
+manteau.add(spirale);
+const flammes = new THREE.Group();
+M.racine.add(flammes);
+const FL = [];
+for (const sx of [1, -1]) LANGUES.forEach(([pts, W, n0, raie, tordre], k) => {
+  const racine = pts[0].map((v, i) => (i === 0 ? v * sx : v));
+  const rel = pts.map((p) => [p[0] * sx - racine[0], p[1] - racine[1], p[2] - racine[2]]);
+  const pivot = new THREE.Group();
+  pivot.position.set(...racine);
+  const mat = matBaryon(k * 1.3 + (sx > 0 ? 0 : 2.1), 2.4, true);
+  const m = new THREE.Mesh(langueGeo(rel, W, [n0[0] * sx, n0[1], n0[2]], raie === null ? null : raie * sx, tordre * sx), mat);
+  m.renderOrder = 1;
+  pivot.add(m);
+  flammes.add(pivot);
+  FL.push({ pivot, mat, k });
+});
+// les cornes du skin Baryon de l'utilisateur : sur le visage, le contour rouge des yeux remonte par les bords (peint sur
+// le skin) ; ici, en pavés, la corne continue ce trait depuis les coins du haut du visage, monte et s'écarte un peu
+const cornes = new THREE.Group();
+M.parts.tete.add(cornes);
+const ROUGE_CORNE = new THREE.MeshLambertMaterial({ color: '#d4160c' }), SOMBRE_CORNE = new THREE.MeshLambertMaterial({ color: '#3a0604' });
+for (const sx of [1, -1]) {
+  [[2.2, 0], [1.8, 1], [1.4, 2], [1.0, 3], [0.6, 4]].forEach(([c, i]) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(c, 1.7, c), i === 4 ? SOMBRE_CORNE : ROUGE_CORNE);
+    m.position.set(sx * (3.5 - c / 2 + 0.55 + 0.3 * i + 0.07 * i * i), 8.5 + 1.45 * i, 3.4 - c / 2 - 0.2 * i * i);
+    m.rotation.z = -sx * 0.18 * i;
+    cornes.add(m);
+  });
+}
+const kunaiMain = creerKunai();
+kunaiMain.position.set(0, -11.2, 1.2);
+kunaiMain.rotation.x = 2.4;
+M.parts.brasD.add(kunaiMain);
+// les petites braises qui montent autour de lui
+const NB = 90;
+const braisesGeo = new THREE.BufferGeometry();
+braisesGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(NB * 3), 3));
+const braises = new THREE.Points(braisesGeo, new THREE.PointsMaterial({
+  map: texRonde([[0, '#ffffff'], [0.35, '#ffd2a8'], [1, '#ff600000']]), color: '#ffc090', size: 2.0, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending,
+}));
+scene.add(braises);
+
+let manteauOui = true;
+/** k : la force du mode (0 à 1) ; niv3 : le skin rouge ; pousse : la taille des langues ; t : le temps. */
+function modeRouge(k, niv3, t, pousse = 1) {
+  const nom = $('skin').value + (niv3 ? '-niv3' : '-niv2');
+  const tex = skin(nom);
+  if (M.m1.map !== tex) { M.m1.map = tex; M.m2.map = tex; }
+  manteau.visible = manteauOui && k > 0.01;
+  flammes.visible = k > 0.01;
+  cornes.visible = niv3 && k > 0.01;
+  cornes.scale.setScalar(Math.max(0.001, Math.min(1, k * 1.2)));
+  matManteau.uniforms.uAlpha.value = 0.92 * Math.min(1, k * 1.4);
+  for (const f of FL) {
+    const s = Math.max(0.001, k * pousse);
+    f.pivot.scale.set(s, s, s);
+    f.mat.uniforms.uAlpha.value = 0.92 * Math.min(1, k * 1.5);
+  }
+  const p = braisesGeo.attributes.position, o = M.racine.position;
+  for (let q = 0; q < NB; q++) {
+    const vie = 1.6 + hache(q, 2, 60), age = ((t + hache(q, 1, 60) * vie) % vie) / vie;
+    const a = hache(q, 3, 60) * TOUR, r = 6 + 26 * hache(q, 4, 60);
+    p.setXYZ(q, o.x + Math.cos(a) * r * (1 + age * 0.3), o.y + 2 + age * 56 * (0.6 + hache(q, 5, 60)), o.z + Math.sin(a) * r * (1 + age * 0.3) - 4);
+  }
+  p.needsUpdate = true;
+  braises.visible = k > 0.3 && M.racine.visible;
+  braises.material.opacity = 0.9 * k;
+}
+
+// ------------------------------------------------------------------ les effets (réserves : on reprend les objets à chaque image)
+class Reserve {
+  constructor(fab, montrer = (o, b) => { o.visible = b; }) { this.fab = fab; this.montrer = montrer; this.objs = []; this.n = 0; }
+  prendre() { if (this.n >= this.objs.length) this.objs.push(this.fab()); const o = this.objs[this.n++]; this.montrer(o, true); return o; }
+  vider() { for (const o of this.objs) this.montrer(o, false); this.n = 0; }
+}
+function texRonde(stops) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), d = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  for (const [k, col] of stops) d.addColorStop(k, col);
+  g.fillStyle = d; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const TEX_FLASH = texRonde([[0, '#ffffff'], [0.18, '#fff2ea'], [0.4, '#ff5a3ccc'], [1, '#ff100000']]);
+const TEX_ETOILE = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  for (const [w, h] of [[256, 10], [10, 256]]) { const d = g.createRadialGradient(128, 128, 0, 128, 128, 128); d.addColorStop(0, '#ffffff'); d.addColorStop(1, '#ff200000'); g.fillStyle = d; g.fillRect(128 - w / 2, 128 - h / 2, w, h); }
+  return new THREE.CanvasTexture(c);
+})();
+const spriteFab = (tex) => () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(s); return s; };
+const R_FLASH = new Reserve(spriteFab(TEX_FLASH)), R_ETOILE = new Reserve(spriteFab(TEX_ETOILE));
+/** Le flash d'une téléportation : un éclat blanc au cœur rouge et une étoile. */
+function flash(p, age, vie = 0.35, k = 1) {
+  if (age < 0 || age > vie) return;
+  if (pasCourant > 0 && age < pasCourant && k <= 2.5) jouerFlash();
+  const u = age / vie;
+  const a = R_FLASH.prendre(); a.position.set(...p); a.scale.setScalar(k * 34 * (0.5 + u)); a.material.opacity = 1 - u * u;
+  const e = R_ETOILE.prendre(); e.position.set(...p); e.scale.setScalar(k * 70 * (1.2 - 0.6 * u)); e.material.opacity = (1 - u) * 0.9;
+  e.material.rotation = 0.4;
+}
+const CYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true);
+const traitFab = (couleur, op) => () => { const m = new THREE.Mesh(CYL, new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(m); return m; };
+const R_TRAIT = new Reserve(traitFab('#ff2a14', 0.8)), R_COEUR = new Reserve(traitFab('#fff0e8', 1));
+const HAUT = new THREE.Vector3(0, 1, 0);
+/** Un trait de lumière rouge (cœur blanc) de a à b. */
+function trait(a, b, age, vie, ep = 1, force = 1) {
+  if (age < 0 || age > vie) return;
+  const A = V(a), Bv = V(b), d = Bv.clone().sub(A), l = d.length();
+  if (l < 0.01) return;
+  const k = force * (1 - lisse(seg(age, vie * 0.6, vie)));
+  for (const [r, e, o] of [[R_TRAIT, ep * 1.6, 0.75], [R_COEUR, ep * 0.45, 1]]) {
+    const m = r.prendre();
+    m.position.copy(A).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(HAUT, d.clone().normalize());
+    m.scale.set(e, l, e);
+    m.material.opacity = o * k;
+  }
+}
+const R_ARC = new Reserve(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(11, 0.8, 6, 30, Math.PI * 1.15), new THREE.MeshBasicMaterial({ color: '#ff3a20', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); scene.add(m); return m; });
+/** Un coup de kunai : un arc rouge autour du point, tourné selon lacet et inclinaison. */
+function arc(p, lacet, incl, age, vie = 0.3, k = 1) {
+  if (age < 0 || age > vie) return;
+  const m = R_ARC.prendre(), u = age / vie;
+  m.position.set(...p);
+  m.rotation.set(Math.PI / 2 + incl, lacet, u * 1.4, 'YXZ');
+  m.scale.setScalar(k * (0.8 + 0.5 * u));
+  m.material.opacity = 1 - u;
+}
+const R_ECLATS = new Reserve(() => {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(60 * 3), 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ color: '#ff6a40', size: 2.2, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  scene.add(p); return p;
+});
+/** Des éclats rouges qui jaillissent de p (graine pour les directions). */
+function eclats(p, age, vie = 0.7, vitesse = 90, graine = 0, couleur = '#ff6a40') {
+  if (age < 0 || age > vie) return;
+  const o = R_ECLATS.prendre(), a = o.geometry.attributes.position;
+  o.material.color.set(couleur);
+  for (let q = 0; q < 60; q++) {
+    const th = hache(q, 1, graine) * TOUR, ph = Math.acos(2 * hache(q, 2, graine) - 1), v = vitesse * (0.4 + 0.6 * hache(q, 3, graine));
+    a.setXYZ(q, p[0] + Math.sin(ph) * Math.cos(th) * v * age, p[1] + Math.cos(ph) * v * age - 60 * age * age, p[2] + Math.sin(ph) * Math.sin(th) * v * age);
+  }
+  a.needsUpdate = true;
+  o.material.opacity = 1 - age / vie;
+}
+const R_ANNEAU = new Reserve(() => { const m = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 96), new THREE.MeshBasicMaterial({ color: '#ff4020', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; });
+function anneau(p, age, vie, rMax, couleur = '#ff4020') {
+  if (age < 0 || age > vie) return;
+  const m = R_ANNEAU.prendre(), u = age / vie;
+  m.position.set(p[0], (p[1] ?? 0) + 0.6, p[2]);
+  m.scale.setScalar(Math.max(0.01, rMax * (1 - (1 - u) ** 3)));
+  m.material.color.set(couleur);
+  m.material.opacity = 1 - u;
+}
+const R_CRATERE = new Reserve(() => { const m = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({ color: '#2a1610', transparent: true, opacity: 0.7, depthWrite: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; });
+function cratere(p, r, age) { if (age < 0) return; const m = R_CRATERE.prendre(); m.position.set(p[0], 0.3, p[2]); m.scale.setScalar(r * Math.min(1, age * 6)); }
+const R_KUNAI = new Reserve(() => { const k = creerKunai(); scene.add(k); return k; });
+function kunai(p, dir, echelle = 1.3) {
+  const k = R_KUNAI.prendre();
+  k.position.set(...p);
+  k.quaternion.setFromUnitVectors(HAUT, V(dir).normalize());
+  k.scale.setScalar(echelle);
+}
+const R_FANTOME = new Reserve(() => creerJoueur(null, true), (J, b) => { J.racine.visible = b; });
+/** Un double rouge transparent de Minato, dans une pose. */
+function fantome(o, alpha = 0.45) {
+  if (alpha <= 0.01) return;
+  const J = R_FANTOME.prendre();
+  poser(J, o);
+  J.m1.opacity = alpha;
+}
+const R_CIBLE = new Reserve(() => creerJoueur(skin('steve')), (J, b) => { J.racine.visible = b; });
+function cible(o) { const J = R_CIBLE.prendre(); poser(J, { ...P.repos, ...o }); return J; }
+// le Rasengan : un cœur blanc, une boule de chakra rouge, trois anneaux qui tournent, un halo
+const R_RASENGAN = new Reserve(() => {
+  const g = new THREE.Group();
+  const coeur = new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 14), new THREE.MeshBasicMaterial({ color: '#fff4ee' }));
+  const boule = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), matChakra({ alpha: 0.75, ondule: 0.04, coeur: '#ff2010', bord: '#ffe0d6', additif: true }));
+  g.add(coeur, boule);
+  g.anneaux = [0, 1, 2].map((k) => { const a = new THREE.Mesh(new THREE.TorusGeometry(1.12 + k * 0.08, 0.05, 6, 48), new THREE.MeshBasicMaterial({ color: '#ffb8a0', transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending })); g.add(a); return a; });
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX_FLASH, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7 }));
+  halo.scale.setScalar(4.2);
+  g.add(halo);
+  g.halo = halo;
+  g.coeur = coeur;
+  scene.add(g);
+  return g;
+});
+function rasengan(p, r, t) {
+  if (r <= 0.05) return;
+  const g = R_RASENGAN.prendre();
+  g.position.set(...p);
+  g.scale.setScalar(r);
+  // le géant : moins de blanc, plus de rouge (sinon il cache Minato sous un halo blanc)
+  g.halo.material.opacity = r > 20 ? 0.28 : 0.7;
+  g.halo.scale.setScalar(r > 20 ? 2.4 : 4.2);
+  g.coeur.scale.setScalar(r > 20 ? 0.6 : 1);
+  g.anneaux.forEach((a, k) => { a.rotation.set(t * (7 + k * 3) + k, t * (5 - k * 2) + k * 2, t * 3 * k); });
+}
+const R_DOME = new Reserve(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24, 0, TOUR, 0, Math.PI / 2), matChakra({ alpha: 0.7, ondule: 0, coeur: '#ff2a10', bord: '#fff0e0', additif: true, paillettes: 0 })); scene.add(m); return m; });
+function dome(p, r, alpha) { if (alpha <= 0.01) return; const m = R_DOME.prendre(); m.position.set(...p); m.scale.setScalar(r); m.material.uniforms.uAlpha.value = alpha; }
+const R_PILIER = new Reserve(() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 24, 1, true), matChakra({ alpha: 0.5, ondule: 0, coeur: '#ff2010', bord: '#ffd0c0', additif: true, paillettes: 0 })); scene.add(m); return m; });
+function pilier(p, r, h, alpha) { if (alpha <= 0.01) return; const m = R_PILIER.prendre(); m.position.set(p[0], (p[1] ?? 0) + h / 2, p[2]); m.scale.set(r, h, r); m.material.uniforms.uAlpha.value = alpha; }
+
+// le sceau au sol de l'ulti : cercles, hexagramme, formules (des petits traits noirs et rouges), la spirale au centre
+const sceau = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 1024;
+  const g = c.getContext('2d'), m = 512;
+  g.strokeStyle = '#ff3a1c'; g.lineCap = 'round';
+  for (const [r, w] of [[500, 10], [470, 4], [330, 6], [300, 3], [120, 6]]) { g.lineWidth = w; g.beginPath(); g.arc(m, m, r, 0, TOUR); g.stroke(); }
+  g.lineWidth = 6;
+  for (const d of [0, Math.PI / 3]) { g.beginPath(); for (let q = 0; q <= 3; q++) { const a = d + (q * TOUR) / 3 - Math.PI / 2; g[q ? 'lineTo' : 'moveTo'](m + Math.cos(a) * 470, m + Math.sin(a) * 470); } g.stroke(); }
+  // les formules : des petits signes en anneau
+  for (const [r0, r1, n, col] of [[480, 505, 120, '#1a0402'], [305, 325, 80, '#1a0402'], [130, 150, 30, '#ff3a1c']]) {
+    for (let q = 0; q < n; q++) {
+      const a = (q / n) * TOUR;
+      g.strokeStyle = col; g.lineWidth = 3;
+      g.beginPath();
+      const x0 = m + Math.cos(a) * r0, y0 = m + Math.sin(a) * r0, x1 = m + Math.cos(a + 0.02 * hache(q, 1)) * r1, y1 = m + Math.sin(a + 0.02 * hache(q, 1)) * r1;
+      g.moveTo(x0, y0); g.lineTo(x1, y1);
+      if (hache(q, 2) < 0.5) { g.moveTo((x0 + x1) / 2 - 4, (y0 + y1) / 2); g.lineTo((x0 + x1) / 2 + 4, (y0 + y1) / 2 + 3); }
+      g.stroke();
+    }
+  }
+  g.strokeStyle = '#ff3a1c'; g.lineWidth = 8; g.beginPath();
+  for (let q = 0; q <= 120; q++) { const a = (q / 120) * TOUR * 2.2, r = 10 + q * 0.85; g[q ? 'lineTo' : 'moveTo'](m + Math.cos(a) * r, m + Math.sin(a) * r); }
+  g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = 0.5;
+  scene.add(mesh);
+  return mesh;
+})();
+
+// ------------------------------------------------------------------ post : le temps arrêté (tout gris sauf le rouge), la teinte rouge, le bloom
+const composeur = new EffectComposer(rendu);
+composeur.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.5, 0.82);
+composeur.addPass(bloom);
+const passeGris = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uGris: { value: 0 }, uRouge: { value: 0 }, uBlanc: { value: 0 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uGris; uniform float uRouge; uniform float uBlanc; varying vec2 vUv;
+    void main(){ vec4 c = texture2D(tDiffuse, vUv); float l = dot(c.rgb, vec3(0.3, 0.59, 0.11));
+      float rouge = smoothstep(0.22, 0.45, c.r - max(c.g, c.b));
+      vec3 g = mix(vec3(l) * vec3(0.92, 0.94, 1.0) * 0.8, c.rgb, rouge);
+      vec3 o = mix(c.rgb, g, uGris);
+      o = mix(o, o * vec3(1.15, 0.45, 0.4), uRouge);
+      o = mix(o, vec3(1.0, 0.92, 0.88), uBlanc);
+      float v = distance(vUv, vec2(0.5)); o *= 1.0 - 0.55 * uGris * smoothstep(0.35, 0.85, v);
+      gl_FragColor = vec4(o, c.a); }`,
+});
+composeur.addPass(passeGris);
+composeur.addPass(new OutputPass());
+
+// ------------------------------------------------------------------ les scènes
+const PANNEAU = [
+  ['Clic gauche', 'Coup éclair (+ double rouge)', 'gauche'],
+  ['Clic droit', 'Ronde des flashs', 'droite'],
+  ['Accroupi + clic droit', 'Ligne rouge', 'ligne'],
+  ['Accroupi + clic gauche', 'Rasengan éclair', 'rasengan'],
+  ['Technique', 'Doubles éclair', 'doubles'],
+  ['L', 'Contre', 'contre'],
+  ['J', 'Mille flashs (1 fois)', 'ulti'],
+];
+let secousse = 0, gris = 0, teinteRouge = 0, blanc = 0;
+
+const SCENES = [
+  {
+    id: 'tenue', nom: 'J : le mode rouge', duree: 10.5,
+    legendes: [
+      [0, 1.5, 'NIVEAU 2 : LE MODE KURAMA, COMME AUJOURD\'HUI'],
+      [1.5, 2.3, 'TOUCHE J : IL PASSE EN MODE ROUGE POUR 1 MINUTE'],
+      [2.3, 7.2, 'LE SKIN DU NIVEAU 2 EN ROUGE, LE CAPUCHON ET LES CORNES BARYON, LE MANTEAU DE CHAKRA ET SES 10 LANGUES EN 3D'],
+      [7.2, 8.4, '… 1 MINUTE PLUS TARD : LES FLAMMES ET LE MANTEAU S\'ÉTEIGNENT'],
+      [8.4, 10.5, 'IL REDEVIENT NORMAL (MODE KURAMA). J : UNE FOIS PAR ÉVEIL'],
+    ],
+    degats: '+20 % de vitesse en plus du mode Kurama, armure du niveau 3, aucun dégât de chute pendant le mode.',
+    maj(t) {
+      const allume = t >= 2.2 && t < 8.2;
+      const k = t < 2.2 ? 0 : t < 7.2 ? lisse(seg(t, 2.2, 2.8)) : 1 - lisse(seg(t, 7.2, 8.2));
+      const pousse = t < 2.2 ? 0 : elastique(seg(t, 2.2, 3.3));
+      let pose = P.fier;
+      if (t >= 1.5 && t < 2.2) pose = P.accroupi;
+      else if (t >= 2.2 && t < 3.4) pose = P.bras;
+      poser(M, { ...pose, pos: [0, t >= 1.5 && t < 2.2 ? -1.5 : 0, 0] });
+      modeRouge(Math.max(k, 0.0001), allume, t, pousse);
+      if (t >= 1.5 && t < 2.2) { anneau([0, 0, 0], t - 1.5, 0.7, 40 * (1 - seg(t, 1.5, 2.2)) + 8, '#ff3a1c'); pilier([0, 0, 0], 10, 60 * seg(t, 1.5, 2.2), 0.3 * seg(t, 1.5, 2.2)); }
+      flash([0, 18, 4], t - 2.2, 0.5, 3);
+      anneau([0, 0, 0], t - 2.2, 0.9, 220);
+      eclats([0, 16, 0], t - 2.2, 1.2, 140, 3);
+      teinteRouge = 0.5 * (1 - seg(t, 2.2, 3.0)) * (t >= 2.2 ? 1 : 0);
+      flash([0, 18, 4], t - 8.2, 0.3, 1);
+    },
+    cam(t) {
+      let a = -0.35 + 0.05 * Math.min(t, 3);
+      if (t > 3.2) a += lisse(seg(t, 3.2, 7.0)) * TOUR;
+      const r = t < 3.2 ? 95 : 105;
+      return { pos: [Math.sin(a) * r, 26, Math.cos(a) * r], vise: [0, 22, 0] };
+    },
+  },
+  {
+    id: 'gauche', nom: 'Clic gauche : coup éclair', duree: 4,
+    legendes: [[0, 4, 'CHAQUE COUP : TP AUTOUR DE LA CIBLE, ET UN DOUBLE ROUGE FRAPPE DE L\'AUTRE CÔTÉ'], ],
+    degats: '14 par coup + 5 pour le double rouge. Un coup toutes les 0,4 s. Viseur bloqué sur la cible comme au niveau 2.',
+    maj(t) {
+      const POS = [[0, 0, 70], [-24, 0, 8], [20, 0, -18], [6, 0, 24]];
+      const HITS = [0.5, 1.5, 2.5];
+      let n = 0;
+      for (const h of HITS) if (t >= h) n++;
+      const p = POS[n], l = vers(p, [0, 0, 0]);
+      const dt = n ? t - HITS[n - 1] : 99;
+      const pose = dt < 0.3 ? frappe(lisse(dt / 0.22)) : P.garde;
+      poser(M, { ...pose, pos: p, lacet: l });
+      modeRouge(1, true, t);
+      let recul = 0;
+      HITS.forEach((h, k) => {
+        flash(torse(POS[k]), t - h, 0.3, 0.9);
+        flash(torse(POS[k + 1]), t - h, 0.3, 1.1);
+        arc([0, 18, 0], vers(POS[k + 1], [0, 0, 0]), -0.5, t - h - 0.05, 0.3);
+        eclats([0, 18, 0], t - h - 0.05, 0.5, 70, 10 + k);
+        // le double rouge, de l'autre côté
+        const op = [-POS[k + 1][0], 0, -POS[k + 1][2]];
+        const d = t - h - 0.15;
+        if (d >= 0 && d < 0.6) {
+          fantome({ ...frappe(lisse(d / 0.22)), pos: op, lacet: vers(op, [0, 0, 0]) }, 0.55 * (1 - d / 0.6));
+          flash(torse(op), d, 0.25, 0.7);
+          arc([0, 16, 0], vers(op, [0, 0, 0]), 0.5, d - 0.05, 0.3, 0.8);
+        }
+        recul += Math.max(0, 0.25 - Math.abs(t - h - 0.1)) * 0.8;
+      });
+      cible({ pos: [0, 0, 0], lacet: vers([0, 0, 0], p), penche: -recul, brasD: [-0.3, -0.4], brasG: [-0.3, 0.4] });
+    },
+    cam(t) { const a = 0.6 + t * 0.25; return { pos: [Math.sin(a) * 120, 46, Math.cos(a) * 120], vise: [0, 14, 10] }; },
+  },
+  {
+    id: 'droite', nom: 'Clic droit : ronde des flashs', duree: 5.6,
+    legendes: [
+      [0, 0.8, 'IL LANCE 6 KUNAI QUI SE PLANTENT EN CERCLE AUTOUR DE LA CIBLE'],
+      [0.8, 3.0, 'IL SAUTE DE KUNAI EN KUNAI ET FRAPPE À CHAQUE FOIS : LE CHEMIN DESSINE UNE ÉTOILE ROUGE'],
+      [3.0, 4.2, 'L\'ÉTOILE S\'ALLUME ET SOULÈVE LA CIBLE… COUP DE TALON DU CIEL'],
+      [4.2, 5.6, 'LA CIBLE EST ÉCRASÉE AU SOL. RECHARGE 12 S'],
+    ],
+    degats: '8 coups de 3 puis le talon 12 (36 au total, dont 12 qui traversent l\'armure).',
+    maj(t) {
+      const K = Array.from({ length: 6 }, (_, i) => { const a = (i * TOUR) / 6 + Math.PI / 6; return [Math.sin(a) * 46, 0, Math.cos(a) * 46]; });
+      const ORDRE = [0, 2, 4, 0, 1, 3, 5, 1];
+      const T0 = 0.9, PAS = 0.26;
+      modeRouge(1, true, t);
+      // Minato
+      let mp = [0, 0, 92], ml = Math.PI, pose = t < 0.35 ? P.lancer : P.garde, vis = true;
+      const i = Math.floor((t - T0) / PAS);
+      if (t >= T0 && i < ORDRE.length) {
+        mp = K[ORDRE[i]]; ml = vers(mp, [0, 0, 0]);
+        pose = frappe(lisse(((t - T0) % PAS) / 0.18));
+      } else if (t >= T0 + ORDRE.length * PAS && t < 3.6) { mp = K[1]; ml = vers(mp, [0, 0, 0]); pose = P.croise; }
+      let cy = 0;
+      if (t >= 3.0) cy = 62 * lisse(seg(t, 3.0, 3.55));
+      if (t >= 3.9) cy = 62 * (1 - seg(t, 3.9, 4.02));
+      if (t >= 3.6 && t < 4.0) { mp = [0, cy + 34 - 30 * lisse(seg(t, 3.6, 3.95)), -6]; ml = 0; pose = P.pied; }
+      if (t >= 4.0) { mp = [-30, 0, 20]; ml = vers(mp, [0, 0, 0]); pose = P.apres; }
+      poser(M, { ...pose, pos: mp, lacet: ml, visible: vis });
+      // les kunai : en vol, puis plantés
+      K.forEach((k, j) => {
+        const u = seg(t, 0.25 + j * 0.04, 0.7 + j * 0.04);
+        if (t > 4.2) { flash([k[0], 6, k[2]], t - 4.2 - j * 0.03, 0.3, 0.6); return; }
+        if (u <= 0) return;
+        const a = [-6, 20, 86], p = [entre(a[0], k[0], u), entre(a[1], 3, u) + 26 * Math.sin(u * Math.PI), entre(a[2], k[2], u)];
+        kunai(p, u < 1 ? [k[0] - a[0], -10 - 40 * u, k[2] - a[2]] : [0.2 * k[0], -46, 0.2 * k[2]]);
+      });
+      // le chemin : les traits restent jusqu'à l'embrasement
+      for (let s = 0; s < ORDRE.length; s++) {
+        const ts = T0 + s * PAS;
+        if (t < ts) break;
+        flash(torse(K[ORDRE[s]]), t - ts, 0.28, 1);
+        eclats([0, 18 + cy, 0], t - ts - 0.08, 0.45, 60, 30 + s);
+        arc([0, 18, 0], vers(K[ORDRE[s]], [0, 0, 0]), 0.3 * (s % 2 ? 1 : -1), t - ts - 0.06, 0.25);
+        if (s > 0 && ORDRE[s] !== ORDRE[s - 1]) {
+          const a = K[ORDRE[s - 1]], b = K[ORDRE[s]];
+          trait([a[0], 2, a[2]], [b[0], 2, b[2]], t - ts, 4.3 - ts, 1.1, t > 3.0 ? 1.8 : 1);
+          trait(torse(a), torse(b), t - ts, 0.35, 0.8);
+        }
+      }
+      if (t >= 3.0 && t < 4.0) { pilier([0, 0, 0], 16, 90, 0.35 * Math.sin(seg(t, 3.0, 4.0) * Math.PI)); }
+      flash([0, 4, 0], t - 3.98, 0.5, 3);
+      anneau([0, 0, 0], t - 3.98, 0.8, 160);
+      eclats([0, 6, 0], t - 3.98, 1.0, 130, 77);
+      cratere([0, 0, 0], 26, t - 3.98);
+      secousse = Math.max(0, 1 - (t - 3.98) / 0.5) * (t >= 3.98 ? 3 : 0);
+      const hit = t >= T0 && t < T0 + ORDRE.length * PAS ? Math.max(0, 0.2 - ((t - T0) % PAS)) : 0;
+      cible({ pos: [0, cy, 0], lacet: Math.PI, penche: t >= 3.98 ? -Math.PI / 2 : -hit * 1.5 + (t > 3 && t < 3.98 ? -0.4 : 0), brasD: [-0.4, -0.5], brasG: [-0.4, 0.5] });
+    },
+    cam(t) {
+      if (t < 3.0) return { pos: [150, 170, 175], vise: [0, 6, 10] };
+      const u = lisse(seg(t, 3.0, 3.6));
+      return { pos: entre([150, 170, 175], [120, 30, 140], u), vise: entre([0, 6, 10], [0, 40, 0], u) };
+    },
+  },
+  {
+    id: 'ligne', nom: 'Accroupi + clic droit : ligne rouge', duree: 4,
+    legendes: [
+      [0, 0.45, 'IL S\'ACCROUPIT, LE CHAKRA SE CONCENTRE…'],
+      [0.45, 1.2, 'TP EN LIGNE DROITE, 25 BLOCS : TOUS CEUX QU\'IL TRAVERSE SONT MARQUÉS'],
+      [1.2, 4, '0,8 S PLUS TARD, LES MARQUES EXPLOSENT. RECHARGE 8 S'],
+    ],
+    degats: '16 à chacun sur la ligne. Il passe à travers les gens et les blocs fins.',
+    maj(t) {
+      const D = [-210, 0, 0], F = [210, 0, 0];
+      const C = [[-90, 0, 6], [-10, 0, -8], [80, 0, 4]];
+      modeRouge(1, true, t);
+      if (t < 0.45) poser(M, { ...P.dash, pos: [D[0], -1, D[2]], lacet: Math.PI / 2 });
+      else poser(M, { ...P.apres, pos: F, lacet: Math.PI / 2 + 0.5 });
+      if (t < 0.45) eclats([D[0], 2, 0], (t % 0.3), 0.3, -50, 4);
+      flash(torse(D), t - 0.45, 0.35, 1.4);
+      flash(torse(F), t - 0.47, 0.35, 1.2);
+      trait([D[0], 16, 0], [F[0], 16, 0], t - 0.45, 1.3, 2.2, 1.4);
+      for (let q = 0; q < 6; q++) fantome({ ...P.dash, pos: [entre(D[0], F[0], (q + 1) / 7), 0, 0], lacet: Math.PI / 2 }, 0.5 * (1 - seg(t, 0.45 + q * 0.03, 0.85 + q * 0.03)) * (t >= 0.45 ? 1 : 0));
+      C.forEach((c, k) => {
+        const te = 1.25 + k * 0.12, d = t - te;
+        // la marque (un petit anneau rouge autour d'eux) entre le passage et l'explosion
+        if (t >= 0.46 && d < 0) anneau([c[0], 14, c[2]], (t - 0.46) % 0.35, 0.35, 14);
+        for (const s of [-1, 1]) trait([c[0] - 14, 30 + s * 14, c[2] - 10], [c[0] + 14, 30 - s * 14, c[2] + 10], d, 0.35, 1.2, 1.4);
+        flash(torse(c), d, 0.4, 1.6);
+        eclats(torse(c), d, 0.8, 100, 50 + k);
+        const v = Math.max(0, d);
+        const p = d > 0 ? [c[0] + 90 * Math.min(v, 0.9), Math.max(0, 50 * v - 70 * v * v), c[2]] : c;
+        cible({ pos: p, lacet: -Math.PI / 2, penche: d > 0 ? -Math.min(Math.PI / 2, v * 3) : 0, brasD: [-0.3, -0.4], brasG: [-0.3, 0.4] });
+      });
+      secousse = t > 1.25 && t < 1.8 ? 2 : 0;
+    },
+    cam(t) { return { pos: [entre(-120, 40, lisse(seg(t, 0, 1.6))), 40, 330], vise: [entre(-110, 30, lisse(seg(t, 0, 1.6))), 18, 0] }; },
+  },
+  {
+    id: 'rasengan', nom: 'Accroupi + clic gauche : Rasengan éclair', duree: 4.6,
+    legendes: [
+      [0, 1.0, 'LE RASENGAN ROUGE SE FORME DANS SA MAIN'],
+      [1.0, 1.7, 'TP SUR CE QU\'IL VISE (40 BLOCS) ET IL L\'ENFONCE DANS LA CIBLE'],
+      [1.7, 4.6, 'LA CIBLE EST PROJETÉE EN TOURNOYANT. RECHARGE 15 S'],
+    ],
+    degats: '24, dont 10 qui traversent l\'armure, et projeté de 12 blocs.',
+    maj(t) {
+      const C = [0, 0, 380];
+      modeRouge(1, true, t);
+      let mp = [0, 0, 0], pose = P.tendu, pen = 0;
+      if (t >= 1.0) { mp = [0, 0, C[2] - 26]; pen = 0.3; }
+      poser(M, { ...pose, pos: mp, lacet: 0, penche: pen });
+      const h = main(M);
+      const r = t < 1.0 ? 5 * lisse(seg(t, 0.1, 0.9)) : t < 1.7 ? 5 + 3 * seg(t, 1.0, 1.7) : 8 * (1 - seg(t, 1.7, 1.9));
+      rasengan([h.x, h.y, h.z + (t >= 1.0 ? 4 : 0)], r, t);
+      if (t < 1.0) for (let q = 0; q < 3; q++) eclats([h.x, h.y, h.z], ((t + q * 0.2) % 0.6), 0.6, -30, 90 + q, '#ffb0a0');
+      flash(torse([0, 0, 0]), t - 1.0, 0.35, 1.3);
+      flash(torse(mp), t - 1.0, 0.3, 1.0);
+      if (t >= 1.0 && t < 1.7) eclats([h.x, h.y, h.z + 6], (t - 1.0) % 0.25, 0.25, 70, 120 + Math.floor((t - 1) / 0.25));
+      flash([h.x, h.y, h.z + 6], t - 1.7, 0.5, 3);
+      anneau([0, 0, C[2]], t - 1.7, 0.8, 140);
+      eclats([h.x, h.y, h.z + 6], t - 1.7, 1.1, 160, 140);
+      cratere([0, 0, C[2]], 22, t - 1.7);
+      secousse = t >= 1.7 && t < 2.2 ? 3 * (1 - seg(t, 1.7, 2.2)) : t >= 1.0 && t < 1.7 ? 0.6 : 0;
+      const v = Math.max(0, t - 1.7);
+      const vol = Math.min(v, 1.0);
+      const cp = t < 1.7 ? C : [0, Math.max(0, 70 * vol - 70 * vol * vol), C[2] + 200 * (1 - (1 - vol) ** 2)];
+      cible({ pos: cp, lacet: Math.PI, penche: t < 1.7 ? (t > 1.0 ? -0.35 : 0) : -Math.min(Math.PI / 2, v * 4) - (v < 1 ? v * 8 : 0), brasD: [-1.2, -0.6], brasG: [-1.2, 0.6] });
+      if (t >= 1.7 && t < 2.7) for (let q = 0; q < 5; q++) { const vv = Math.max(0, v - q * 0.06), vo = Math.min(vv, 1); flash([0, 14 + Math.max(0, 70 * vo - 70 * vo * vo), C[2] + 200 * (1 - (1 - vo) ** 2)], 0.08, 0.3, 0.5); }
+    },
+    cam(t) {
+      if (t < 1.0) return { pos: [-34, 26, 42], vise: [-6, 17, 6] };
+      const u = lisse(seg(t, 1.7, 3.0));
+      return { pos: [-170, 50, entre(330, 470, u)], vise: [0, 16, entre(370, 470, u)] };
+    },
+  },
+  {
+    id: 'doubles', nom: 'Technique : doubles éclair', duree: 3.8,
+    legendes: [[0, 0.35, 'IL CROISE LES BRAS…'], [0.35, 1.4, '4 DOUBLES ROUGES JAILLISSENT, FILENT SUR LES 4 PLUS PROCHES ET FRAPPENT DEUX FOIS'], [1.4, 3.8, 'PUIS ILS EXPLOSENT EN ÉTINCELLES. RECHARGE 20 S']],
+    degats: '2 coups de 7 par double (28 sur 4 personnes, 14 au plus sur une seule).',
+    maj(t) {
+      const C = [[110, 0, 40], [-90, 0, 90], [60, 0, -120], [-130, 0, -60]];
+      modeRouge(1, true, t);
+      poser(M, { ...(t < 1.4 ? P.croise : P.fier), pos: [0, 0, 0], lacet: 0 });
+      flash([0, 18, 0], t - 0.35, 0.4, 2);
+      anneau([0, 0, 0], t - 0.35, 0.6, 80);
+      C.forEach((c, k) => {
+        const l = vers([0, 0, 0], c), d = Math.hypot(c[0], c[2]);
+        const u = lisse(seg(t, 0.35, 0.55));
+        const proche = [c[0] - Math.sin(l) * 18, 0, c[2] - Math.cos(l) * 18];
+        const derriere = [c[0] + Math.sin(l) * 18, 0, c[2] + Math.cos(l) * 18];
+        let fp = [entre(0, proche[0], u), 0, entre(0, proche[2], u)], fl = l, pose = P.dash;
+        if (t >= 0.55) pose = frappe(lisse((t - 0.55) / 0.2));
+        if (t >= 0.9) { fp = derriere; fl = l + Math.PI; pose = frappe(lisse((t - 0.9) / 0.2)); }
+        if (t >= 0.35 && t < 1.35) {
+          fantome({ ...pose, pos: fp, lacet: fl }, 0.6);
+          if (t < 0.55) trait([0, 16, 0], [fp[0], 16, fp[2]], 0, 0.3, 1);
+        }
+        flash(torse(derriere), t - 0.9, 0.25, 0.8);
+        arc(torse(c), l, -0.4, t - 0.58, 0.3);
+        arc(torse(c), l + Math.PI, 0.4, t - 0.93, 0.3);
+        eclats(torse(c), t - 0.58, 0.4, 60, 200 + k);
+        eclats(torse(c), t - 0.93, 0.4, 60, 210 + k);
+        eclats(torse(derriere), t - 1.35, 0.9, 80, 220 + k, '#ff9a70');
+        flash(torse(derriere), t - 1.35, 0.35, 1.2);
+        const hit = Math.max(0, 0.2 - Math.abs(t - 0.62)) + Math.max(0, 0.2 - Math.abs(t - 0.97));
+        cible({ pos: c, lacet: l + Math.PI, penche: -hit * 2, brasD: [-0.3, -0.4], brasG: [-0.3, 0.4] });
+        void d;
+      });
+    },
+    cam(t) { const a = 0.4 + t * 0.12; return { pos: [Math.sin(a) * 300, 190, Math.cos(a) * 300], vise: [0, 10, 0] }; },
+  },
+  {
+    id: 'contre', nom: 'L : le contre', duree: 3,
+    legendes: [[0, 3, 'LE CONTRE NE CHANGE PAS. EN GARDE, PLUS D\'YEUX ROUGES NI D\'ÉTINCELLES : RIEN NE SE VOIT']],
+    degats: 'Comme avant : le premier qui le frappe au corps à corps voit Kurama. Seul son panneau affiche « En garde ! ».',
+    maj(t) {
+      modeRouge(1, true, t);
+      poser(M, { ...P.fier, pos: [0, 0, 0] });
+      cible({ pos: [0, 0, 60 - 30 * lisse(seg(t, 0.4, 1.6))], lacet: Math.PI, ...course(t * 9) });
+    },
+    cam(t) { return { pos: [90, 30, 70], vise: [0, 18, 20] }; },
+  },
+  {
+    id: 'ulti', nom: 'J dans le mode : MILLE FLASHS', duree: 13.5,
+    legendes: [
+      [0, 0.7, 'IL PLANTE SON KUNAI DANS LE SOL…'],
+      [0.7, 1.7, 'UN SCEAU GÉANT S\'ÉTEND : 25 BLOCS AUTOUR DE LUI'],
+      [1.7, 2.4, 'LE TEMPS S\'ARRÊTE : TOUT DEVIENT GRIS, SAUF LUI'],
+      [2.4, 6.0, 'MILLE FLASHS : IL FRAPPE TOUT LE MONDE DE PARTOUT, CHAQUE TP LAISSE UN TRAIT ROUGE'],
+      [6.0, 8.0, 'IL APPARAÎT DANS LE CIEL : UN RASENGAN ROUGE GÉANT'],
+      [8.0, 8.5, 'FLASH : IL L\'ÉCRASE AU CENTRE DU SCEAU…'],
+      [8.5, 10.8, '… ET LE TEMPS REPART : TOUS LES COUPS TOMBENT D\'UN COUP'],
+      [10.8, 13.5, 'MILLE FLASHS. UNE FOIS PAR MODE ROUGE'],
+    ],
+    degats: '5 coups de 3 sur chacun pendant le temps arrêté, puis 20 à l\'explosion (dont 10 qui traversent l\'armure), et projetés. Ceux qui sont dans le sceau ne peuvent ni bouger ni frapper pendant le temps arrêté.',
+    maj(t) {
+      const R = 25 * B;
+      const C = Array.from({ length: 6 }, (_, i) => { const a = (i * TOUR) / 6 + 0.4, d = 150 + 110 * hache(i, 3, 5); return [Math.sin(a) * d, 0, Math.cos(a) * d]; });
+      const fige = t >= 1.7 && t < 8.5;
+      gris = t < 1.7 ? 0 : t < 2.1 ? seg(t, 1.7, 2.1) : t < 8.5 ? 1 : 1 - seg(t, 8.5, 8.7);
+      ciel.material.uniforms.uSombre.value = t > 0.7 && t < 11 ? Math.min(1, seg(t, 0.7, 1.6)) : 0;
+      // Minato
+      const N = 30, T0 = 2.4, PAS = (5.8 - T0) / N;
+      const stops = Array.from({ length: N }, (_, s) => {
+        const c = C[s % 6], a = hache(s, 1, 9) * TOUR, d = 18 + 10 * hache(s, 2, 9);
+        return [c[0] + Math.sin(a) * d, 30 * hache(s, 3, 9) ** 2, c[2] + Math.cos(a) * d];
+      });
+      let mp = [0, 0, 0], ml = 0, pose = P.leve, vis = true, flam = 1;
+      if (t >= 0.5 && t < 2.4) { pose = P.accroupi; mp = [0, -2, 0]; }
+      const i = Math.floor((t - T0) / PAS);
+      if (t >= T0 && i < N) { mp = stops[i]; ml = vers(mp, C[i % 6]); pose = frappe(lisse(((t - T0) % PAS) / 0.08)); }
+      if (t >= 5.8 && t < 6.05) vis = false;
+      if (t >= 6.05 && t < 8.0) { mp = [0, 520, 0]; ml = 0; pose = P.leve; flam = 1 + 0.6 * lisse(seg(t, 6.05, 7.5)); }
+      if (t >= 8.0 && t < 10.8) { mp = [0, 0, 0]; pose = { ...P.tendu, brasD: [-2.2, 0.05], penche: 0.5 }; }
+      if (t >= 10.8) { mp = [0, 0, 0]; ml = 0.3; pose = P.fier; }
+      poser(M, { ...pose, pos: mp, lacet: ml, visible: vis });
+      modeRouge(1, true, t, flam);
+      // le kunai planté et le sceau
+      if (t >= 0.6 && t < 10.8) kunai([3, 3, 6], [0, -1, 0.15], 1.5);
+      const rs = R * (1 - (1 - seg(t, 0.7, 1.7)) ** 3);
+      sceau.visible = t >= 0.7 && t < 10.8;
+      sceau.scale.setScalar(Math.max(0.01, rs));
+      sceau.material.opacity = t < 8.5 ? 1 : 1 - seg(t, 8.5, 10.8);
+      flash([3, 6, 6], t - 0.62, 0.4, 2);
+      anneau([0, 0, 0], t - 0.62, 1.1, R * 1.05);
+      // les cibles : elles accourent, puis figées
+      C.forEach((c, k) => {
+        const tf = Math.min(t, 1.7), avance = 30 * tf;
+        const l = vers(c, [0, 0, 0]);
+        let p = [c[0] - Math.sin(l) * avance, 0, c[2] - Math.cos(l) * avance];
+        let o = { ...course(tf * 9 + k), lacet: l };
+        if (t >= 8.5) {
+          const v = t - 8.5, vo = Math.min(v, 1.2) / 1.2;
+          const loin = 160 + 40 * hache(k, 7);
+          p = [p[0] + Math.sin(l) * -loin * (1 - (1 - vo) ** 2), Math.max(0, 140 * vo - 140 * vo * vo), p[2] + Math.cos(l) * -loin * (1 - (1 - vo) ** 2)];
+          o = v < 1.2 ? { ...aTerre, lacet: l + v * 6, penche: -v * 7 } : { ...aTerre, lacet: l };
+        }
+        cible({ ...o, pos: p });
+        C[k] = p;
+        // le kunai figé au-dessus d'eux
+        if (t >= 2.0 && t < 8.5) { kunai([p[0], 44, p[2]], [0, -1, 0], 1.6); anneau([p[0], 0, p[2]], 0.3, 1, 18 * lisse(seg(t, 2.0, 2.3))); }
+        flash([p[0], 44, p[2]], t - 2.0 - k * 0.04, 0.3, 0.8);
+        // tout tombe d'un coup
+        flash(torse(p), t - 8.5 - k * 0.03, 0.5, 2.4);
+        eclats(torse(p), t - 8.5, 1.2, 160, 300 + k);
+      });
+      // mille flashs : un trait rouge d'un arrêt au suivant, qui reste jusqu'à la reprise du temps
+      for (let s = 0; s < N; s++) {
+        const ts = T0 + s * PAS;
+        if (t < ts) break;
+        const p = stops[s];
+        flash(torse(p), t - ts, 0.3, 1.1);
+        arc(torse(C[s % 6]), vers(p, C[s % 6]), (hache(s, 4, 9) - 0.5) * 1.6, t - ts - 0.03, 0.4);
+        if (s > 0) trait(torse(stops[s - 1]), torse(p), t - ts, 8.75 - ts, 0.9, t > 8.3 ? 2.2 : 1);
+        if (t < 8.5) fantome({ ...frappe(1), pos: p, lacet: vers(p, C[s % 6]) }, 0.45 * (1 - seg(t, ts, ts + 0.5)));
+      }
+      // le Rasengan géant dans le ciel, puis au centre
+      const h = main(M);
+      if (t >= 6.05 && t < 8.0) {
+        const r = 90 * lisse(seg(t, 6.1, 7.6));
+        rasengan([h.x, h.y + r * 1.05 + 6, h.z], r, t);
+        for (let q = 0; q < 4; q++) eclats([h.x, h.y + r, h.z], (t + q * 0.25) % 1, 1, -110, 400 + q, '#ffb0a0');
+      }
+      if (t >= 8.0 && t < 8.6) rasengan([0, 40, 26], 90 * (1 - 0.25 * seg(t, 8.0, 8.5)), t);
+      flash([0, 540, 0], t - 8.0, 0.35, 4);
+      flash([0, 30, 0], t - 8.0, 0.4, 5);
+      trait([0, 600, 0], [0, 10, 0], t - 8.0, 0.4, 6, 1.5);
+      // l'explosion
+      const e = t - 8.5;
+      dome([0, 0, 0], R * 1.15 * (1 - (1 - seg(t, 8.5, 9.7)) ** 3), e >= 0 ? 0.75 * (1 - seg(t, 9.7, 10.8)) : 0);
+      anneau([0, 0, 0], e, 1.4, R * 1.6);
+      anneau([0, 0, 0], e - 0.25, 1.6, R * 2.2, '#ff9a60');
+      eclats([0, 30, 0], e, 2.0, 380, 500);
+      eclats([0, 30, 0], e - 0.1, 2.0, 280, 501, '#ffd0b0');
+      cratere([0, 0, 0], R * 0.55, e);
+      blanc = e >= 0 && e < 0.3 ? 0.85 * (1 - e / 0.3) : 0;
+      teinteRouge = e >= 0 && e < 2 ? 0.45 * (1 - e / 2) : 0;
+      secousse = e >= 0 && e < 1.6 ? 9 * (1 - e / 1.6) : t >= 8.0 && t < 8.5 ? 2 : 0;
+      void fige;
+    },
+    cam(t) {
+      if (t < 1.7) { const u = lisse(seg(t, 0.6, 1.7)); return { pos: entre([110, 36, 150], [0, 760, 330], u), vise: entre([0, 14, 0], [0, 0, 0], u) }; }
+      if (t < 2.4) return { pos: [0, 760, 330], vise: [0, 0, 0] };
+      if (t < 5.9) { const a = lisse(seg(t, 2.4, 5.9)) * Math.PI * 1.3; return { pos: [Math.sin(a) * 560, 230, Math.cos(a) * 560], vise: [0, 20, 0] }; }
+      if (t < 8.0) { const u = lisse(seg(t, 6.0, 8.0)); return { pos: entre([230, 330, 360], [150, 390, 240], u), vise: [0, 565, 0] }; }
+      if (t < 8.5) return { pos: [0, 420, 640], vise: [0, 30, 0] };
+      if (t < 10.8) return { pos: [0, 300, 1000], vise: [0, 60, 0] };
+      const u = lisse(seg(t, 10.8, 13.5));
+      return { pos: entre([220, 70, 280], [70, 30, 110], u), vise: [0, 20, 0] };
+    },
+  },
+];
+
+// ------------------------------------------------------------------ l'interface
+let courante = SCENES[0], t = 0, lecture = true, vitesse = 1, libre = false;
+const btns = SCENES.map((s) => {
+  const b = document.createElement('button');
+  b.textContent = s.nom;
+  b.onclick = () => choisir(s.id);
+  $('scenes').appendChild(b);
+  return b;
+});
+function choisir(id) {
+  courante = SCENES.find((s) => s.id === id) ?? SCENES[0];
+  t = 0;
+  $('temps').max = courante.duree;
+  btns.forEach((b, k) => b.classList.toggle('actif', SCENES[k] === courante));
+  $('degats').textContent = 'Dégâts / détails : ' + courante.degats;
+  history.replaceState(null, '', '#' + courante.id);
+}
+$('lecture').onclick = () => { lecture = !lecture; $('lecture').textContent = lecture ? 'Pause' : 'Lecture'; $('lecture').classList.toggle('actif', lecture); };
+$('debut').onclick = () => { t = 0; };
+$('ralenti').onclick = () => { vitesse = vitesse === 1 ? 0.3 : 1; $('ralenti').classList.toggle('actif', vitesse !== 1); };
+$('temps').oninput = (e) => { t = +e.target.value; };
+$('camLibre').onclick = () => { libre = !libre; controles.enabled = libre; $('camLibre').classList.toggle('actif', libre); };
+$('manteau').onclick = () => { manteauOui = !manteauOui; $('manteau').textContent = 'Manteau : ' + (manteauOui ? 'oui' : 'non'); $('manteau').classList.toggle('actif', manteauOui); };
+$('son').onclick = () => { sonOui = !sonOui; $('son').textContent = 'Son : ' + (sonOui ? 'oui' : 'non'); $('son').classList.toggle('actif', sonOui); };
+choisir(location.hash.slice(1) || 'tenue');
+
+function panneau() {
+  const reste = courante.id === 'tenue' ? (t < 2.2 ? null : Math.max(0, 60 - Math.round((t - 2.2) * (t > 7.2 ? 59 / 5 : 2)))) : 47;
+  if (reste === null || (courante.id === 'tenue' && t > 8.2)) {
+    $('panneau').innerHTML = '<b><span>MINATO · MODE KURAMA</span></b><div class="l"><span class="t">J</span><span>Mode rouge</span></div>';
+    return;
+  }
+  const m = Math.floor(reste / 60), s = String(reste % 60).padStart(2, '0');
+  $('panneau').innerHTML = `<b><span>MINATO · MODE ROUGE</span><span>${m}:${s}</span></b>` +
+    PANNEAU.map(([touche, quoi, id]) => `<div class="l${id === courante.id ? ' on' : ''}"><span class="t">${touche}</span><span>${quoi}</span></div>`).join('');
+}
+
+// le son du flash de Minato (voix/effets/minato.flash.ogg, comme en jeu avec le pack privé)
+let pasCourant = 0, sonOui = true, dernierSon = 0, tamponFlash = null;
+const audio = new (window.AudioContext || window.webkitAudioContext)();
+fetch('son/minato.flash.ogg').then((r) => (r.ok ? r.arrayBuffer() : Promise.reject())).then((b) => audio.decodeAudioData(b)).then((d) => { tamponFlash = d; }).catch(() => {});
+addEventListener('pointerdown', () => audio.resume());
+function jouerFlash() {
+  if (!sonOui || !tamponFlash || performance.now() - dernierSon < 70) return;
+  dernierSon = performance.now();
+  const src = audio.createBufferSource(), g = audio.createGain();
+  src.buffer = tamponFlash;
+  src.playbackRate.value = 0.95 + Math.random() * 0.12;
+  g.gain.value = 0.55;
+  src.connect(g).connect(audio.destination);
+  src.start();
+}
+const horloge = new THREE.Clock();
+function image() {
+  const dt = Math.min(0.05, horloge.getDelta());
+  pasCourant = lecture ? dt * vitesse : 0;
+  if (lecture) { t += dt * vitesse; if (t > courante.duree + 0.8) t = 0; }
+  const tc = Math.min(t, courante.duree);
+  for (const r of [R_FLASH, R_ETOILE, R_TRAIT, R_COEUR, R_ARC, R_ECLATS, R_ANNEAU, R_CRATERE, R_KUNAI, R_FANTOME, R_CIBLE, R_RASENGAN, R_DOME, R_PILIER]) r.vider();
+  secousse = 0; gris = 0; teinteRouge = 0; blanc = 0;
+  sceau.visible = false;
+  ciel.material.uniforms.uSombre.value = 0;
+  for (const m of CHAKRAS) m.uniforms.uTemps.value = tc;
+  courante.maj(tc);
+  passeGris.uniforms.uGris.value = gris;
+  passeGris.uniforms.uRouge.value = teinteRouge;
+  passeGris.uniforms.uBlanc.value = blanc;
+  if (!libre) {
+    const c = courante.cam(tc);
+    const s = secousse;
+    camera.position.set(c.pos[0] + (Math.random() - 0.5) * s, c.pos[1] + (Math.random() - 0.5) * s, c.pos[2] + (Math.random() - 0.5) * s);
+    camera.lookAt(...c.vise);
+    controles.target.set(...c.vise);
+  } else controles.update();
+  $('temps').value = tc;
+  $('horloge').textContent = tc.toFixed(1).replace('.', ',') + ' s';
+  const l = courante.legendes.find(([a, b]) => tc >= a && tc < b);
+  $('legende').textContent = l ? l[2] : '';
+  $('titre').textContent = courante.nom.toUpperCase();
+  $('titre').style.opacity = String(tc < 0.15 ? tc / 0.15 : 1 - seg(tc, 1.0, 1.5));
+  panneau();
+  composeur.render();
+}
+rendu.setAnimationLoop(image);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  rendu.setSize(innerWidth, innerHeight);
+  composeur.setSize(innerWidth, innerHeight);
+});
+
+window.aller = (id, temps) => { lecture = false; libre = false; controles.enabled = false; choisir(id); t = temps; image(); };
+window.cam = (p, v) => { libre = true; controles.enabled = true; camera.position.set(...p); controles.target.set(...v); controles.update(); image(); };
+// pour la planche : window.capturer('ulti', 7.2, 'ulti-3.png') fige la scène à ce moment et enregistre l'image
+window.capturer = async (id, temps, nom, vue = null, manteau = true) => {
+  lecture = false;
+  libre = false;
+  controles.enabled = false;
+  manteauOui = manteau;
+  choisir(id);
+  t = temps;
+  if (vue) { libre = true; camera.position.set(...vue[0]); controles.target.set(...vue[1]); controles.update(); }
+  image();
+  manteauOui = true;
+  libre = false;
+  const url = rendu.domElement.toDataURL('image/png');
+  await fetch('/capture?nom=' + encodeURIComponent(nom), { method: 'POST', body: url });
+  return nom;
+};
+</script>
+</body>
+</html>

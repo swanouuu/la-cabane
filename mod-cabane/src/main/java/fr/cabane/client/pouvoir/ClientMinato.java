@@ -78,6 +78,10 @@ public final class ClientMinato {
         if (mc.player == null || !ELUS.contains(mc.player.getUUID()) || enScene()) {
             return false;
         }
+        // en mode rouge (Minato 3), la touche donne les doubles éclair
+        if (ClientMinatoRouge.technique()) {
+            return true;
+        }
         UUID moi = mc.player.getUUID();
         if (MARQUES.containsKey(moi)) {
             PacketDistributor.sendToServer(new Minato.Rejoindre());
@@ -196,7 +200,7 @@ public final class ClientMinato {
     public static void recevoir(Pouvoirs.Etat p) {
         Minecraft mc = Minecraft.getInstance();
         if (moi(p.joueur())) {
-            minato2 = p.pouvoir().equals(Minato.NOM2);
+            minato2 = p.pouvoir().equals(Minato.NOM2) || p.pouvoir().equals(Minato.NOM3);
         }
         int avant = niveau(p.joueur());
         if (!p.eveille()) {
@@ -442,6 +446,10 @@ public final class ClientMinato {
     private static void ecran(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.options.hideGui || !ELUS.contains(mc.player.getUUID()) || ClientMinatoCombo.cinematique() || ClientBijuuDama.participant()) {
+            return;
+        }
+        // en mode rouge (Minato 3), son propre panneau
+        if (ClientMinatoRouge.panneau(g)) {
             return;
         }
         UUID moi = mc.player.getUUID();

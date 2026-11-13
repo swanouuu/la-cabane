@@ -94,9 +94,11 @@ public final class Minato {
     public static final String NOM = "minato";
     /** Minato 2 : le même Minato au niveau 1, puis le mode Kurama au niveau 2. */
     public static final String NOM2 = "minato2";
+    /** Minato 3 : comme Minato 2, et en mode Kurama la touche Ulti donne le mode rouge (voir {@link MinatoRouge}). */
+    public static final String NOM3 = "minato3";
 
     public static boolean est(String pouvoir) {
-        return pouvoir.equals(NOM) || pouvoir.equals(NOM2);
+        return pouvoir.equals(NOM) || pouvoir.equals(NOM2) || pouvoir.equals(NOM3);
     }
 
     /** La Bijuu Dama, en ticks depuis qu'il touche : sa durée, le coup de poing, l'impact de la boule, le dôme. */
@@ -204,6 +206,11 @@ public final class Minato {
 
     static int niveau(UUID joueur) {
         return NIVEAUX.getOrDefault(joueur, 0);
+    }
+
+    /** Pris dans un combo ou une Bijuu Dama (la sienne ou celle d'un autre) : il ne peut rien lancer d'autre. */
+    static boolean occupe(LivingEntity e) {
+        return fige(e);
     }
     /** Vrai pendant nos propres coups (les seuls qui passent pendant le combo). */
     private static boolean frappe;
@@ -536,6 +543,7 @@ public final class Minato {
 
     /** Le combo en cours continue (c'est une cinématique) ; seuls les kunais en vol disparaissent. */
     static void endormir(ServerPlayer joueur) {
+        MinatoRouge.arreter(joueur, true);
         ELUS.remove(joueur.getUUID());
         NIVEAUX.remove(joueur.getUUID());
         TP_RESTANTES.remove(joueur.getUUID());
@@ -1345,6 +1353,8 @@ public final class Minato {
                     && cible.isAlive()) {
                 if (prendreCharge(joueur, maintenant)) {
                     autour(joueur, cible, maintenant);
+                    // en mode rouge (Minato 3), un double rouge frappe aussi de l'autre côté
+                    MinatoRouge.coupEclair(joueur, cible);
                 } else {
                     // plus de charge : il frappe comme tout le monde, au sol, la vue libre
                     liberer(joueur);

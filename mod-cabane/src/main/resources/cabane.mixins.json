@@ -4,7 +4,7 @@
   "package": "fr.cabane.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": ["ChunkGeneratorMixin", "FireBlockMixin", "LevelChunkMixin"],
-  "client": ["AbstractClientPlayerMixin", "CameraMixin", "PlayerModelMixin", "MinecraftMixin", "EntityMixin", "CapeLayerMixin", "HumanoidArmorLayerMixin", "LivingEntityRendererMixin", "KeyBindsListMixin", "LivingEntityViseeMixin"],
+  "client": ["AbstractClientPlayerMixin", "CameraMixin", "PlayerModelMixin", "MinecraftMixin", "EntityMixin", "CapeLayerMixin", "HumanoidArmorLayerMixin", "LivingEntityRendererMixin", "KeyBindsListMixin", "LivingEntityViseeMixin", "GameRendererAccess"],
   "injectors": {
     "defaultRequire": 1
   }

@@ -68,7 +68,7 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Pouvoirs {
     /** Les pouvoirs qui existent (une liste blanche chacun ; un joueur n'est que dans une). */
-    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Susano4.NOM, Hachibi.NOM, Hachibi.NOM2, Hachibi4.NOM, Maudit.NOM, Maudit.NOM2, Maudit.NOM3, Minato.NOM, Minato.NOM2,
+    public static final List<String> LISTE = List.of("susano", "susano2", Susano3.NOM, Susano3.DEV, Susano4.NOM, Hachibi.NOM, Hachibi.NOM2, Hachibi4.NOM, Maudit.NOM, Maudit.NOM2, Maudit.NOM3, Minato.NOM, Minato.NOM2, Minato.NOM3,
             Fruit.LAVE, Fruit.LAVE2, Fruit.LAVE3, Fruit.GLACE, Fruit.GLACE2, Fruit.GLACE3, Ichibi.NOM, Ichibi.NOM2, Ichibi.NOM3, Foudre.NOM, Foudre.NOM2, Foudre.NOM3, Vent.NOM, Vent.NOM2, Vent.NOM3,
             Kaguya.NOM, Kaguya.NOM2, Kaguya.NOM3, Tenebres.NOM, Tenebres.NOM2, Tenebres.NOM3, Lumiere.NOM, Lumiere.NOM2, Lumiere.NOM3);
 
@@ -187,7 +187,7 @@ public final class Pouvoirs {
             /** Le niveau le plus haut que ce joueur peut atteindre. */
             int niveauMax() {
                 return Hachibi.deux(pouvoir) || Susano4.est(pouvoir) ? 4 : Susano3.est(pouvoir) || pouvoir.equals(Maudit.NOM3) || Fruit.troisieme(pouvoir) || pouvoir.equals(Foudre.NOM3) || pouvoir.equals(Vent.NOM3) || pouvoir.equals(Ichibi.NOM3) || pouvoir.equals(Kaguya.NOM3) || pouvoir.equals(Tenebres.NOM3) || pouvoir.equals(Lumiere.NOM3) ? 3
-                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) || pouvoir.equals(Vent.NOM2) || pouvoir.equals(Ichibi.NOM2) || pouvoir.equals(Kaguya.NOM2) || pouvoir.equals(Tenebres.NOM2) || pouvoir.equals(Lumiere.NOM2) ? 2 : 1;
+                        : pouvoir.equals("susano2") || pouvoir.equals(Maudit.NOM2) || pouvoir.equals(Minato.NOM2) || pouvoir.equals(Minato.NOM3) || Fruit.deuxieme(pouvoir) || pouvoir.equals(Foudre.NOM2) || pouvoir.equals(Vent.NOM2) || pouvoir.equals(Ichibi.NOM2) || pouvoir.equals(Kaguya.NOM2) || pouvoir.equals(Tenebres.NOM2) || pouvoir.equals(Lumiere.NOM2) ? 2 : 1;
             }
         }
 
@@ -549,7 +549,7 @@ public final class Pouvoirs {
         // le chevalier (Susano niveau 3) : un peu plus que la netherite, et presque impossible à repousser
         // (et, depuis l'équilibrage par niveau, le mode Kurama de Minato 2, toujours au plus haut)
         // (et la marque au niveau 3, aux serpents ; et les fruits au niveau 3)
-        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Ichibi.est(pouvoir(joueur)) || Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur)) || Kaguya.est(pouvoir(joueur)) || Tenebres.est(pouvoir(joueur)) || Lumiere.est(pouvoir(joueur))) && niveau >= 3 || pouvoir(joueur).equals(Minato.NOM2) && niveau >= 2;
+        boolean chevalier = (Susano3.est(pouvoir(joueur)) || Ichibi.est(pouvoir(joueur)) || Maudit.est(pouvoir(joueur)) || Fruit.est(pouvoir(joueur)) || Foudre.est(pouvoir(joueur)) || Vent.est(pouvoir(joueur)) || Kaguya.est(pouvoir(joueur)) || Tenebres.est(pouvoir(joueur)) || Lumiere.est(pouvoir(joueur))) && niveau >= 3 || (pouvoir(joueur).equals(Minato.NOM2) || pouvoir(joueur).equals(Minato.NOM3)) && niveau >= 2;
         // Minato (niveau 1) compte comme un niveau 2 : de la netherite
         boolean netherite = Minato.est(pouvoir(joueur)) && niveau == 1;
         boolean parfait = Susano4.est(pouvoir(joueur)) && niveau >= 4;
