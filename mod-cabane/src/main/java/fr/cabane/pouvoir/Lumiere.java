@@ -341,7 +341,6 @@ public final class Lumiere {
         joueur.setDeltaMovement(joueur.getDeltaMovement().x, 1.75, joueur.getDeltaMovement().z);
         joueur.hurtMarked = true;
         joueur.fallDistance = 0;
-        joueur.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 160, 0, false, false, true));
         effet(joueur, E_ENVOL, 0, joueur.position(), Vec3.ZERO, 0);
         eclat(joueur.serverLevel(), joueur.position(), 40, 1.5);
         son(joueur.serverLevel(), joueur.position(), SoundEvents.ENDER_DRAGON_FLAP, 2F, 1.2F);

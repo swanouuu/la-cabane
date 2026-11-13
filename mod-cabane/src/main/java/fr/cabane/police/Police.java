@@ -271,6 +271,7 @@ public final class Police {
                 CompoundTag data = prisonnier.getPersistentData();
                 data.putUUID(MENOTTES, policier.getUUID());
                 data.putLong(DEPUIS, prisonnier.serverLevel().getGameTime());
+                fr.cabane.pouvoir.Pouvoirs.endormirMenotte(prisonnier);
                 prisonnier.serverLevel().playSound(null, prisonnier.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1F, 1.2F);
                 prisonnier.displayClientMessage(Component.literal("🔒 " + policier.getGameProfile().getName() + " t'a passé les menottes !").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
                 policier.displayClientMessage(Component.literal("🔒 " + prisonnier.getGameProfile().getName() + " est menotté. Il te suit.").withStyle(ChatFormatting.BLUE), true);
@@ -305,6 +306,7 @@ public final class Police {
             liberer(prisonnier);
             return;
         }
+        fr.cabane.pouvoir.Pouvoirs.endormirMenotte(prisonnier);
         if (prisonnier.tickCount % 10 == 0) {
             prisonnier.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 2, true, false));
             prisonnier.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 30, 4, true, false));
@@ -331,6 +333,14 @@ public final class Police {
         }
         joueur.displayClientMessage(Component.literal("🔒 Tu es menotté !").withStyle(ChatFormatting.RED), true);
         return true;
+    }
+
+    /** Menotté, on ne blesse personne : ni à la main, ni avec une arme, ni avec un tir, ni avec un pouvoir. */
+    @SubscribeEvent
+    public static void onDegats(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (event.getSource().getEntity() instanceof Player auteur && menotte(auteur) && auteur != event.getEntity()) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent

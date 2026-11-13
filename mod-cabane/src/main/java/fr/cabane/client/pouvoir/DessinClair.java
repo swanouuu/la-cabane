@@ -60,12 +60,108 @@ final class DessinClair {
         c.addVertex(m, (float) p0.x, (float) p0.y, (float) p0.z).setColor(r, g, bl, al);
     }
 
-    /** Un trait qui brille, avec son halo : un cœur, puis deux fois plus large et plus pâle, puis quatre fois. */
+    /** Un trait qui brille, avec son halo : un cœur blanc, puis des couches de plus en plus larges et pâles (ça éclate). */
     static void rayon(PoseStack ps, MultiBufferSource b, Vec3 cam, Vec3 a, Vec3 z, double w, float r, float g, float bl, float al) {
         VertexConsumer c = lueur(b);
-        trait(ps, c, cam, a, z, w * 4, r, g, bl, al * 0.18F);
-        trait(ps, c, cam, a, z, w * 2, r, g, bl, al * 0.35F);
-        trait(ps, c, cam, a, z, w, Math.min(1, r + 0.4F), Math.min(1, g + 0.4F), Math.min(1, bl + 0.4F), al);
+        trait(ps, c, cam, a, z, w * 8, r, g, bl, al * 0.07F);
+        trait(ps, c, cam, a, z, w * 4.5, r, g, bl, al * 0.14F);
+        trait(ps, c, cam, a, z, w * 2.4, r, g, bl, al * 0.3F);
+        trait(ps, c, cam, a, z, w * 1.3, Math.min(1, r + 0.3F), Math.min(1, g + 0.3F), Math.min(1, bl + 0.3F), al * 0.75F);
+        trait(ps, c, cam, a, z, w * 0.6, 1, 1, 1, al);
+    }
+
+    /**
+     * Un halo : un disque tourné vers la caméra, qui brille fort au milieu et s'efface vers le bord (comme l'éclat d'une
+     * lumière). Il s'ajoute à ce qui est derrière.
+     */
+    static void halo(PoseStack ps, VertexConsumer c, Vec3 cam, Vec3 centre, double rayon, float r, float g, float bl, float al) {
+        Vec3 o = cam.subtract(centre);
+        if (o.lengthSqr() < 1e-6) {
+            return;
+        }
+        o = o.normalize();
+        Vec3 e1 = o.cross(Math.abs(o.y) > 0.95 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0)).normalize(), e2 = e1.cross(o).normalize();
+        Matrix4f m = ps.last().pose();
+        int n = 24;
+        Vec3 cc = centre.subtract(cam);
+        for (int i = 0; i < n; i++) {
+            double a0 = i * Mth.TWO_PI / n, a1 = (i + 1) * Mth.TWO_PI / n;
+            Vec3 p0 = cc.add(e1.scale(Math.cos(a0) * rayon)).add(e2.scale(Math.sin(a0) * rayon));
+            Vec3 p1 = cc.add(e1.scale(Math.cos(a1) * rayon)).add(e2.scale(Math.sin(a1) * rayon));
+            for (int k = 0; k < 2; k++) {
+                Vec3 x = k == 0 ? p0 : p1, y = k == 0 ? p1 : p0;
+                c.addVertex(m, (float) cc.x, (float) cc.y, (float) cc.z).setColor(r, g, bl, al);
+                c.addVertex(m, (float) cc.x, (float) cc.y, (float) cc.z).setColor(r, g, bl, al);
+                c.addVertex(m, (float) x.x, (float) x.y, (float) x.z).setColor(r, g, bl, 0);
+                c.addVertex(m, (float) y.x, (float) y.y, (float) y.z).setColor(r, g, bl, 0);
+            }
+        }
+    }
+
+    /** Un éclat : de la lueur pure, en couches (un grand halo doré très doux, un plus vif, un cœur blanc qui brûle). */
+    static void eclat(PoseStack ps, MultiBufferSource b, Vec3 cam, Vec3 centre, double rayon, float r, float g, float bl, float al, double tourne) {
+        VertexConsumer c = lueur(b);
+        halo(ps, c, cam, centre, rayon * 3.2, r, g, bl, al * 0.22F);
+        halo(ps, c, cam, centre, rayon * 1.8, r, g, bl, al * 0.45F);
+        halo(ps, c, cam, centre, rayon * 0.9, Math.min(1, r + 0.2F), Math.min(1, g + 0.2F), Math.min(1, bl + 0.3F), al * 0.8F);
+        halo(ps, c, cam, centre, rayon * 0.45, 1, 1, 1, al);
+    }
+
+    /**
+     * Une explosion de lumière, t secondes après l'impact : une boule blanche qui gonfle d'un coup et s'efface, sa lueur
+     * dorée, une onde au sol, un pilier bref. taille : à peu près son rayon en blocs.
+     */
+    static void explosion(PoseStack ps, MultiBufferSource b, Vec3 cam, Vec3 centre, double t, double taille, float r, float g, float bl) {
+        if (t < 0 || t > 1.4) {
+            return;
+        }
+        float al = (float) (1 - lisse01((t - 0.12) / 1.2));
+        double gonfle = lisse01(t / 0.18);
+        VertexConsumer v = voile(b), c = lueur(b);
+        boule(ps, v, cam, centre, taille * (0.4 + 0.9 * gonfle), (int) (200 * Math.max(0, 1 - t / 0.5)) << 24 | 0xFFFFF4, 0xF000F0);
+        boule(ps, v, cam, centre, taille * (0.6 + 1.6 * gonfle), (int) (90 * Math.max(0, 1 - t / 0.8)) << 24 | 0xFFE08A, 0xF000F0);
+        eclat(ps, b, cam, centre, taille * (0.8 + 0.8 * gonfle), r, g, bl, al, 0);
+        // l'onde au sol, et une deuxième plus lente
+        Vec3 sol = centre.add(0, -Math.min(taille * 0.9, 1.5), 0);
+        for (int k = 0; k < 2; k++) {
+            double tt = t - k * 0.12;
+            if (tt > 0) {
+                double ro = taille * (0.6 + 4.5 * lisse01(tt / 0.6));
+                float ao = (float) (1 - lisse01(tt / 1.0));
+                anneauSol(ps, c, cam, sol.add(0, 0.06, 0), ro, taille * 0.45, r, g, bl, ao * 0.35F);
+                anneauSol(ps, c, cam, sol.add(0, 0.07, 0), ro, taille * 0.14, 1, 1, 1, ao * 0.8F);
+            }
+        }
+        // un pilier de lumière bref
+        if (t < 0.5) {
+            float ap = (float) (1 - t / 0.5);
+            rayon(ps, b, cam, sol, sol.add(0, taille * 5 * lisse01(t / 0.1), 0), taille * 0.35, r, g, bl, ap);
+        }
+    }
+
+    private static double lisse01(double x) {
+        x = Mth.clamp(x, 0, 1);
+        return x * x * (3 - 2 * x);
+    }
+
+    /** Un anneau plat qui brille, dans le plan xz du repère courant (en pixels : centre, rayon, largeur). */
+    static void anneauModele(PoseStack ps, VertexConsumer c, float y, float rayon, float w, float r, float g, float bl, float al) {
+        Matrix4f m = ps.last().pose();
+        int n = 40;
+        for (int i = 0; i < n; i++) {
+            double a0 = i * Mth.TWO_PI / n, a1 = (i + 1) * Mth.TWO_PI / n;
+            float[][] q = new float[4][];
+            q[0] = new float[]{(float) Math.cos(a0) * (rayon - w / 2), (float) Math.sin(a0) * (rayon - w / 2)};
+            q[1] = new float[]{(float) Math.cos(a0) * (rayon + w / 2), (float) Math.sin(a0) * (rayon + w / 2)};
+            q[2] = new float[]{(float) Math.cos(a1) * (rayon + w / 2), (float) Math.sin(a1) * (rayon + w / 2)};
+            q[3] = new float[]{(float) Math.cos(a1) * (rayon - w / 2), (float) Math.sin(a1) * (rayon - w / 2)};
+            for (int k = 0; k < 8; k++) {
+                float[] p = q[k < 4 ? k : 7 - k];
+                // le bord intérieur et le bord extérieur s'effacent : seul le milieu de l'anneau brille fort
+                float a = (k < 4 ? k : 7 - k) == 0 || (k < 4 ? k : 7 - k) == 3 ? al * 0.6F : al * 0.6F;
+                c.addVertex(m, p[0] / 16, y / 16, p[1] / 16).setColor(r, g, bl, a);
+            }
+        }
     }
 
     /** Une ligne brisée qui brille (un éclair, une spirale), point par point. */

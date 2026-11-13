@@ -171,6 +171,7 @@ public final class ClientLumiere {
                 u.zone = pos;
             }
             if (p.phase() == 3) {
+                impact(pos.add(0, 1, 0), 0, 4.5);
                 secouer(mc, pos, 2F, 50);
                 eclairer(mc, pos, 40, 0.9F);
                 for (int k = 0; k < 160; k++) {
@@ -186,7 +187,9 @@ public final class ClientLumiere {
             e.rayonFin = System.nanoTime() + p.n() * 50_000_000L;
             return;
         }
-        ANIMS.add(new Anim(p.joueur(), p.sorte(), p.phase(), pos, dir, p.n(), System.nanoTime()));
+        Anim nouvelle = new Anim(p.joueur(), p.sorte(), p.phase(), pos, dir, p.n(), System.nanoTime());
+        ANIMS.add(nouvelle);
+        prevoir(nouvelle);
         switch (p.sorte()) {
             case Lumiere.E_COUP -> etincelles(level, pos, p.phase() * 6, 0.3);
             case Lumiere.E_FLECHE -> etincelles(level, dir, 16, 0.3);
@@ -255,6 +258,59 @@ public final class ClientLumiere {
         }
     }
 
+    /** Une aile (c = -1 : droite), battue de « bat » radians autour de l'épaule. */
+    private static void aile(String nom, PoseStack ps, MultiBufferSource b, ModelPart corps, float c, float bat, float alpha) {
+        ModeleVent[] l = ModeleVent.lire("lumiere", nom);
+        if (l.length < 2) {
+            return;
+        }
+        ps.pushPose();
+        corps.translateAndRotate(ps);
+        // l'épaule, en pixels du jeu (y vers le bas, l'arrière vers +z)
+        float ex = c * 2.2F / 16, ey = 2.5F / 16, ez = 2.6F / 16;
+        ps.translate(ex, ey, ez);
+        ps.mulPose(com.mojang.math.Axis.ZP.rotation(-c * bat));
+        ps.mulPose(com.mojang.math.Axis.YP.rotation(c * bat * 0.45F));
+        ps.translate(-ex, -ey, -ez);
+        l[1].dessiner(b, ps.last(), LightTexture.FULL_BRIGHT, 1 / 16F, alpha);
+        ps.popPose();
+    }
+
+    /**
+     * L'auréole : un anneau d'or plein (des maillons qui accrochent la lumière), un fil blanc dedans, et une lueur dorée qui
+     * l'entoure et pulse ; elle flotte au-dessus de la tête, un peu penchée, et tourne lentement.
+     */
+    private static void aureole(PoseStack ps, MultiBufferSource b, ModelPart tete, float r, float t, float alpha, int niveau) {
+        if (alpha <= 0.01F) {
+            return;
+        }
+        ps.pushPose();
+        tete.translateAndRotate(ps);
+        ps.translate(0, (-11.2F + 0.35F * Mth.sin(t * 2)) / 16, 0.8F / 16);
+        ps.mulPose(com.mojang.math.Axis.XP.rotation(-0.25F));
+        ps.mulPose(com.mojang.math.Axis.YP.rotation(t * 0.7F));
+        VertexConsumer plein = DessinClair.plein(b);
+        int n = 36;
+        for (int i = 0; i < n; i++) {
+            double a = i * Mth.TWO_PI / n;
+            ps.pushPose();
+            ps.translate(Math.cos(a) * r / 16, 0, Math.sin(a) * r / 16);
+            ps.mulPose(com.mojang.math.Axis.YP.rotation((float) -a));
+            int col = i % 2 == 0 ? 0xFFFFD45A : 0xFFFFE9A0;
+            DessinClair.pave(ps, plein, -0.5F, -0.45F, -0.6F, 1F, 0.9F, 1.2F, col, LightTexture.FULL_BRIGHT);
+            DessinClair.pave(ps, plein, -0.15F, -0.6F, -0.68F, 0.3F, 0.15F, 1.36F, 0xFFFFFFF4, LightTexture.FULL_BRIGHT);
+            ps.popPose();
+        }
+        VertexConsumer lu = DessinClair.lueur(b);
+        float pulse = 0.8F + 0.2F * Mth.sin(t * 3.1F);
+        DessinClair.anneauModele(ps, lu, 0, r, 2.2F, 1F, 0.86F, 0.45F, 0.9F * alpha * pulse);
+        DessinClair.anneauModele(ps, lu, 0, r, 5F, 1F, 0.78F, 0.3F, 0.35F * alpha * pulse);
+        if (niveau >= 2) {
+            DessinClair.anneauModele(ps, lu, 0, r + 2.2F, 0.8F, 1F, 0.95F, 0.75F, 0.5F * alpha * pulse);
+        }
+        ps.popPose();
+    }
+
     public static final class Couche extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
         public Couche(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
             super(parent);
@@ -276,20 +332,30 @@ public final class ClientLumiere {
             int niveau = e.fin >= 0 ? e.niveauFin : e.niveau;
             double t1 = e.debut1 < 0 ? 99 : secondes(e.debut1), t2 = e.debut2 < 0 ? 99 : secondes(e.debut2), t3 = e.debut3 < 0 ? 99 : secondes(e.debut3);
             ClientTenebres.yeux(ps, buffers, m.head, OR_YEUX);
+            double t = System.nanoTime() / 1e9 + joueur.getId() * 0.7;
             if (t1 > 0.5) {
-                piece(niveau >= 2 ? "aureole" : "aureole1", ps, buffers, LightTexture.FULL_BRIGHT, parties, efface);
+                aureole(ps, buffers, m.head, niveau >= 2 ? 5.3F : 4.7F, (float) t, efface * (float) lisse((t1 - 0.5) / 0.4), niveau);
             }
             if (niveau >= 2) {
-                ClientTenebres.aura(ps, buffers, parties, 1.1F, (int) (55 * efface) << 24 | 0xFFDC82);
-                ClientTenebres.aura(ps, buffers, parties, 2.4F, (int) (22 * efface) << 24 | 0xFFF8E0);
+                // comme l'aura de la Foudre (deux coques à peine plus grandes que le corps, qui vacillent), en or
+                float vacille = 0.85F + 0.15F * Mth.sin(age * 0.45F);
+                boolean fin = joueur.getSkin().model() == PlayerSkin.Model.SLIM;
+                VertexConsumer c = buffers.getBuffer(net.minecraft.client.renderer.RenderType.entityTranslucentEmissive(ClientHachibi.MANTEAU));
+                ClientHachibi.enveloppe(m, ps, c, fin, 1F, (Math.round(62 * efface * vacille) << 24) | 0xFFD060);
+                ClientHachibi.enveloppe(m, ps, c, fin, 1.14F, (Math.round(26 * efface * vacille) << 24) | 0xFFF2C0);
             }
+            // les ailes battent doucement ; en vol plané, grandes ouvertes, elles battent plus fort
+            boolean plane = PLANEURS.contains(joueur.getUUID()) || !joueur.onGround();
+            float bat = (float) (plane ? 0.32 * Math.sin(t * 5.2) - 0.05 : 0.09 * Math.sin(t * 2.1) + 0.04);
             if (niveau >= 3 && t3 > 0.9) {
-                piece("ailes3", ps, buffers, LightTexture.FULL_BRIGHT, parties, efface);
+                aile("ailes3_d", ps, buffers, m.body, -1, bat, efface);
+                aile("ailes3_g", ps, buffers, m.body, 1, bat, efface);
                 piece("soleil", ps, buffers, LightTexture.FULL_BRIGHT, parties, efface);
             } else if (niveau >= 2) {
                 // à l'éveil 2, les ailes s'ouvrent en une seconde
                 int k = niveau == 2 && t2 < 1.2 ? Mth.clamp(1 + (int) (t2 / 0.4), 1, 3) : 3;
-                piece("ailes2_" + k, ps, buffers, LightTexture.FULL_BRIGHT, parties, efface);
+                aile("aile_d_" + k, ps, buffers, m.body, -1, bat, efface);
+                aile("aile_g_" + k, ps, buffers, m.body, 1, bat, efface);
             }
         }
     }
@@ -374,22 +440,31 @@ public final class ClientLumiere {
             if (h.getType() != HitResult.Type.MISS) {
                 a = h.getLocation();
             }
-            DessinClair.rayon(ps, b, cam, de, a, 0.5, R, G, B, al);
+            DessinClair.rayon(ps, b, cam, de, a, 1.3, R, G, B, al);
             VertexConsumer lu = DessinClair.lueur(b);
+            // un soleil entre ses mains, une étoile sur ce qu'il touche, des anneaux qui filent le long du rayon
+            double pulse = 1 + 0.15 * Math.sin(System.nanoTime() / 1e9 * 18);
+            DessinClair.eclat(ps, b, cam, de, 0.9 * pulse, R, G, B, al, System.nanoTime() / 1e9 * 2);
+            DessinClair.eclat(ps, b, cam, a, 3.2 * pulse, R, G, B, al, 0);
+            DessinClair.boule(ps, DessinClair.voile(b), cam, a, 1.6 * pulse, (int) (150 * al) << 24 | 0xFFFCEC, LightTexture.FULL_BRIGHT);
+            // des boules de lumière qui filent le long du rayon
+            for (int k = 0; k < 6; k++) {
+                double s = (System.nanoTime() / 1e9 * 1.6 + k / 6.0) % 1.0;
+                DessinClair.halo(ps, lu, cam, de.lerp(a, s), 1.1, 1, 0.92F, 0.7F, al * 0.5F * (float) (1 - s * 0.5));
+            }
+            if (HASARD.nextInt(3) == 0) {
+                Minecraft.getInstance().level.addParticle(ParticleTypes.FLASH, a.x, a.y, a.z, 0, 0, 0);
+            }
+            if (j == Minecraft.getInstance().player) {
+                ClientVent.secouer(0.12F);
+            }
             double t = System.nanoTime() / 1e9;
             Vec3 u = regard.cross(new Vec3(0, 1, 0)).normalize(), v = u.cross(regard).normalize();
-            for (int k = 0; k < 2; k++) {
-                Vec3[] pts = new Vec3[40];
-                for (int q = 0; q < 40; q++) {
-                    double s = q / 39.0, ang = s * 30 - t * 14 + k * Math.PI;
-                    pts[q] = de.lerp(a, s).add(u.scale(Math.cos(ang) * 0.6)).add(v.scale(Math.sin(ang) * 0.6));
-                }
-                DessinClair.ligne(ps, lu, cam, pts, 0.08, R, G, B, al * 0.8F);
-            }
             if (HASARD.nextInt(2) == 0) {
                 etincelles(level, a, 3, 0.3);
             }
         }
+        rayonnement(ps, b, cam, level, partiel);
         for (Anim a : ANIMS) {
             dessiner(ps, b, cam, level, a, partiel);
         }
@@ -399,92 +474,181 @@ public final class ClientLumiere {
         b.endBatch();
     }
 
+    // ================================================================ les impacts (ça pète)
+
+    /** Un impact à venir : où, quand, sa taille ; il fait son effet une fois (particules, secousse, flash, son). */
+    private static final class Impact {
+        final Vec3 pos;
+        final long quand;
+        final double taille;
+        boolean fait;
+
+        Impact(Vec3 pos, double dans, double taille) {
+            this.pos = pos;
+            this.quand = System.nanoTime() + (long) (dans * 1e9);
+            this.taille = taille;
+        }
+    }
+
+    private static final List<Impact> IMPACTS = new ArrayList<>();
+
+    static void impact(Vec3 pos, double dans, double taille) {
+        IMPACTS.add(new Impact(pos, dans, taille));
+    }
+
+    /** Les impacts arrivés : une gerbe d'étincelles et d'éclats, la secousse et le flash pour ceux qui sont près, le son. */
+    private static void impacts(Minecraft mc) {
+        long maintenant = System.nanoTime();
+        for (Impact i : IMPACTS) {
+            if (i.fait || maintenant < i.quand) {
+                continue;
+            }
+            i.fait = true;
+            Level level = mc.level;
+            Vec3 p = i.pos;
+            int n = (int) (30 + 40 * i.taille);
+            for (int k = 0; k < n; k++) {
+                Vec3 d = new Vec3(HASARD.nextGaussian(), Math.abs(HASARD.nextGaussian()) * 0.8 + 0.2, HASARD.nextGaussian()).normalize().scale(0.25 + 0.5 * HASARD.nextDouble() * i.taille);
+                level.addParticle(k % 3 == 0 ? ParticleTypes.FIREWORK : k % 3 == 1 ? ParticleTypes.END_ROD : OR, p.x, p.y, p.z, d.x, d.y, d.z);
+            }
+            level.addParticle(ParticleTypes.FLASH, p.x, p.y, p.z, 0, 0, 0);
+            if (i.taille >= 1.5) {
+                level.addParticle(ParticleTypes.EXPLOSION, p.x, p.y, p.z, 0, 0, 0);
+            }
+            secouer(mc, p, (float) (0.35 * i.taille), 10 + 6 * i.taille);
+            eclairer(mc, p, 4 + 3 * i.taille, (float) Math.min(0.75, 0.25 * i.taille));
+            level.playLocalSound(p.x, p.y, p.z, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.PLAYERS, (float) (0.8 + 0.4 * i.taille), 1.3F, false);
+            if (i.taille >= 1.5) {
+                level.playLocalSound(p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, (float) (0.5 + 0.3 * i.taille), 1.5F, false);
+            }
+            level.playLocalSound(p.x, p.y, p.z, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.5F, 1.6F, false);
+        }
+        IMPACTS.removeIf(i -> i.fait && secondes(i.quand) > 2);
+    }
+
+    /** Quand un coup arrive, on prévoit son impact (le serveur n'envoie que le départ). */
+    private static void prevoir(Anim a) {
+        switch (a.sorte()) {
+            case Lumiere.E_COUP -> impact(a.pos(), 0, 0.45 + 0.35 * a.phase());
+            case Lumiere.E_FLECHE -> impact(a.dir(), 0.06, 2.2);
+            case Lumiere.E_FLASH -> impact(a.pos().add(0, 1.1, 0), 0, 2.4);
+            case Lumiere.E_LANCE -> impact(a.pos().add(0, 0.5, 0), (10 + a.phase() * 4) / 20.0, 1.9);
+            case Lumiere.E_ENVOL -> impact(a.pos().add(0, 0.3, 0), 0, 1.3);
+            case Lumiere.E_VITESSE -> {
+                impact(a.pos().add(0, 1, 0), 0, 1.2);
+                impact(a.dir().add(0, 1, 0), 0.05, 2.2);
+            }
+            case Lumiere.E_CROIX -> impact(a.pos().add(0, 1, 0), Lumiere.CROIX_DELAI / 20.0, 3);
+            default -> { }
+        }
+    }
+
     private static void dessiner(PoseStack ps, MultiBufferSource b, Vec3 cam, Level level, Anim a, float partiel) {
         double t = a.age();
+        VertexConsumer lu = DessinClair.lueur(b);
         switch (a.sorte()) {
-            case Lumiere.E_COUP -> {
-                if (a.phase() >= 2 && t < 0.4) {
-                    DessinClair.anneau(ps, DessinClair.lueur(b), cam, a.pos(), 0.4 + 1.6 * lisse(t / 0.3), 0.15, horizontal(a.dir()).cross(new Vec3(0, 1, 0)),
-                            new Vec3(0, 1, 0), R, G, B, (float) (1 - t / 0.4));
-                }
-            }
+            case Lumiere.E_COUP -> DessinClair.explosion(ps, b, cam, a.pos(), t, 0.45 + 0.35 * a.phase(), R, G, B);
             case Lumiere.E_FLECHE -> {
-                if (t < 0.4) {
-                    DessinClair.rayon(ps, b, cam, a.pos(), a.dir(), 0.18, R, G, B, (float) (1 - t / 0.4));
+                // la flèche : un trait de lumière pure qui part d'un coup, une lueur à la main, une explosion sur la cible
+                if (t < 0.5) {
+                    float al = (float) (1 - lisse((t - 0.12) / 0.38));
+                    Vec3 bout = a.pos().lerp(a.dir(), lisse(t / 0.06));
+                    DessinClair.rayon(ps, b, cam, a.pos(), bout, 0.45, R, G, B, al);
+                    DessinClair.eclat(ps, b, cam, a.pos(), 0.5, R, G, B, al, 0);
                 }
+                DessinClair.explosion(ps, b, cam, a.dir(), t - 0.06, 2.2, R, G, B);
             }
             case Lumiere.E_FLASH -> {
-                if (t < 0.6) {
-                    double r = 6.5 * lisse(t / 0.2);
-                    DessinClair.boule(ps, DessinClair.voile(b), cam, a.pos().add(0, 1, 0), r, (int) (130 * (1 - t / 0.6)) << 24 | 0xFFFCEC, LightTexture.FULL_BRIGHT);
+                // l'éclat aveuglant : un soleil qui naît sur lui et souffle tout autour
+                Vec3 c = a.pos().add(0, 1.1, 0);
+                if (t < 0.9) {
+                    float al = (float) (1 - lisse((t - 0.15) / 0.75));
+                    DessinClair.boule(ps, DessinClair.voile(b), cam, c, 6.5 * lisse(t / 0.2), (int) (110 * al) << 24 | 0xFFFCEC, LightTexture.FULL_BRIGHT);
+                    DessinClair.halo(ps, lu, cam, c, 9 * lisse(t / 0.25), 1, 0.9F, 0.6F, al * 0.6F);
                 }
+                DessinClair.explosion(ps, b, cam, c, t, 2.4, R, G, B);
             }
             case Lumiere.E_LANCE -> lance(ps, b, cam, level, a, t, partiel);
             case Lumiere.E_ENVOL -> {
-                for (int k = 0; k < 3; k++) {
-                    double tt = t - k * 0.12;
-                    if (tt > 0 && tt < 0.9) {
-                        DessinClair.anneauSol(ps, DessinClair.lueur(b), cam, a.pos().add(0, 0.05 + k * 0.4, 0), 1 + 4 * lisse(tt / 0.6), 0.15, R, G, B, (float) (1 - tt / 0.9));
+                if (t < 1.1) {
+                    float al = (float) (1 - lisse((t - 0.3) / 0.8));
+                    DessinClair.rayon(ps, b, cam, a.pos(), a.pos().add(0, 10 * lisse(t / 0.2), 0), 1.1, R, G, B, al * 0.9F);
+                    for (int q = 0; q < 16; q++) {
+                        Vec3 d = new Vec3(Kag(q, 70) - 0.5, 0.2 + Kag(q, 71) * 0.4, Kag(q, 72) - 0.5).normalize();
+                        Vec3 p = a.pos().add(0, 1, 0).add(d.scale(1 + 5 * lisse(t / 0.8))).add(0, -1.5 * t * t, 0);
+                        DessinClair.modele(ps, b, cam, "lumiere", "plume", p, DessinClair.vers(d).rotateZ((float) (t * 8 + q)), 1 / 16F * 2.2F, LightTexture.FULL_BRIGHT, al);
+                        DessinClair.halo(ps, lu, cam, p, 0.4, 1, 0.9F, 0.6F, al * 0.7F);
                     }
                 }
+                DessinClair.explosion(ps, b, cam, a.pos().add(0, 0.3, 0), t, 1.3, R, G, B);
             }
             case Lumiere.E_VITESSE -> {
-                if (t < 0.8) {
-                    float al = (float) (1 - t / 0.8);
-                    for (int k = 0; k < 5; k++) {
-                        Vec3 o = new Vec3(0, 0.3 + k * 0.35, 0);
-                        DessinClair.rayon(ps, b, cam, a.pos().add(o), a.dir().add(o), k == 2 ? 0.25 : 0.1, R, G, B, al);
-                    }
-                    // trois doubles de lumière le long du chemin
+                if (t < 0.9) {
+                    float al = (float) (1 - lisse(t / 0.9));
+                    // le sillage : une traînée de lumière épaisse, des doubles qui brillent le long du chemin
+                    DessinClair.rayon(ps, b, cam, a.pos().add(0, 1, 0), a.dir().add(0, 1, 0), 1.0, R, G, B, al);
+                    DessinClair.rayon(ps, b, cam, a.pos().add(0, 0.2, 0), a.dir().add(0, 0.2, 0), 0.4, R, G, B, al * 0.6F);
                     Vec3 d = horizontal(a.dir().subtract(a.pos()));
                     float lacet = (float) (Math.atan2(-d.x, d.z) * Mth.RAD_TO_DEG);
-                    for (int k = 1; k <= 3; k++) {
-                        Vec3 pieds = a.pos().lerp(a.dir(), k / 4.0);
+                    for (int k = 1; k <= 4; k++) {
+                        Vec3 pieds = a.pos().lerp(a.dir(), k / 5.0);
                         ps.pushPose();
                         DessinClair.repere(ps, cam, pieds, lacet, 1, 0.35F);
-                        DessinClair.pantin(ps, b, new DessinClair.Pose().bras(0.8F, 0.2F, 0.8F, -0.2F).jambes(-0.6F, 0.6F), (int) (90 * al * k / 3) << 24 | 0xFFE8A0, -1,
+                        DessinClair.pantin(ps, b, new DessinClair.Pose().bras(0.8F, 0.2F, 0.8F, -0.2F).jambes(-0.6F, 0.6F), (int) (130 * al * k / 4) << 24 | 0xFFF4D0, -1,
                                 LightTexture.FULL_BRIGHT);
                         ps.popPose();
+                        DessinClair.halo(ps, lu, cam, pieds.add(0, 1, 0), 1.6, 1, 0.85F, 0.5F, al * k / 5);
                     }
                 }
+                DessinClair.explosion(ps, b, cam, a.pos().add(0, 1, 0), t, 1.2, R, G, B);
+                DessinClair.explosion(ps, b, cam, a.dir().add(0, 1, 0), t - 0.05, 2.2, R, G, B);
             }
             case Lumiere.E_PLUMES -> {
-                if (t > 0.7) {
+                if (t > 0.8) {
                     return;
                 }
                 Vec3 d = a.dir().normalize();
                 Vec3 u = d.cross(new Vec3(0, 1, 0)).normalize(), v = u.cross(d).normalize();
-                for (int q = 0; q < 26; q++) {
+                for (int q = 0; q < 30; q++) {
                     double s = q % 2 == 0 ? 1 : -1;
-                    Vec3 dep = a.pos().add(u.scale(s * (0.6 + 1.2 * Kag(q, 1)))).add(v.scale(-0.2 + 0.8 * Kag(q, 2)));
+                    Vec3 dep = a.pos().add(u.scale(s * (0.6 + 1.4 * Kag(q, 1)))).add(v.scale(-0.2 + 1.0 * Kag(q, 2)));
                     Vec3 dq = d.add(u.scale((Kag(q, 3) - 0.5) * 0.5)).add(v.scale((Kag(q, 4) - 0.5) * 0.35)).normalize();
                     double vol = Math.max(0, t - Kag(q, 5) * 0.15) * 30;
-                    if (vol <= 0 || vol > 16) {
+                    if (vol <= 0 || vol > 17) {
                         continue;
                     }
                     Vec3 p = dep.add(dq.scale(vol));
-                    DessinClair.modele(ps, b, cam, "lumiere", "plume", p, DessinClair.vers(dq), 1 / 16F * 1.6F, LightTexture.FULL_BRIGHT, 1);
-                    DessinClair.trait(ps, DessinClair.lueur(b), cam, p.subtract(dq.scale(1.2)), p, 0.05, R, G, B, 0.6F);
+                    DessinClair.modele(ps, b, cam, "lumiere", "plume", p, DessinClair.vers(dq), 1 / 16F * 2.8F, LightTexture.FULL_BRIGHT, 1);
+                    DessinClair.rayon(ps, b, cam, p.subtract(dq.scale(2.5)), p, 0.12, R, G, B, 0.7F);
+                    DessinClair.halo(ps, lu, cam, p, 0.55, 1, 0.9F, 0.6F, 0.8F);
+                }
+                if (t < 0.35) {
+                    DessinClair.eclat(ps, b, cam, a.pos().add(d.scale(0.8)), 1.2, R, G, B, (float) (1 - t / 0.35), 0);
                 }
             }
             case Lumiere.E_CROIX -> {
                 Vec3 c = a.pos();
                 double attente = Lumiere.CROIX_DELAI / 20.0;
-                VertexConsumer lu = DessinClair.lueur(b);
-                float pre = (float) (lisse(t / 0.2) * (1 - lisse((t - attente - 0.6) / 0.6)));
-                // la croix au sol (elle prévient), puis la grande croix qui jaillit
-                DessinClair.trait(ps, lu, cam, c.add(-2.5, 0.05, 0), c.add(2.5, 0.05, 0), 0.25, R, G, B, pre);
-                DessinClair.trait(ps, lu, cam, c.add(0, 0.05, -2.5), c.add(0, 0.05, 2.5), 0.25, R, G, B, pre);
-                DessinClair.anneauSol(ps, lu, cam, c.add(0, 0.05, 0), 2.6, 0.12, R, G, B, pre);
+                float pre = (float) (lisse(t / 0.2) * (1 - lisse((t - attente - 0.3) / 0.3)));
+                // le sceau au sol (il prévient), qui brille de plus en plus
+                float monte = (float) (0.4 + 0.6 * lisse(t / attente));
+                DessinClair.rayon(ps, b, cam, c.add(-3.2, 0.06, 0), c.add(3.2, 0.06, 0), 0.25, R, G, B, pre * monte);
+                DessinClair.rayon(ps, b, cam, c.add(0, 0.06, -3.2), c.add(0, 0.06, 3.2), 0.25, R, G, B, pre * monte);
+                DessinClair.anneauSol(ps, lu, cam, c.add(0, 0.05, 0), 3.2, 0.5, R, G, B, pre * monte * 0.6F);
+                DessinClair.anneauSol(ps, lu, cam, c.add(0, 0.06, 0), 3.2, 0.15, 1, 1, 1, pre * monte);
                 double te = t - attente;
-                if (te > 0 && te < 1.4) {
-                    float al = (float) (1 - lisse((te - 0.6) / 0.8));
-                    double h = 9 * lisse(te / 0.15);
-                    DessinClair.rayon(ps, b, cam, c, c.add(0, h, 0), 0.9, R, G, B, al);
+                if (te > 0 && te < 1.8) {
+                    // la croix géante qui jaillit du sol : 18 blocs de haut, une barre de 12, une étoile au croisement
+                    float al = (float) (1 - lisse((te - 0.8) / 1.0));
+                    double h = 18 * lisse(te / 0.15);
+                    DessinClair.rayon(ps, b, cam, c, c.add(0, h, 0), 2.0, R, G, B, al);
                     Vec3 o = cam.subtract(c);
-                    Vec3 cote = new Vec3(-o.z, 0, o.x).normalize().scale(3.2 * lisse((te - 0.08) / 0.15));
-                    DessinClair.rayon(ps, b, cam, c.add(0, 5.5, 0).subtract(cote), c.add(0, 5.5, 0).add(cote), 0.7, R, G, B, al);
+                    Vec3 cote = new Vec3(-o.z, 0, o.x).normalize().scale(6 * lisse((te - 0.08) / 0.15));
+                    Vec3 x = c.add(0, 12, 0);
+                    DessinClair.rayon(ps, b, cam, x.subtract(cote), x.add(cote), 1.7, R, G, B, al);
+                    DessinClair.eclat(ps, b, cam, x, 3.2 * lisse((te - 0.1) / 0.2), R, G, B, al, 0);
                 }
+                DessinClair.explosion(ps, b, cam, c.add(0, 1, 0), te, 3, R, G, B);
             }
             case Lumiere.E_CHAKRAM -> chakram(ps, b, cam, level, a, t, partiel);
             default -> { }
@@ -495,36 +659,31 @@ public final class ClientLumiere {
         return fr.cabane.pouvoir.Kaguya.hache(i, j, 911);
     }
 
-    /** Une lance de lumière qui tombe du ciel sur la cible, puis reste plantée un instant. */
+    /** Une lance de lumière géante qui tombe du ciel sur la cible et explose en touchant le sol. */
     private static void lance(PoseStack ps, MultiBufferSource b, Vec3 cam, Level level, Anim a, double t, float partiel) {
         double impact = (10 + a.phase() * 4) / 20.0;
-        Entity cible = entite(level, a.n());
-        Vec3 sol = cible != null && t < impact ? cible.getPosition(partiel) : a.pos();
-        Vec3 dec = new Vec3((Kag(a.phase(), 1) - 0.5) * 1.2, 0, (Kag(a.phase(), 2) - 0.5) * 1.2);
-        Vec3 pointe = sol.add(dec);
-        double chute = lisse((t - (impact - 0.3)) / 0.3);
-        double haut = 22 * (1 - chute);
-        float al = (float) (lisse(t / 0.15) * (1 - lisse((t - impact - 0.6) / 0.4)));
-        if (al <= 0.01) {
-            return;
+        Vec3 pointe = a.pos().add((Kag(a.phase(), 1) - 0.5) * 1.2, 0, (Kag(a.phase(), 2) - 0.5) * 1.2);
+        double chute = lisse((t - (impact - 0.25)) / 0.25);
+        float al = (float) (lisse(t / 0.15) * (1 - lisse((t - impact - 0.3) / 0.4)));
+        VertexConsumer lu = DessinClair.lueur(b);
+        if (al > 0.01) {
+            Vec3 p = pointe.add(0, 28 * (1 - chute) + 0.3, 0);
+            DessinClair.modele(ps, b, cam, "lumiere", "lance", p, DessinClair.vers(new Vec3(0.05, -1, 0.02)), 1 / 16F * 5.5F, LightTexture.FULL_BRIGHT, al);
+            DessinClair.rayon(ps, b, cam, p, p.add(0, 9, 0), 0.7, R, G, B, al * 0.8F);
+            DessinClair.halo(ps, lu, cam, p, 2, 1, 0.9F, 0.6F, al);
         }
-        Vec3 p = pointe.add(0, haut + 0.3, 0);
-        DessinClair.modele(ps, b, cam, "lumiere", "lance", p, DessinClair.vers(new Vec3(0.05, -1, 0.02)), 1 / 16F * 2.2F, LightTexture.FULL_BRIGHT, al);
-        if (t < impact) {
-            DessinClair.trait(ps, DessinClair.lueur(b), cam, p, p.add(0, 6, 0), 0.25, R, G, B, al * 0.5F);
-        } else {
-            DessinClair.anneauSol(ps, DessinClair.lueur(b), cam, pointe.add(0, 0.05, 0), 0.4 + 1.6 * lisse((t - impact) / 0.3), 0.12, R, G, B, al);
-        }
+        DessinClair.explosion(ps, b, cam, pointe.add(0, 0.5, 0), t - impact, 1.9, R, G, B);
     }
 
-    /** Le chakram : il file tout droit 25 blocs, puis revient dans sa main, en tournant. */
+    /** Le chakram : il file tout droit 25 blocs, puis revient dans sa main, en tournant, dans une boule de lumière. */
     private static void chakram(PoseStack ps, MultiBufferSource b, Vec3 cam, Level level, Anim a, double t, float partiel) {
         double aller = Lumiere.PORTEE_CHAKRAM / Lumiere.VITESSE_CHAKRAM / 20.0;
         Player j = level.getPlayerByUUID(a.qui());
         Vec3 loin = a.pos().add(a.dir().scale(Lumiere.PORTEE_CHAKRAM));
-        Vec3 p;
+        Vec3 p, avant;
         if (t <= aller) {
             p = a.pos().add(a.dir().scale(Lumiere.PORTEE_CHAKRAM * t / aller));
+            avant = a.pos().add(a.dir().scale(Lumiere.PORTEE_CHAKRAM * Math.max(0, t - 0.15) / aller));
         } else {
             if (j == null) {
                 return;
@@ -536,11 +695,36 @@ public final class ClientLumiere {
                 return;
             }
             p = loin.lerp(main, s);
+            avant = loin.lerp(main, Math.max(0, s - 0.15 / retour));
         }
         Quaternionf r = new Quaternionf().rotateY((float) (t * 25));
-        DessinClair.modele(ps, b, cam, "lumiere", "chakram", p, r, 1 / 16F * 1.4F, LightTexture.FULL_BRIGHT, 1);
+        DessinClair.modele(ps, b, cam, "lumiere", "chakram", p, r, 1 / 16F * 3.2F, LightTexture.FULL_BRIGHT, 1);
+        DessinClair.eclat(ps, b, cam, p, 0.9, R, G, B, 0.9F, 0);
+        DessinClair.rayon(ps, b, cam, avant, p, 0.9, R, G, B, 0.55F);
         if (HASARD.nextInt(2) == 0) {
             level.addParticle(ParticleTypes.END_ROD, p.x, p.y, p.z, 0, 0, 0);
+        }
+    }
+
+    /** Il rayonne : une lueur douce autour de lui, qui respire (plus forte à chaque niveau). Pas de traits : de la lueur. */
+    private static void rayonnement(PoseStack ps, MultiBufferSource b, Vec3 cam, Level level, float partiel) {
+        Minecraft mc = Minecraft.getInstance();
+        VertexConsumer lu = DessinClair.lueur(b);
+        for (Map.Entry<UUID, Etat> en : ETATS.entrySet()) {
+            Etat e = en.getValue();
+            int niveau = e.fin >= 0 ? e.niveauFin : e.niveau;
+            if (niveau <= 0 || !(level.getPlayerByUUID(en.getKey()) instanceof Player j) || j.isInvisible()) {
+                continue;
+            }
+            if (j == mc.player && mc.options.getCameraType().isFirstPerson()) {
+                continue;
+            }
+            float k = (niveau >= 3 ? 1.1F : niveau == 2 ? 0.8F : 0.5F) * (e.fin >= 0 ? (float) Math.max(0, 1 - secondes(e.fin) / 0.4) : 1);
+            double t = System.nanoTime() / 1e9 + j.getId();
+            float respire = (float) (0.85 + 0.15 * Math.sin(t * 2.2));
+            Vec3 c = j.getPosition(partiel).add(0, 1.1, 0);
+            DessinClair.halo(ps, lu, cam, c, 1.8 + 0.5 * niveau, 1, 0.82F, 0.4F, 0.2F * k * respire);
+            DessinClair.halo(ps, lu, cam, c.add(0, 0.25, 0), 1.1, 1, 0.95F, 0.75F, 0.16F * k * respire);
         }
     }
 
@@ -642,6 +826,7 @@ public final class ClientLumiere {
         // la colonne du Jugement
         if (u.t[3] >= 0 && u.zone != null) {
             double tc = secondes(u.t[3]);
+            DessinClair.explosion(ps, b, cam, u.zone.add(0, 1, 0), tc, 5, R, G, B);
             Vec3 z = u.zone;
             float col = (float) (lisse(tc / 0.12) * (1 - lisse((tc - 1.2) / 1.0))) * part;
             if (col > 0.01) {
@@ -856,6 +1041,8 @@ public final class ClientLumiere {
                 envoyer(ClairObscur.ACCROUPI);
             }
             accroupiAvant = accroupi;
+            planer(mc, moi, accroupi);
+            impacts(mc);
             ETATS.values().removeIf(e -> e.fin >= 0 && secondes(e.fin) > 1);
             ANIMS.removeIf(a -> a.age() > 4);
             ULTIS.values().removeIf(u -> u.t[0] < 0 || secondes(u.t[0]) > 12 || u.t[4] >= 0 && secondes(u.t[4]) > 1.5);
@@ -920,8 +1107,100 @@ public final class ClientLumiere {
             ClientLumiere.monde(event.getPoseStack(), cam, partiel);
         }
 
+        /** Vu de l extérieur : quand il plane, il se couche ventre à plat. */
+        @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+        public static void avant(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre event) {
+            Player p = event.getEntity();
+            if (!ETATS.containsKey(p.getUUID()) && !INCLINAISONS.containsKey(p.getUUID())) {
+                return;
+            }
+            float incl = inclinaison(p);
+            if (incl > 0.01F) {
+                PoseStack ps = event.getPoseStack();
+                ps.pushPose();
+                INCLINES.add(p);
+                float lacet = Mth.lerp(event.getPartialTick(), p.yBodyRotO, p.yBodyRot) * Mth.DEG_TO_RAD;
+                ps.translate(0, 0.9F, 0);
+                ps.mulPose(new Quaternionf().rotateAxis(-incl, -Mth.cos(lacet), 0, -Mth.sin(lacet)));
+                ps.translate(0, -0.9F, 0);
+            }
+        }
+
+        @SubscribeEvent
+        public static void apres(net.neoforged.neoforge.client.event.RenderPlayerEvent.Post event) {
+            if (INCLINES.remove(event.getEntity())) {
+                event.getPoseStack().popPose();
+            }
+        }
+
         private Evenements() {
         }
+    }
+
+    // ================================================================ le vol plané
+
+    /** Ceux qui planent en ce moment (niveaux 2 et 3, en l air, en descente). */
+    static final java.util.Set<UUID> PLANEURS = new java.util.HashSet<>();
+    private static final Map<UUID, float[]> INCLINAISONS = new HashMap<>();
+    private static final java.util.Set<Player> INCLINES = new java.util.HashSet<>();
+
+    /** Plane-t-il ? Pour soi, on le sait ; pour les autres, en l air, qui avancent sans monter. */
+    private static boolean plane(Player j) {
+        Etat e = ETATS.get(j.getUUID());
+        if (e == null || e.fin >= 0 || e.niveau < 2 || j.onGround() || j.isInWater() || j.isPassenger() || j.isFallFlying() || j.getAbilities().flying) {
+            return false;
+        }
+        Ulti u = ULTIS.get(j.getUUID());
+        if (u != null && u.t[0] >= 0 && u.t[4] < 0) {
+            return false;
+        }
+        double vitesse = Math.hypot(j.getX() - j.xo, j.getZ() - j.zo);
+        return j.getY() - j.yo < 0.02 && vitesse > 0.1;
+    }
+
+    /** L inclinaison, lissée : vers 1,45 rad (ventre à plat) quand il plane, vers 0 sinon. */
+    private static float inclinaison(Player j) {
+        float[] v = INCLINAISONS.computeIfAbsent(j.getUUID(), k -> new float[]{0, System.nanoTime()});
+        double dt = Math.min(0.1, Math.max(0, (System.nanoTime() - (long) v[1]) / 1e9));
+        v[1] = System.nanoTime();
+        float but = plane(j) ? 1.45F : 0;
+        v[0] += (float) ((but - v[0]) * Math.min(1, dt * 5));
+        if (v[0] < 0.005F && but == 0) {
+            INCLINAISONS.remove(j.getUUID());
+        }
+        return v[0];
+    }
+
+    /** Pour soi : en l air (niveaux 2 et 3), il plane comme les ailes de la marque ; accroupi, il pique. */
+    private static void planer(Minecraft mc, Etat moi, boolean accroupi) {
+        net.minecraft.client.player.LocalPlayer j = mc.player;
+        PLANEURS.clear();
+        for (UUID qui : ETATS.keySet()) {
+            Player p = mc.level.getPlayerByUUID(qui);
+            if (p != null && plane(p)) {
+                PLANEURS.add(qui);
+            }
+        }
+        if (moi == null || moi.niveau < 2 || j.onGround() || j.isInWater() || j.isInLava() || j.getAbilities().flying || j.isPassenger()
+                || j.onClimbable() || j.isFallFlying() || ultiEnCours()) {
+            return;
+        }
+        Vec3 d = j.getDeltaMovement();
+        if (d.y >= 0) {
+            return;
+        }
+        if (accroupi) {
+            j.setDeltaMovement(d.x, Math.max(d.y - 0.06, -1.2), d.z);
+            return;
+        }
+        double y = Math.max(d.y, -0.1);
+        Vec3 h = new Vec3(d.x, 0, d.z);
+        if (j.input.forwardImpulse > 0) {
+            Vec3 regard = j.getLookAngle();
+            Vec3 voulu = new Vec3(regard.x, 0, regard.z).normalize().scale(moi.niveau >= 3 ? 0.62 : 0.5);
+            h = h.lerp(voulu, 0.1);
+        }
+        j.setDeltaMovement(h.x, y, h.z);
     }
 
     private ClientLumiere() {

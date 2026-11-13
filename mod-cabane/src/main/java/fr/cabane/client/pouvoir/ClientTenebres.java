@@ -305,8 +305,12 @@ public final class ClientTenebres {
             int niveau = e.fin >= 0 ? e.niveauFin : e.niveau;
             yeux(ps, buffers, m.head, VIOLET_YEUX);
             if (niveau >= 2) {
-                aura(ps, buffers, parties, 1.1F, (int) ((niveau >= 3 ? 40 : 80) * efface) << 24 | 0x14081E);
-                aura(ps, buffers, parties, 2.4F, (int) ((niveau >= 3 ? 26 : 36) * efface) << 24 | 0x5A2896);
+                // comme l'aura de la Foudre (deux coques à peine plus grandes que le corps, qui vacillent), en violet
+                float vacille = 0.85F + 0.15F * Mth.sin(age * 0.45F);
+                boolean fin = joueur.getSkin().model() == PlayerSkin.Model.SLIM;
+                VertexConsumer c = buffers.getBuffer(net.minecraft.client.renderer.RenderType.entityTranslucentEmissive(ClientHachibi.MANTEAU));
+                ClientHachibi.enveloppe(m, ps, c, fin, 1F, (Math.round(58 * efface * vacille) << 24) | 0x7A3CE0);
+                ClientHachibi.enveloppe(m, ps, c, fin, 1.14F, (Math.round(22 * efface * vacille) << 24) | 0xB898FF);
             }
             if (niveau >= 3 && e.debut3 >= 0 && secondes(e.debut3) > 0.9) {
                 piece("tenebres", "couronne", ps, buffers, lumiere, parties, efface);

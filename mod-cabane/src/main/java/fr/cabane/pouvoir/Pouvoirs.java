@@ -353,6 +353,10 @@ public final class Pouvoirs {
 
     /** La touche Éveil : endormi → niveau 1 → niveau 2 (si le joueur l'a) → endormi. */
     private static void basculer(ServerPlayer joueur) {
+        if (fr.cabane.police.Police.menotte(joueur)) {
+            joueur.displayClientMessage(Component.literal("🔒 Menotté : ton pouvoir ne répond plus.").withStyle(ChatFormatting.RED), true);
+            return;
+        }
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
         if (elu == null) {
             joueur.displayClientMessage(Component.literal("Rien ne s'éveille en toi… pour l'instant.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), true);
@@ -451,6 +455,9 @@ public final class Pouvoirs {
 
     /** La touche du Susano (²) : un niveau de plus, jusqu'au niveau de ses yeux ; au plus haut, il se range. */
     static void susano(ServerPlayer joueur) {
+        if (fr.cabane.police.Police.menotte(joueur)) {
+            return;
+        }
         Donnees.Elu elu = Donnees.get(joueur.server).elus.get(joueur.getUUID());
         if (elu == null || !Sharingan.est(elu.pouvoir())) {
             return;
@@ -573,6 +580,14 @@ public final class Pouvoirs {
         if (valeur != 0) {
             a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, valeur,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+        }
+    }
+
+    /** Les menottes endorment le pouvoir (et les yeux) : s'il était éveillé, il s'endort tout de suite. */
+    public static void endormirMenotte(ServerPlayer joueur) {
+        if (EVEILLES.containsKey(joueur.getUUID()) || YEUX.containsKey(joueur.getUUID())) {
+            endormir(joueur);
+            joueur.displayClientMessage(Component.literal("🔒 Les menottes étouffent ton pouvoir.").withStyle(ChatFormatting.RED), true);
         }
     }
 
