@@ -27,7 +27,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public class LameLancee extends Entity {
     private static final EntityDataAccessor<Boolean> RETOUR = SynchedEntityData.defineId(LameLancee.class, EntityDataSerializers.BOOLEAN);
-    public static final float DEGATS = 12;
+    /** À chaque passage (l'aller, puis le retour) : 12 en tout sur qui se fait toucher deux fois. */
+    public static final float DEGATS = 6;
     private UUID proprio;
     private Vec3 dir = Vec3.ZERO;
     private final Set<Integer> touches = new HashSet<>();

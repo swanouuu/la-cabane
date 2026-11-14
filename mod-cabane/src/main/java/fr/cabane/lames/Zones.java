@@ -136,7 +136,8 @@ final class Zones {
 
     /** Ce que la force du joueur ajoute aux coups spéciaux : 1 avec la lame seule, plus avec Force ou un pouvoir. */
     static float force(ServerPlayer j) {
-        return Math.max(1, Math.min(3, coupNormal(j) / Lames.DEGATS));
+        Sorte s = Lames.sorte(j.getMainHandItem());
+        return Math.max(1, Math.min(3, coupNormal(j) / (s == null ? Lames.DEGATS : s.degats)));
     }
 
     private static void frapper(ServerPlayer j, Sorte s, String zone) {

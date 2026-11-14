@@ -56,20 +56,26 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Lames {
     /**
-     * Les sept lames : dégâts, coups par seconde, portée en plus, recharge du coup spécial (en ticks). Toutes frappent
-     * pareil (comme une épée en diamant Tranchant IV : 9,5), c'est la façon de frapper qui change (les combos).
+     * Les dégâts d'un coup des lames : une épée en diamant (7) avec Tranchant IV (+2,5). Seule Kabutowari, le gros
+     * marteau, frappe plus fort (11) et un peu moins vite.
      */
-    /** Les dégâts de chaque coup, pour toutes les lames : une épée en diamant (7) avec Tranchant IV (+2,5). */
     public static final float DEGATS = 9.5F;
 
+    /**
+     * Les sept lames : dégâts, coups par seconde, portée en plus, recharge du coup spécial (en ticks). Rééquilibrage du
+     * 2026-11-14 (« réduis les dégâts des coups spéciaux et équilibre-les toutes ; le gros marteau ne fait pas assez ») :
+     * chaque coup spécial fait de 8 à 12 sur sa cible (avant Equilibrage), à peu près un point par seconde de recharge ;
+     * ceux qui immobilisent ou ramènent (Samehada, Nuibari) frappent moins. Les chiffres : LameItem (Kiba, Nuibari,
+     * Shibuki, Kabutowari), LameLancee (Kubikiribôchô) et LameChakra (Hiramekarei).
+     */
     public enum Sorte {
-        KUBIKIRIBOCHO("kubikiribocho", DEGATS, 1.6F, 1, 160),
+        KUBIKIRIBOCHO("kubikiribocho", DEGATS, 1.6F, 1, 200),
         SAMEHADA("samehada", DEGATS, 1.6F, 0.5, 300),
         KIBA("kiba", DEGATS, 1.6F, 0, 200),
         NUIBARI("nuibari", DEGATS, 1.6F, 2, 240),
         SHIBUKI("shibuki", DEGATS, 1.6F, 0.5, 240),
-        KABUTOWARI("kabutowari", DEGATS, 1.6F, 0.5, 300),
-        HIRAMEKAREI("hiramekarei", DEGATS, 1.6F, 0.5, 300);
+        KABUTOWARI("kabutowari", 11, 1.4F, 0.5, 240),
+        HIRAMEKAREI("hiramekarei", DEGATS, 1.6F, 0.5, 240);
 
         public final String id;
         public final float degats, vitesse;

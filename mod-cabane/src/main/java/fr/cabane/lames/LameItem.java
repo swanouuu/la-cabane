@@ -247,7 +247,7 @@ public class LameItem extends Item {
         monde.sendParticles(ParticleTypes.ELECTRIC_SPARK, j.getX(), j.getY() + 2.6, j.getZ(), 25, 0.4, 0.3, 0.4, 0.2);
         for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(ou, ou).inflate(2.5, 3, 2.5))) {
             if (e != j && e.isAlive() && e.distanceToSqr(ou) < 2.5 * 2.5 + 4) {
-                e.hurt(monde.damageSources().playerAttack(j), 10 * Zones.force(j));
+                e.hurt(monde.damageSources().playerAttack(j), 9 * Zones.force(j));
                 e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1));
             }
         }
@@ -288,9 +288,9 @@ public class LameItem extends Item {
         Vec3 vue = j.getLookAngle(), dir = new Vec3(vue.x, 0, vue.z);
         dir = dir.lengthSqr() < 1e-4 ? Vec3.directionFromRotation(0, j.getYRot()) : dir.normalize();
         Vec3 pied = j.position();
-        Lames.exploser(j, pied.add(dir.scale(2.6)).add(0, 0.5, 0), 1.7F, 8, 0);
-        Lames.exploser(j, pied.add(dir.scale(4.2)).add(0, 0.7, 0), 2.2F, 9, 3);
-        Lames.exploser(j, pied.add(dir.scale(6)).add(0, 0.9, 0), 2.7F, 10, 6);
+        Lames.exploser(j, pied.add(dir.scale(2.6)).add(0, 0.5, 0), 1.7F, 6, 0);
+        Lames.exploser(j, pied.add(dir.scale(4.2)).add(0, 0.7, 0), 2.2F, 7, 3);
+        Lames.exploser(j, pied.add(dir.scale(6)).add(0, 0.9, 0), 2.7F, 8, 6);
         monde.playSound(null, j.blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 1F, 1.3F);
         return true;
     }
@@ -311,7 +311,8 @@ public class LameItem extends Item {
             if (e == j || !e.isAlive() || d > 5.5) {
                 continue;
             }
-            e.hurt(monde.damageSources().playerAttack(j), (float) (9 * (1 - d / 7)) * Zones.force(j));
+            // le plus gros coup des lames : 12 au contact, encore 7,5 au bord de l'onde (5,5 blocs)
+            e.hurt(monde.damageSources().playerAttack(j), (float) (13 - d) * Zones.force(j));
             Vec3 loin = e.position().subtract(ou).normalize();
             e.setDeltaMovement(loin.x * 0.6, 0.7, loin.z * 0.6);
             e.hurtMarked = true;
