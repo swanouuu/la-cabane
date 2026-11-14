@@ -111,6 +111,10 @@ public final class CaveHaru {
     private CaveHaru() {
     }
 
+    static boolean enChantier() {
+        return chantier != null;
+    }
+
     // ================================================================ commandes
 
     @SubscribeEvent
@@ -119,6 +123,10 @@ public final class CaveHaru {
                 .executes(c -> lancer(c.getSource(), null, false))
                 .then(Commands.literal("forcer").executes(c -> lancer(c.getSource(), null, true)))
                 .then(Commands.literal("annuler").executes(c -> annuler(c.getSource())))
+                // le labo « Breaking Célia » derrière le coffre-fort, pour une cave construite avant lui
+                .then(Commands.literal("labo").executes(c -> CaveHaruLabo.construire(c.getSource()))
+                        .then(Commands.literal("annuler").executes(c -> CaveHaruLabo.annuler(c.getSource())))
+                        .then(Commands.literal("ouvrir").executes(c -> CaveHaruLabo.ouvrirCommande(c.getSource()))))
                 // depuis la console : l'endroit d'où on la lancerait, dans la rue devant les deux maisons
                 .then(Commands.argument("depuis", BlockPosArgument.blockPos())
                         .executes(c -> lancer(c.getSource(), BlockPosArgument.getBlockPos(c, "depuis"), false))
@@ -151,7 +159,7 @@ public final class CaveHaru {
             source.sendFailure(Component.literal("Le village n'existe pas dans ce monde."));
             return 0;
         }
-        if (chantier != null) {
+        if (chantier != null || CaveHaruLabo.enChantier()) {
             source.sendFailure(Component.literal("La cave est déjà en train de se construire."));
             return 0;
         }
@@ -248,6 +256,11 @@ public final class CaveHaru {
             chantier.liberer();
             chantier = null;
         }
+        // d'abord le labo (sa photo a été prise la cave déjà là), puis la cave
+        if (!CaveHaruLabo.enlever(level, d)) {
+            source.sendFailure(Component.literal("L'état d'origine du terrain sous la cave est introuvable, je n'y touche pas."));
+            return 0;
+        }
         BlockPos min = new BlockPos(d.minX, d.minY, d.minZ);
         Vec3i taille = photo.get().getSize();
         AABB zone = new AABB(min.getX(), min.getY(), min.getZ(), min.getX() + taille.getX(), min.getY() + taille.getY(), min.getZ() + taille.getZ());
@@ -297,7 +310,7 @@ public final class CaveHaru {
     }
 
     /** Un PNJ, un animal apprivoisé, un mannequin… : on ne les déplace pas d'office. Les bêtes du village qui passent, si. */
-    private static boolean bloquant(Entity e) {
+    static boolean bloquant(Entity e) {
         return e.getTags().stream().anyMatch(t -> t.startsWith("pnj.") || t.equals("cabane_pnj"))
                 || e instanceof net.minecraft.world.entity.npc.AbstractVillager || e instanceof net.minecraft.world.entity.decoration.ArmorStand
                 || e instanceof net.minecraft.world.entity.Display || e instanceof net.minecraft.world.entity.vehicle.VehicleEntity
@@ -305,16 +318,16 @@ public final class CaveHaru {
                 || (e.hasCustomName() && !(e instanceof net.minecraft.world.entity.animal.Animal));
     }
 
-    private static String texte(BlockPos p) {
+    static String texte(BlockPos p) {
         return p.getX() + " " + p.getY() + " " + p.getZ();
     }
 
     // ================================================================ le plan
 
-    private record Plan(BlockState[] palette, int[] structure, int[] finitions, JsonObject brut) {
+    record Plan(BlockState[] palette, int[] structure, int[] finitions, JsonObject brut) {
     }
 
-    private static Plan lirePlan(MinecraftServer server, Rotation rot) throws Exception {
+    static Plan lirePlan(MinecraftServer server, Rotation rot) throws Exception {
         Resource fichier = server.getResourceManager().getResource(PLAN).orElseThrow();
         JsonObject o;
         try (Reader lecteur = fichier.openAsReader()) {
@@ -329,7 +342,7 @@ public final class CaveHaru {
         return new Plan(palette, entiers(o.getAsJsonArray("structure")), entiers(o.getAsJsonArray("finitions")), o);
     }
 
-    private static int[] entiers(JsonArray a) {
+    static int[] entiers(JsonArray a) {
         int[] t = new int[a.size()];
         for (int i = 0; i < t.length; i++) {
             t[i] = a.get(i).getAsInt();
@@ -354,7 +367,7 @@ public final class CaveHaru {
 
     // ================================================================ passer du plan au monde
 
-    private record Boite(BlockPos min, BlockPos max) {
+    record Boite(BlockPos min, BlockPos max) {
         Vec3i taille() {
             return new Vec3i(max.getX() - min.getX() + 1, max.getY() - min.getY() + 1, max.getZ() - min.getZ() + 1);
         }
@@ -365,7 +378,7 @@ public final class CaveHaru {
     }
 
     /** (ax, ay, az) est la case (0, 0, 0) du plan. */
-    private record Pose(int ax, int ay, int az, Rotation rot) {
+    record Pose(int ax, int ay, int az, Rotation rot) {
         BlockPos bloc(int x, int y, int z) {
             return new BlockPos(x, y, z).rotate(rot).offset(ax, ay, az);
         }
@@ -401,7 +414,12 @@ public final class CaveHaru {
         }
 
         Boite boite() {
-            BlockPos a = bloc(X_MIN, Y_MIN, Z_MIN), b = bloc(X_MAX, Y_MAX, Z_MAX);
+            return boite(X_MIN, Y_MIN, Z_MIN, X_MAX, Y_MAX, Z_MAX);
+        }
+
+        /** La boîte du monde qui couvre ces coordonnées du plan. */
+        Boite boite(int x0, int y0, int z0, int x1, int y1, int z1) {
+            BlockPos a = bloc(x0, y0, z0), b = bloc(x1, y1, z1);
             return new Boite(new BlockPos(Math.min(a.getX(), b.getX()), Math.min(a.getY(), b.getY()), Math.min(a.getZ(), b.getZ())),
                     new BlockPos(Math.max(a.getX(), b.getX()), Math.max(a.getY(), b.getY()), Math.max(a.getZ(), b.getZ())));
         }
@@ -415,6 +433,7 @@ public final class CaveHaru {
 
     @SubscribeEvent
     public static void tick(ServerTickEvent.Post event) {
+        CaveHaruLabo.tick(event.getServer());
         if (chantier != null) {
             if (chantier.level.getServer() != event.getServer()) {
                 chantier = null;
@@ -559,6 +578,7 @@ public final class CaveHaru {
                 default -> {
                     entites();
                     source.sendSuccess(() -> Component.literal("La Cave à Haru est ouverte ! (/caveharu annuler remet les maisons)").withStyle(ChatFormatting.GOLD), true);
+                    CaveHaruLabo.lancer(level, pose, plan, source); // et tout de suite, le labo sous la salle au trésor
                     return true;
                 }
             }
@@ -574,19 +594,7 @@ public final class CaveHaru {
 
         private void entites() {
             JsonObject o = plan.brut();
-            var registre = level.registryAccess().registryOrThrow(Registries.PAINTING_VARIANT);
-            for (JsonElement t : o.getAsJsonArray("tableaux")) {
-                JsonArray a = t.getAsJsonArray();
-                var variante = registre.getHolder(ResourceKey.create(Registries.PAINTING_VARIANT, ResourceLocation.fromNamespaceAndPath(Cabane.MODID, a.get(0).getAsString())));
-                if (variante.isEmpty()) {
-                    LOG.warn("Tableau de la cave introuvable : {}", a.get(0).getAsString());
-                    continue;
-                }
-                Direction d = pose.rot().rotate(Direction.byName(a.get(4).getAsString()));
-                Painting tableau = new Painting(level, pose.bloc(a.get(1).getAsInt(), a.get(2).getAsInt(), a.get(3).getAsInt()), d, variante.get());
-                tableau.addTag(TAG);
-                level.addFreshEntity(tableau);
-            }
+            accrocher(level, pose, o.getAsJsonArray("tableaux"));
             // le râtelier du bar : une boisson par colonne
             for (JsonElement t : o.getAsJsonArray("tonneaux")) {
                 JsonArray a = t.getAsJsonArray();
@@ -606,23 +614,52 @@ public final class CaveHaru {
         }
     }
 
+    /** Accroche les tableaux du plan ([variante, x, y, z, face]), marqués comme faisant partie de la cave. */
+    static void accrocher(ServerLevel level, Pose pose, JsonArray tableaux) {
+        var registre = level.registryAccess().registryOrThrow(Registries.PAINTING_VARIANT);
+        for (JsonElement t : tableaux) {
+            JsonArray a = t.getAsJsonArray();
+            var variante = registre.getHolder(ResourceKey.create(Registries.PAINTING_VARIANT, ResourceLocation.fromNamespaceAndPath(Cabane.MODID, a.get(0).getAsString())));
+            if (variante.isEmpty()) {
+                LOG.warn("Tableau de la cave introuvable : {}", a.get(0).getAsString());
+                continue;
+            }
+            Direction d = pose.rot().rotate(Direction.byName(a.get(4).getAsString()));
+            Painting tableau = new Painting(level, pose.bloc(a.get(1).getAsInt(), a.get(2).getAsInt(), a.get(3).getAsInt()), d, variante.get());
+            tableau.addTag(TAG);
+            level.addFreshEntity(tableau);
+        }
+    }
+
     /**
      * Ce qui se recharge alors qu'il ne devrait plus être là : un tableau de la cave après une annulation (pas encore chargé
-     * pendant l'annulation), et le barman Haru des premières caves (le PNJ a été retiré à la demande du joueur).
+     * pendant l'annulation), le barman Haru des premières caves (le PNJ a été retiré à la demande du joueur), les
+     * combinaisons du labo enlevé, et les morceaux de la porte du coffre-fort restés en route quand le serveur s'est arrêté.
      */
     @SubscribeEvent
     public static void rejoint(EntityJoinLevelEvent event) {
         Entity e = event.getEntity();
-        if (e.getTags().contains(TAG) && event.getLevel() instanceof ServerLevel l
-                && (!(e instanceof Painting) || !Donnees.get(l.getServer()).present)) {
-            event.setCanceled(true);
+        if (!(event.getLevel() instanceof ServerLevel l)) {
+            return;
+        }
+        if (e.getTags().contains(CaveHaruLabo.TAG_PORTE)) {
+            if (event.loadedFromDisk()) {
+                event.setCanceled(true); // un morceau resté en route quand le serveur s'est arrêté
+            }
+        } else if (e.getTags().contains(TAG)) {
+            Donnees d = Donnees.get(l.getServer());
+            boolean garde = e instanceof Painting ? d.present
+                    : e instanceof net.minecraft.world.entity.decoration.ArmorStand && d.present && d.labo;
+            if (!garde) {
+                event.setCanceled(true);
+            }
         }
     }
 
     // ================================================================ la porte du fût n°2
 
     /** La cave construite dans ce monde-là, ou null. */
-    private static Pose ici(Level level) {
+    static Pose ici(Level level) {
         if (!(level instanceof ServerLevel serveur)) {
             return null;
         }
@@ -739,6 +776,8 @@ public final class CaveHaru {
     public static final class Donnees extends SavedData {
         private static final String NOM = "cabane_cave_haru";
         boolean present;
+        /** Le labo « Breaking Célia » est construit sous la cave (sa photo d'avant est sur le disque). */
+        boolean labo;
         String dim = "";
         int ax, ay, az, rot;
         int minX, minY, minZ;
@@ -750,6 +789,7 @@ public final class CaveHaru {
         static Donnees charger(CompoundTag t, HolderLookup.Provider registres) {
             Donnees d = new Donnees();
             d.present = t.getBoolean("present");
+            d.labo = t.getBoolean("labo");
             d.dim = t.getString("dim");
             d.ax = t.getInt("ax");
             d.ay = t.getInt("ay");
@@ -764,6 +804,7 @@ public final class CaveHaru {
         @Override
         public CompoundTag save(CompoundTag t, HolderLookup.Provider registres) {
             t.putBoolean("present", present);
+            t.putBoolean("labo", labo);
             t.putString("dim", dim);
             t.putInt("ax", ax);
             t.putInt("ay", ay);
@@ -790,6 +831,12 @@ public final class CaveHaru {
 
         void effacer() {
             present = false;
+            labo = false;
+            setDirty();
+        }
+
+        void labo(boolean construit) {
+            labo = construit;
             setDirty();
         }
 

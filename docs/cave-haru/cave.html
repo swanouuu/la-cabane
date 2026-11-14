@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rye&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=IM+Fell+English+SC&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; height: 100%; background: #0d0a08; overflow: hidden; font-family: system-ui, sans-serif; color: #f1e3c6; }
   #outils { position: fixed; left: 10px; top: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 3; max-width: calc(100% - 20px); }
@@ -48,6 +48,7 @@
     <button data-vue="bar">Le bar</button>
     <button data-vue="cave">La cave</button>
     <button data-vue="secret">Salle au trésor</button>
+    <button data-vue="labo">Le labo</button>
   </div>
   <div class="barre">
     <label class="case"><input type="checkbox" id="toit"> Toit / plafonds</label>
@@ -57,7 +58,7 @@
   </div>
   <div class="barre">
     <label class="case"><input type="checkbox" id="couche-on"> Construire couche par couche</label>
-    <input type="range" id="couche" min="-6" max="14" value="0" disabled>
+    <input type="range" id="couche" min="-29" max="14" value="0" disabled>
     <span id="couche-val"></span>
   </div>
   <div class="barre">
@@ -128,6 +129,39 @@ const T = {
   emeraude: { nom: "Bloc d'émeraude", c: '#3ccf6a', m: 'or' },
   or_brut:  { nom: "Bloc d'or brut", c: '#d9a62a', m: 'pave' },
   echelle:  { nom: 'Échelle', c: '#8a6a3c', m: 'echelle', transp: 0.5 },
+  // le labo
+  beton:    { nom: 'Béton gris clair', c: '#9a9a94', m: 'beton' },
+  beton_b:  { nom: 'Béton blanc', c: '#e2e4e4', m: 'beton' },
+  beton_f:  { nom: 'Béton gris', c: '#55585a', m: 'beton' },
+  jaune:    { nom: 'Béton jaune', c: '#f0b51e', m: 'beton' },
+  noir:     { nom: 'Béton noir', c: '#1c1d21', m: 'beton' },
+  sol_lab:  { nom: 'Pierre lisse', c: '#a5a5a5', m: 'beton' },
+  acier:    { nom: 'Bloc de fer (inox)', c: '#d8d8d8', m: 'or' },
+  lampe:    { nom: 'Lanterne aquatique', c: '#d8f0ec', m: 'lampe', lum: 1.1 },
+  croissance: { nom: 'Perlumière nacrée (lampe de croissance)', c: '#f0b7e8', m: 'lampe', lum: 1.3 },
+  an:       { nom: 'Andésite polie', c: '#8a8d8f', m: 'beton' },
+  an_esc:   { nom: 'Escalier en andésite polie', c: '#8a8d8f', m: 'beton' },
+  barreau:  { nom: 'Barreaux de fer (rambarde)', c: '#5d6066', m: 'lisse' },
+  coffre_p: { nom: 'Porte du coffre-fort (blocs de fer)', c: '#cfd2d6', m: 'or' },
+  coffre_c: { nom: 'Roche noire polie sculptée (la roue du coffre)', c: '#2d2a30', m: 'lisse' },
+  bouton:   { nom: 'Bouton en roche noire polie (ouvre le coffre-fort)', c: '#e0574f', m: 'lisse' },
+  farm:     { nom: 'Terre labourée', c: '#5a3a22', m: 'pave' },
+  eau:      { nom: 'Eau', c: '#3a6fd8', m: 'verre', transp: 0.6 },
+  weed:     { nom: 'Weed (plants du mod, mûrs)', c: '#3f8f3a', m: 'plante', transp: 0.5 },
+  coca:     { nom: 'Coca (plants du mod, mûrs)', c: '#86b84f', m: 'plante', transp: 0.5 },
+  alambic:  { nom: "Alambic (alambic d'enchanteur)", c: '#c9b26a', m: 'lisse' },
+  bougie_b: { nom: 'Bougies blanches (éprouvettes)', c: '#f2f2f2', m: 'bougie' },
+  bougie_bl:{ nom: 'Bougies bleu clair', c: '#55c8f0', m: 'bougie' },
+  tapis_bleu: { nom: 'Tapis bleu clair (plateaux de cristal bleu)', c: '#7fd3f5', m: 'laine' },
+  chaudron_eau: { nom: "Chaudron d'eau", c: '#3b3b40', m: 'chaudron' },
+  porte_cu: { nom: 'Porte en cuivre ciré', c: '#c87a52', m: 'porte' },
+  p_reacteur: { nom: 'Réacteur de cuisson (poste du mod)', c: '#9fb4c8', m: 'or' },
+  p_table_decoupe: { nom: 'Table de découpe (poste du mod)', c: '#8fd0f0', m: 'or' },
+  p_bac_maceration: { nom: 'Bac de macération (poste du mod)', c: '#9b8a6a', m: 'planches' },
+  p_table_raffinage: { nom: 'Table de raffinage (poste du mod)', c: '#e8e8e8', m: 'or' },
+  p_sechoir: { nom: 'Séchoir à weed (poste du mod)', c: '#6a8f4a', m: 'planches' },
+  p_presse_hash: { nom: 'Presse à hash (poste du mod)', c: '#7a6040', m: 'or' },
+  combi:    { nom: 'Combinaison jaune (porte-armure)', c: '#f2c230', m: 'laine' },
 };
 
 // formes : morceaux [x, y, z, largeur, hauteur, profondeur] dans le bloc
@@ -157,6 +191,11 @@ function morceaux(f, d) {
     case 'chope': return [[.36, 0, .36, .28, .36, .28]];
     case 'chope_d': return [[.36, .5, .36, .28, .36, .28]];
     case 'bouteille_d': return [[.42, .5, .42, .16, .46, .16], [.46, .96, .46, .08, .04, .08]];
+    case 'bouton': return { n: [[.31, .37, .87, .38, .25, .13]], s: [[.31, .37, 0, .38, .25, .13]], e: [[0, .37, .31, .13, .25, .38]], w: [[.87, .37, .31, .13, .25, .38]] }[d];
+    case 'plante': return [[.2, 0, .45, .6, .9, .1], [.45, 0, .2, .1, .9, .6]];
+    case 'eau': return [[0, 0, 0, 1, .88, 1]];
+    case 'alambic': return [[.44, 0, .44, .12, .85, .12], [.12, 0, .12, .76, .12, .76]];
+    case 'combi': return [[.25, 0, .38, .5, 1.5, .24], [.05, .75, .38, .9, .75, .24], [.3, 1.5, .3, .4, .45, .4]];
     default: return [[0, 0, 0, 1, 1, 1]];
   }
 }
@@ -164,7 +203,28 @@ function morceaux(f, d) {
 const MAP = new Map();
 const DECO = [];
 const cle = (x, y, z) => x + ',' + y + ',' + z;
-function pose(x, y, z, t, f = 'cube', d = null, plafond = false, e = null) { MAP.set(cle(x, y, z), { x, y, z, t, f, d, plafond, e }); }
+let ZONE = null;
+function zone(z) { ZONE = z; }
+function pose(x, y, z, t, f = 'cube', d = null, plafond = false, e = null) { MAP.set(cle(x, y, z), { x, y, z, t, f, d, plafond, e, zone: ZONE }); }
+function vides() {} // ce que le jeu creuse : le croquis n'en a pas besoin
+// les cases des postes du mod (Labos.Poste.cases) : {vers la droite, vers le haut, vers l'arrière}, vues par celui qui pose
+const CASES_POSTE = {
+  sechoir: [[-1, 0, 0], [-1, 1, 0], [0, 1, 0], [1, 0, 0], [1, 1, 0]],
+  presse_hash: [[1, 0, 0], [0, 1, 0], [1, 1, 0]],
+  bac_maceration: [[1, 0, 0], [0, 0, 1], [1, 0, 1]],
+  table_raffinage: [[-1, 0, 0], [-1, 0, 1], [0, 0, 1], [1, 0, 0], [1, 0, 1]],
+  reacteur: [[0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]],
+  table_decoupe: [[-1, 0, 0], [1, 0, 0]],
+};
+function poste(x, y, z, id, face) {
+  // face : vers où regarde le poste (celui qui s'en sert est de ce côté) ; sa droite = face tournée d'un quart vers la gauche
+  const V = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }, ccw = { n: 'w', w: 's', s: 'e', e: 'n' };
+  const dr = V[ccw[face]], ar = V[face].map(v => -v);
+  pose(x, y, z, 'p_' + id);
+  for (const [d, h, a] of CASES_POSTE[id]) pose(x + dr[0] * d + ar[0] * a, y + h, z + dr[1] * d + ar[1] * a, 'p_' + id);
+}
+function armure(x, y, z) { DECO.push({ x, y, z, t: 'combi', f: 'combi', d: null, zone: ZONE }); }
+function vestiaire() {}
 const AFFS = [];
 function affiche(nom, x, y, z, face) { AFFS.push({ nom, x, y, z, face }); }
 let HARU = null;
@@ -355,11 +415,131 @@ for (let x = -1; x <= 20; x++) for (let z = -1; z <= 10; z++) {
 for (const x of [0, 19]) for (let z = 0; z <= 9; z++) for (let y = 7; y < toitY(z); y++) pose(x, y, z, z === 4 || z === 5 ? 'buche' : 'ep_pl', 'cube', 'y');
 for (const x of [0, 19]) for (const z of [4, 5]) pose(x, 9, z, 'vitre', 'vitre', 'z');
 for (let y = 6; y <= 13; y++) { pose(1, y, 4, 'briques'); pose(1, y, 5, 'briques'); }
+
+// ---------------------------------------------------------------- le labo « Breaking Célia » (derrière le coffre-fort)
+// Le coffre-fort du mur ouest de la salle au trésor devient une vraie porte de 4 × 4. Le bouton sur l'accoudoir doré du
+// trône la fait descendre dans le sol ; derrière, un puits d'escaliers en acier tourne le long des murs jusqu'au labo
+// (sol y -28) : une grande salle blanche sous la salle au trésor (les postes du mod, deux cuves, la paillasse au cristal
+// bleu, le vestiaire et ses combinaisons jaunes), et derrière elle la serre (weed et coca sous les lampes violettes).
+// Tout ce qui suit zone('labo') est construit par /caveharu labo (ou juste après la cave). vides(x0, y0, z0, x1, y1, z1) :
+// ce que le jeu creuse (sauf ce qui est posé dedans) ; poste(x, y, z, id, face) : un poste du mod, tourné vers face ;
+// armure(x, y, z, face) : un porte-armure en combinaison ; vestiaire(x, y, z) : le coffre rempli de combinaisons.
+zone('labo');
+function coque(x0, y0, z0, x1, y1, z1, mur, sol, plafond) {
+  vides(x0, y0, z0, x1, y1, z1);
+  for (let x = x0 - 1; x <= x1 + 1; x++) for (let z = z0 - 1; z <= z1 + 1; z++) for (let y = y0 - 1; y <= y1 + 1; y++) {
+    if (x >= x0 && x <= x1 && z >= z0 && z <= z1 && y >= y0 && y <= y1) continue;
+    if (x >= 0 && x <= 19 && z >= 0 && z <= 9 && y >= -13) continue; // les murs de la salle au trésor restent
+    if (y === y0 - 1) pose(x, y, z, sol(x, z));
+    else if (y === y1 + 1) pose(x, y, z, plafond(x, z), 'cube', null, true);
+    else pose(x, y, z, mur(x, y, z));
+  }
+}
+const rayure = (a, b) => (a + b) % 2 ? 'jaune' : 'noir';
+
+// la porte du coffre-fort (x 0, z 3..6, y -12..-9) dans son cadre en or, et le bouton sur l'accoudoir du trône
+for (let y = -12; y <= -8; y++) for (let z = 2; z <= 7; z++) {
+  const cadre = z === 2 || z === 7 || y === -8;
+  pose(0, y, z, cadre ? 'or' : (z === 4 || z === 5) && (y === -11 || y === -10) ? 'coffre_c' : 'coffre_p');
+}
+pose(17, -12, 5, 'bouton', 'bouton', 'w');
+
+// le puits (x -8..-1, z -1..10, du sol y -28 au plafond y -7) : béton, lampes dans les murs, bande jaune et noire en bas
+coque(-8, -27, -1, -1, -8, 10,
+  (x, y, z) => {
+    if (y === -27) return rayure(x, z);
+    const lampe = y === -24 || y === -17 || y === -10;
+    if (lampe && x === -9 && z % 3 === 0 && !(z >= 2 && z <= 7 && y >= -12)) return 'lampe';
+    if (lampe && (z === -2 || z === 11) && (x === -3 || x === -6)) return 'lampe';
+    return 'beton';
+  },
+  () => 'sol_lab',
+  (x, z) => (x === -5 || x === -3) && (z === 2 || z === 7) ? 'lampe' : 'beton');
+// le palier derrière la porte (y -12), puis l'escalier : vers le fond, vers l'ouest, puis vers la rue jusqu'au sol
+for (const x of [-2, -1]) for (let z = 3; z <= 6; z++) pose(x, -13, z, 'an');
+for (let z = 2; z <= 6; z++) pose(-3, -12, z, 'barreau', 'vitre', 'z');
+for (const x of [-2, -1]) pose(x, -12, 2, 'barreau', 'vitre', 'x');
+for (const x of [-2, -1]) { pose(x, -14, 7, 'an_esc', 'esc', 'n'); pose(x, -15, 8, 'an_esc', 'esc', 'n'); }
+pose(-3, -13, 7, 'barreau', 'vitre', 'z'); pose(-3, -14, 8, 'barreau', 'vitre', 'z');
+for (const x of [-2, -1]) for (const z of [9, 10]) { pose(x, -16, z, 'an'); for (let y = -27; y <= -17; y++) pose(x, y, z, 'beton_f'); }
+for (let k = 0; k <= 3; k++) for (const z of [9, 10]) { pose(-3 - k, -17 - k, z, 'an_esc', 'esc', 'e'); pose(-3 - k, -16 - k, 8, 'barreau', 'vitre', 'x'); }
+for (const x of [-8, -7]) for (const z of [9, 10]) { pose(x, -21, z, 'an'); for (let y = -27; y <= -22; y++) pose(x, y, z, 'beton_f'); }
+for (let k = 0; k <= 5; k++) for (const x of [-8, -7]) { pose(x, -22 - k, 8 - k, 'an_esc', 'esc', 's'); pose(-6, -21 - k, 8 - k, 'barreau', 'vitre', 'z'); }
+// une grosse lampe pendue au milieu du puits, et le logo en face de la porte
+for (let y = -8; y >= -16; y--) pose(-5, y, 5, 'chaine', 'chaine');
+pose(-5, -17, 5, 'lampe', 'cube', null, false, 'pl');
+affiche('logo', -8, -12, 2, 'e');
+
+// le labo (x 1..20, z -1..10, sol y -28, plafond y -14 juste sous la salle au trésor)
+coque(1, -27, -1, 20, -15, 10,
+  (x, y, z) => y === -27 ? rayure(x, z) : y === -15 ? 'beton' : y === -23 && (z === -2 || z === 11) && x % 4 === 2 ? 'lampe' : 'beton_b',
+  (x, z) => (z === 1 || z === 8) && x % 2 === 0 ? 'jaune' : 'sol_lab',
+  () => 'beton');
+// le mur entre le puits et le labo : une grande baie vitrée, et le passage (4 × 4) sous un linteau rayé
+for (let z = 0; z <= 9; z++) if (z !== 2 && z !== 7) for (let y = -22; y <= -18; y++) pose(0, y, z, 'vitre', 'vitre', 'z');
+for (let z = 3; z <= 6; z++) { for (let y = -27; y <= -24; y++) vide(0, y, z); pose(0, -23, z, rayure(z, 0)); }
+vides(0, -27, 3, 0, -24, 6);
+// les lampes industrielles pendues au plafond
+for (const x of [3, 7, 11, 15, 19]) for (const z of [1, 8]) { for (let y = -15; y >= -19; y--) pose(x, y, z, 'chaine', 'chaine'); pose(x, -20, z, 'lampe', 'cube', null, false, 'pl'); }
+// la cuisine (mur du fond nord) : deux réacteurs sous leur hotte, deux tables de découpe, une presse
+poste(5, -27, 0, 'reacteur', 's'); poste(8, -27, 0, 'reacteur', 's');
+for (let x = 5; x <= 9; x++) for (const z of [-1, 0]) pose(x, -24, z, 'acier');
+pose(7, -27, -1, 'chaudron'); pose(7, -26, -1, 'tuyau', 'tuyau', 'y'); pose(7, -25, -1, 'tuyau', 'tuyau', 'y');
+for (let y = -23; y >= -15; y--) pose(7, y, -1, 'tuyau', 'tuyau', 'y');
+poste(12, -27, -1, 'table_decoupe', 's'); poste(16, -27, -1, 'table_decoupe', 's');
+poste(18, -27, -1, 'presse_hash', 's');
+// la coke (mur sud) : deux bacs de macération, deux tables de raffinage
+poste(9, -27, 9, 'bac_maceration', 'n'); poste(12, -27, 9, 'bac_maceration', 'n');
+poste(16, -27, 9, 'table_raffinage', 'n'); poste(19, -27, 9, 'table_raffinage', 'n');
+// la weed (mur est) : deux séchoirs et une presse
+poste(20, -27, 0, 'sechoir', 'w'); poste(20, -27, 3, 'presse_hash', 'w'); poste(20, -27, 6, 'sechoir', 'w');
+affiche('heisenberg', 20, -24, 3, 'w');
+// la paillasse en inox : alambics, éprouvettes, plateaux de cristal bleu
+for (let x = 5; x <= 8; x++) for (const z of [4, 5]) pose(x, -27, z, 'acier');
+pose(5, -26, 4, 'alambic', 'alambic'); pose(6, -26, 4, 'bougie_b', 'bougies'); pose(7, -26, 4, 'tapis_bleu', 'tapis'); pose(8, -26, 4, 'tapis_bleu', 'tapis');
+pose(5, -26, 5, 'chaudron_eau', 'cube'); pose(6, -26, 5, 'tapis_bleu', 'tapis'); pose(7, -26, 5, 'alambic', 'alambic'); pose(8, -26, 5, 'bougie_bl', 'bougies');
+// les deux grandes cuves en inox, reliées par un tuyau, et leurs tuyaux jusqu'au plafond
+function cuve(x0) {
+  for (let x = x0; x <= x0 + 3; x++) for (let z = 3; z <= 6; z++) {
+    if ((x === x0 || x === x0 + 3) && (z === 3 || z === 6)) continue;
+    pose(x, -27, z, 'beton_f');
+    for (let y = -26; y <= -20; y++) pose(x, y, z, y === -23 ? 'beton_f' : 'acier');
+  }
+  for (const x of [x0 + 1, x0 + 2]) for (const z of [4, 5]) pose(x, -19, z, 'acier');
+  for (let y = -18; y >= -15; y--) pose(x0 + 1, y, 4, 'tuyau', 'tuyau', 'y');
+}
+cuve(10); cuve(15);
+for (const z of [4, 5]) pose(14, -22, z, 'tuyau', 'tuyau', 'x');
+for (let y = -27; y <= -20; y++) pose(11, y, 2, 'echelle', 'echelle', 'n');
+// le vestiaire à l'entrée : trois combinaisons jaunes et le coffre des combinaisons
+for (const x of [1, 2, 3]) armure(x, -27, -1, 's');
+pose(4, -27, -1, 'coffre', 'coffre', 's'); vestiaire(4, -27, -1);
+affiche('combi', 1, -25, -1, 's');
+affiche('danger', 1, -25, 8, 'e');
+// la réserve (coin sud-ouest) : tonneaux et un coffre
+pose(4, -27, 10, 'coffre', 'coffre', 'n');
+for (const x of [5, 6, 7]) pose(x, -27, 10, 'tonneau', 'cube', 'y');
+pose(6, -26, 10, 'tonneau', 'cube', 'y');
+
+// la serre (x 2..19, z 12..19, sol y -28, plafond y -21), derrière le labo
+coque(2, -27, 12, 19, -22, 19, () => 'beton_b', () => 'sol_lab', () => 'beton');
+pose(2, -27, 11, 'porte_cu', 'porte', 's', false, 'bas_g'); pose(2, -26, 11, 'porte_cu', 'porte', 's', false, 'haut_g');
+pose(3, -27, 11, 'porte_cu', 'porte', 's', false, 'bas_d'); pose(3, -26, 11, 'porte_cu', 'porte', 's', false, 'haut_d');
+affiche('serre', 1, -25, 10, 'n');
+// deux planches de culture : weed devant, coca au fond, de l'eau au milieu de chaque planche
+for (let x = 4; x <= 18; x++) {
+  for (const [z, plante] of [[13, 'weed'], [15, 'weed'], [17, 'coca'], [19, 'coca']]) { pose(x, -28, z, 'farm'); pose(x, -27, z, plante, 'plante'); }
+  for (const z of [14, 18]) { pose(x, -28, z, 'eau', 'eau'); pose(x, -29, z, 'beton'); }
+}
+// les lampes de croissance, pendues au-dessus de l'eau (les plantes poussent sous terre)
+for (let x = 4; x <= 18; x += 2) for (const z of [14, 18]) { pose(x, -22, z, 'chaine', 'chaine'); pose(x, -23, z, 'chaine', 'chaine'); pose(x, -24, z, 'croissance', 'cube', null, false, x % 4 === 0 ? 'pl' : null); }
+pose(19, -27, 16, 'coffre', 'coffre', 'w');
+for (const z of [18, 19]) pose(2, -27, z, 'tonneau', 'cube', 'y');
 // ================================================================ PLAN : fin
 
 // ---------------------------------------------------------------- tout ça en liste
 const BLOCS = [...MAP.values(), ...DECO];
-const zoneDe = (b) => b.y >= 6 ? 'toit' : b.y >= 0 ? 'rdc' : b.y >= -6 ? 'cave' : 'tresor';
+const zoneDe = (b) => (b.zone === 'labo' || (b.x < 0 && b.y < -6)) && !(b.x >= 0 && b.y >= -13) ? 'labo' : b.y >= 6 ? 'toit' : b.y >= 0 ? 'rdc' : b.y >= -6 ? 'cave' : b.y >= -13 ? 'tresor' : 'labo';
 
 // ---------------------------------------------------------------- textures 16×16
 function rng(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -473,6 +653,9 @@ function dessinsDe(nom, t) {
     case 'toile': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const fil = x === y || x === 15 - y || x === 8 || y === 8 || Math.round(Math.hypot(x - 8, y - 8)) % 4 === 0; px(x, y, [235, 235, 235], fil ? 230 : 0); } }) };
     case 'chope': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, y < 4 ? [250, 245, 225] : fois(b, bruit(0.15))); }) };
     case 'bouteille': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, y > 6 && y < 11 ? [225, 210, 170] : fois(b, bruit(0.2))); }) };
+    case 'beton': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, bruit(0.06))); }) };
+    case 'lampe': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, x % 5 === 0 || y % 5 === 0 ? 0.82 : 1.05)); }) };
+    case 'plante': return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, bruit(0.3)), Math.abs(x - 7.5) < (16 - y) * 0.45 && (x + y) % 3 !== 0 ? 255 : 0); }) };
     default: return { cote: toile16(px => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, fois(b, bruit(0.1))); }) };
   }
 }
@@ -546,7 +729,9 @@ function visible(b) {
   const zone = zoneDe(b);
   if (etat.vue === 'cave' && zone !== 'cave' && zone !== 'tresor') return false;
   if (etat.vue === 'tresor' && zone !== 'tresor') return false;
-  if (etat.vue === 'bar' && (zone === 'cave' || zone === 'tresor')) return false;
+  if (etat.vue === 'labo' && (zone !== 'labo' || b.z <= -2)) return false; // sans le mur nord, pour voir dedans
+  if (etat.vue === 'bar' && (zone === 'cave' || zone === 'tresor' || zone === 'labo')) return false;
+  if (etat.vue === 'tout' && zone === 'labo') return false;
   if (!etat.toit && (zone === 'toit' || b.plafond)) return false;
   if (etat.coupe && b.z <= 0) return false;
   return true;
@@ -579,9 +764,10 @@ function construire() {
 }
 // lumières des lanternes et des feux
 for (const b of BLOCS) {
-  if (b.t !== 'lanterne' && b.t !== 'feu') continue;
-  const l = new THREE.PointLight(b.t === 'feu' ? 0xff7a2a : 0xffa850, b.t === 'feu' ? 7 : 5, 10, 1.6);
-  l.position.set(b.x + 0.5, b.y + (b.f === 'petit_h' ? 0.5 : 0.6), b.z + 0.5);
+  if (b.t !== 'lanterne' && b.t !== 'feu' && b.e !== 'pl') continue;
+  const couleur = b.t === 'feu' ? 0xff7a2a : b.t === 'lampe' ? 0xdff6ff : b.t === 'croissance' ? 0xff8af0 : 0xffa850;
+  const l = new THREE.PointLight(couleur, b.t === 'feu' ? 7 : b.e === 'pl' ? 9 : 5, b.e === 'pl' ? 16 : 10, 1.6);
+  l.position.set(b.x + 0.5, b.y + (b.f === 'petit_h' ? 0.5 : b.e === 'pl' ? -0.2 : 0.6), b.z + 0.5);
   l.userData.b = b; lumieres.push(l); scene.add(l);
 }
 
@@ -613,6 +799,20 @@ etiquette('Le trône du patron', 18, -10.8, 4.5, true);
 etiquette('Coffre-fort', 0.8, -9.5, 4.5, true);
 etiquette('Vitrines', 15, -10.2, 1.5, true);
 etiquette('Coffres', 12.5, -11.2, 8.4, true);
+etiquette('Le coffre-fort : la porte du labo', 0.5, -7.6, 4.5, true);
+etiquette('Le bouton (accoudoir du trône)', 17.5, -11.4, 5.5, true);
+etiquette('Le puits et son escalier', -4.5, -9, 4.5);
+etiquette('« Breaking Célia »', -7.6, -9.4, 5);
+etiquette('Le vestiaire (combinaisons)', 2.5, -24.6, -0.4);
+etiquette('Réacteurs sous la hotte', 7.5, -23.2, -0.4);
+etiquette('Tables de découpe', 14.5, -25.6, -0.4);
+etiquette('Séchoirs + presse (weed)', 20, -24.8, 1);
+etiquette('Bacs + raffinage (coke)', 14, -25.6, 9.6);
+etiquette('Paillasse au cristal bleu', 6.5, -25.4, 4.5);
+etiquette('Les deux cuves', 14.5, -18.4, 4.5);
+etiquette('Harusenberg', 20, -21, 4.5);
+etiquette('La serre (weed + coca)', 11, -21.6, 16);
+etiquette('La réserve', 5.5, -25.6, 10);
 
 // ---------------------------------------------------------------- le skin d'Haru : affiches + statue
 const decors = [];
@@ -660,7 +860,7 @@ function texte(g, s, x, y, taille, police, coul, { contour = null, ep = 4, align
   if (contour) { g.strokeStyle = contour; g.lineWidth = ep; g.lineJoin = 'round'; g.strokeText(s, x, y); }
   g.fillStyle = coul; g.fillText(s, x, y);
 }
-const RYE = "'Rye', Georgia, serif", FELL = "'IM Fell English SC', Georgia, serif";
+const RYE = "'Rye', Georgia, serif", FELL = "'IM Fell English SC', Georgia, serif", ELITE = "'Special Elite', 'Courier New', monospace";
 function perso(g, x, y, s) { g.imageSmoothingEnabled = false; g.drawImage(FIG, x, y, 16 * s, 32 * s); }
 function tete(g, x, y, s) { g.imageSmoothingEnabled = false; g.drawImage(TETE, x, y, 8 * s, 8 * s); }
 function chope(g, x, y, s, biere = '#f0b429', mousse = '#fff6dc') {
@@ -809,7 +1009,86 @@ const AFFICHES = {
     texte(g, 'FÛT N°2', W / 2, H * 0.37, 56, RYE, '#fff1d0', { contour: '#2a1408', ep: 6 });
     texte(g, 'PAS TOUCHE — Haru', W / 2, H * 0.76, 34, FELL, '#ff9a80', { maxW: W - 40 });
   } },
+  // ---- le labo
+  logo: { titre: '« Breaking Célia » (le puits, en face de la porte du coffre-fort)', w: 6, h: 3, dessin(g, W, H) {
+    // la fumée verte, et les deux cases du tableau périodique : Br (brome) et Ce (cérium)
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#12301a'); gr.addColorStop(1, '#050d07'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    const R = rng(58);
+    for (let i = 0; i < 30; i++) { const x = R() * W, y = R() * H, r = 60 + R() * 170, f = g.createRadialGradient(x, y, 0, x, y, r); f.addColorStop(0, 'rgba(120,210,110,0.15)'); f.addColorStop(1, 'rgba(120,210,110,0)'); g.fillStyle = f; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+    cadre(g, W, H, '#2c5a32', 10, 6);
+    const s = 200;
+    element(g, 130, 34, s, 'Br', 35, '79,904');
+    texte(g, 'eaking', 130 + s + 18, 34 + s * 0.6, 168, ELITE, '#f4f4ec', { align: 'left', ombre: 'rgba(0,0,0,0.55)' });
+    element(g, 400, 34 + s + 26, s, 'Cé', 58, '140,12');
+    texte(g, 'lia', 400 + s + 18, 34 + s + 26 + s * 0.6, 168, ELITE, '#f4f4ec', { align: 'left', ombre: 'rgba(0,0,0,0.55)' });
+    texte(g, "le labo d'Haru", W - 60, H - 46, 30, ELITE, '#9fd39a', { align: 'right' });
+  } },
+  heisenberg: { titre: 'Harusenberg (le labo, au-dessus des séchoirs)', w: 3, h: 3, dessin(g, W, H) {
+    g.fillStyle = '#0d0d0d'; g.fillRect(0, 0, W, H);
+    const gl = g.createRadialGradient(W / 2, 230, 20, W / 2, 230, 260); gl.addColorStop(0, 'rgba(240,220,150,0.28)'); gl.addColorStop(1, 'rgba(240,220,150,0)'); g.fillStyle = gl; g.fillRect(0, 0, W, H);
+    cadre(g, W, H, '#c8c8c0', 8, 10);
+    const s = 30, tx = W / 2 - 4 * s, ty = 130;
+    tete(g, tx, ty, s);
+    // le chapeau noir et les lunettes de soleil
+    g.fillStyle = '#080808'; g.fillRect(tx - 50, ty - 6, 8 * s + 100, 24); g.fillRect(tx + 26, ty - 62, 8 * s - 52, 58);
+    g.fillStyle = '#262626'; g.fillRect(tx + 26, ty - 24, 8 * s - 52, 14);
+    g.fillStyle = '#050505'; g.fillRect(tx + 0.8 * s, ty + 3.9 * s, 2.8 * s, 1.5 * s); g.fillRect(tx + 4.4 * s, ty + 3.9 * s, 2.8 * s, 1.5 * s); g.fillRect(tx + 3.4 * s, ty + 4.2 * s, 1.2 * s, 0.4 * s);
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(tx + 1.1 * s, ty + 4.1 * s, 0.9 * s, 0.25 * s); g.fillRect(tx + 4.7 * s, ty + 4.1 * s, 0.9 * s, 0.25 * s);
+    texte(g, 'HARUSENBERG', W / 2, H - 112, 66, ELITE, '#f2f2ea', { maxW: W - 70 });
+    texte(g, '« Dis mon nom. »', W / 2, H - 56, 36, ELITE, '#9fd39a');
+  } },
+  danger: { titre: "Danger (le labo, à côté de l'entrée)", w: 2, h: 2, dessin(g, W, H) {
+    hachures(g, W, H, 26);
+    g.fillStyle = '#f2c230'; g.fillRect(26, 26, W - 52, H - 52);
+    g.fillStyle = '#111'; g.beginPath(); g.moveTo(W / 2, 52); g.lineTo(W / 2 + 92, 210); g.lineTo(W / 2 - 92, 210); g.closePath(); g.fill();
+    g.fillStyle = '#f2c230'; g.beginPath(); g.moveTo(W / 2, 80); g.lineTo(W / 2 + 70, 196); g.lineTo(W / 2 - 70, 196); g.closePath(); g.fill();
+    texte(g, '!', W / 2, 150, 92, ELITE, '#111');
+    texte(g, 'DANGER', W / 2, 248, 58, ELITE, '#111', { maxW: W - 70 });
+    texte(g, 'PRODUITS CHIMIQUES', W / 2, 292, 26, ELITE, '#111', { maxW: W - 70 });
+    texte(g, 'interdit aux balances', W / 2, 328, 22, ELITE, '#5a3a00', { maxW: W - 70 });
+  } },
+  combi: { titre: 'Combinaison obligatoire (le vestiaire)', w: 2, h: 2, dessin(g, W, H) {
+    g.fillStyle = '#f4f4f0'; g.fillRect(0, 0, W, H); cadre(g, W, H, '#1d4f9c', 10, 10);
+    g.fillStyle = '#1d4f9c'; g.beginPath(); g.arc(W / 2, 140, 96, 0, Math.PI * 2); g.fill();
+    // la combinaison, en blanc dans le rond bleu
+    g.fillStyle = '#fff'; g.fillRect(W / 2 - 22, 66, 44, 40); g.fillRect(W / 2 - 40, 108, 80, 70); g.fillRect(W / 2 - 62, 112, 20, 60); g.fillRect(W / 2 + 42, 112, 20, 60);
+    g.fillRect(W / 2 - 38, 180, 32, 44); g.fillRect(W / 2 + 6, 180, 32, 44);
+    g.fillStyle = '#1d4f9c'; g.fillRect(W / 2 - 14, 78, 28, 14);
+    texte(g, 'COMBINAISON', W / 2, 272, 40, ELITE, '#1d4f9c', { maxW: W - 60 });
+    texte(g, 'OBLIGATOIRE', W / 2, 312, 34, ELITE, '#1d4f9c', { maxW: W - 60 });
+    texte(g, 'même pour Haru', W / 2, 348, 22, ELITE, '#555');
+  } },
+  serre: { titre: 'La serre (au-dessus de sa porte, côté labo)', w: 3, h: 1, dessin(g, W, H) {
+    g.fillStyle = '#1f5a2a'; g.fillRect(0, 0, W, H); cadre(g, W, H, '#e8f0e0', 6, 10);
+    feuille(g, 70, H / 2, 46); feuille(g, W - 70, H / 2, 46);
+    texte(g, 'LA SERRE', W / 2, H * 0.4, 62, ELITE, '#f4f4ec', { maxW: W - 200 });
+    texte(g, 'bio · local · interdit', W / 2, H * 0.74, 26, ELITE, '#bfe8b0', { maxW: W - 200 });
+  } },
 };
+function element(g, x, y, s, sym, num, masse) {
+  const tg = g.createLinearGradient(x, y, x + s, y + s); tg.addColorStop(0, '#47a352'); tg.addColorStop(1, '#1c5a26');
+  g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(x + 8, y + 8, s, s);
+  g.fillStyle = tg; g.fillRect(x, y, s, s);
+  g.strokeStyle = '#dcf2d4'; g.lineWidth = 6; g.strokeRect(x + 5, y + 5, s - 10, s - 10);
+  texte(g, String(num), x + 18, y + 32, 30, ELITE, '#f4fff0', { align: 'left' });
+  texte(g, masse, x + s - 16, y + s - 26, 22, ELITE, '#e4f6dc', { align: 'right' });
+  texte(g, sym, x + s / 2, y + s * 0.55, s * 0.58, ELITE, '#ffffff');
+}
+function hachures(g, W, H, ep) {
+  g.save(); g.beginPath(); g.rect(0, 0, W, H); g.rect(ep, ep, W - 2 * ep, H - 2 * ep); g.clip('evenodd');
+  for (let i = -H; i < W + H; i += 24) { g.fillStyle = (i / 24) % 2 ? '#111' : '#f2c230'; g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 12, 0); g.lineTo(i + 12 + H, H); g.lineTo(i + H, H); g.fill(); }
+  g.restore();
+}
+function feuille(g, cx, cy, r) {
+  // une feuille à sept pointes
+  g.fillStyle = '#7fd06a';
+  for (let k = -3; k <= 3; k++) {
+    const a = -Math.PI / 2 + k * 0.42, l = r * (1 - Math.abs(k) * 0.17);
+    g.save(); g.translate(cx, cy + r * 0.35); g.rotate(a + Math.PI / 2);
+    g.beginPath(); g.ellipse(0, -l / 2, l * 0.13, l / 2, 0, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  g.fillRect(cx - 2, cy + r * 0.35, 4, r * 0.4);
+}
 const CANVAS = {};
 function dessinerAffiches() {
   for (const [nom, a] of Object.entries(AFFICHES)) {
@@ -877,8 +1156,9 @@ const CAMS = {
   bar: [[10, 13, -8], [10, 1.5, 5]],
   cave: [[10, 15, -0.5], [10, -5, 5]],
   secret: [[10, 3, -7], [10, -11.5, 4.5]],
+  labo: [[6, 8, -22], [6, -24, 8]],
 };
-const REGLAGES = { dehors: { vue: 'tout', toit: true, coupe: false }, bar: { vue: 'bar', toit: false, coupe: true }, cave: { vue: 'cave', toit: true, coupe: true }, secret: { vue: 'tresor', toit: false, coupe: true } };
+const REGLAGES = { dehors: { vue: 'tout', toit: true, coupe: false }, bar: { vue: 'bar', toit: false, coupe: true }, cave: { vue: 'cave', toit: true, coupe: true }, secret: { vue: 'tresor', toit: false, coupe: true }, labo: { vue: 'labo', toit: false, coupe: false } };
 const $ = (id) => document.getElementById(id);
 function choisirVue(nom, bouger = true) {
   const r = REGLAGES[nom]; etat.vue = r.vue; etat.toit = r.toit; etat.coupe = r.coupe;
@@ -899,7 +1179,7 @@ $('jour').onclick = () => {
 scene.background = new THREE.Color(0x0d0a08);
 
 // couche par couche
-function nomCouche(y) { return y === 0 ? 'y 0 · sol du bar' : y === -6 ? 'y −6 · sol de la cave' : y === 6 ? 'y 6 · plafond du bar' : y > 6 ? `y ${y} · toit` : y > 0 ? `y ${y} · bar` : `y ${y} · cave`; }
+function nomCouche(y) { return y === 0 ? 'y 0 · sol du bar' : y === -6 ? 'y −6 · sol de la cave' : y === 6 ? 'y 6 · plafond du bar' : y === -13 ? 'y −13 · sol de la salle au trésor' : y === -28 ? 'y −28 · sol du labo' : y > 6 ? `y ${y} · toit` : y > 0 ? `y ${y} · bar` : y > -6 ? `y ${y} · cave` : y > -13 ? `y ${y} · salle au trésor` : `y ${y} · labo`; }
 function majCouche() {
   const y = +$('couche').value; etat.couche = y; $('couche-val').textContent = nomCouche(y).replace('−', '-');
   construire(); dessinerCouche(y);
@@ -910,7 +1190,7 @@ $('couche-on').onchange = (e) => {
   else finCouche();
 };
 $('couche').oninput = majCouche;
-const CASE = 17, X0 = -1, X1 = 20, Z0 = -1, Z1 = 14;
+const CASE = 13, X0 = -9, X1 = 21, Z0 = -2, Z1 = 20;
 function dessinerCouche(y) {
   const c = $('carte'), g = c.getContext('2d');
   c.width = (X1 - X0 + 1) * CASE; c.height = (Z1 - Z0 + 1) * CASE;
@@ -951,7 +1231,7 @@ $('carte').onmouseleave = () => { $('bulle').style.display = 'none'; };
 
 // liste des blocs
 $('b-blocs').onclick = () => {
-  const zones = { rdc: 'Le bar', cave: 'La cave + salle secrète', toit: 'Plafond, toit et cheminée' };
+  const zones = { rdc: 'Le bar', cave: 'La cave', tresor: 'La salle au trésor', labo: 'Le labo (Breaking Célia)', toit: 'Plafond, toit et cheminée' };
   let html = '';
   const total = new Map();
   for (const [z, nom] of Object.entries(zones)) {
@@ -977,14 +1257,14 @@ $('b-affiches').onclick = () => {
   $('galerie').style.display = 'block';
 };
 $('f-galerie').onclick = () => { $('galerie').style.display = 'none'; };
-window.envoyerAffiches = async () => { for (const nom of Object.keys(AFFICHES)) { const a = AFFICHES[nom], [c, g] = toile(a.w * 128, a.h * 128); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(CANVAS[nom], 0, 0, c.width, c.height); const b = await new Promise(ok => c.toBlob(ok)); await fetch(`affiches/${nom}.png`, { method: 'PUT', body: b }); } return Object.keys(AFFICHES); };
+window.envoyerAffiches = async (noms = Object.keys(AFFICHES)) => { for (const nom of noms) { const a = AFFICHES[nom], [c, g] = toile(a.w * 128, a.h * 128); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(CANVAS[nom], 0, 0, c.width, c.height); const b = await new Promise(ok => c.toBlob(ok)); await fetch(`affiches/${nom}.png`, { method: 'PUT', body: b }); } return noms; };
 
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); rendu.setSize(innerWidth, innerHeight); etiqRendu.setSize(innerWidth, innerHeight); });
-function boucle() { requestAnimationFrame(boucle); controles.update(); const t = performance.now() / 1000; for (const l of lumieres) l.intensity = (l.userData.b.t === 'feu' ? 7 : 5) * (0.9 + 0.1 * Math.sin(t * 7 + l.position.x * 3) * Math.sin(t * 3.1 + l.position.z)); rendu.render(scene, camera); etiqRendu.render(scene, camera); }
+function boucle() { requestAnimationFrame(boucle); controles.update(); const t = performance.now() / 1000; for (const l of lumieres) l.intensity = (l.userData.b.t === 'feu' ? 7 : l.userData.b.e === 'pl' ? 9 : 5) * (0.9 + 0.1 * Math.sin(t * 7 + l.position.x * 3) * Math.sin(t * 3.1 + l.position.z)); rendu.render(scene, camera); etiqRendu.render(scene, camera); }
 
 // ---------------------------------------------------------------- départ
 (async () => {
-  try { await Promise.race([Promise.all([document.fonts.load("40px 'Rye'"), document.fonts.load("20px 'IM Fell English SC'")]), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
+  try { await Promise.race([Promise.all([document.fonts.load("40px 'Rye'"), document.fonts.load("20px 'IM Fell English SC'"), document.fonts.load("40px 'Special Elite'")]), new Promise(ok => setTimeout(ok, 2500))]); } catch {}
   preparerSkin(await charge('skin-haru.png'));
   dessinerAffiches();
   for (const a of AFFS) accroche(a);
