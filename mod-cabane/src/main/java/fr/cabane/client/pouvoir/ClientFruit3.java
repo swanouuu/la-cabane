@@ -73,20 +73,20 @@ public final class ClientFruit3 {
     private static final double B = 1 / 16.0;
 
     // les couleurs des maquettes (rendu.mjs)
-    private static final float[] CROUTE = rgb(40, 24, 22), CROUTE_R = rgb(96, 36, 22), LAVE_R = rgb(222, 58, 16), LAVE_O = rgb(255, 116, 20),
+    static final float[] CROUTE = rgb(40, 24, 22), CROUTE_R = rgb(96, 36, 22), LAVE_R = rgb(222, 58, 16), LAVE_O = rgb(255, 116, 20),
             LAVE_J = rgb(255, 216, 80), CHAUD = rgb(255, 250, 214), GLACE = rgb(146, 206, 244), GLACE_C = rgb(214, 240, 255), BLANCHE = rgb(248, 252, 255),
             GLACE_P = rgb(90, 156, 224), GLACE_V = rgb(120, 236, 255), FUMEE = rgb(128, 122, 120);
 
-    private static float[] rgb(int r, int g, int b) {
+    static float[] rgb(int r, int g, int b) {
         return new float[]{r / 255F, g / 255F, b / 255F};
     }
 
-    private static float[] mix(float[] a, float[] b, double k) {
+    static float[] mix(float[] a, float[] b, double k) {
         float t = (float) Mth.clamp(k, 0, 1);
         return new float[]{a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t};
     }
 
-    private static float[] avec(float[] c, float a) {
+    static float[] avec(float[] c, float a) {
         return new float[]{c[0], c[1], c[2], a};
     }
 
@@ -116,20 +116,20 @@ public final class ClientFruit3 {
         return d2 - d1;
     }
 
-    private static double borne(double u) {
+    static double borne(double u) {
         return Mth.clamp(u, 0, 1);
     }
 
-    private static double entre(double t, double a, double b) {
+    static double entre(double t, double a, double b) {
         return borne((t - a) / (b - a));
     }
 
-    private static double sortie(double u) {
+    static double sortie(double u) {
         u = borne(u);
         return 1 - (1 - u) * (1 - u) * (1 - u);
     }
 
-    private static double entree(double u) {
+    static double entree(double u) {
         u = borne(u);
         return u * u;
     }
@@ -139,7 +139,7 @@ public final class ClientFruit3 {
         return a.scale(v * v * v).add(b.scale(3 * v * v * u)).add(c.scale(3 * v * u * u)).add(d.scale(u * u * u));
     }
 
-    private static Vec3 vec(Vector3f v) {
+    static Vec3 vec(Vector3f v) {
         return new Vec3(v.x, v.y, v.z);
     }
 
@@ -169,7 +169,7 @@ public final class ClientFruit3 {
     }
 
     /** De 0 à 1 (un peu au-delà au milieu : ça jaillit, puis ça se pose) quand l'avancée va de « de » à « a ». */
-    private static double croissance(double avance, double de, double a) {
+    static double croissance(double avance, double de, double a) {
         double k = borne((avance - de) / (a - de));
         return k * (1 + 0.3 * Math.sin(k * Math.PI));
     }
@@ -221,7 +221,7 @@ public final class ClientFruit3 {
 
     // ================================================================ dessins dans le monde
 
-    private static final class Types extends RenderType {
+    static final class Types extends RenderType {
         /** Ce qui est plein (la sphère, les pics, le pylône, la tempête) : opaque ; ses couleurs portent leur ombre. */
         static final RenderType PLEIN = create("cabane_fruit3_plein", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144, false, false,
                 CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setCullState(NO_CULL).setWriteMaskState(COLOR_DEPTH_WRITE)
@@ -240,7 +240,7 @@ public final class ClientFruit3 {
         c.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(col[0], col[1], col[2], a);
     }
 
-    private static void quad(VertexConsumer c, Matrix4f m, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, float[] col, float a) {
+    static void quad(VertexConsumer c, Matrix4f m, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, float[] col, float a) {
         sommet(c, m, p0, col, a);
         sommet(c, m, p1, col, a);
         sommet(c, m, p2, col, a);
@@ -250,13 +250,13 @@ public final class ClientFruit3 {
     private static final float[] OMBRES = {1F, 0.55F, 0.82F, 0.82F, 0.7F, 0.7F};
 
     /** Un cube droit (tourné de « angle » autour de la verticale) de demi-côté s, chaque face un peu plus ou moins claire. */
-    private static void cube(VertexConsumer c, Matrix4f m, Vec3 o, double s, double angle, float[] col, float a) {
+    static void cube(VertexConsumer c, Matrix4f m, Vec3 o, double s, double angle, float[] col, float a) {
         Vec3 x = new Vec3(Math.cos(angle), 0, Math.sin(angle)).scale(s), z = new Vec3(-Math.sin(angle), 0, Math.cos(angle)).scale(s), y = new Vec3(0, s, 0);
         boite(c, m, o, x, y, z, (f, i, j) -> col, a, 1);
     }
 
     /** Ce que vaut chaque case d'une face : la face (0 haut, 1 bas, 2 et 3 côtés x, 4 et 5 côtés z), sa case (i, j). */
-    private interface Teinte {
+    interface Teinte {
         float[] de(int face, int i, int j);
     }
 
@@ -264,7 +264,7 @@ public final class ClientFruit3 {
      * Une boîte de centre o, de demi-axes x, y, z (des vecteurs), chaque face coupée en n×n cases ; « teinte » donne la
      * couleur de chaque case, l'ombre de la face s'y ajoute.
      */
-    private static void boite(VertexConsumer c, Matrix4f m, Vec3 o, Vec3 x, Vec3 y, Vec3 z, Teinte teinte, float a, int n) {
+    static void boite(VertexConsumer c, Matrix4f m, Vec3 o, Vec3 x, Vec3 y, Vec3 z, Teinte teinte, float a, int n) {
         Vec3[][] faces = {{y, x, z}, {y.scale(-1), x, z}, {x, y, z}, {x.scale(-1), y, z}, {z, x, y}, {z.scale(-1), x, y}};
         for (int f = 0; f < 6; f++) {
             Vec3 cen = o.add(faces[f][0]), u = faces[f][1], v = faces[f][2];
@@ -280,18 +280,18 @@ public final class ClientFruit3 {
     }
 
     /** Une pointe (un pic de glace, un éclat), de la couleur « pied » à la couleur « bout ». */
-    private static void pic(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 dir, double longueur, double largeur, float[] pied, float[] bout, float a) {
+    static void pic(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 dir, double longueur, double largeur, float[] pied, float[] bout, float a) {
         if (longueur > 1e-3 && dir.lengthSqr() > 1e-8) {
             GrandeFleche.pic(c, m, base, dir, longueur, largeur, avec(pied, a), avec(bout, a));
         }
     }
 
-    private static void cristal(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 dir, double longueur, double largeur) {
+    static void cristal(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 dir, double longueur, double largeur) {
         pic(c, m, base, dir, longueur, largeur, GLACE, BLANCHE, 1);
     }
 
     /** Une flamme : jaune au pied, rouge et transparente au bout, un cœur plus clair dedans (à dessiner en VOILE). */
-    private static void flamme(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 dir, double longueur, double largeur) {
+    static void flamme(VertexConsumer c, Matrix4f m, Vec3 base, Vec3 dir, double longueur, double largeur) {
         if (longueur > 1e-3) {
             GrandeFleche.pic(c, m, base, dir, longueur, largeur, new float[]{1F, 0.78F, 0.22F, 0.95F}, new float[]{1F, 0.25F, 0.04F, 0.12F});
             GrandeFleche.pic(c, m, base, dir, longueur * 0.55, largeur * 0.5, new float[]{1F, 0.98F, 0.75F, 1F}, new float[]{1F, 0.75F, 0.25F, 0.4F});
@@ -299,7 +299,7 @@ public final class ClientFruit3 {
     }
 
     /** Un repère : x sur le côté, y vers le haut (autant que possible), pour un nez vers f. */
-    private static Vec3[] repere(Vec3 f, Vec3 haut) {
+    static Vec3[] repere(Vec3 f, Vec3 haut) {
         Vec3 h = haut == null ? new Vec3(0, 1, 0) : haut;
         Vec3 x = h.cross(f);
         if (x.lengthSqr() < 0.04) {
@@ -483,6 +483,11 @@ public final class ClientFruit3 {
     }
 
     private static final List<Eclatement> ECLATEMENTS = new ArrayList<>();
+
+    /** Une boule de feu (ou une gerbe de glace) là, pour deux secondes (les attaques de ClientFruit3Coups aussi). */
+    static void eclater(Vec3 p, boolean glace, boolean sol, double taille) {
+        ECLATEMENTS.add(new Eclatement(p, glace, System.nanoTime(), sol, taille));
+    }
 
     /** Le dragon qu'on monte soi-même (-1 : aucun) : sa route, ce qu'il fait, depuis quand, sur qui il fonce. */
     private static int monDragon = -1;
@@ -1134,7 +1139,7 @@ public final class ClientFruit3 {
     }
 
     /** La couleur du feu de l'explosion : blanc au cœur, puis jaune, orange, rouge, et de la fumée en refroidissant. */
-    private static float[] feu(double k) {
+    static float[] feu(double k) {
         k = borne(k);
         if (k < 0.22) {
             return rgb(255, 252, 228);
@@ -1739,15 +1744,15 @@ public final class ClientFruit3 {
 
     // ================================================================ les particules, les touches, l'éclair blanc
 
-    private static void particule(Minecraft mc, ParticleOptions p, Vec3 o, double vx, double vy, double vz) {
+    static void particule(Minecraft mc, ParticleOptions p, Vec3 o, double vx, double vy, double vz) {
         mc.level.addParticle(p, true, o.x, o.y, o.z, vx, vy, vz);
     }
 
-    private static double aleat(double k) {
+    static double aleat(double k) {
         return (HASARD.nextDouble() - 0.5) * 2 * k;
     }
 
-    private static void gerbeParticules(Minecraft mc, Vec3 p, boolean glace) {
+    static void gerbeParticules(Minecraft mc, Vec3 p, boolean glace) {
         if (glace) {
             for (int q = 0; q < 60; q++) {
                 particule(mc, ParticleTypes.SNOWFLAKE, p.add(aleat(1), aleat(1), aleat(1)), aleat(0.6), aleat(0.5) + 0.2, aleat(0.6));
@@ -1765,7 +1770,7 @@ public final class ClientFruit3 {
     }
 
     /** Le clic droit au niveau 3 : maintenu (le dragon) ou court (le tir du niveau 2) ; envoye : le serveur guide un dragon. */
-    private static boolean appuyeAvant, envoye;
+    private static boolean appuyeAvant, envoye, appuiAccroupi;
     private static long debutAppui;
 
     private static void clicDroit(Minecraft mc) {
@@ -1788,6 +1793,12 @@ public final class ClientFruit3 {
         long maintenant = mc.level.getGameTime();
         if (appuye && !appuyeAvant) {
             debutAppui = maintenant;
+            // accroupi, le clic droit est au volcan (ou aux partisans) : ni dragon ni vague
+            appuiAccroupi = mc.options.keyShift.isDown();
+        }
+        if (appuiAccroupi) {
+            appuyeAvant = appuye;
+            return;
         }
         if (appuye && !envoye && maintenant - debutAppui >= Fruit3.APPUI_DRAGON && System.nanoTime() >= pretDragon) {
             // le dragon sort et il monte dessus (le serveur répond par le premier paquet Dragon)
@@ -1800,7 +1811,7 @@ public final class ClientFruit3 {
             if (envoye) {
                 envoye = false;
             } else if (maintenant - debutAppui < Fruit3.APPUI_DRAGON && System.nanoTime() >= ClientFruit.pretJet) {
-                ClientFruit.pretJet = System.nanoTime() + Fruit.RECHARGE_JET_2 * 50_000_000L;
+                ClientFruit.pretJet = System.nanoTime() + fr.cabane.pouvoir.Fruit3Coups.RECHARGE_VAGUE * 50_000_000L;
                 mc.player.swing(ClientFruit.mainDuFruit(mc.player, Fruit.glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Jet());
             }

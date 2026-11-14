@@ -314,6 +314,7 @@ public final class ClientFruit {
                 pretJet = 0;
                 pretChoc = 0;
                 ClientFruit3.endormi();
+                ClientFruit3Coups.endormi();
             }
         }
     }
@@ -869,7 +870,8 @@ public final class ClientFruit {
     // ================================================================ les touches
 
     static long pretJet, pretChoc;
-    private static boolean accroupiAvant;
+    private static boolean accroupiAvant, clicAccroupi;
+    private static long debutAccroupi;
 
     /** La touche d'ulti (J par défaut) : au niveau 3, l'attaque ultime (le Hyoton, le soleil de magma), si elle est prête. */
     public static void toucheUlti() {
@@ -985,17 +987,24 @@ public final class ClientFruit {
         boolean prete = ClientFruit3.ultimePrete();
         String nomUlti = glace ? "Hyoton" : "Soleil de magma";
         String ulti = prete ? nomUlti : ClientFruit3.ultimeFaite() ? nomUlti + " (faite)" : nomUlti + "  " + (int) Math.ceil(ultime / 60) + " min";
+        long maintenant = System.nanoTime();
+        double zone = Math.max(0, (ClientFruit3Coups.pretZone - maintenant) / 1e9), ruee = Math.max(0, (ClientFruit3Coups.pretRuee - maintenant) / 1e9);
+        String acc = Clavier.accroupi();
         String[][] lignes = {
-                {Clavier.gauche(), ClientFruit3.monte() ? (ClientFruit3.tient() ? "Il le tient dans sa gueule" : "Attraper (la gueule)") : glace ? "Coup glacé" : "Coup de lave"},
-                {Clavier.droite(), PanneauPouvoir.recharge(glace ? "Grande flèche de glace" : "Grand poing de magma", jet)},
+                {Clavier.gauche(), ClientFruit3.monte() ? (ClientFruit3.tient() ? "Il le tient dans sa gueule" : "Attraper (la gueule)")
+                        : glace ? "Épée de glace (3e coup : éclats)" : "Poing volcanique (3e coup : pilier)"},
+                {Clavier.droite(), PanneauPouvoir.recharge(glace ? "Vague gelée" : "Vague de magma", jet)},
                 ClientFruit3.monte()
                         ? new String[]{Clavier.droite(), "Foncer" + "  " + (int) Math.ceil(ClientFruit3.restantMonte()) + " s"}
                         : new String[]{Clavier.droite() + " tenu", PanneauPouvoir.recharge(glace ? "Dragon de glace" : "Dragon de lave", dragon)},
-                {Clavier.accroupi(), PanneauPouvoir.recharge(glace ? "Capsule de glace" : "Chien de l'enfer", choc)},
+                {acc, PanneauPouvoir.recharge(glace ? "Capsule de glace" : "Chien de l'enfer", choc)},
+                {acc + " + " + Clavier.droite(), PanneauPouvoir.recharge(glace ? "Partisans" : "Volcan", zone)},
+                {acc + " + " + Clavier.gauche(), PanneauPouvoir.recharge(glace ? "Glissade" : "Comète", ruee)},
                 {Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), ulti},
                 {Clavier.nom(ClientSusano.EVEIL), "Rendormir"},
         };
-        boolean[] gris = {false, jet > 0, dragon > 0 && !ClientFruit3.monte(), choc > 0 || ClientFruit3.monte(), !prete, false};
+        boolean monte = ClientFruit3.monte();
+        boolean[] gris = {false, jet > 0, dragon > 0 && !monte, choc > 0 || monte, zone > 0 || monte, ruee > 0 || monte, !prete, false};
         String titre = (glace ? "Hie Hie no Mi" : "Magu Magu no Mi") + "  ·  niv. 3";
         int teinte = glace ? 0xFF6FE4FF : 0xFFFF8A1E;
         PanneauPouvoir.dessiner(g, font, titre, teinte, lignes, gris);
@@ -1755,8 +1764,16 @@ public final class ClientFruit {
             long maintenant = System.nanoTime();
             // s'accroupir (l'appui, pas le maintien) : l'éruption ou l'ère glaciaire, et plus fort à chaque niveau
             boolean accroupi = mc.options.keyShift.isDown();
-            if (accroupi && !accroupiAvant && moi != null && mc.screen == null && maintenant >= pretChoc && !ClientFruit3.monte()) {
-                int niveau = niveau(mc.player.getUUID());
+            int monNiveau = moi == null ? 0 : niveau(mc.player.getUUID());
+            if (accroupi && !accroupiAvant) {
+                debutAccroupi = maintenant;
+                clicAccroupi = false;
+            }
+            // au niveau 3, accroupi + un clic fait autre chose : l'accroupi seul part quand on se relève (un appui court, sans clic)
+            boolean part = monNiveau >= 3 ? !accroupi && accroupiAvant && !clicAccroupi && (maintenant - debutAccroupi) / 1e9 < 0.6
+                    : accroupi && !accroupiAvant;
+            if (part && moi != null && mc.screen == null && maintenant >= pretChoc && !ClientFruit3.monte()) {
+                int niveau = monNiveau;
                 pretChoc = maintenant + (niveau >= 3 ? fr.cabane.pouvoir.Fruit3.RECHARGE_ACCROUPI : niveau >= 2 ? Fruit.RECHARGE_CHOC_2 : Fruit.RECHARGE_CHOC) * 50_000_000L;
                 mc.player.swing(mainDuFruit(mc.player, glace(moi)));
                 PacketDistributor.sendToServer(new Fruit.Choc());
@@ -1809,7 +1826,18 @@ public final class ClientFruit {
         public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
             Minecraft mc = Minecraft.getInstance();
             String moi = mc.player == null ? null : EVEILLES.get(mc.player.getUUID());
-            if (moi == null || !event.isUseItem()) {
+            if (moi == null) {
+                return;
+            }
+            // au niveau 3, accroupi : clic droit, le volcan (ou les partisans) ; clic gauche, la comète (ou la glissade)
+            if (niveau(mc.player.getUUID()) >= 3 && mc.options.keyShift.isDown() && !ClientFruit3.monte() && (event.isUseItem() || event.isAttack())) {
+                event.setCanceled(true);
+                event.setSwingHand(false);
+                clicAccroupi = true;
+                ClientFruit3Coups.toucher(mc, event.isUseItem() ? fr.cabane.pouvoir.Fruit3Coups.ACC_DROIT : fr.cabane.pouvoir.Fruit3Coups.ACC_GAUCHE);
+                return;
+            }
+            if (!event.isUseItem()) {
                 return;
             }
             event.setCanceled(true);

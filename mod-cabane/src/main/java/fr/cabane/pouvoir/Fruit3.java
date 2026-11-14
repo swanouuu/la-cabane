@@ -584,6 +584,13 @@ public final class Fruit3 {
         });
     }
 
+    /** Il retombe (lancé en l'air par une attaque du niveau 3) : pas de dégâts de chute jusqu'au sol. */
+    static void retombe(Entity e) {
+        if (e.getServer() != null) {
+            RETOMBENT.put(e.getUUID(), e.getServer().getTickCount() + 15 * 20);
+        }
+    }
+
     /** Sur son dragon, ou en retombant après l'explosion : la chute ne fait rien. */
     @SubscribeEvent
     public static void chute(LivingFallEvent event) {

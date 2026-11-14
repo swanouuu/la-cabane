@@ -560,6 +560,7 @@ public final class Fruit {
 
     static void endormir(ServerPlayer joueur) {
         Fruit3.endormir(joueur);
+        Fruit3Coups.endormir(joueur);
         if (EVEILLES.remove(joueur.getUUID()) != null && joueur.isAlive()) {
             // la lave refroidit en sifflant, la glace se fend et fond (ClientFruit la montre se retirer jusqu'à la main)
             if (glace(Pouvoirs.pouvoir(joueur))) {
@@ -624,6 +625,11 @@ public final class Fruit {
             return;
         }
         boolean glace = glace(Pouvoirs.pouvoir(joueur));
+        if (niveau(joueur) >= 3) {
+            PRET_JET.put(joueur.getUUID(), maintenant + Fruit3Coups.RECHARGE_VAGUE);
+            Fruit3Coups.vague(joueur, glace);
+            return;
+        }
         if (niveau(joueur) >= 2) {
             PRET_JET.put(joueur.getUUID(), maintenant + RECHARGE_JET_2);
             jet2(joueur, glace);
@@ -1091,8 +1097,22 @@ public final class Fruit {
         }
         LivingEntity cible = event.getEntity();
         boolean fort = niveau(joueur) >= 2, glace = glace(Pouvoirs.pouvoir(joueur));
-        event.setAmount(event.getAmount() + (fort ? BONUS_ARME_2 : BONUS_ARME) + (glace ? (fort ? FROID_2 : FROID) : 0));
         ServerLevel monde = joueur.serverLevel();
+        if (niveau(joueur) >= 3) {
+            // le poing volcanique ou l'épée de glace (Fruit3Coups) : +6, et le 3e coup de suite
+            event.setAmount(event.getAmount() + Fruit3Coups.BONUS_ARME_3 + (glace ? FROID_2 : 0) + Fruit3Coups.frapper(joueur, cible, glace));
+            if (glace) {
+                cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
+                givrer(cible);
+                monde.sendParticles(ParticleTypes.SNOWFLAKE, cible.getX(), cible.getY(0.6), cible.getZ(), 18, 0.3, 0.4, 0.3, 0.05);
+            } else {
+                cible.igniteForSeconds(5);
+                monde.sendParticles(ParticleTypes.FLAME, cible.getX(), cible.getY(0.6), cible.getZ(), 16, 0.3, 0.4, 0.3, 0.05);
+                monde.sendParticles(ParticleTypes.LAVA, cible.getX(), cible.getY(0.6), cible.getZ(), 4, 0.2, 0.3, 0.2, 0);
+            }
+            return;
+        }
+        event.setAmount(event.getAmount() + (fort ? BONUS_ARME_2 : BONUS_ARME) + (glace ? (fort ? FROID_2 : FROID) : 0));
         if (glace) {
             // il gèle : bien ralenti, plus longtemps au niveau 2
             cible.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, fort ? 100 : 80, fort ? 2 : 1));
