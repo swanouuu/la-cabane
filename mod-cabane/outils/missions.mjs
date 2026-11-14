@@ -62,8 +62,8 @@ const MISSIONS = {
       evenement("ugrak", 1, "Vaincre le boss du donjon"),
     ],
     rappel: "Le portail est toujours ouvert. Regroupez-vous près de moi, et dites « On y va ».",
-    merci: "Vous êtes revenus. Tous ? … Bien. Un ogre de rang S. Pas mal, pour des gens tombés d'un avion. Vous avez gagné un niveau, et pas seulement sur le papier. Tenez. Et reposez-vous : des portails, il y en aura d'autres.",
-    recompense: argent(3000, [["minecraft:golden_apple", 2]], 10) },
+    merci: "Vous êtes revenus. Tous ? … Bien. Un maître de donjon de rang S. Pas mal, pour des gens tombés d'un avion. Vous avez gagné un niveau, et pas seulement sur le papier. Tenez. Et reposez-vous : des portails, il y en aura d'autres.",
+    recompense: argent(300, [["minecraft:golden_apple", 2]], 10) },
 
   // ------------------------------------------------------------ « Où est Pierre ? » : Sylvie cherche son mari
   ou_est_pierre: { qui: "sylvie", ordre: 1, quand: -1, partie: 2, titre: "Où est Pierre ?",

@@ -171,9 +171,9 @@ public final class Enigmes {
         if (l.getBlockEntity(p) instanceof ChestBlockEntity c) {
             c.clearContent();
             c.setItem(11, new ItemStack(Items.TOTEM_OF_UNDYING));
-            c.setItem(13, new ItemStack(Items.GOLDEN_APPLE, 4));
+            c.setItem(13, new ItemStack(Items.GOLDEN_APPLE, 2));
             c.setItem(15, new ItemStack(Items.COOKED_BEEF, 12));
-            c.setItem(22, new ItemStack(Items.ENDER_PEARL, 4));
+            c.setItem(22, new ItemStack(Items.ENDER_PEARL, 2));
             c.setChanged();
         }
     }
@@ -182,7 +182,7 @@ public final class Enigmes {
 
     private static List<ServerPlayer> chasseurs(ServerLevel l) {
         List<ServerPlayer> c = new ArrayList<>();
-        for (ServerPlayer p : l.players()) {
+        for (ServerPlayer p : Boss.joueurs(l, TypeDonjon.OGRE)) {
             if (!p.isSpectator() && p.isAlive()) {
                 c.add(p);
             }
@@ -209,7 +209,7 @@ public final class Enigmes {
             return;
         }
         ServerLevel l = Donjon.niveau(event.getServer());
-        if (l == null || l.players().isEmpty()) {
+        if (l == null || Boss.joueurs(l, TypeDonjon.OGRE).isEmpty()) {
             return;
         }
         braseros(l);
@@ -254,7 +254,7 @@ public final class Enigmes {
                     double a = k * Math.PI * 2 / 3 + 0.5;
                     Boss.poserSbire(l, Donjon.GOBELIN.get(), c.x + Math.cos(a) * 4, c.y, c.z + Math.sin(a) * 4, c);
                 }
-                for (ServerPlayer p : l.players()) {
+                for (ServerPlayer p : Boss.joueurs(l, TypeDonjon.OGRE)) {
                     if (p.distanceToSqr(c) < 16 * 16) {
                         barre(p, "Mauvais ordre ! Les feux s'éteignent…", ChatFormatting.RED);
                     }
@@ -325,7 +325,7 @@ public final class Enigmes {
             l.playSound(null, 0.5, sol() + 3, z, SoundEvents.END_PORTAL_SPAWN, SoundSource.BLOCKS, 0.8F, 1.2F);
             l.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, 0.5, sol() + 4, z + 0.5, 60, 2.5, 2.5, 0.3, 0.03);
             Boss.annoncer(l, "SYSTÈME", new String[] {"Les deux sceaux répondent.", "La porte des sceaux est ouverte, au sud du carrefour."}, "", 0);
-            for (ServerPlayer p : l.players()) {
+            for (ServerPlayer p : Boss.joueurs(l, TypeDonjon.OGRE)) {
                 fr.cabane.pnj.Missions.evenement(p, "sceaux");
             }
             return;

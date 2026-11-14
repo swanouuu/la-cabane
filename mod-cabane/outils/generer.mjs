@@ -381,6 +381,37 @@ tex("item/ticket_a_gratter", [
   ".KYSSYYSSYYSSYK.", ".KYYYYYYYYYYYYK.", ".KYSSYYSSYYTTYK.", ".KYSSYYSSYYTTYK.", ".KYYYYYYYYYYYYK.", ".KYyyyyyyyyyyYK.",
   ".KKKKKKKKKKKKKK.", "................", "................", "................"]);
 for (const n of ["parachute", "booster", "classeur", "ticket_a_gratter"]) itemGenere(n);
+// le cristal de mana des donjons de Jin-woo (voir donjon/Cristaux)
+{
+  const PC = { ".": [0, 0, 0, 0], K: [40, 16, 60], v: [96, 44, 160], V: [150, 80, 222], L: [204, 150, 255], W: [248, 232, 255] };
+  const lignes = [
+    "................",
+    ".......W........",
+    "......WL........",
+    "......LVv.......",
+    ".....LLVv....W..",
+    ".....LVVv...WL..",
+    "....LLVVvv..LVv.",
+    "....LVVVvv.LLVv.",
+    "...LLVVVvvKLVVv.",
+    "...LVWVVvvKLVvv.",
+    "...LVVVvvvKVVvK.",
+    "....VVVvvvKVvvK.",
+    "....KVvvvKKvvK..",
+    ".....KKKKK.KK...",
+    "................",
+    "................"];
+  ecrire("assets/cabane/textures/item/cristal_mana.png", png(lignes.map((l) => l.padEnd(16, ".").slice(0, 16)), PC));
+  itemGenere("cristal_mana");
+}
+// le grain des boss des donjons (client/donjon/Formes) : un bruit gris clair, qui ne teinte pas leurs couleurs
+{
+  const PG = { a: [255, 255, 255], b: [240, 240, 240], c: [226, 226, 226], d: [212, 212, 212] };
+  let graine = 1802;
+  const hasard = () => ((graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const lignes = Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => "abcd"[Math.floor(hasard() * 4)]).join(""));
+  ecrire("assets/cabane/textures/entity/grain_boss.png", png(lignes, PG));
+}
 for (const n of ["carte_rare", "carte_epique", "carte_legendaire"]) itemGenere(n);
 ecrire("assets/cabane/models/item/carte.json", {
   parent: "minecraft:item/generated", textures: { layer0: "cabane:item/carte_commune" },
@@ -491,7 +522,7 @@ Object.assign(lang, {
   "block.cabane.etal": "Étal", "block.cabane.machine_a_sous": "Machine à sous", "block.cabane.table_roulette": "Table de roulette",
   "block.cabane.table_blackjack": "Table de blackjack", "block.cabane.table_des": "Table de dés",
   "block.cabane.roue_fortune": "Roue de la fortune", "block.cabane.table_pile_ou_face": "Table de pile ou face",
-  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi", "entity.cabane.titan": "Titan", "entity.cabane.ogre": "Ugrak, l'Ogre Écarlate", "entity.cabane.gobelin": "Gobelin", "death.attack.cabane.donjon": "%1$s a été écrasé par %2$s", "death.attack.cabane.donjon.player": "%1$s a été écrasé par %2$s", "entity.cabane.brute": "Brute",
+  "entity.cabane.parachute": "Parachute", "entity.cabane.hachibi3": "Hachibi", "entity.cabane.titan": "Titan", "entity.cabane.ogre": "Ugrak, l'Ogre Écarlate", "entity.cabane.gobelin": "Gobelin", "death.attack.cabane.donjon": "%1$s a été écrasé par %2$s", "death.attack.cabane.donjon.player": "%1$s a été écrasé par %2$s", "entity.cabane.brute": "Brute", "entity.cabane.colosse_givre": "Hrimgar, le Colosse de Givre", "entity.cabane.reine_araignee": "Arachna, la Reine-Araignée", "entity.cabane.roi_liche": "Morvane, le Roi-Liche", "entity.cabane.roi_fourmi": "Kar'Thax, le Roi des Fourmis", "item.cabane.cristal_mana": "Cristal de mana",
   "item.cabane.puff_rose": "Puff rose (goût surprise)", "item.cabane.puff_bleue": "Puff bleue (goût surprise)", "item.cabane.puff_menthe": "Puff verte (goût surprise)",
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",

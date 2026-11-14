@@ -36,7 +36,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class DonjonBuilder {
     /** À changer quand le donjon change : il est reconstruit à la prochaine entrée. */
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
     /** Le sol de l'arrivée (on marche à SOL + 1). */
     public static final int SOL = 64;
     /** Le sol du bas (salle des piliers, arène). */
@@ -490,12 +490,13 @@ public final class DonjonBuilder {
                 cristal(g[0] + dx * (k > 0 ? 1 : 0), g[1] + dz * (k > 0 ? 1 : 0), k == 0 ? 4 : 1 + k % 3);
             }
         }
-        // des améthystes, ici et là, sur le sol des grottes
+        // des cristaux de mana, ici et là, sur le sol des grottes : posés sur l'améthyste, ils se minent (Cristaux)
         for (int x = -62; x <= 62; x++) {
             for (int z = -10; z <= 84; z++) {
                 int s = sol(x, z);
-                if (estVide(x, s + 1, z) && Math.floorMod(hash(x, s, z), 41L) == 0 && Math.abs(x) > 3) {
-                    pose(x, s + 1, z, Blocks.LARGE_AMETHYST_BUD.defaultBlockState());
+                if (estVide(x, s + 1, z) && Math.floorMod(hash(x, s, z), 61L) == 0 && Math.abs(x) > 3) {
+                    pose(x, s, z, Blocks.AMETHYST_BLOCK.defaultBlockState());
+                    pose(x, s + 1, z, (hash(x, 3, z) & 1) == 0 ? Blocks.AMETHYST_CLUSTER.defaultBlockState() : Blocks.LARGE_AMETHYST_BUD.defaultBlockState());
                 }
             }
         }

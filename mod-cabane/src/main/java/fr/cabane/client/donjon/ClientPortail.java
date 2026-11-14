@@ -724,6 +724,7 @@ public final class ClientPortail {
     /** Quand le paquet d'arrivée est venu : si le donjon ne se charge jamais, le blanc s'en va quand même. */
     private static long arriveeRecue = -1;
     private static int groupe;
+    private static String nomDonjon = "";
     /** Après la scène : le blanc tient jusqu'à l'arrivée (au plus quelques secondes). */
     private static long blancTenu = -1;
 
@@ -732,6 +733,7 @@ public final class ClientPortail {
         arrivee = System.nanoTime();
         arriveeRecue = arrivee;
         groupe = p.groupe();
+        nomDonjon = p.nom();
         blancTenu = -1;
     }
 
@@ -770,7 +772,7 @@ public final class ClientPortail {
         if (b > 0) {
             g.fill(0, 0, w, h, Mth.clamp((int) (b * 255), 0, 255) << 24 | 0xF2F8FF);
         }
-        fenetre(g, d - 1.2, 6.5, "SYSTÈME", new String[] {"Vous êtes entrés dans un donjon de rang S.", "Objectif : vaincre le boss du donjon.",
+        fenetre(g, d - 1.2, 6.5, "SYSTÈME", new String[] {"Vous êtes entrés dans un donjon de rang S :", nomDonjon.toUpperCase(), "Objectif : vaincre le boss du donjon.",
                 groupe > 1 ? "Chasseurs : " + groupe : "Chasseur : seul"}, "", 0);
         if (d > 8) {
             arrivee = -1;
@@ -811,19 +813,20 @@ public final class ClientPortail {
     // ================================================================ le portail de sortie, dans le donjon
 
     private static void dessinerSortie(PoseStack pose, Vec3 cam, MultiBufferSource.BufferSource buffers) {
-        Vec3 s = DonjonBuilder.SORTIE;
+        fr.cabane.donjon.TypeDonjon type = fr.cabane.donjon.TypeDonjon.de(cam.x);
+        Vec3 s = type.sortie();
         float temps = (float) ((System.nanoTime() / 1e9) % 10000);
         if (cam.distanceToSqr(s) < 90 * 90) {
             RenduPortail.dessiner(pose, buffers, s.subtract(cam), new Vec3(0, 0, 1), DonjonBuilder.RAYON_SORTIE, 1F, 0F, temps);
         }
-        Vec3 a = fr.cabane.donjon.Boss.SORTIE_ARENE;
+        Vec3 a = type.sortieArene();
         if (sortieArene && cam.distanceToSqr(a) < 90 * 90) {
             RenduPortail.dessiner(pose, buffers, a.subtract(cam), new Vec3(0, 0, -1), fr.cabane.donjon.Boss.RAYON_SORTIE_ARENE, 1F, 0F, temps);
         }
     }
 
     private static void particulesSortie(ClientLevel l, Vec3 joueur) {
-        Vec3 s = DonjonBuilder.SORTIE;
+        Vec3 s = fr.cabane.donjon.TypeDonjon.de(joueur.x).sortie();
         if (joueur.distanceToSqr(s) > 40 * 40) {
             return;
         }

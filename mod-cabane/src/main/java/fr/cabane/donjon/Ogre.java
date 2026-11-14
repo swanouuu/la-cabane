@@ -41,12 +41,12 @@ import org.joml.Vector3f;
  * rage (plus rapide, plus fort) et fait jaillir la lave sous les pieds de tout le monde. Il s'acharne sur celui qui lui
  * fait le plus mal. Si tout le monde quitte l'arène, il se soigne et retourne dormir.
  *
- * <p>Sa vie : la vie de Minecraft s'arrête à 1 024 ; il en a 1 000 et ne prend qu'un sixième des dégâts, soit 6 000 PV
+ * <p>Sa vie : la vie de Minecraft s'arrête à 1 024 ; il en a 1 000 et ne prend qu'un tiers des dégâts, soit 3 000 PV
  * « affichés ».
  */
 public class Ogre extends Monster {
     /** Les PV affichés pour 1 PV réel. */
-    public static final float ECHELLE_PV = 6;
+    public static final float ECHELLE_PV = 3;
     public static final float VIE = 1000;
     public static final String NOM = "Ugrak, l'Ogre Écarlate";
 

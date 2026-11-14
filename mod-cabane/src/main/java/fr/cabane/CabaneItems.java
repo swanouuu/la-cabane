@@ -66,6 +66,10 @@ public final class CabaneItems {
     public static final DeferredItem<fr.cabane.police.Police.VoitureItem> VOITURE_POLICE =
             ITEMS.register("voiture_police", () -> new fr.cabane.police.Police.VoitureItem(new Item.Properties().stacksTo(1)));
 
+    /** Un cristal de mana, miné dans les donjons de Jin-woo (voir fr.cabane.donjon.Cristaux). */
+    public static final DeferredItem<fr.cabane.donjon.Cristaux.CristalItem> CRISTAL_MANA = ITEMS.register("cristal_mana",
+            () -> new fr.cabane.donjon.Cristaux.CristalItem(new Item.Properties().rarity(Rarity.RARE)));
+
     /** Une photo du téléphone, imprimée (voir fr.cabane.photo). */
     public static final DeferredItem<fr.cabane.photo.PhotoItem> PHOTO =
             ITEMS.register("photo", () -> new fr.cabane.photo.PhotoItem(new Item.Properties().stacksTo(16)));

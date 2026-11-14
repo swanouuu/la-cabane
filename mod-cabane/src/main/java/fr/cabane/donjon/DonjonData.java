@@ -25,6 +25,14 @@ public class DonjonData extends SavedData {
     private boolean vaincu;
     /** L'hôte a lancé l'événement (/cabane evenement jinwoo) : le portail est ouvert, Jin-woo emmène les groupes. */
     private boolean evenement;
+    /** Les donjons dont le boss est mort (jusqu au prochain groupe), sauf celui d Ugrak (vaincu). */
+    private final java.util.Set<String> vaincus = new java.util.HashSet<>();
+    /** La version construite de chaque donjon tracé. */
+    private final Map<String, Integer> versions = new HashMap<>();
+    /** Quand chaque joueur pourra de nouveau entrer dans un portail (millisecondes). */
+    private final Map<UUID, Long> recharges = new HashMap<>();
+    /** Le dernier donjon de chaque joueur (pour ne pas lui redonner le même). */
+    private final Map<UUID, String> derniers = new HashMap<>();
 
     public static DonjonData get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(DonjonData::new, DonjonData::load, null), NAME);
@@ -47,6 +55,22 @@ public class DonjonData extends SavedData {
         data.versionConstruite = tag.getInt("version");
         data.vaincu = tag.getBoolean("vaincu");
         data.evenement = tag.getBoolean("evenement");
+        net.minecraft.nbt.ListTag v = tag.getList("vaincus", net.minecraft.nbt.Tag.TAG_STRING);
+        for (int k = 0; k < v.size(); k++) {
+            data.vaincus.add(v.getString(k));
+        }
+        CompoundTag ver = tag.getCompound("versions");
+        for (String cle : ver.getAllKeys()) {
+            data.versions.put(cle, ver.getInt(cle));
+        }
+        CompoundTag rec = tag.getCompound("recharges");
+        for (String cle : rec.getAllKeys()) {
+            data.recharges.put(UUID.fromString(cle), rec.getLong(cle));
+        }
+        CompoundTag der = tag.getCompound("derniers");
+        for (String cle : der.getAllKeys()) {
+            data.derniers.put(UUID.fromString(cle), der.getString(cle));
+        }
         return data;
     }
 
@@ -70,6 +94,25 @@ public class DonjonData extends SavedData {
         tag.putInt("version", versionConstruite);
         tag.putBoolean("vaincu", vaincu);
         tag.putBoolean("evenement", evenement);
+        net.minecraft.nbt.ListTag v = new net.minecraft.nbt.ListTag();
+        for (String t : vaincus) {
+            v.add(net.minecraft.nbt.StringTag.valueOf(t));
+        }
+        tag.put("vaincus", v);
+        CompoundTag ver = new CompoundTag();
+        versions.forEach(ver::putInt);
+        tag.put("versions", ver);
+        CompoundTag rec = new CompoundTag();
+        long maintenant = System.currentTimeMillis();
+        recharges.forEach((id, t) -> {
+            if (t > maintenant) {
+                rec.putLong(id.toString(), t);
+            }
+        });
+        tag.put("recharges", rec);
+        CompoundTag der = new CompoundTag();
+        derniers.forEach((id, t) -> der.putString(id.toString(), t));
+        tag.put("derniers", der);
         return tag;
     }
 
@@ -114,6 +157,50 @@ public class DonjonData extends SavedData {
 
     public void setVaincu(boolean v) {
         vaincu = v;
+        setDirty();
+    }
+
+    public boolean vaincu(TypeDonjon type) {
+        return type == TypeDonjon.OGRE ? vaincu : vaincus.contains(type.id());
+    }
+
+    public void setVaincu(TypeDonjon type, boolean v) {
+        if (type == TypeDonjon.OGRE) {
+            vaincu = v;
+        } else if (v) {
+            vaincus.add(type.id());
+        } else {
+            vaincus.remove(type.id());
+        }
+        setDirty();
+    }
+
+    public int version(TypeDonjon type) {
+        return versions.getOrDefault(type.id(), 0);
+    }
+
+    public void setVersion(TypeDonjon type, int version) {
+        versions.put(type.id(), version);
+        setDirty();
+    }
+
+    /** Dans combien de millisecondes ce joueur pourra rentrer dans un portail (0 : tout de suite). */
+    public long recharge(UUID joueur) {
+        return Math.max(0, recharges.getOrDefault(joueur, 0L) - System.currentTimeMillis());
+    }
+
+    public void setRecharge(UUID joueur, long dureeMs) {
+        recharges.put(joueur, System.currentTimeMillis() + dureeMs);
+        setDirty();
+    }
+
+    public TypeDonjon dernier(UUID joueur) {
+        String d = derniers.get(joueur);
+        return d == null ? null : TypeDonjon.parId(d);
+    }
+
+    public void setDernier(UUID joueur, TypeDonjon type) {
+        derniers.put(joueur, type.id());
         setDirty();
     }
 

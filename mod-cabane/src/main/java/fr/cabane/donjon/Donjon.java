@@ -2,6 +2,11 @@ package fr.cabane.donjon;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import fr.cabane.Cabane;
 import fr.cabane.hub.Accueil;
 import fr.cabane.hub.Decollage;
@@ -92,10 +97,28 @@ public final class Donjon {
     public static final DeferredHolder<EntityType<?>, EntityType<Sbire>> BRUTE = ENTITES.register("brute",
             () -> EntityType.Builder.<Sbire>of(Sbire::new, MobCategory.MONSTER).sized(1.3F, 2.6F).clientTrackingRange(10).build("brute"));
 
+    /** Les boss des donjons tracés : le colosse de givre, la reine-araignée, le roi-liche, le roi des fourmis. */
+    public static final DeferredHolder<EntityType<?>, EntityType<Colosse>> COLOSSE = ENTITES.register("colosse_givre",
+            () -> EntityType.Builder.<Colosse>of(Colosse::new, MobCategory.MONSTER).sized(3.4F, 8.4F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("colosse_givre"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Reine>> REINE = ENTITES.register("reine_araignee",
+            () -> EntityType.Builder.<Reine>of(Reine::new, MobCategory.MONSTER).sized(5.0F, 3.0F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("reine_araignee"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Liche>> LICHE = ENTITES.register("roi_liche",
+            () -> EntityType.Builder.<Liche>of(Liche::new, MobCategory.MONSTER).sized(1.8F, 5.2F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("roi_liche"));
+    public static final DeferredHolder<EntityType<?>, EntityType<RoiFourmi>> ROI_FOURMI = ENTITES.register("roi_fourmi",
+            () -> EntityType.Builder.<RoiFourmi>of(RoiFourmi::new, MobCategory.MONSTER).sized(1.6F, 4.4F).fireImmune().clientTrackingRange(16)
+                    .updateInterval(1).build("roi_fourmi"));
+
     public static void register(IEventBus modBus) {
         ENTITES.register(modBus);
         modBus.addListener((EntityAttributeCreationEvent e) -> {
             e.put(OGRE.get(), Ogre.attributs().build());
+            e.put(COLOSSE.get(), Colosse.attributs().build());
+            e.put(REINE.get(), Reine.attributs().build());
+            e.put(LICHE.get(), Liche.attributs().build());
+            e.put(ROI_FOURMI.get(), RoiFourmi.attributs().build());
             e.put(GOBELIN.get(), Sbire.attributsGobelin().build());
             e.put(BRUTE.get(), Sbire.attributsBrute().build());
         });
@@ -115,9 +138,10 @@ public final class Donjon {
     }
 
     /** Serveur → client : on vient d'arriver dans le donjon (le blanc s'efface, la fenêtre du Système s'affiche). */
-    public record Arrivee(int groupe) implements CustomPacketPayload {
+    public record Arrivee(int groupe, String nom) implements CustomPacketPayload {
         public static final Type<Arrivee> TYPE = new Type<>(Cabane.id("donjon_arrivee"));
-        public static final StreamCodec<ByteBuf, Arrivee> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, Arrivee::groupe, Arrivee::new);
+        public static final StreamCodec<ByteBuf, Arrivee> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, Arrivee::groupe,
+                ByteBufCodecs.STRING_UTF8, Arrivee::nom, Arrivee::new);
 
         @Override
         public Type<Arrivee> type() {
@@ -179,10 +203,73 @@ public final class Donjon {
             joueur.sendSystemMessage(Component.literal("Sung Jin-woo : « Pas encore. Le portail n'est pas ouvert. »").withStyle(ChatFormatting.DARK_PURPLE));
             return;
         }
-        List<ServerPlayer> groupe = autour(joueur);
-        String refus = lancer(joueur.server, groupe, 0, 0);
+        DonjonData data = DonjonData.get(joueur.server);
+        long attente = data.recharge(joueur.getUUID());
+        if (attente > 0) {
+            joueur.sendSystemMessage(Component.literal("Sung Jin-woo : « Tu sors à peine d'un portail. Repose-toi : encore " + duree(attente) + ". »")
+                    .withStyle(ChatFormatting.DARK_PURPLE));
+            return;
+        }
+        // ceux qui sont encore fatigués de leur dernier donjon restent dehors
+        List<ServerPlayer> groupe = new ArrayList<>();
+        for (ServerPlayer j : autour(joueur)) {
+            long a = data.recharge(j.getUUID());
+            if (a > 0) {
+                j.sendSystemMessage(Component.literal("Sung Jin-woo : « Pas toi, " + j.getGameProfile().getName() + ". Encore " + duree(a)
+                        + " de repos. »").withStyle(ChatFormatting.DARK_PURPLE));
+            } else {
+                groupe.add(j);
+            }
+        }
+        String refus = lancer(joueur.server, groupe, 0, 0, null);
         if (!refus.isEmpty()) {
             joueur.sendSystemMessage(Component.literal("Sung Jin-woo : « " + refus + " »").withStyle(ChatFormatting.DARK_PURPLE));
+        }
+    }
+
+    /** On ne peut entrer dans un portail que toutes les dix minutes. */
+    public static final long RECHARGE_MS = 10 * 60 * 1000L;
+
+    private static String duree(long ms) {
+        long s = (ms + 999) / 1000;
+        return s >= 60 ? (s / 60) + " min " + String.format("%02d", s % 60) + " s" : s + " s";
+    }
+
+    /**
+     * Un donjon pour ce groupe : au hasard parmi ceux où il n'y a personne, et si possible pas un de ceux que ses membres
+     * viennent de faire. {@code null} : ils sont tous occupés.
+     */
+    private static TypeDonjon choisir(MinecraftServer server, List<ServerPlayer> joueurs) {
+        ServerLevel l = niveau(server);
+        DonjonData data = DonjonData.get(server);
+        List<TypeDonjon> libres = new ArrayList<>();
+        for (TypeDonjon t : TypeDonjon.values()) {
+            if (l == null || Boss.joueurs(l, t).isEmpty()) {
+                libres.add(t);
+            }
+        }
+        if (libres.isEmpty()) {
+            return null;
+        }
+        List<TypeDonjon> neufs = new ArrayList<>(libres);
+        for (ServerPlayer j : joueurs) {
+            neufs.remove(data.dernier(j.getUUID()));
+        }
+        List<TypeDonjon> parmi = neufs.isEmpty() ? libres : neufs;
+        return parmi.get(new java.util.Random().nextInt(parmi.size()));
+    }
+
+    /** Construit ce donjon s'il n'est pas à jour. */
+    static void construireSiBesoin(ServerLevel donjon, TypeDonjon type) {
+        DonjonData data = DonjonData.get(donjon.getServer());
+        if (type == TypeDonjon.OGRE) {
+            if (data.versionConstruite() != DonjonBuilder.VERSION) {
+                DonjonBuilder.construire(donjon);
+                data.setVersionConstruite(DonjonBuilder.VERSION);
+            }
+        } else if (data.version(type) != DonjonGenere.VERSION) {
+            DonjonGenere.construire(donjon, type);
+            data.setVersion(type, DonjonGenere.VERSION);
         }
     }
 
@@ -202,7 +289,7 @@ public final class Donjon {
      * Lance la cinématique pour ce groupe (à partir de {@code depart} secondes ; {@code faux} : des joueurs inventés en
      * plus, pour les tests), puis les emmène dans le donjon. Renvoie la raison du refus, ou "".
      */
-    public static String lancer(MinecraftServer server, List<ServerPlayer> groupe, float depart, int faux) {
+    public static String lancer(MinecraftServer server, List<ServerPlayer> groupe, float depart, int faux, TypeDonjon voulu) {
         BlockPos c = HubData.get(server).centre();
         if (c == null) {
             return "Le village n'est pas encore construit.";
@@ -222,12 +309,20 @@ public final class Donjon {
             return "Personne pour entrer.";
         }
         DonjonData data = DonjonData.get(server);
-        if (data.versionConstruite() != DonjonBuilder.VERSION) {
-            DonjonBuilder.construire(donjon);
-            data.setVersionConstruite(DonjonBuilder.VERSION);
+        TypeDonjon type = voulu != null ? voulu : choisir(server, joueurs);
+        if (type == null) {
+            return "Tous les portails sont occupés par d'autres chasseurs. Attendez qu'un groupe en sorte.";
         }
-        // un nouveau groupe : le boss est de nouveau là
-        Boss.nouveauGroupe(server);
+        if (voulu != null && !Boss.joueurs(donjon, voulu).isEmpty()) {
+            return "Il y a déjà un groupe dans ce donjon.";
+        }
+        construireSiBesoin(donjon, type);
+        // un nouveau groupe : le donjon est de nouveau à faire
+        Boss.nouveauGroupe(server, type);
+        for (ServerPlayer j : joueurs) {
+            data.setRecharge(j.getUUID(), RECHARGE_MS);
+            data.setDernier(j.getUUID(), type);
+        }
         ServerLevel monde = server.overworld();
         centre = c;
         List<Decollage.Passager> liste = new ArrayList<>();
@@ -265,7 +360,7 @@ public final class Donjon {
             j.addEffect(new MobEffectInstance(MobEffects.SATURATION, effets, 0, false, false));
             PacketDistributor.sendToPlayer(j, debut);
         }
-        Cabane.LOGGER.info("Donjon : {} joueur(s) entrent dans le portail ({} s de cinématique)", joueurs.size(), (int) duree);
+        Cabane.LOGGER.info("Donjon : {} joueur(s) entrent dans le portail vers « {} » ({} s de cinématique)", joueurs.size(), type.nom, (int) duree);
         return "";
     }
 
@@ -322,14 +417,15 @@ public final class Donjon {
             return;
         }
         for (ServerPlayer j : List.copyOf(donjon.players())) {
+            TypeDonjon type = TypeDonjon.de(j.getX());
             // tombé dans le vide : retour à l'arrivée
             if (j.getY() < DonjonBuilder.SOL - 30) {
-                Vec3 p = DonjonBuilder.ARRIVEE;
+                Vec3 p = type.arrivee();
                 j.teleportTo(donjon, p.x, p.y, p.z, 0F, 0F);
                 j.fallDistance = 0;
             }
             // dans le portail de sortie : on repart
-            Vec3 s = DonjonBuilder.SORTIE;
+            Vec3 s = type.sortie();
             double dz = j.getZ() - s.z;
             double dx = j.getX() - s.x;
             double dy = j.getY() + 1 - s.y;
@@ -352,9 +448,13 @@ public final class Donjon {
         if (donjon == null) {
             return;
         }
-        PacketDistributor.sendToPlayer(j, new Arrivee(groupe));
+        TypeDonjon type = DonjonData.get(j.server).dernier(j.getUUID());
+        if (type == null) {
+            type = TypeDonjon.OGRE;
+        }
+        PacketDistributor.sendToPlayer(j, new Arrivee(groupe, type.nom));
         fr.cabane.pnj.Missions.evenement(j, "portail");
-        Vec3 p = DonjonBuilder.ARRIVEE.add((i % 5 - 2) * 1.6, 0, (i / 5) * 1.6);
+        Vec3 p = type.arrivee().add((i % 5 - 2) * 1.6, 0, (i / 5) * 1.6);
         j.teleportTo(donjon, p.x, p.y, p.z, 0F, 0F);
         j.fallDistance = 0;
         j.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 60, 4, false, false));
@@ -363,15 +463,18 @@ public final class Donjon {
     }
 
     /** Envoie ce joueur directement dans le donjon, sans la scène (l'hôte, pour rejoindre les autres). */
-    public static void rejoindre(ServerPlayer j) {
+    public static void rejoindre(ServerPlayer j, TypeDonjon type) {
         ServerLevel donjon = niveau(j.server);
-        if (donjon == null || dedans(j)) {
+        if (donjon == null) {
             return;
         }
         DonjonData data = DonjonData.get(j.server);
-        if (data.versionConstruite() != DonjonBuilder.VERSION) {
-            DonjonBuilder.construire(donjon);
-            data.setVersionConstruite(DonjonBuilder.VERSION);
+        construireSiBesoin(donjon, type);
+        data.setDernier(j.getUUID(), type);
+        if (dedans(j)) {
+            Vec3 p = type.arrivee();
+            j.teleportTo(donjon, p.x, p.y, p.z, 0F, 0F);
+            return;
         }
         data.setRetour(j.getUUID(), new DonjonData.Retour(j.serverLevel().dimension().location(), j.getX(), j.getY(), j.getZ(), j.getYRot(), j.getXRot()));
         arriver(j, 0, 1);
@@ -387,6 +490,7 @@ public final class Donjon {
         DonjonData.Retour retour = data.retour(joueur.getUUID());
         ServerLevel cible = retour == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, retour.dimension()));
         ServerLevel ici = joueur.serverLevel();
+        Cristaux.vendre(joueur);
         ici.playSound(null, joueur.getX(), joueur.getY(), joueur.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1F, 0.7F);
         BlockPos c = HubData.get(server).centre();
         if (cible != null && cible != ici) {
@@ -454,12 +558,24 @@ public final class Donjon {
         ACTEURS.clear();
         ServerLevel donjon = niveau(event.getServer());
         DonjonData data = DonjonData.get(event.getServer());
-        if (donjon != null && data.versionConstruite() != DonjonBuilder.VERSION) {
-            DonjonBuilder.construire(donjon);
-            data.setVersionConstruite(DonjonBuilder.VERSION);
-        } else if (donjon != null) {
+        if (donjon == null) {
+            return;
+        }
+        if (data.versionConstruite() != DonjonBuilder.VERSION) {
+            construireSiBesoin(donjon, TypeDonjon.OGRE);
+        } else {
             // personne n'est dedans au démarrage : les énigmes et les portes reprennent leur état de départ
             Enigmes.reinitialiser(donjon);
+        }
+        for (TypeDonjon t : TypeDonjon.values()) {
+            if (!t.genere()) {
+                continue;
+            }
+            if (data.version(t) != DonjonGenere.VERSION) {
+                construireSiBesoin(donjon, t);
+            } else {
+                Epreuves.de(t).reinitialiser(donjon, true);
+            }
         }
     }
 
@@ -526,7 +642,47 @@ public final class Donjon {
                     return 1;
                 }))
                 .then(Commands.literal("rejoindre").requires(Donjon::hote).executes(ctx -> {
-                    rejoindre(ctx.getSource().getPlayerOrException());
+                    rejoindre(ctx.getSource().getPlayerOrException(), TypeDonjon.OGRE);
+                    return 1;
+                }))
+                // pour l'hôte : aller dans tel donjon sans la scène
+                .then(Commands.literal("aller").requires(Donjon::hote)
+                        .then(Commands.argument("donjon", StringArgumentType.word()).suggests(Donjon::suggererTypes).executes(ctx -> {
+                            TypeDonjon t = typeArg(ctx);
+                            if (t == null) {
+                                return 0;
+                            }
+                            rejoindre(ctx.getSource().getPlayerOrException(), t);
+                            return 1;
+                        })))
+                // pour les captures de l'hôte : le boss joue tel geste (son numéro d'état), qui commence dans tant de ticks
+                .then(Commands.literal("vitrine").requires(Donjon::hote)
+                        .then(Commands.argument("donjon", StringArgumentType.word()).suggests(Donjon::suggererTypes)
+                                .then(Commands.argument("etat", IntegerArgumentType.integer(-1, 20))
+                                        .then(Commands.argument("dans", IntegerArgumentType.integer(1, 400)).executes(ctx -> {
+                                            TypeDonjon t = typeArg(ctx);
+                                            ServerLevel donjon = niveau(ctx.getSource().getServer());
+                                            if (t == null || !t.genere() || donjon == null) {
+                                                return 0;
+                                            }
+                                            if (Boss.boss(donjon, t).isEmpty()) {
+                                                Boss.apparaitre(donjon, t);
+                                            }
+                                            int etat = IntegerArgumentType.getInteger(ctx, "etat"), dans = IntegerArgumentType.getInteger(ctx, "dans");
+                                            for (var b : Boss.boss(donjon, t)) {
+                                                if (b instanceof BossDonjon bd) {
+                                                    bd.vitrine(etat, dans);
+                                                }
+                                            }
+                                            return 1;
+                                        })))))
+                // pour l'hôte : tout le monde peut de nouveau entrer dans un portail
+                .then(Commands.literal("recharge").requires(Donjon::hote).executes(ctx -> {
+                    DonjonData d = DonjonData.get(ctx.getSource().getServer());
+                    for (ServerPlayer j : ctx.getSource().getServer().getPlayerList().getPlayers()) {
+                        d.setRecharge(j.getUUID(), 0);
+                    }
+                    ctx.getSource().sendSuccess(() -> Component.literal("Tout le monde peut de nouveau entrer dans un portail."), true);
                     return 1;
                 }))
                 .then(Commands.literal("fin").requires(Donjon::hote).executes(ctx -> {
@@ -542,26 +698,23 @@ public final class Donjon {
                     ctx.getSource().sendSuccess(() -> Component.literal(total + " joueur(s) sorti(s) du donjon."), true);
                     return n;
                 }))
-                .then(Commands.literal("boss").requires(Donjon::hote).executes(ctx -> {
-                    ServerPlayer j = ctx.getSource().getPlayerOrException();
-                    rejoindre(j);
-                    Boss.nouveauGroupe(ctx.getSource().getServer());
-                    ServerLevel donjon = niveau(ctx.getSource().getServer());
-                    // un combat tout neuf : l'ancien boss et les sbires s'en vont
-                    if (donjon != null) {
-                        Boss.retirer(donjon);
-                    }
-                    if (donjon != null) {
-                        Vec3 p = DonjonBuilder.ARENE.add(0, 0, -20);
-                        j.teleportTo(donjon, p.x, p.y, p.z, 0F, 0F);
-                    }
-                    return 1;
-                }))
+                .then(Commands.literal("boss").requires(Donjon::hote)
+                        .executes(ctx -> versBoss(ctx.getSource(), TypeDonjon.OGRE))
+                        .then(Commands.argument("donjon", StringArgumentType.word()).suggests(Donjon::suggererTypes).executes(ctx -> {
+                            TypeDonjon t = typeArg(ctx);
+                            return t == null ? 0 : versBoss(ctx.getSource(), t);
+                        })))
                 // pour l'hôte : les énigmes comme résolues et la porte des sceaux ouverte
                 .then(Commands.literal("ouvrir").requires(Donjon::hote).executes(ctx -> {
                     ServerLevel donjon = niveau(ctx.getSource().getServer());
+                    ServerPlayer j = ctx.getSource().getPlayer();
+                    TypeDonjon t = j != null && dedans(j) ? TypeDonjon.de(j.getX()) : TypeDonjon.OGRE;
                     if (donjon != null) {
-                        Enigmes.toutOuvrir(donjon);
+                        if (t == TypeDonjon.OGRE) {
+                            Enigmes.toutOuvrir(donjon);
+                        } else {
+                            Epreuves.de(t).toutOuvrir(donjon);
+                        }
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal("Énigmes résolues, porte des sceaux ouverte."), true);
                     return 1;
@@ -572,16 +725,37 @@ public final class Donjon {
                         ctx.getSource().sendFailure(Component.literal("La dimension du donjon est introuvable."));
                         return 0;
                     }
-                    Boss.retirer(donjon);
-                    DonjonBuilder.construire(donjon);
-                    DonjonData.get(ctx.getSource().getServer()).setVersionConstruite(DonjonBuilder.VERSION);
-                    ctx.getSource().sendSuccess(() -> Component.literal("Le donjon est reconstruit."), true);
+                    DonjonData d = DonjonData.get(ctx.getSource().getServer());
+                    for (TypeDonjon t : TypeDonjon.values()) {
+                        Boss.retirer(donjon, t);
+                        if (t == TypeDonjon.OGRE) {
+                            d.setVersionConstruite(0);
+                        } else {
+                            d.setVersion(t, 0);
+                        }
+                        construireSiBesoin(donjon, t);
+                    }
+                    ctx.getSource().sendSuccess(() -> Component.literal("Les donjons sont reconstruits."), true);
                     return 1;
                 }))
                 .then(Commands.literal("test").requires(Donjon::hote)
                         .then(Commands.argument("depart", FloatArgumentType.floatArg(0, (float) DUREE - 1))
                                 .executes(ctx -> lancerDepuis(ctx.getSource(), List.of(ctx.getSource().getPlayerOrException()),
                                         FloatArgumentType.getFloat(ctx, "depart"), 0))
+                                .then(Commands.literal("vers").then(Commands.argument("donjon", StringArgumentType.word()).suggests(Donjon::suggererTypes)
+                                        .executes(ctx -> {
+                                            TypeDonjon t = typeArg(ctx);
+                                            if (t == null) {
+                                                return 0;
+                                            }
+                                            String refus = lancer(ctx.getSource().getServer(), List.of(ctx.getSource().getPlayerOrException()),
+                                                    FloatArgumentType.getFloat(ctx, "depart"), 0, t);
+                                            if (!refus.isEmpty()) {
+                                                ctx.getSource().sendFailure(Component.literal(refus));
+                                                return 0;
+                                            }
+                                            return 1;
+                                        })))
                                 .then(Commands.argument("faux", IntegerArgumentType.integer(0, MAX))
                                         .executes(ctx -> lancerDepuis(ctx.getSource(), List.of(ctx.getSource().getPlayerOrException()),
                                                 FloatArgumentType.getFloat(ctx, "depart"), IntegerArgumentType.getInteger(ctx, "faux"))))))
@@ -600,12 +774,44 @@ public final class Donjon {
     }
 
     private static int lancerDepuis(CommandSourceStack source, List<ServerPlayer> joueurs, float depart, int faux) {
-        String refus = lancer(source.getServer(), joueurs, depart, faux);
+        String refus = lancer(source.getServer(), joueurs, depart, faux, null);
         if (!refus.isEmpty()) {
             source.sendFailure(Component.literal(refus));
             return 0;
         }
         source.sendSuccess(() -> Component.literal("Le portail de rang S s'ouvre…").withStyle(ChatFormatting.AQUA), true);
+        return 1;
+    }
+
+    private static java.util.concurrent.CompletableFuture<Suggestions> suggererTypes(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder b) {
+        for (TypeDonjon t : TypeDonjon.values()) {
+            b.suggest(t.id());
+        }
+        return b.buildFuture();
+    }
+
+    private static TypeDonjon typeArg(CommandContext<CommandSourceStack> ctx) {
+        String id = StringArgumentType.getString(ctx, "donjon");
+        TypeDonjon t = TypeDonjon.parId(id);
+        if (t == null) {
+            ctx.getSource().sendFailure(Component.literal("Donjon inconnu : " + id));
+        }
+        return t;
+    }
+
+    /** Pour l'hôte : un combat tout neuf contre le boss de ce donjon (l'ancien boss et les sbires s'en vont). */
+    private static int versBoss(CommandSourceStack source, TypeDonjon t) throws CommandSyntaxException {
+        ServerPlayer j = source.getPlayerOrException();
+        rejoindre(j, t);
+        ServerLevel donjon = niveau(source.getServer());
+        if (donjon == null) {
+            return 0;
+        }
+        DonjonData.get(source.getServer()).setVaincu(t, false);
+        Boss.retirer(donjon, t);
+        Boss.prevenir(j);
+        Vec3 p = t.arene().add(0, 0, -t.rayonArene() + 6);
+        j.teleportTo(donjon, p.x, p.y, p.z, 0F, 0F);
         return 1;
     }
 
