@@ -691,6 +691,8 @@ public final class ClientHachibi4 {
                 // et à l Éclipse des Ténèbres, au Jugement de la Lumière (niveau 3)
                 fr.cabane.client.pouvoir.ClientTenebres.toucheUlti();
                 fr.cabane.client.pouvoir.ClientLumiere.toucheUlti();
+                // et à l'aube du phénix (niveau 3)
+                fr.cabane.client.pouvoir.ClientPhenix.toucheUlti();
                 PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.ULTI));
             }
         }

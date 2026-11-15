@@ -10,7 +10,7 @@ import net.minecraft.client.KeyMapping;
  * par défaut, et les panneaux des pouvoirs continuent de les afficher. Pour les remettre dans le menu : ACTIF = false.
  */
 public final class TouchesCachees {
-    public static final boolean ACTIF = true;
+    public static final boolean ACTIF = false;
 
     /** L'Éveil reste dans le menu : son nom ne dévoile rien, et les joueurs doivent pouvoir le changer. */
     private static final Set<String> CACHEES = Set.of("key.cabane.ulti", "key.cabane.technique", "key.cabane.kamui", "key.cabane.meteorite", "key.cabane.corbeau", "key.cabane.fracture");

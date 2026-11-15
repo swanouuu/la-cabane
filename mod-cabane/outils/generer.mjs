@@ -558,7 +558,8 @@ Object.assign(lang, {
   "death.attack.cabane.eclair_jaune.item": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
   "death.attack.cabane.eclair_jaune.player": "%1$s a été foudroyé par l'Éclair Jaune",
   // les fruits du démon (voir pouvoir/Fruit.java et docs/fruits)
-  "block.cabane.hie_hie_no_mi": "Hie Hie no Mi", "block.cabane.magu_magu_no_mi": "Magu Magu no Mi",
+  "block.cabane.hie_hie_no_mi": "Hie Hie no Mi", "block.cabane.magu_magu_no_mi": "Magu Magu no Mi", "block.cabane.tori_tori_no_mi": "Tori Tori no Mi",
+  "block.cabane.feu_bleu": "Flammes bleues",
   "death.attack.cabane.magma": "%1$s a fondu dans la lave de %2$s",
   "death.attack.cabane.magma.item": "%1$s a fondu dans la lave de %2$s",
   "death.attack.cabane.magma.player": "%1$s a fondu dans la lave",

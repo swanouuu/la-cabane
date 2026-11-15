@@ -697,3 +697,4 @@ if (PRINCIPAL) {
   ecrirePng(path.join(DOC, "planche-objets.png"), W, H, img);
   console.log("ok", W, H);
 }
+export { icone, peau, MODELE, VRILLE, TIGE };

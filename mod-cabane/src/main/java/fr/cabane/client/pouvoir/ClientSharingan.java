@@ -510,11 +510,15 @@ public final class ClientSharingan {
     /** ², L, I : le Susano, le Kamui, la météorite (le serveur dit si c'est possible). */
     private static void touches(Minecraft mc) {
         while (SUSANO.consumeClick()) {
-            if (mc.screen == null && !ClientMinato.technique() && !ClientIchibi.technique() && !ClientKaguya.technique() && !ClientTenebres.technique() && !ClientLumiere.technique()) {
+            if (mc.screen == null && !ClientMinato.technique() && !ClientIchibi.technique() && !ClientKaguya.technique() && !ClientTenebres.technique() && !ClientLumiere.technique() && !ClientVent.technique() && !ClientPhenix.technique()) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_SUSANO));
             }
         }
         while (KAMUI.consumeClick()) {
+            // le phénix éveillé : L est son piqué
+            if (ClientPhenix.touche(fr.cabane.pouvoir.Phenix.PIQUE)) {
+                continue;
+            }
             // (L ouvre aussi les progrès : avec le Mangekyo, l'écran ne s'ouvre pas, voir ecranOuvert)
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_KAMUI));
@@ -524,16 +528,25 @@ public final class ClientSharingan {
             }
         }
         while (METEORITE.consumeClick()) {
+            if (ClientPhenix.touche(fr.cabane.pouvoir.Phenix.VOL_BLEU)) {
+                continue;
+            }
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_METEORITE));
             }
         }
         while (CORBEAU.consumeClick()) {
+            if (ClientPhenix.touche(fr.cabane.pouvoir.Phenix.BRASIER)) {
+                continue;
+            }
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_CORBEAU));
             }
         }
         while (FRACTURE.consumeClick()) {
+            if (ClientPhenix.touche(fr.cabane.pouvoir.Phenix.TOURBILLON)) {
+                continue;
+            }
             if (mc.screen == null && mc.player != null && niveau(mc.player.getUUID()) >= 1) {
                 PacketDistributor.sendToServer(new Sharingan.Touche(Sharingan.J_FRACTURE));
             }
@@ -697,7 +710,7 @@ public final class ClientSharingan {
                 return;
             }
             int n = niveau(mc.player.getUUID());
-            boolean kamui = (n >= 2 || ClientMinato.eveille()) && KAMUI.isDown()
+            boolean kamui = (n >= 2 || ClientMinato.eveille() || ClientPhenix.niveauLocal() >= 3) && KAMUI.isDown()
                     && event.getNewScreen() instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
             if (kamui) {
                 event.setCanceled(true);

@@ -204,6 +204,23 @@ public final class ClientSusano {
             TRANSFORMES.remove(p.joueur());
             FRUITS.remove(p.joueur());
         }
+        // le phénix a son propre dessin (ClientPhenix)
+        if (fr.cabane.pouvoir.Phenix.est(p.pouvoir())) {
+            SUSANOS.remove(p.joueur());
+            ClientHachibi.oublier(p.joueur());
+            ClientMaudit.oublier(p.joueur());
+            ClientMinato.oublier(p.joueur());
+            ClientFruit.oublier(p.joueur());
+            ClientIchibi.oublier(p.joueur());
+            ClientFoudre.oublier(p.joueur());
+            ClientVent.oublier(p.joueur());
+            ClientKaguya.oublier(p.joueur());
+            ClientTenebres.oublier(p.joueur());
+            ClientLumiere.oublier(p.joueur());
+            ClientPhenix.recevoir(p);
+            return;
+        }
+        ClientPhenix.oublier(p.joueur());
         // les Ténèbres et la Lumière ont leur propre dessin (ClientTenebres, ClientLumiere)
         if (fr.cabane.pouvoir.Tenebres.est(p.pouvoir()) || fr.cabane.pouvoir.Lumiere.est(p.pouvoir())) {
             SUSANOS.remove(p.joueur());

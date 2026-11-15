@@ -302,7 +302,7 @@ public final class PhotoTour {
             }
             case "technique" -> {
                 // la touche ² : le Susano monte d un niveau (ou Minato va à son kunai)
-                if (!fr.cabane.client.pouvoir.ClientMinato.technique() && !fr.cabane.client.pouvoir.ClientIchibi.technique() && !fr.cabane.client.pouvoir.ClientKaguya.technique() && !fr.cabane.client.pouvoir.ClientTenebres.technique() && !fr.cabane.client.pouvoir.ClientLumiere.technique()) {
+                if (!fr.cabane.client.pouvoir.ClientMinato.technique() && !fr.cabane.client.pouvoir.ClientIchibi.technique() && !fr.cabane.client.pouvoir.ClientKaguya.technique() && !fr.cabane.client.pouvoir.ClientTenebres.technique() && !fr.cabane.client.pouvoir.ClientLumiere.technique() && !fr.cabane.client.pouvoir.ClientVent.technique() && !fr.cabane.client.pouvoir.ClientPhenix.technique()) {
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Sharingan.Touche(fr.cabane.pouvoir.Sharingan.J_SUSANO));
                 }
                 return 2;
@@ -313,6 +313,7 @@ public final class PhotoTour {
                 fr.cabane.client.pouvoir.ClientKaguya.toucheUlti();
                 fr.cabane.client.pouvoir.ClientTenebres.toucheUlti();
                 fr.cabane.client.pouvoir.ClientLumiere.toucheUlti();
+                fr.cabane.client.pouvoir.ClientPhenix.toucheUlti();
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new fr.cabane.pouvoir.Hachibi4.Touche(fr.cabane.pouvoir.Hachibi4.ULTI));
                 return 2;
             }

@@ -135,6 +135,8 @@ public final class Fruit {
 
     public static final ResourceLocation MAGU = Cabane.id("magu_magu_no_mi");
     public static final ResourceLocation HIE = Cabane.id("hie_hie_no_mi");
+    /** Le Tori Tori no Mi, modèle Phénix (liste blanche « phenix ») : voir {@link Phenix}. */
+    public static final ResourceLocation TORI = Cabane.id("tori_tori_no_mi");
 
     public static final int RECHARGE_JET = 6 * 20;
     public static final int RECHARGE_CHOC = 20 * 20;
@@ -183,7 +185,7 @@ public final class Fruit {
 
     static final ResourceKey<DamageType> MAGMA = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("magma"));
     static final ResourceKey<DamageType> GIVRE = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("givre"));
-    private static final ResourceKey<DamageType> EAU = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("eau"));
+    static final ResourceKey<DamageType> EAU = ResourceKey.create(Registries.DAMAGE_TYPE, Cabane.id("eau"));
 
     public static boolean est(String pouvoir) {
         return lave(pouvoir) || glace(pouvoir);
@@ -236,6 +238,9 @@ public final class Fruit {
         event.register(Registries.BLOCK, HIE, () -> new FruitPose(proprietes(false), GLACE));
         event.register(Registries.ITEM, MAGU, () -> new FruitItem(BuiltInRegistries.BLOCK.get(MAGU), LAVE));
         event.register(Registries.ITEM, HIE, () -> new FruitItem(BuiltInRegistries.BLOCK.get(HIE), GLACE));
+        event.register(Registries.BLOCK, TORI, () -> new FruitPose(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(0.3F)
+                .sound(SoundType.WART_BLOCK).noOcclusion().pushReaction(PushReaction.DESTROY).lightLevel(s -> 8), Phenix.NOM));
+        event.register(Registries.ITEM, TORI, () -> new FruitItem(BuiltInRegistries.BLOCK.get(TORI), Phenix.NOM));
     }
 
     private static BlockBehaviour.Properties proprietes(boolean lave) {
@@ -249,6 +254,7 @@ public final class Fruit {
         if (event.getTabKey().location().equals(Cabane.id("cabane"))) {
             event.accept(BuiltInRegistries.ITEM.get(HIE));
             event.accept(BuiltInRegistries.ITEM.get(MAGU));
+            event.accept(BuiltInRegistries.ITEM.get(TORI));
         }
     }
 
@@ -275,19 +281,24 @@ public final class Fruit {
         public ItemStack finishUsingItem(ItemStack objet, Level monde, LivingEntity mangeur) {
             ItemStack reste = super.finishUsingItem(objet, monde, mangeur);
             if (mangeur instanceof ServerPlayer joueur) {
-                manger(joueur, sorte);
+                if (Phenix.NOM.equals(sorte)) {
+                    Phenix.manger(joueur);
+                } else {
+                    manger(joueur, sorte);
+                }
             }
             return reste;
         }
 
         @Override
         public Component getName(ItemStack objet) {
-            return Component.translatable(getDescriptionId(objet)).withStyle(GLACE.equals(sorte) ? ChatFormatting.AQUA : ChatFormatting.GOLD);
+            return Component.translatable(getDescriptionId(objet)).withStyle(GLACE.equals(sorte) || Phenix.NOM.equals(sorte) ? ChatFormatting.AQUA : ChatFormatting.GOLD);
         }
 
         @Override
         public void appendHoverText(ItemStack objet, Item.TooltipContext contexte, List<Component> lignes, TooltipFlag options) {
-            lignes.add(Component.literal(GLACE.equals(sorte) ? "Fruit du démon : la glace" : "Fruit du démon : la lave").withStyle(ChatFormatting.GRAY));
+            lignes.add(Component.literal(Phenix.NOM.equals(sorte) ? "Fruit du démon : le phénix" : GLACE.equals(sorte) ? "Fruit du démon : la glace" : "Fruit du démon : la lave")
+                    .withStyle(ChatFormatting.GRAY));
             lignes.add(Component.literal("Clic droit maintenu : le manger").withStyle(ChatFormatting.DARK_GRAY));
             // les touches de chacun (s'accroupir n'est pas forcément Maj)
             lignes.add(Component.empty().append(Component.keybind("key.sneak")).append(" + ").append(Component.keybind("key.use"))
@@ -355,7 +366,11 @@ public final class Fruit {
         public void animateTick(BlockState etat, Level monde, BlockPos pos, RandomSource hasard) {
             double x = pos.getX() + 0.5 + (hasard.nextDouble() - 0.5) * 0.6, y = pos.getY() + 0.2 + hasard.nextDouble() * 0.6;
             double z = pos.getZ() + 0.5 + (hasard.nextDouble() - 0.5) * 0.6;
-            if (GLACE.equals(sorte)) {
+            if (Phenix.NOM.equals(sorte)) {
+                if (hasard.nextInt(3) == 0) {
+                    monde.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, pos.getY() + 0.75, z, 0, 0.01, 0);
+                }
+            } else if (GLACE.equals(sorte)) {
                 if (hasard.nextInt(3) == 0) {
                     monde.addParticle(ParticleTypes.SNOWFLAKE, x, y, z, 0, 0.01, 0);
                 }

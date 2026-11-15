@@ -1,6 +1,7 @@
 package fr.cabane.client.pouvoir;
 
 import fr.cabane.Cabane;
+import fr.cabane.pouvoir.FeuBleu;
 import fr.cabane.pouvoir.FeuNoir;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -14,10 +15,13 @@ import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class ClientFeuNoir {
     private static final int TEINTE = 0x16121C;
+    /** Les flammes bleues du phénix : le feu des âmes, un peu poussé vers le cyan. */
+    private static final int TEINTE_BLEUE = 0xC4F2FF;
 
     @SubscribeEvent
     public static void couleurs(RegisterColorHandlersEvent.Block event) {
         event.register((etat, monde, pos, indice) -> TEINTE, FeuNoir.FEU.get());
+        event.register((etat, monde, pos, indice) -> TEINTE_BLEUE, FeuBleu.FEU.get());
     }
 
     private ClientFeuNoir() {
