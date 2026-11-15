@@ -118,6 +118,25 @@ public final class Casino {
         Ticket.register(event);
     }
 
+    /**
+     * Accroupi avec un objet en main, Minecraft n'ouvre pas le bloc visé : le gérant (ou un op) ne pouvait
+     * pas gérer sa caisse s'il tenait quoi que ce soit, même dans l'autre main. On force l'ouverture pour lui.
+     */
+    @net.neoforged.fml.common.EventBusSubscriber(modid = Cabane.MODID)
+    public static final class ClicGerant {
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void clic(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+            net.minecraft.world.entity.player.Player joueur = event.getEntity();
+            if (joueur.isShiftKeyDown()
+                    && event.getLevel().getBlockState(event.getPos()).getBlock() instanceof fr.cabane.bloc.BlocInteractif bloc && bloc.ouverture().casino()
+                    && event.getLevel().getBlockEntity(event.getPos()) instanceof fr.cabane.bloc.InteractifBlockEntity be
+                    && (be.estProprietaire(joueur.getUUID()) || joueur.hasPermissions(2))) {
+                event.setUseBlock(net.neoforged.neoforge.common.util.TriState.TRUE);
+                event.setUseItem(net.neoforged.neoforge.common.util.TriState.FALSE);
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- la caisse de chaque machine
 
     /** La machine visée, si c'est bien un jeu du casino à portée de main. */
