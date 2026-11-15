@@ -174,9 +174,14 @@ public final class ClientVent {
                     mc.level.playLocalSound(j.getX(), j.getY() + 1, j.getZ(), SoundEvents.BREEZE_IDLE_GROUND, SoundSource.PLAYERS, 1.2F, hauteur, false);
                 }
             }
+            // la jauge de vol repart pleine seulement quand il passe au niveau 3 (ce paquet revient aussi en cours d éveil)
+            boolean monte3 = p.niveau() >= 3 && e.niveau < 3;
             e.niveau = p.niveau();
             if (moi) {
                 sautsReste = Vent.SAUTS_EN_L_AIR;
+                if (monte3) {
+                    volReste = Vent.VOL_MAX;
+                }
             }
         } else {
             if (e != null && e.fin < 0) {
@@ -1469,14 +1474,14 @@ public final class ClientVent {
             lignes.add(new String[]{Clavier.gauche(), "Lame de vent"});
             lignes.add(new String[]{Clavier.droite(), "Lances" + reste(pretDroit)});
             lignes.add(new String[]{tenuNom, "Tempête" + reste(pretTenu)});
-            lignes.add(new String[]{Clavier.accroupi(), "Répulsion" + reste(pretAccroupi)});
-            lignes.add(new String[]{Clavier.saut() + " ×2", "Voler"});
+            lignes.add(new String[]{Clavier.nom(ClientSharingan.SUSANO), "Répulsion" + reste(pretAccroupi)});
+            lignes.add(new String[]{Clavier.saut() + " ×2", "Voler  " + (volReste + 19) / 20 + " s"});
             lignes.add(new String[]{Clavier.nom(fr.cabane.client.hachibi4.ClientHachibi4.ULTI), "Tornade royale"});
             gris.add(false);
             gris.add(pretDroit > now);
             gris.add(pretTenu > now);
             gris.add(pretAccroupi > now);
-            gris.add(false);
+            gris.add(volReste == 0);
             gris.add(false);
         }
         lignes.add(new String[]{Clavier.nom(ClientSusano.EVEIL), eveil});
@@ -1506,6 +1511,8 @@ public final class ClientVent {
     private static long tenuDebut;
     private static boolean accroupiAvant, sautAvant, solAvant = true;
     private static int sautsReste = Vent.SAUTS_EN_L_AIR;
+    /** La jauge de vol du niveau 3, tenue de son côté comme sur le serveur (voir Vent.VOL_MAX) : pour le panneau. */
+    private static int volReste = Vent.VOL_MAX;
     private static long derniereLame;
     private static long secousse = -1;
     private static float forceSecousse;
@@ -1524,6 +1531,20 @@ public final class ClientVent {
     }
 
     /** Le clic droit lâché avant 1 s : les tranches (niveaux 1 et 2) ou les lances (niveau 3). */
+    /** La touche technique (², lue dans ClientSharingan) : la répulsion en grand, au niveau 3. */
+    public static boolean technique() {
+        Minecraft mc = Minecraft.getInstance();
+        Etat moi = mc.player == null ? null : ETATS.get(mc.player.getUUID());
+        if (moi == null || moi.fin >= 0 || moi.niveau < 3) {
+            return false;
+        }
+        if (System.nanoTime() >= pretAccroupi) {
+            pretAccroupi = dans(Vent.RECHARGE_REPULSION);
+            envoyer(Vent.ACCROUPI);
+        }
+        return true;
+    }
+
     private static void clicCourt(Minecraft mc, Etat moi) {
         if (System.nanoTime() < pretDroit) {
             return;
@@ -1600,9 +1621,10 @@ public final class ClientVent {
                     }
                 }
             }
-            // s'accroupir (l'appui) : le tourbillon, la répulsion céleste (en grand au niveau 3)
+            // s'accroupir (l'appui) : le tourbillon, la répulsion céleste ; au niveau 3, la répulsion passe sur la touche
+            // technique (voir technique()) : accroupi sert à redescendre quand il vole
             boolean accroupi = mc.options.keyShift.isDown();
-            if (eveille && accroupi && !accroupiAvant && mc.screen == null && System.nanoTime() >= pretAccroupi) {
+            if (eveille && moi.niveau < 3 && accroupi && !accroupiAvant && mc.screen == null && System.nanoTime() >= pretAccroupi) {
                 pretAccroupi = dans(moi.niveau >= 2 ? Vent.RECHARGE_REPULSION : Vent.RECHARGE_TOURBILLON);
                 envoyer(Vent.ACCROUPI);
             }
@@ -1612,6 +1634,13 @@ public final class ClientVent {
             boolean sol = mc.player.onGround();
             if (sol) {
                 sautsReste = Vent.SAUTS_EN_L_AIR;
+            }
+            if (eveille && moi.niveau >= 3) {
+                if (mc.player.getAbilities().flying) {
+                    volReste = Math.max(0, volReste - 1);
+                } else if (sol) {
+                    volReste = Math.min(Vent.VOL_MAX, volReste + 2);
+                }
             }
             if (eveille && moi.niveau == 2 && saut && !sautAvant && !sol && !solAvant && sautsReste > 0 && mc.screen == null
                     && !mc.player.getAbilities().flying && !mc.player.isInWater() && !mc.player.onClimbable()) {

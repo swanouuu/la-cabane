@@ -112,6 +112,13 @@ public final class Vent {
     private static final double[] VITESSE = {0, 0.2, 0.4, 0.6};
     /** En vol (niveau 3) : environ une fois et demie la vitesse de course (8,5 blocs/s), moins que le vol normal. */
     static final float VOL = 0.039F;
+    /**
+     * Au niveau 3, il vole 30 s au plus d affilée : la jauge se vide en l air ; vide, il retombe (sans dégâts de chute) et
+     * ne revole qu après avoir touché le sol. Au sol, elle se remplit deux fois plus vite (pleine en 15 s).
+     */
+    public static final int VOL_MAX = 30 * 20;
+    private static final Map<UUID, Integer> VOL_RESTE = new HashMap<>();
+    private static final Set<UUID> VOL_EPUISE = new HashSet<>();
 
     private static final ResourceLocation VITE = Cabane.id("vent_vitesse");
 
@@ -412,6 +419,8 @@ public final class Vent {
         }
         if (niveau >= 3) {
             ARRIVEE.put(joueur.getUUID(), joueur.server.getTickCount() + FORME);
+            VOL_RESTE.put(joueur.getUUID(), VOL_MAX);
+            VOL_EPUISE.remove(joueur.getUUID());
             // la tornade verte le soulève : il reste en l'air (il vole)
             voler(joueur, true);
             joueur.setDeltaMovement(0, 0.95, 0);
@@ -447,6 +456,8 @@ public final class Vent {
         PRET_ACCROUPI.remove(joueur.getUUID());
         PRET_FAUCON.remove(joueur.getUUID());
         SAUTS.remove(joueur.getUUID());
+        VOL_RESTE.remove(joueur.getUUID());
+        VOL_EPUISE.remove(joueur.getUUID());
     }
 
     /** Au niveau 3, il peut voler (le double saut, comme en créatif) ; endormi, il redescend doucement. */
@@ -908,12 +919,36 @@ public final class Vent {
             if (e.getValue() >= 3 && !ARRIVEE.containsKey(e.getKey()) && !tient(joueur)) {
                 garderEnMain(joueur);
             }
-            if (e.getValue() >= 3 && !joueur.getAbilities().mayfly && !joueur.isSpectator()) {
-                Abilities a = joueur.getAbilities();
-                a.mayfly = true;
-                a.setFlyingSpeed(VOL);
-                joueur.onUpdateAbilities();
+            if (e.getValue() >= 3 && !joueur.isSpectator() && !joueur.isCreative()) {
+                jaugeVol(joueur);
             }
+        }
+    }
+
+    /** La jauge de vol du niveau 3 (voir VOL_MAX) ; pendant l ulti, il vole sans compter. */
+    private static void jaugeVol(ServerPlayer joueur) {
+        UUID id = joueur.getUUID();
+        Abilities a = joueur.getAbilities();
+        int reste = VOL_RESTE.getOrDefault(id, VOL_MAX);
+        if (a.flying && !Vent3.ultiActif(joueur)) {
+            reste--;
+            if (reste <= 0) {
+                VOL_EPUISE.add(id);
+                a.flying = false;
+                a.mayfly = false;
+                joueur.onUpdateAbilities();
+                joueur.displayClientMessage(net.minecraft.network.chat.Component.literal("Plus de vent pour voler : touche le sol pour reprendre ton souffle.")
+                        .withStyle(net.minecraft.ChatFormatting.AQUA), true);
+            }
+        } else if (joueur.onGround()) {
+            reste = Math.min(VOL_MAX, reste + 2);
+            VOL_EPUISE.remove(id);
+        }
+        VOL_RESTE.put(id, Math.max(0, reste));
+        if (!a.mayfly && !VOL_EPUISE.contains(id) && reste > 0) {
+            a.mayfly = true;
+            a.setFlyingSpeed(VOL);
+            joueur.onUpdateAbilities();
         }
     }
 
