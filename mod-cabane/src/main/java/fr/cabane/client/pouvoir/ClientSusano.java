@@ -86,6 +86,10 @@ public final class ClientSusano {
         /** Quand il a commencé à tendre l'arc (-1 sinon), et à lever l'épée pour le grand coup. */
         long tir = -1;
         long grand = -1;
+        /** Quand il a lancé son épée (-1 sinon), et combien de secondes avant qu'elle revienne ; quand il a foncé derrière son bouclier. */
+        long lance = -1;
+        double retourLance;
+        long ruee = -1;
         long fin = -1;
         /** Le dernier geste (frappe, charge, jet, écrasement), de quel bras, et quand il a commencé. */
         int geste = Pouvoirs.FRAPPE;
@@ -110,6 +114,8 @@ public final class ClientSusano {
     private static long dernierClic;
     private static long derniereCharge;
     private static boolean accroupiAvant;
+    /** Le chevalier : accroupi, il attend de se relever pour le grand coup (sauf s'il a fait clic droit entre-temps : la ruée). */
+    private static boolean grandEnAttente;
     /** La charge se recharge comme sur le serveur (en nanosecondes). */
     private static final long RECHARGE_CHARGE = Pouvoirs.RECHARGE_CHARGE * 50_000_000L;
     /** L'écran tremble quand un écrasement frappe le sol près de nous : à partir de ce moment-là. */
@@ -155,7 +161,8 @@ public final class ClientSusano {
     /** Le dernier geste, pour le chevalier : le coup d'épée (de 0 à 1, 1 s'il n'y en a pas), son côté, et le tir. */
     private static ClientSusano3.Gestes gestes(Susano s) {
         double coup = s.coup >= 0 && s.geste == Pouvoirs.FRAPPE ? Math.min(1, secondes(s.coup) / DUREE_COUP) : 1;
-        return new ClientSusano3.Gestes(coup, s.cote, s.tir >= 0 ? secondes(s.tir) : -1, s.grand >= 0 ? secondes(s.grand) : -1);
+        return new ClientSusano3.Gestes(coup, s.cote, s.tir >= 0 ? secondes(s.tir) : -1, s.grand >= 0 ? secondes(s.grand) : -1,
+                s.lance >= 0 ? secondes(s.lance) : -1, s.retourLance, s.ruee >= 0 ? secondes(s.ruee) : -1);
     }
 
     /** De 0 (niveau 1) à 1 (niveau 2 tout formé) : tout le squelette grandit avec. */
@@ -395,6 +402,23 @@ public final class ClientSusano {
         }
     }
 
+    /** Le chevalier lance son épée : elle quitte sa main, file jusqu'au bout de la ligne du serveur, s'y plante, puis revient. */
+    public static void jet(fr.cabane.pouvoir.Susano3.Jet p) {
+        Susano s = SUSANOS.get(p.joueur());
+        Minecraft mc = Minecraft.getInstance();
+        Player joueur = mc.level == null ? null : mc.level.getPlayerByUUID(p.joueur());
+        if (joueur == null) {
+            return;
+        }
+        double vol = new Vec3(p.fin()).distanceTo(new Vec3(p.depart())) / (fr.cabane.pouvoir.Susano3.VITESSE_LANCE * 20);
+        if (s != null) {
+            s.lance = System.nanoTime();
+            s.retourLance = vol + fr.cabane.pouvoir.Susano3.PLANTEE / 20.0;
+        }
+        ClientSusano3.jet(joueur, eveille(s) && t3(s) >= 0 ? ClientSusano3.forme(t3(s)).taille() : 1, s == null ? Couleur.VIOLET : s.couleur, p, vol);
+        son(joueur, SoundEvents.TRIDENT_THROW.value(), 1.2F, 0.5F);
+    }
+
     public static void geste(Pouvoirs.Geste p) {
         if (p.geste() >= fr.cabane.pouvoir.Ichibi.GESTE_COUP) {
             ClientIchibi.geste(p);
@@ -416,6 +440,14 @@ public final class ClientSusano {
             if (joueur != null) {
                 son(joueur, SoundEvents.CROSSBOW_LOADING_START.value(), 1F, 0.5F);
                 son(joueur, SoundEvents.ENDER_DRAGON_FLAP, 0.7F, 1.3F);
+            }
+            return;
+        }
+        if (p.geste() == Pouvoirs.RUEE) {
+            s.ruee = maintenant;
+            if (joueur != null) {
+                son(joueur, SoundEvents.ENDER_DRAGON_FLAP, 1F, 0.6F);
+                son(joueur, SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1F, 0.5F);
             }
             return;
         }
@@ -1291,6 +1323,15 @@ public final class ClientSusano {
                 {Clavier.accroupi(), chevalier ? (recharge > 0 ? String.format("Grand coup (%.0f s)", Math.ceil(recharge)) : "Grand coup")
                         : recharge > 0 ? String.format("Charge (%.0f s)", Math.ceil(recharge)) : "Charge"},
                 {EVEIL.getTranslatedKeyMessage().getString(), versParfait ? "Susano parfait" : plus ? "Niveau " + (s.niveau + 1) : "Rendormir"}};
+        // le chevalier : la lance (3 coups d'épée de suite) et la ruée (accroupi + clic droit), avant la touche d'éveil
+        double rechargeLance = chevalier && !parfait && s.lance >= 0 ? fr.cabane.pouvoir.Susano3.RECHARGE_LANCE / 20.0 - secondes(s.lance) : 0;
+        double rechargeRuee = chevalier && !parfait && s.ruee >= 0 ? fr.cabane.pouvoir.Susano3.RECHARGE_RUEE / 20.0 - secondes(s.ruee) : 0;
+        if (chevalier && !parfait) {
+            java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(lignes));
+            l.add(3, new String[]{Clavier.gauche() + " ×3", rechargeLance > 0 ? String.format("Lance d'Amaterasu (%.0f s)", Math.ceil(rechargeLance)) : "Lance d'Amaterasu"});
+            l.add(4, new String[]{Clavier.accroupi() + " + " + Clavier.droite(), rechargeRuee > 0 ? String.format("Ruée du bouclier (%.0f s)", Math.ceil(rechargeRuee)) : "Ruée du bouclier"});
+            lignes = l.toArray(new String[0][]);
+        }
         // le Susano (les yeux) : ses techniques (Tsukuyomi, Kamui, météorite), la touche du Susano, puis l'éveil des yeux
         if (fr.cabane.pouvoir.Sharingan.est(s.pouvoir)) {
             java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(lignes).subList(0, lignes.length - 1));
@@ -1302,7 +1343,8 @@ public final class ClientSusano {
         Font font = mc.font;
         String titre = parfait ? "SUSANO PARFAIT" : chevalier ? "SUSANO  ·  NIV. 3" : grand ? "SUSANO  ·  NIV. 2" : "SUSANO";
         PanneauPouvoir.dessiner(g, font, titre, 0xFF000000 | (s.couleur == Couleur.NOIR ? 0xFFFFFF : s.couleur.contour), lignes,
-                new boolean[]{false, rechargePrise > 0, recharge > 0});
+                chevalier && !parfait ? new boolean[]{false, rechargePrise > 0, recharge > 0, rechargeLance > 0, rechargeRuee > 0}
+                        : new boolean[]{false, rechargePrise > 0, recharge > 0});
     }
 
     // ================================================================ branchements
@@ -1341,7 +1383,16 @@ public final class ClientSusano {
             boolean accroupi = mc.options.keyShift.isDown();
             Susano moi = SUSANOS.get(mc.player.getUUID());
             // en Susano parfait, en l'air, s'accroupir sert à descendre : pas de perce
-            if (accroupi && !accroupiAvant && mc.screen == null && eveille(moi) && secondes(moi.debut) >= FORME
+            // le chevalier : le grand coup part quand il se relève, sauf s'il a fait clic droit accroupi (la ruée du bouclier)
+            boolean chevalier = eveille(moi) && moi.niveau == 3 && fr.cabane.pouvoir.Susano3.est(moi.pouvoir) && !ClientSusano4.enForme(mc.player.getUUID());
+            boolean lancerCharge = chevalier ? !accroupi && accroupiAvant && grandEnAttente : accroupi && !accroupiAvant;
+            if (chevalier && accroupi && !accroupiAvant) {
+                grandEnAttente = true;
+            }
+            if (!chevalier || !accroupi) {
+                grandEnAttente = false;
+            }
+            if (lancerCharge && mc.screen == null && eveille(moi) && secondes(moi.debut) >= FORME
                     && System.nanoTime() - derniereCharge > RECHARGE_CHARGE && !ClientSusano4.enVol()) {
                 derniereCharge = System.nanoTime();
                 PacketDistributor.sendToServer(new Pouvoirs.Charge());
@@ -1453,6 +1504,10 @@ public final class ClientSusano {
             }
             event.setCanceled(true);
             event.setSwingHand(event.isAttack());
+            // clic droit accroupi : la ruée du bouclier (le grand coup n'attend plus qu'il se relève)
+            if (event.isUseItem() && mc.options.keyShift.isDown()) {
+                grandEnAttente = false;
+            }
             long recharge = s.niveau >= 2 && event.isAttack() ? 400_000_000L : 600_000_000L;
             if (System.nanoTime() - dernierClic > recharge) {
                 dernierClic = System.nanoTime();

@@ -49,6 +49,11 @@ import org.joml.Vector3f;
  * éteint, et elles embrasent qui marche dedans. Accroupi : le grand coup ; il lève son épée et l'abat, une vague de
  * flammes noires part tout autour de lui, embrase ce qu'elle touche et laisse des flammes noires partout autour. Les flammes, la flèche et la
  * vague sont dessinées chez chaque joueur (ClientSusano3).
+ * <p>
+ * Depuis le 2026-11-16 (docs/susano-max) : au 3e coup d'épée en moins de 2 s, la lance d'Amaterasu (il lance son épée,
+ * qui traverse tout et se plante dans un pilier de flammes noires, puis revient dans sa main) ; accroupi + clic droit,
+ * la ruée du bouclier (il fonce 16 blocs bouclier devant, ceux qu'il percute sont projetés et sonnés ; contre un mur,
+ * une onde de choc et des flammes noires).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Susano3 {
@@ -144,7 +149,8 @@ public final class Susano3 {
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(Flammes.TYPE, Flammes.CODEC,
                 (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano3.flammes(p)))
-                .playToClient(Trait.TYPE, Trait.CODEC, (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano.trait(p)));
+                .playToClient(Trait.TYPE, Trait.CODEC, (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano.trait(p)))
+                .playToClient(Jet.TYPE, Jet.CODEC, (p, ctx) -> ctx.enqueueWork(() -> fr.cabane.client.pouvoir.ClientSusano.jet(p)));
     }
 
     /** Le clic droit au niveau 3 : il tend l'arc (s'il est rechargé). */
@@ -167,6 +173,265 @@ public final class Susano3 {
     static void endormir(ServerPlayer joueur) {
         TIRS.remove(joueur.getUUID());
         GRANDS.remove(joueur.getUUID());
+        RUEES.remove(joueur.getUUID());
+        SERIES.remove(joueur.getUUID());
+        RETOURS.remove(joueur.getUUID());
+    }
+
+    // ================================================================ la lance d'Amaterasu
+
+    /** La lance : 12 s de recharge ; les 3 coups d'épée doivent tenir en 2 s ; l'épée reste plantée 1,5 s puis revient. */
+    public static final int RECHARGE_LANCE = 240, SERIE_LANCE = 40, PLANTEE = 30;
+    /** Elle file à 2,5 blocs par tick (30 blocs en 12 ticks), touche ce qui passe à 1,2 bloc de sa ligne. */
+    public static final double VITESSE_LANCE = 2.5;
+    private static final double PORTEE_LANCE = 30, LARGEUR_LANCE = 1.2, RAYON_PILIER = 3;
+    private static final float DEGATS_LANCE = 14, DEGATS_PILIER = 6;
+
+    /** Ses coups d'épée de suite : [combien, le tick du premier]. */
+    private static final Map<UUID, int[]> SERIES = new HashMap<>();
+    private static final Map<UUID, Integer> DERNIERE_LANCE = new HashMap<>();
+    /** Jusqu'à quand son épée n'est pas dans sa main (le tick où elle revient). */
+    private static final Map<UUID, Integer> RETOURS = new HashMap<>();
+
+    /** Une épée lancée : qui, sa ligne, si elle se plante au bout, quand elle est partie, ce qu'elle a déjà touché. */
+    private record Lance(UUID tireur, ServerLevel monde, Vec3 depart, Vec3 dir, double longueur, boolean plantee, int debut, Set<Integer> touches) {
+    }
+
+    private static final List<Lance> LANCES = new ArrayList<>();
+
+    /** Serveur → ceux qui voient le lanceur : l'épée part de son œil jusqu'à ce point (plantée dans le sol, ou pas). */
+    public record Jet(UUID joueur, Vector3f depart, Vector3f fin, boolean plantee) implements CustomPacketPayload {
+        public static final Type<Jet> TYPE = new Type<>(Cabane.id("lance_amaterasu"));
+        public static final StreamCodec<ByteBuf, Jet> CODEC = StreamCodec.composite(
+                UUIDUtil.STREAM_CODEC, Jet::joueur, ByteBufCodecs.VECTOR3F, Jet::depart, ByteBufCodecs.VECTOR3F, Jet::fin, ByteBufCodecs.BOOL, Jet::plantee,
+                Jet::new);
+
+        @Override
+        public Type<Jet> type() {
+            return TYPE;
+        }
+    }
+
+    /**
+     * Un coup d'épée du chevalier (appelé avant de frapper) : true s'il ne frappe pas normalement, parce que son épée est
+     * partie ou parce que c'est le 3e coup de suite et qu'il la lance.
+     */
+    static boolean serie(ServerPlayer joueur) {
+        UUID id = joueur.getUUID();
+        int maintenant = joueur.server.getTickCount();
+        if (maintenant < RETOURS.getOrDefault(id, 0)) {
+            return true;
+        }
+        int[] s = SERIES.computeIfAbsent(id, k -> new int[]{0, 0});
+        if (s[0] == 0 || maintenant - s[1] > SERIE_LANCE) {
+            s[0] = 1;
+            s[1] = maintenant;
+            return false;
+        }
+        s[0]++;
+        if (s[0] < 3) {
+            return false;
+        }
+        s[0] = 0;
+        if (maintenant < DERNIERE_LANCE.getOrDefault(id, -10_000) + RECHARGE_LANCE) {
+            return false;
+        }
+        lancer(joueur);
+        return true;
+    }
+
+    /** Il lance son épée droit là où il regarde (30 blocs, ou jusqu'au premier mur ; dans le vide, elle descend se planter au sol). */
+    private static void lancer(ServerPlayer joueur) {
+        ServerLevel monde = joueur.serverLevel();
+        int maintenant = joueur.server.getTickCount();
+        Vec3 oeil = joueur.getEyePosition(), regard = joueur.getLookAngle();
+        Vec3 bout = oeil.add(regard.scale(PORTEE_LANCE));
+        HitResult mur = monde.clip(new ClipContext(oeil, bout, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, joueur));
+        boolean plantee = mur.getType() != HitResult.Type.MISS;
+        if (plantee) {
+            bout = mur.getLocation();
+        } else {
+            Vec3 dessous = sol(monde, bout, 8, joueur);
+            if (dessous != null) {
+                bout = dessous;
+                plantee = true;
+            }
+        }
+        double longueur = Math.max(1, bout.distanceTo(oeil));
+        Vec3 dir = bout.subtract(oeil).normalize();
+        LANCES.add(new Lance(joueur.getUUID(), monde, oeil, dir, longueur, plantee, maintenant, new HashSet<>()));
+        DERNIERE_LANCE.put(joueur.getUUID(), maintenant);
+        RETOURS.put(joueur.getUUID(), maintenant + (int) Math.ceil(longueur / VITESSE_LANCE) + PLANTEE + 6);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(joueur, new Jet(joueur.getUUID(), v(oeil), v(bout), plantee));
+        monde.playSound(null, joueur.getX(), joueur.getY() + 3, joueur.getZ(), SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 2F, 0.5F);
+        monde.playSound(null, joueur.getX(), joueur.getY() + 3, joueur.getZ(), SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 0.9F, 0.6F);
+    }
+
+    /** L'épée avance d'un tick ; au bout, elle se plante et un pilier de flammes noires monte. */
+    private static boolean volerLance(Lance l, int maintenant, MinecraftServer server) {
+        ServerPlayer tireur = server.getPlayerList().getPlayer(l.tireur());
+        int t = maintenant - l.debut();
+        double d0 = Math.max(0, (t - 1) * VITESSE_LANCE), d1 = Math.min(l.longueur(), t * VITESSE_LANCE);
+        if (d1 <= d0) {
+            return false;
+        }
+        Vec3 a = l.depart().add(l.dir().scale(d0)), b = l.depart().add(l.dir().scale(d1));
+        if (tireur != null) {
+            for (LivingEntity e : l.monde().getEntitiesOfClass(LivingEntity.class, new AABB(a, b).inflate(LARGEUR_LANCE + 1),
+                    e -> Pouvoirs.cible(tireur, e) && !l.touches().contains(e.getId()))) {
+                AABB boite = e.getBoundingBox().inflate(LARGEUR_LANCE);
+                if (boite.contains(a) || boite.clip(a, b).isPresent()) {
+                    l.touches().add(e.getId());
+                    e.hurt(tireur.damageSources().playerAttack(tireur), DEGATS_LANCE);
+                    e.knockback(1.2, -l.dir().x, -l.dir().z);
+                    e.hurtMarked = true;
+                    enflammer(e, tireur);
+                    l.monde().sendParticles(ParticleTypes.SQUID_INK, e.getX(), e.getY(0.6), e.getZ(), 18, 0.3, 0.4, 0.3, 0.1);
+                }
+            }
+        }
+        l.monde().sendParticles(ParticleTypes.SQUID_INK, b.x, b.y, b.z, 3, 0.2, 0.2, 0.2, 0.02);
+        if (d1 < l.longueur()) {
+            return false;
+        }
+        if (l.plantee()) {
+            pilier(l.monde(), b, l.tireur(), tireur);
+        } else {
+            l.monde().sendParticles(ParticleTypes.SQUID_INK, b.x, b.y, b.z, 24, 0.4, 0.4, 0.4, 0.06);
+        }
+        return true;
+    }
+
+    /** Le pilier : ce qui est à 3 blocs est soufflé vers le haut et s'embrase, et des flammes noires restent au sol. */
+    private static void pilier(ServerLevel monde, Vec3 p, UUID tireur, ServerPlayer joueur) {
+        if (joueur != null) {
+            for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(RAYON_PILIER, 4, RAYON_PILIER),
+                    e -> Pouvoirs.cible(joueur, e) && e.position().subtract(p).horizontalDistance() <= RAYON_PILIER)) {
+                e.invulnerableTime = 0;
+                e.hurt(joueur.damageSources().playerAttack(joueur), DEGATS_PILIER);
+                e.setDeltaMovement(e.getDeltaMovement().add(0, 0.8, 0));
+                e.hurtMarked = true;
+                enflammer(e, joueur);
+            }
+        }
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                if (joueur == null || dx * dx + dz * dz > 10 || monde.random.nextFloat() < 0.35F) {
+                    continue;
+                }
+                Vec3 s = sol(monde, p.add(dx, 2, dz), 5, joueur);
+                if (s != null) {
+                    FeuNoir.poser(monde, BlockPos.containing(s.x, s.y + 0.05, s.z), tireur);
+                }
+            }
+        }
+        monde.sendParticles(ParticleTypes.SQUID_INK, p.x, p.y + 1, p.z, 60, 0.8, 2.5, 0.8, 0.15);
+        monde.sendParticles(ParticleTypes.LARGE_SMOKE, p.x, p.y + 1, p.z, 30, 1, 2, 1, 0.06);
+        monde.playSound(null, p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.6F, 0.6F);
+        monde.playSound(null, p.x, p.y, p.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2F, 0.4F);
+    }
+
+    // ================================================================ la ruée du bouclier
+
+    /** La ruée : 14 s de recharge, 0,8 s à 1 bloc par tick (16 blocs). */
+    public static final int RECHARGE_RUEE = 280, DUREE_RUEE = 16;
+    private static final double VITESSE_RUEE = 1.0;
+    private static final float DEGATS_RUEE = 10, DEGATS_MUR = 6;
+    /** Sonné : 1 s presque immobile. */
+    private static final int SONNE = 20;
+
+    private record Ruee(int debut, Vec3 dir, Set<Integer> touches) {
+    }
+
+    private static final Map<UUID, Ruee> RUEES = new HashMap<>();
+    private static final Map<UUID, Integer> DERNIERE_RUEE = new HashMap<>();
+
+    /** Accroupi + clic droit au niveau 3 : il lève son bouclier et fonce droit devant. */
+    static void ruee(ServerPlayer joueur) {
+        int maintenant = joueur.server.getTickCount();
+        if (RUEES.containsKey(joueur.getUUID())) {
+            return;
+        }
+        int reste = DERNIERE_RUEE.getOrDefault(joueur.getUUID(), -10_000) + RECHARGE_RUEE - maintenant;
+        if (reste > 0) {
+            joueur.displayClientMessage(Component.literal("La ruée se recharge… " + (reste + 19) / 20 + " s").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        RUEES.put(joueur.getUUID(), new Ruee(maintenant, Pouvoirs.devant(joueur), new HashSet<>()));
+        DERNIERE_RUEE.put(joueur.getUUID(), maintenant);
+        Pouvoirs.geste(joueur, Pouvoirs.RUEE, -1);
+        ServerLevel monde = joueur.serverLevel();
+        monde.playSound(null, joueur.getX(), joueur.getY() + 2, joueur.getZ(), SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 1.2F, 0.7F);
+        monde.playSound(null, joueur.getX(), joueur.getY() + 2, joueur.getZ(), SoundEvents.ARMOR_EQUIP_NETHERITE.value(), SoundSource.PLAYERS, 2F, 0.5F);
+    }
+
+    /** Un tick de ruée : il avance, percute ce qui est devant ; false quand c'est fini (au bout, ou contre un mur). */
+    private static boolean foncer(ServerPlayer joueur, Ruee r, int maintenant) {
+        ServerLevel monde = joueur.serverLevel();
+        int t = maintenant - r.debut();
+        if (t >= DUREE_RUEE || !joueur.isAlive()) {
+            return false;
+        }
+        Vec3 ici = joueur.position();
+        // un mur juste devant (à hauteur des jambes ou de la tête) : le choc
+        BlockPos bas = BlockPos.containing(ici.add(r.dir().scale(1.1)).add(0, 0.5, 0)), haut = bas.above();
+        if (t > 0 && !monde.getBlockState(bas).getCollisionShape(monde, bas).isEmpty() && !monde.getBlockState(haut).getCollisionShape(monde, haut).isEmpty()) {
+            choc(joueur, ici.add(r.dir().scale(1.2)));
+            joueur.setDeltaMovement(r.dir().scale(-0.3).add(0, 0.2, 0));
+            joueur.hurtMarked = true;
+            return false;
+        }
+        joueur.setDeltaMovement(r.dir().x * VITESSE_RUEE, Math.min(joueur.getDeltaMovement().y, 0.1), r.dir().z * VITESSE_RUEE);
+        joueur.hurtMarked = true;
+        joueur.fallDistance = 0;
+        for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, joueur.getBoundingBox().inflate(3, 2, 3),
+                e -> Pouvoirs.cible(joueur, e) && !r.touches().contains(e.getId()))) {
+            Vec3 vers = e.position().subtract(ici);
+            Vec3 plat = new Vec3(vers.x, 0, vers.z);
+            if (plat.length() > 3.2 || plat.lengthSqr() > 0.01 && plat.normalize().dot(r.dir()) < -0.1) {
+                continue;
+            }
+            r.touches().add(e.getId());
+            e.hurt(joueur.damageSources().playerAttack(joueur), DEGATS_RUEE);
+            e.knockback(2.4, -r.dir().x, -r.dir().z);
+            e.setDeltaMovement(e.getDeltaMovement().add(0, 0.65, 0));
+            e.hurtMarked = true;
+            e.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, SONNE, 6, false, false));
+            e.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, SONNE, 2, false, false));
+            monde.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY(1) + 0.4, e.getZ(), 14, 0.4, 0.2, 0.4, 0.2);
+            monde.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY(0.5), e.getZ(), 10, 0.4, 0.4, 0.4, 0.2);
+            monde.playSound(null, e.getX(), e.getY(), e.getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.8F, 0.7F);
+        }
+        if (t % 2 == 0) {
+            monde.sendParticles(ParticleTypes.CLOUD, ici.x, ici.y + 0.2, ici.z, 6, 0.8, 0.1, 0.8, 0.03);
+        }
+        return true;
+    }
+
+    /** Contre un mur : une onde de choc (ce qui est à 4 blocs est repoussé) et des flammes noires autour. */
+    private static void choc(ServerPlayer joueur, Vec3 p) {
+        ServerLevel monde = joueur.serverLevel();
+        for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(4, 2.5, 4), e -> Pouvoirs.cible(joueur, e))) {
+            Vec3 loin = e.position().subtract(p);
+            if (loin.horizontalDistance() > 4) {
+                continue;
+            }
+            e.invulnerableTime = 0;
+            e.hurt(joueur.damageSources().playerAttack(joueur), DEGATS_MUR);
+            e.knockback(1.4, -loin.x, -loin.z);
+            e.hurtMarked = true;
+        }
+        for (int i = 0; i < 12; i++) {
+            double a = monde.random.nextDouble() * Math.PI * 2, d = 1 + monde.random.nextDouble() * 2.5;
+            Vec3 s = sol(monde, joueur.position().add(Math.cos(a) * d, 2, Math.sin(a) * d), 5, joueur);
+            if (s != null) {
+                FeuNoir.poser(monde, BlockPos.containing(s.x, s.y + 0.05, s.z), joueur.getUUID());
+            }
+        }
+        monde.sendParticles(ParticleTypes.EXPLOSION_EMITTER, p.x, p.y + 1, p.z, 1, 0, 0, 0, 0);
+        monde.sendParticles(ParticleTypes.SQUID_INK, p.x, p.y + 1, p.z, 40, 1.5, 1, 1.5, 0.1);
+        monde.playSound(null, p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.8F, 0.6F);
+        monde.playSound(null, p.x, p.y, p.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.2F, 0.5F);
     }
 
     /** Accroupi au niveau 3 : il lève son épée (s'il le peut). */
@@ -394,8 +659,16 @@ public final class Susano3 {
                 abattre(joueur);
             }
         }
-        // les flèches en vol
+        // les flèches en vol, les épées lancées
         VOLS.removeIf(vol -> voler(vol, maintenant, server));
+        LANCES.removeIf(l -> volerLance(l, maintenant, server));
+        // les ruées du bouclier
+        for (Map.Entry<UUID, Ruee> r : new ArrayList<>(RUEES.entrySet())) {
+            ServerPlayer joueur = server.getPlayerList().getPlayer(r.getKey());
+            if (joueur == null || !foncer(joueur, r.getValue(), maintenant)) {
+                RUEES.remove(r.getKey());
+            }
+        }
         // les flammes noires brûlent : des dégâts chaque seconde, de la fumée noire ; l'eau n'y fait rien
         for (Map.Entry<Integer, Feu> entree : new ArrayList<>(FEUX.entrySet())) {
             Feu feu = entree.getValue();

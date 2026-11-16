@@ -48,9 +48,10 @@ public final class ClientSusano3 {
 
     /**
      * Le dernier geste : le coup d'épée (temps relatif de 0 à 1, et de quel côté), le tir (secondes depuis qu'il tend
-     * l'arc), le grand coup (secondes depuis qu'il lève l'épée) ; -1 quand il n'y en a pas.
+     * l'arc), le grand coup (secondes depuis qu'il lève l'épée), la lance (secondes depuis qu'il a lancé son épée, et
+     * quand elle revient), la ruée (secondes depuis qu'il fonce) ; -1 quand il n'y en a pas.
      */
-    record Gestes(double coup, int cote, double tir, double grand) {
+    record Gestes(double coup, int cote, double tir, double grand, double lance, double retour, double ruee) {
     }
 
     private static float l(double x) {
@@ -209,11 +210,41 @@ public final class ClientSusano3 {
     /** Le temps de tendre l'arc (comme sur le serveur), puis il tient, puis il range l'arc. */
     static final double TENSION = Susano3.TENSION / 20.0;
 
-    /** Les deux bras à cet instant, et combien l'arc (ou le bouclier) est là. */
-    private record Posture(Bras d, Bras g, float arc) {
+    /** La lance : le bras armé derrière la tête, puis tendu devant, la main vide. */
+    private static final Bras LANCE_ARME = new Bras(v(-2.7, 5.6, -0.8), v(-2.4, 6.4, -1.6), norm(v(0.05, 0.25, 1)));
+    private static final Bras LANCE_TENDU = new Bras(v(-2.3, 4.7, 1.4), v(-1.4, 4.6, 3.3), norm(v(0.05, 0, 1)));
+    /** La ruée : l'épée tenue basse en arrière, le bouclier levé devant lui. */
+    private static final Bras RUEE_D = new Bras(v(-3.0, 3.4, -1.0), v(-3.2, 2.6, 0.4), norm(v(-0.2, -0.2, -1)));
+    private static final Bras RUEE_G = new Bras(v(1.6, 4.0, 1.7), v(-1.4, 4.0, 2.6), null);
+    /** Pendant la ruée, il penche en avant (en degrés). */
+    private static final double PENCHE_RUEE = 16, DUREE_RUEE = Susano3.DUREE_RUEE / 20.0;
+
+    /** Les deux bras à cet instant, combien l'arc (ou le bouclier) est là, l'épée dans sa main (0 : lancée), et de combien il penche. */
+    private record Posture(Bras d, Bras g, float arc, float epee, float penche) {
+        Posture(Bras d, Bras g, float arc) {
+            this(d, g, arc, 1, 0);
+        }
     }
 
     private static Posture posture(Gestes g, double t) {
+        Posture p = posture0(g, t);
+        // la ruée : le bouclier devant, il penche en avant, puis il se redresse
+        if (g.ruee() >= 0 && g.ruee() < DUREE_RUEE + 0.35) {
+            double k = g.ruee(), f = Math.min(1, k / 0.12) * (1 - Math.max(0, (k - DUREE_RUEE) / 0.35));
+            p = new Posture(p.d().vers(RUEE_D, f), p.g().vers(RUEE_G, f), p.arc(), p.epee(), (float) (PENCHE_RUEE * l(f)));
+        }
+        // la lance : il arme, lance (l'épée quitte sa main), reste le bras tendu, puis l'épée se reforme dans sa main
+        if (g.lance() >= 0 && g.lance() < g.retour() + 0.4) {
+            double k = g.lance();
+            Bras d = k < 0.08 ? p.d().vers(LANCE_ARME, k / 0.08) : k < 0.2 ? LANCE_ARME.vers(LANCE_TENDU, (k - 0.08) / 0.12)
+                    : k < 0.7 ? LANCE_TENDU : LANCE_TENDU.vers(p.d(), (k - 0.7) / 0.4);
+            float epee = k < 0.16 ? 1 : k < g.retour() ? 0 : l((k - g.retour()) / 0.4);
+            p = new Posture(d, p.g(), p.arc(), epee, p.penche());
+        }
+        return p;
+    }
+
+    private static Posture posture0(Gestes g, double t) {
         // au repos, les bras respirent un peu
         double r = Math.sin(t * 1.3) * 0.08;
         Bras d = new Bras(add(REPOS_D.e, v(0, r, 0)), add(REPOS_D.w, v(0, r, 0)), REPOS_D.lame), gauche = new Bras(add(REPOS_G.e, v(0, -r, 0)),
@@ -257,6 +288,10 @@ public final class ClientSusano3 {
         ps.pushPose();
         float k = 0.72F + 0.28F * e.taille();
         ps.scale(k, k, k);
+        // la ruée : il penche en avant, autour de ses pieds
+        if (p.penche() > 0) {
+            ps.mulPose(Axis.XP.rotationDegrees(p.penche()));
+        }
         // ---- la chair (les fibres d'abord)
         List<double[][]> muscles = new ArrayList<>();
         muscles.add(new double[][] {v(0, 3.75, -0.1), {1.75, 0.95, 1.1}});
@@ -323,7 +358,7 @@ public final class ClientSusano3 {
         ps.popPose();
         // ---- les armes
         if (e.armes() > 0) {
-            float epee = e.armes() * (1 - p.arc());
+            float epee = e.armes() * (1 - p.arc()) * p.epee();
             if (epee > 0.02F && p.d().lame() != null) {
                 epee(c, p.d().w(), p.d().lame(), epee);
             }
@@ -749,13 +784,30 @@ public final class ClientSusano3 {
         }
     }
 
+    /** Une épée lancée : de sa main jusqu'au bout de la ligne du serveur, plantée ou pas, quand, combien de secondes elle vole, sa taille, sa couleur. */
+    private record EpeeLancee(Vec3 depart, Vec3 fin, boolean plantee, long debut, double vol, float taille, Couleur couleur) {
+    }
+
+    private static final List<EpeeLancee> EPEES = new ArrayList<>();
+    /** Le pilier de flammes noires dure 3 s ; l'épée reste plantée {@link Susano3#PLANTEE} ticks. */
+    private static final double DUREE_PILIER = 3, PLANTEE = Susano3.PLANTEE / 20.0;
+
+    /** Ce joueur lance son épée : elle part de sa main tendue. */
+    static void jet(Player joueur, float taille, Couleur couleur, Susano3.Jet p, double vol) {
+        float k = 0.72F + 0.28F * taille;
+        double[] local = mul(LANCE_TENDU.w(), k);
+        double a = -joueur.yBodyRot * Mth.DEG_TO_RAD;
+        Vec3 depart = joueur.position().add(local[0] * Math.cos(a) + local[2] * Math.sin(a), local[1], -local[0] * Math.sin(a) + local[2] * Math.cos(a));
+        EPEES.add(new EpeeLancee(depart, new Vec3(p.fin()), p.plantee(), System.nanoTime(), Math.max(0.05, vol), k, couleur));
+    }
+
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT)
     public static final class Dessin {
         @SubscribeEvent
         public static void dessiner(RenderLevelStageEvent event) {
             Minecraft mc = Minecraft.getInstance();
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || mc.level == null
-                    || FLECHES.isEmpty() && FEUX.isEmpty() && VAGUES.isEmpty() && FOYERS.isEmpty()) {
+                    || FLECHES.isEmpty() && FEUX.isEmpty() && VAGUES.isEmpty() && FOYERS.isEmpty() && EPEES.isEmpty()) {
                 return;
             }
             Camera camera = event.getCamera();
@@ -866,7 +918,68 @@ public final class ClientSusano3 {
                             e.getY() + mc.level.random.nextDouble() * h, e.getZ() + (mc.level.random.nextDouble() - 0.5) * l, 0, 0.04, 0);
                 }
             }
+            // les épées lancées : des langues noires derrière elle en vol ; plantée, le pilier de flammes noires monte autour
+            for (Iterator<EpeeLancee> it = EPEES.iterator(); it.hasNext(); ) {
+                EpeeLancee e = it.next();
+                double t = (maintenant - e.debut()) / 1e9;
+                if (t > e.vol() + (e.plantee() ? DUREE_PILIER : PLANTEE)) {
+                    it.remove();
+                    continue;
+                }
+                Vec3 dir = e.fin().subtract(e.depart()).normalize();
+                if (t < e.vol()) {
+                    Vec3 pointe = e.depart().lerp(e.fin(), t / e.vol());
+                    for (int i = 0; i < 10; i++) {
+                        Vec3 q = pointe.subtract(dir.scale((1.2 + i * 0.6) * e.taille())).subtract(cam);
+                        langue(c, m, q, droite, haut, (0.55 - i * 0.04) * e.taille(), temps * 9 + i);
+                    }
+                } else if (e.plantee()) {
+                    double tp = t - e.vol(), force = l(tp / 0.15) * (1 - l((tp - DUREE_PILIER + 0.6) / 0.6));
+                    Vec3 base = e.fin().subtract(cam);
+                    // la colonne : des langues empilées jusqu'à 7 blocs, plus fines en haut
+                    for (int i = 0; i < 46; i++) {
+                        double a = hache(i, 31, 5) * Math.PI * 2, r = Math.sqrt(hache(i, 32, 5)) * 1.4, y = hache(i, 33, 5) * 7 * l(tp / 0.35);
+                        double taille = (0.6 + 0.6 * hache(i, 34, 5)) * force * (1 - y / 9) * (0.8 + 0.2 * Math.sin(temps * 7 + i));
+                        if (taille > 0.05) {
+                            langue(c, m, base.add(Math.cos(a + temps * 2) * r, y, Math.sin(a + temps * 2) * r), droite, haut, taille, temps * 9 + i * 1.3);
+                        }
+                    }
+                    // l'anneau qui part au sol quand elle se plante
+                    if (tp < 0.8) {
+                        double r = 0.8 + 2.4 * l(tp / 0.3);
+                        for (int i = 0; i < 26; i++) {
+                            double a = i / 26.0 * Math.PI * 2;
+                            langue(c, m, base.add(Math.cos(a) * r, 0, Math.sin(a) * r), droite, haut, 0.9 * (1 - tp / 0.8) + 0.25, temps * 10 + i);
+                        }
+                    }
+                    if (force > 0.3 && mc.level.random.nextInt(3) == 0) {
+                        mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.SQUID_INK, e.fin().x + (mc.level.random.nextDouble() - 0.5) * 2,
+                                e.fin().y + mc.level.random.nextDouble() * 5, e.fin().z + (mc.level.random.nextDouble() - 0.5) * 2, 0, 0.08, 0);
+                    }
+                }
+            }
             buffers.endBatch(ClientSusano.Types.CORPS);
+            // l'épée elle-même (en blocs de chakra, comme dans sa main) : en vol, puis plantée, puis elle s'efface
+            if (!EPEES.isEmpty()) {
+                for (EpeeLancee e : EPEES) {
+                    double t = (maintenant - e.debut()) / 1e9;
+                    if (t > e.vol() + PLANTEE) {
+                        continue;
+                    }
+                    Vec3 dir = e.fin().subtract(e.depart()).normalize();
+                    Vec3 pointe = t < e.vol() ? e.depart().lerp(e.fin(), t / e.vol()) : e.fin().add(dir.scale(e.plantee() ? 1.0 : 0));
+                    float force = (float) Mth.clamp((e.vol() + PLANTEE - t) / 0.3, 0, 1);
+                    List<ClientSusano.Os> liste = new ArrayList<>();
+                    ps.pushPose();
+                    Vec3 w = pointe.subtract(dir.scale(5.85 * e.taille())).subtract(cam);
+                    ps.translate(w.x, w.y, w.z);
+                    ps.scale(e.taille(), e.taille(), e.taille());
+                    epee(new Chantier(liste, ps), v(0, 0, 0), v(dir.x, dir.y, dir.z), force);
+                    ps.popPose();
+                    ClientSusano.dessinerOs(buffers, liste, e.couleur(), 1, 0, false, 1, true);
+                }
+                buffers.endBatch();
+            }
         }
 
         /** Une langue de flamme noire, face à la caméra : large en bas, qui s'affine en ondulant. */

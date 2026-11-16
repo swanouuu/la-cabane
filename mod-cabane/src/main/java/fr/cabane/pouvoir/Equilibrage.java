@@ -25,10 +25,13 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  * sa classe et gardent l'ordre des niveaux.
  * <ol>
  * <li>Tout ce qu'un joueur inflige (sorts, ults, épées, poings, armes du cartel), à un joueur comme à un mob, est
- * {@link #multiplicateur multiplié} : ×1,6 pour un petit coup, jusqu'à ×2,4 pour les gros (les ults).</li>
+ * {@link #multiplicateur multiplié} : ×1,6 pour un petit coup, jusqu'à ×2 pour les gros (les ults ; ×2,4 avant le
+ * 2026-11-16).</li>
  * <li>Ces coups traversent la moitié de l'armure et de ses enchantements de protection.</li>
- * <li>Un joueur ne perd jamais plus de {@link #PLAFOND 80 %} de sa vie à cause du même joueur en {@link #FENETRE 5 s} :
- * toujours pas de one-shot d'un joueur en pleine forme, mais deux gros sorts suffisent.</li>
+ * <li>Un seul coup n'enlève jamais plus de {@link #PAR_COUP 30 %} de la vie d'un joueur, et un joueur ne perd jamais plus de
+ * {@link #PLAFOND 50 %} de sa vie à cause du même joueur en {@link #FENETRE 5 s} (2026-11-16 : « quasiment one shot avec
+ * une seule attaque » sur une Netherite P4, c'était 80 %) : il faut au moins une dizaine de secondes pour tuer quelqu'un en
+ * pleine forme.</li>
  * <li>Entre joueurs, un coup (arme ou pouvoir) n'use l'armure qu'au {@link #USURE quart} de l'usure normale (2026-11-16 :
  * « sinon on détruit trop facilement nos armures ») ; contre les monstres, rien ne change.</li>
  * </ol>
@@ -36,10 +39,11 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Equilibrage {
     /** Le multiplicateur d'un petit coup, celui d'un gros coup, et entre quels dégâts on passe de l'un à l'autre. */
-    private static final float PETIT = 1.6F, GROS = 2.4F, DEBUT_GROS = 6, PLEIN_GROS = 20;
+    private static final float PETIT = 1.6F, GROS = 2.0F, DEBUT_GROS = 6, PLEIN_GROS = 20;
     /** La part de l'armure (et de ses enchantements) qui protège encore d'un coup de joueur. */
     private static final float ARMURE = 0.5F;
-    private static final float PLAFOND = 0.8F;
+    /** La part de sa vie qu'un joueur peut perdre d'un seul coup, puis à cause du même joueur en 5 s. */
+    private static final float PAR_COUP = 0.3F, PLAFOND = 0.5F;
     /** La part de l'usure normale que prend l'armure d'un joueur frappé par un autre joueur. */
     public static final float USURE = 0.25F;
     private static final int FENETRE = 5 * 20;
@@ -66,7 +70,7 @@ public final class Equilibrage {
         return victime instanceof ServerPlayer ? frappeur(victime, source) : null;
     }
 
-    /** ×1,6 jusqu'à 6 dégâts, puis de plus en plus fort jusqu'à ×2,4 à partir de 20 (les ults). */
+    /** ×1,6 jusqu'à 6 dégâts, puis de plus en plus fort jusqu'à ×2 à partir de 20 (les ults). */
     static float multiplicateur(float degats) {
         float k = Math.max(0, Math.min(1, (degats - DEBUT_GROS) / (PLEIN_GROS - DEBUT_GROS)));
         return PETIT + (GROS - PETIT) * k;
@@ -99,7 +103,8 @@ public final class Equilibrage {
         for (Coup c : coups) {
             deja += c.degats();
         }
-        float degats = Math.min(event.getNewDamage(), Math.max(0, PLAFOND * event.getEntity().getMaxHealth() - deja));
+        float max = event.getEntity().getMaxHealth();
+        float degats = Math.min(Math.min(event.getNewDamage(), PAR_COUP * max), Math.max(0, PLAFOND * max - deja));
         event.setNewDamage(degats);
         if (degats > 0) {
             coups.addLast(new Coup(maintenant, degats));

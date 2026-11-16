@@ -105,9 +105,10 @@ public final class Phenix {
             RECHARGE_BRASIER = 20 * 20, RECHARGE_TOURBILLON = 18 * 20, RECHARGE_AILE = 12 * 20, RECHARGE_ENVOL = 15 * 20;
     /** La renaissance : au plus une fois toutes les 10 minutes (elle marche même endormi, à tous les niveaux). */
     public static final int RECHARGE_RENAISSANCE = 10 * 60 * 20;
-    private static final float COUP_1 = 2, COUP_2 = 4, ECLAT_2 = 3, COUP_3 = 6, CROIX = 8, JET = 6, SERRE = 12, PLUME_PLUIE = 5, PLUIE_MAX = 15,
-            PLUME = 6, PLUME_MAX = 12, GRAND_MILIEU = 20, GRAND_BORD = 12, COCON = 4, PIQUE_DEGATS = 12, VOL_DEGATS = 10, TOURBILLON_COUP = 3,
-            TOURBILLON_MAX = 24, VAGUE = 8, DOME = 25, ONDE = 6, AILE = 8, ENVOL_DEGATS = 6, COCON_OUVERTURE = 6;
+    /** 2026-11-16 : tout ramené à environ deux tiers (« il fait trop trop mal »). */
+    private static final float COUP_1 = 1.5F, COUP_2 = 3, ECLAT_2 = 2, COUP_3 = 4, CROIX = 5, JET = 4, SERRE = 8, PLUME_PLUIE = 3, PLUIE_MAX = 10,
+            PLUME = 4, PLUME_MAX = 8, GRAND_MILIEU = 13, GRAND_BORD = 8, COCON = 3, PIQUE_DEGATS = 8, VOL_DEGATS = 7, TOURBILLON_COUP = 2,
+            TOURBILLON_MAX = 15, VAGUE = 5, DOME = 16, ONDE = 4, AILE = 5, ENVOL_DEGATS = 4, COCON_OUVERTURE = 4;
     public static final double PORTEE_JET = 12, PORTEE_PLUIE = 30, RAYON_PLUIE = 4, PORTEE_PLUME = 20, VITESSE_PLUME = 1.4, PORTEE_PIQUE = 25,
             RAYON_BRASIER = 4, RAYON_TOURBILLON = 3, RAYON_GRAND = 5, RAYON_VAGUE = 18, RAYON_DOME = 12;
     public static final int DUREE_PLUIE = 60, DUREE_GRAND = 100, DUREE_COCON = 60, DUREE_BRASIER = 100, DUREE_TOURBILLON = 80, DUREE_RENAISSANCE = 92;

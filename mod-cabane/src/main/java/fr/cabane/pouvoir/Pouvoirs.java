@@ -302,6 +302,8 @@ public final class Pouvoirs {
     public static final int FLECHE = 6;
     /** Niveau 3, accroupi : le grand coup d'épée, qui embrase tout autour de flammes noires. */
     public static final int GRAND_COUP = 7;
+    /** Niveau 3, accroupi + clic droit : la ruée du bouclier. */
+    public static final int RUEE = 8;
 
     /**
      * Serveur → ceux qui voient ce joueur : un geste de son Susano. Pour une frappe, {@code cible} est le bras (0 droit,
@@ -688,6 +690,10 @@ public final class Pouvoirs {
             return;
         }
         DERNIERE_FRAPPE.put(joueur.getUUID(), maintenant);
+        // le chevalier : au 3e coup de suite, il lance son épée (et sans épée, il ne frappe pas)
+        if (niveau >= 3 && Susano3.est(pouvoir(joueur)) && Susano3.serie(joueur)) {
+            return;
+        }
         if (TENUS.containsKey(joueur.getUUID())) {
             jeter(joueur, f);
             return;
@@ -764,9 +770,13 @@ public final class Pouvoirs {
             }
             return;
         }
-        // le chevalier n'attrape plus : il tire à l'arc (les flammes noires)
+        // le chevalier n'attrape plus : il tire à l'arc (les flammes noires) ; accroupi, il fonce derrière son bouclier
         if (niveau >= 3) {
-            Susano3.tirer(joueur);
+            if (joueur.isShiftKeyDown()) {
+                Susano3.ruee(joueur);
+            } else {
+                Susano3.tirer(joueur);
+            }
             return;
         }
         if (TENUS.containsKey(joueur.getUUID())) {

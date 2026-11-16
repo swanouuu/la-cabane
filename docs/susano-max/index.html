@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Susano niveau 3 final</title>
+<style>
+  :root { --fond:#16131f; --carte:#221d30; --trait:#3a3150; --texte:#ece7f7; --doux:#a99bc6; --violet:#9b6bff; --noir:#0b0910; --nouveau:#ffb547; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fond); color:var(--texte); font:15px/1.45 system-ui, "Segoe UI", sans-serif; padding:24px 16px 48px; }
+  .page { max-width:1180px; margin:0 auto; }
+  h1 { font-size:30px; margin:0 0 4px; letter-spacing:.5px; }
+  .sous { color:var(--doux); margin:0 0 20px; }
+  .bandeau { background:#2a1f45; border:1px solid var(--violet); border-radius:10px; padding:12px 16px; margin-bottom:24px; }
+  .bandeau b { color:#d9c7ff; }
+  h2 { font-size:18px; margin:28px 0 12px; color:#d9c7ff; text-transform:uppercase; letter-spacing:1px; }
+  .grille { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; }
+  .carte { background:var(--carte); border:1px solid var(--trait); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+  .carte.neuf { border-color:var(--nouveau); }
+  .img { aspect-ratio:440/400; width:100%; display:block; background:#000; }
+  .corps { padding:10px 12px 12px; }
+  .titre { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+  .titre b { font-size:16px; }
+  .touche { font:600 12px ui-monospace, Consolas, monospace; background:#110e19; border:1px solid var(--trait); border-radius:5px; padding:1px 7px; white-space:nowrap; color:#d9c7ff; }
+  .neuf .touche { color:var(--nouveau); }
+  .corps p { margin:6px 0 8px; color:var(--doux); font-size:13.5px; }
+  .chiffres { display:flex; flex-wrap:wrap; gap:6px; }
+  .chiffres span { font-size:12px; background:#2f2742; border-radius:4px; padding:2px 7px; }
+  .badge { font-size:11px; font-weight:700; color:#1a1300; background:var(--nouveau); border-radius:4px; padding:1px 6px; margin-left:6px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; background:var(--carte); border-radius:10px; overflow:hidden; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--trait); }
+  th { color:var(--doux); font-weight:600; font-size:12px; text-transform:uppercase; }
+  td.n { color:var(--nouveau); }
+  .note { color:var(--doux); font-size:13px; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Susano — niveau 3 final</h1>
+  <p class="sous">Le chevalier tel qu'il est en jeu (même modèle, mêmes couleurs, rien n'a changé dans son look) + les yeux Rinnegan / Mangekyo. Croquis dessinés avec le vrai modèle du chevalier. La lance et la ruée sont codées dans le mod (2026-11-16).</p>
+
+  <div class="bandeau">
+    <b>Équilibrage pour tout le monde (déjà fait dans le mod) :</b> un seul coup n'enlève jamais plus de <b>3 cœurs</b> à un joueur,
+    et le même joueur ne peut pas lui enlever plus de <b>5 cœurs en 5 secondes</b>. Avant c'était 8 cœurs, d'où le « quasi one-shot » sur une Netherite P4.
+    Les gros coups (ultis) sont un peu moins multipliés (×2 au lieu de ×2,4) et le phénix tape environ un tiers moins fort. Tuer quelqu'un en pleine vie prend au moins ~10 s de combat.
+  </div>
+
+  <h2>Le chevalier</h2>
+  <div class="grille">
+    <div class="carte">
+      <img class="img" src="images/forme.png" alt="">
+      <div class="corps"><div class="titre"><b>La forme</b><span class="touche">²</span></div>
+        <p>Os → chair → armure → le chevalier, à chaque appui. Il garde son casque de couleur.</p>
+        <div class="chiffres"><span>3 min d'éveil</span><span>puis repos</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/epee.png" alt="">
+      <div class="corps"><div class="titre"><b>Coups d'épée</b><span class="touche">clic gauche</span></div>
+        <p>Grande épée violette, gauche puis droite, sur tout ce qui est devant.</p>
+        <div class="chiffres"><span>16 dégâts</span><span>8,5 blocs</span><span>1 coup / 0,4 s</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/arc.png" alt="">
+      <div class="corps"><div class="titre"><b>Arc aux flammes noires</b><span class="touche">clic droit</span></div>
+        <p>La flèche traverse tout, pose une bande de flammes noires au sol et une flaque là où elle se plante.</p>
+        <div class="chiffres"><span>10 dégâts</span><span>48 blocs</span><span>recharge 8 s</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/grandcoup.png" alt="">
+      <div class="corps"><div class="titre"><b>Le grand coup</b><span class="touche">accroupi</span></div>
+        <p>Il abat l'épée : une vague de flammes noires part tout autour, une quarantaine de flammes restent au sol.</p>
+        <div class="chiffres"><span>22 dégâts</span><span>8 blocs autour</span><span>recharge 15 s</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/flammes.png" alt="">
+      <div class="corps"><div class="titre"><b>Flammes noires</b><span class="touche">passif</span></div>
+        <p>Amaterasu : rien ne les éteint, l'eau non plus. Qui marche dedans brûle (pas lui ni ses alliés).</p>
+        <div class="chiffres"><span>2 / s pendant 10 s</span><span>1 min au sol</span></div></div>
+    </div>
+  </div>
+
+  <h2>Les yeux</h2>
+  <div class="grille">
+    <div class="carte">
+      <img class="img" src="images/tsukuyomi.png" alt="">
+      <div class="corps"><div class="titre"><b>Tsukuyomi</b><span class="touche">J</span></div>
+        <p>Il regarde quelqu'un dans les yeux : 30 s dans le monde rouge, attaché à la croix. Au réveil, 3 cœurs perdus au plus.</p>
+        <div class="chiffres"><span>16 blocs</span><span>−3 cœurs max</span><span>recharge 1 min</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/kamui.png" alt="">
+      <div class="corps"><div class="titre"><b>Kamui</b><span class="touche">L maintenue</span></div>
+        <p>Sur quelqu'un : aspiré en spirale, 10 s dans la dimension du Kamui. Sur personne : il se cache lui-même, invisible et intouchable.</p>
+        <div class="chiffres"><span>cible : 20 blocs, recharge 40 s</span><span>caché 30 s max, recharge 20 s</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/meteorite.png" alt="">
+      <div class="corps"><div class="titre"><b>Météorite</b><span class="touche">I</span></div>
+        <p>Sa cible monte dans une sphère noire qui aspire le sol et tout ce qui vit, la météorite se forme puis explose.</p>
+        <div class="chiffres"><span>28 + blocs 18 max</span><span>34 blocs</span><span>1 fois par éveil, 5 min</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/corbeau.png" alt="">
+      <div class="corps"><div class="titre"><b>Corbeau</b><span class="touche">,</span></div>
+        <p>Il explose en encre et plumes et s'envole en corbeau : vole vite, entend tout, personne ne le voit ni ne l'entend. Ne frappe pas.</p>
+        <div class="chiffres"><span>30 s max</span><span>recharge 1 min</span></div></div>
+    </div>
+    <div class="carte">
+      <img class="img" src="images/fracture.png" alt="">
+      <div class="corps"><div class="titre"><b>Fracture temporelle</b><span class="touche">.</span></div>
+        <p>L'écran se fissure et les 10 dernières secondes se rembobinent autour de lui : blocs, places, vie ; ce qui est mort revient.</p>
+        <div class="chiffres"><span>10 blocs autour</span><span>10 s en arrière</span><span>recharge 3 min</span></div></div>
+    </div>
+  </div>
+
+  <h2>Les deux nouvelles attaques <span class="badge">CODÉES</span></h2>
+  <div class="grille">
+    <div class="carte neuf">
+      <img class="img" src="images/lance.png" alt="">
+      <div class="corps"><div class="titre"><b>Lance d'Amaterasu</b><span class="touche">3e coup d'épée</span></div>
+        <p>Au 3e coup d'épée de suite (en moins de 2 s), il lance son épée comme une lance : elle file tout droit, embrase ceux qu'elle traverse et se plante en faisant monter un pilier de flammes noires. L'épée revient dans sa main.</p>
+        <div class="chiffres"><span>14 dégâts</span><span>30 blocs</span><span>pilier 3 s, rayon 3</span><span>recharge 12 s</span></div></div>
+    </div>
+    <div class="carte neuf">
+      <img class="img" src="images/ruee.png" alt="">
+      <div class="corps"><div class="titre"><b>Ruée du bouclier</b><span class="touche">accroupi + clic droit</span></div>
+        <p>Il lève son bouclier et fonce devant lui : tout ce qu'il percute est projeté et sonné 1 s. S'il percute un mur, l'onde de choc pose des flammes noires autour.</p>
+        <div class="chiffres"><span>10 dégâts</span><span>16 blocs en 0,8 s</span><span>sonné 1 s</span><span>recharge 14 s</span></div></div>
+    </div>
+  </div>
+
+  <h2>Tout le kit d'un coup d'œil</h2>
+  <table>
+    <tr><th>Attaque</th><th>Touche</th><th>Dégâts de base</th><th>Sur un joueur</th><th>Recharge</th></tr>
+    <tr><td>Coups d'épée</td><td>clic gauche</td><td>16</td><td>3 cœurs max</td><td>0,4 s</td></tr>
+    <tr><td>Arc aux flammes noires</td><td>clic droit</td><td>10 + 2/s (10 s)</td><td>3 cœurs max</td><td>8 s</td></tr>
+    <tr><td>Grand coup</td><td>accroupi</td><td>22</td><td>3 cœurs max</td><td>15 s</td></tr>
+    <tr><td>Tsukuyomi</td><td>J</td><td>illusion</td><td>3 cœurs au réveil</td><td>1 min</td></tr>
+    <tr><td>Kamui</td><td>L</td><td>—</td><td>envoyé 10 s ailleurs</td><td>40 s / 20 s</td></tr>
+    <tr><td>Météorite</td><td>I</td><td>28 + 18</td><td>3 cœurs max par coup</td><td>1 / éveil, 5 min</td></tr>
+    <tr><td>Corbeau</td><td>,</td><td>—</td><td>—</td><td>1 min</td></tr>
+    <tr><td>Fracture temporelle</td><td>.</td><td>—</td><td>rembobine 10 s</td><td>3 min</td></tr>
+    <tr><td class="n">Lance d'Amaterasu</td><td class="n">3e coup d'épée</td><td class="n">14 + pilier</td><td class="n">3 cœurs max</td><td class="n">12 s</td></tr>
+    <tr><td class="n">Ruée du bouclier</td><td class="n">accroupi + clic droit</td><td class="n">10 + sonné 1 s</td><td class="n">3 cœurs max</td><td class="n">14 s</td></tr>
+  </table>
+  <p class="note">Les touches sont celles par défaut, chacun peut les changer dans Contrôles. Aujourd'hui le corbeau et la fracture ne sont que pour « susanodev » et sans recharge. Dans ce niveau 3 final, tout le monde qui a le Susano 3 les aurait, avec les recharges ci-dessus.</p>
+</div>
+</body>
+</html>
