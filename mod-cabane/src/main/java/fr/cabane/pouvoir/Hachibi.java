@@ -190,7 +190,7 @@ public final class Hachibi {
     public static void reseau(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(Boule.TYPE, Boule.CODEC, (p, ctx) -> ctx.enqueueWork(() -> ClientHachibi.boule(p)))
                 .playToServer(ClicAccroupi.TYPE, ClicAccroupi.CODEC, (p, ctx) -> ctx.enqueueWork(() -> {
-                    if (ctx.player() instanceof ServerPlayer joueur && !Hachibi4.actif(joueur)) {
+                    if (ctx.player() instanceof ServerPlayer joueur && !Hachibi4.occupe(joueur)) {
                         Etat e = ETATS.get(joueur.getUUID());
                         if (e != null && e.forme == 4) {
                             bombe(joueur, e, joueur.server.getTickCount());
@@ -278,7 +278,7 @@ public final class Hachibi {
 
     /** Clic gauche : un coup de griffe devant (plus fort et plus large en bête) ; au niveau 4, un coup de tentacule. */
     static void griffe(ServerPlayer joueur) {
-        if (Hachibi4.actif(joueur)) {
+        if (Hachibi4.occupe(joueur)) {
             return;
         }
         Etat e = ETATS.get(joueur.getUUID());
@@ -503,7 +503,7 @@ public final class Hachibi {
     /** Clic droit : devenir la bête (si elle est rechargée), ou redevenir soi-même ; au niveau 4 de Hachibi 2, le balayage. */
     static void bete(ServerPlayer joueur) {
         Etat e = ETATS.get(joueur.getUUID());
-        if (e == null || Hachibi4.actif(joueur)) {
+        if (e == null || Hachibi4.occupe(joueur)) {
             return;
         }
         int maintenant = joueur.server.getTickCount();
@@ -556,7 +556,7 @@ public final class Hachibi {
     /** S'accroupir : la course (manteau), la bombe de chakra (bête), ou au niveau 4 de Hachibi 2 la tentacule qui attrape. */
     static void accroupi(ServerPlayer joueur) {
         Etat e = ETATS.get(joueur.getUUID());
-        if (e == null || Hachibi4.actif(joueur)) {
+        if (e == null || Hachibi4.occupe(joueur)) {
             return;
         }
         int maintenant = joueur.server.getTickCount();

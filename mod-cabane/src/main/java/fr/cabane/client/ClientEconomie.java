@@ -29,7 +29,8 @@ public final class ClientEconomie {
         String texte = Economie.format(solde);
         int largeur = mc.font.width(texte) + 16;
         int x = g.guiWidth() - largeur - 4;
-        int y = g.guiHeight() / 2 - 6;
+        // Sous le panneau des missions quand il descend jusque-là, sinon au milieu à droite.
+        int y = Math.max(g.guiHeight() / 2 - 6, ClientDialogue.basSuivi + 7);
         g.fill(x - 3, y - 3, x + largeur + 2, y + 12, 0x88000000);
         g.blit(PIECE, x, y, 0, 0, 10, 10, 10, 10);
         g.drawString(mc.font, texte, x + 13, y + 1, 0xFFFFD75E, true);

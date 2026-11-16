@@ -159,6 +159,8 @@ public final class ClientLames {
         DOS.put(Sorte.KABUTOWARI, new Place[]{new Place(0, -5.5F, 9, -4.2F, v(0.45F, 1, 0), v(1, -0.45F, 0)),
                 new Place(1, 5.5F, 9, -9.8F, v(-0.45F, 1, 0), v(1, 0.45F, 0))});
         DOS.put(Sorte.HIRAMEKAREI, new Place[]{new Place(0, -2.5F, 35, -3.6F, v(0.1F, -1, 0), v(1, 0.1F, 0))});
+        // la dague du phénix : en travers, dans le bas du dos
+        DOS.put(Sorte.DAGUE, new Place[]{new Place(0, 5.5F, 13.5F, -2.8F, v(-0.85F, -0.5F, 0), v(-0.5F, 0.85F, 0))});
     }
 
     // ------------------------------------------------------------------ les combos et les clics droits
@@ -546,7 +548,8 @@ public final class ClientLames {
                 // grande à l'écran : toutes les lames prennent à peu près la même place, la prise dans la main
                 ps.mulPose(Axis.ZP.rotationDegrees(-45));
                 ps.translate(0, -0.42F, 0);
-                k = 1.3F / (t[0] + 4);
+                // (la dague reste une dague : plus petite que les grandes lames)
+                k = (s == Sorte.DAGUE ? 0.75F : 1.3F) / (t[0] + 4);
                 ps.scale(k, k, k);
             } else {
                 ps.mulPose(Axis.ZP.rotationDegrees(-45));

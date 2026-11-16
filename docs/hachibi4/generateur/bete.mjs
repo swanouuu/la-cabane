@@ -89,8 +89,9 @@ export function hachibi(sc, o = {}) {
   const bout = tete(piece, T, o.gueule ?? 0);
   let haut = 0;
   const q = o.queues ?? "eventail";
-  if (q === "eventail") TENTACULES.forEach(([phi, p], k) => { const ph = o.phi?.[k] ?? phi; haut = Math.max(haut, dessinerTentacule(piece, eventail(ph, p), ph)); });
-  else QUEUES[q].forEach((chemin, k) => { haut = Math.max(haut, dessinerTentacule(piece, suivre(chemin), k * 37)); });
+  // o.remplace = { k: chemin } : cette queue suit un chemin à elle ; o.queues peut aussi être une liste de huit chemins
+  if (q === "eventail") TENTACULES.forEach(([phi, p], k) => { const ph = o.phi?.[k] ?? phi; haut = Math.max(haut, dessinerTentacule(piece, o.remplace?.[k] ? suivre(o.remplace[k]) : eventail(ph, p), ph)); });
+  else (Array.isArray(q) ? q : QUEUES[q]).forEach((chemin, k) => { haut = Math.max(haut, dessinerTentacule(piece, suivre(chemin), k * 37)); });
   return { haut: haut * G, gueule: P(bout), devant: norme(T.axes[2]) };
 }
 

@@ -113,7 +113,7 @@ public class ProjectileArme extends ThrowableItemProjectile {
         ProjectileArme p = new ProjectileArme(Cartel.PROJECTILE.get(), level);
         p.setOwner(joueur);
         p.setMode(tir);
-        p.puissance = 3F;
+        p.puissance = 2.7F;
         p.setPos(joueur.getX(), joueur.getEyeY() - 0.1, joueur.getZ());
         p.shootFromRotation(joueur, joueur.getXRot(), joueur.getYRot(), -6F, 1.15F, 1F);
         level.addFreshEntity(p);

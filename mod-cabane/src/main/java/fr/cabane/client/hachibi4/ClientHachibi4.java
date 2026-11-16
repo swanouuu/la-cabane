@@ -89,12 +89,48 @@ public final class ClientHachibi4 {
         boolean lacetPret;
         double agePrecedent = -1;
         final double[] poingPrecedent = {9, 9};
+        /** Quand chaque nouvelle attaque a été faite (par sa place dans le panneau), pour afficher sa recharge. */
+        final long[] faites = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
         double queuesPrecedent = 9;
         double boumPrecedent = 9;
         /** La marche : où il était au tick d'avant, la phase du pas (un tour = deux poings posés), et à quel point il marche (0 à 1). */
         Vec3 avant;
         double pas, pasO;
         float marche, marcheO;
+        /** Les nouvelles attaques (docs/hachibi5) : quand elles ont commencé (-1 : jamais). */
+        long rayon = -1, toupie = -1, saisie = -1, ecrase = -1, saut = -1, pluie = -1, fonce = -1;
+        int proie;
+        Vec3 proiePos;
+        final java.util.List<Onde> ondes = new java.util.ArrayList<>(), domes = new java.util.ArrayList<>();
+        final java.util.List<Goutte> gouttes = new java.util.ArrayList<>();
+    }
+
+    /** Une onde au sol (ou un dôme) qui s'élargit jusqu'à r. */
+    private record Onde(Vec3 p, double r, long debut) {
+    }
+
+    /** Une Bijuu Dama de la pluie : où elle tombe, dans combien de secondes (depuis debut). */
+    private record Goutte(Vec3 p, double delai, long debut) {
+    }
+
+    /** Un choc à cet endroit : ceux qui sont à moins de loin blocs tremblent. */
+    private static void tremble(Vec3 ou, float force, double loin) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            double d = ou.distanceTo(mc.player.position());
+            if (d < loin) {
+                secouer(force * (float) Math.max(0.25, 1 - d / loin));
+            }
+        }
+    }
+
+    /** De 0 à 1 : une attaque commencée à ce moment-là, qui monte en a secondes, tient jusqu'à b, retombe en c. */
+    private static double pendant(long quand, double a, double b, double c) {
+        if (quand < 0) {
+            return 0;
+        }
+        double t = secondes(quand);
+        return lisse(t / a) * (1 - lisse((t - b) / c));
     }
 
     /** Un pas de la bête (un poing qui se lève, avance et se repose) couvre ce nombre de blocs. */
@@ -106,7 +142,7 @@ public final class ClientHachibi4 {
     private static long secousse = -1;
     private static float forceSecousse;
     private static long dernierClic;
-    private static boolean accroupiAvant, encreFaite;
+    private static boolean accroupiAvant, encreFaite, sautAvant, courseAvant, techniqueAvant;
     private static long accroupiDebut;
 
     private static double secondes(long depuis) {
@@ -144,6 +180,10 @@ public final class ClientHachibi4 {
             return;
         }
         long maintenant = System.nanoTime();
+        if (p.geste() >= fr.cabane.pouvoir.Manteau.DEBUT) {
+            fr.cabane.client.pouvoir.ClientManteau.geste(p);
+            return;
+        }
         Bete b = BETES.get(p.joueur());
         if (p.geste() == Hachibi4.DEBUT) {
             b = new Bete();
@@ -172,6 +212,36 @@ public final class ClientHachibi4 {
             }
             case Hachibi4.GESTE_QUEUES -> b.queues = maintenant;
             case Hachibi4.GESTE_ENCRE -> b.encre = maintenant;
+            case Hachibi4.GESTE_RAYON -> b.rayon = b.faites[5] = maintenant;
+            case Hachibi4.GESTE_TOUPIE -> b.toupie = b.faites[7] = maintenant;
+            case Hachibi4.GESTE_SAISIE -> {
+                b.saisie = b.faites[4] = maintenant;
+                b.ecrase = -1;
+                b.proie = p.valeur();
+                b.proiePos = null;
+            }
+            case Hachibi4.GESTE_ECRASE -> {
+                b.ecrase = maintenant;
+                b.proiePos = new Vec3(p.a());
+                if (p.valeur() == 1) {
+                    b.ondes.add(new Onde(b.proiePos, 8, maintenant));
+                    tremble(b.proiePos, 1F, 60);
+                }
+            }
+            case Hachibi4.GESTE_SAUT -> b.saut = b.faites[6] = maintenant;
+            case Hachibi4.GESTE_ATTERRI -> {
+                b.ondes.add(new Onde(new Vec3(p.a()), Hachibi4.RAYON_SAUT, maintenant));
+                tremble(new Vec3(p.a()), 1.8F, 110);
+            }
+            case Hachibi4.GESTE_PLUIE -> b.pluie = b.faites[9] = maintenant;
+            case Hachibi4.GESTE_CERCLE -> b.gouttes.add(new Goutte(new Vec3(p.a()), p.valeur() / 20.0, maintenant));
+            case Hachibi4.GESTE_IMPACT -> {
+                Vec3 ou = new Vec3(p.a());
+                b.gouttes.removeIf(g -> g.p.distanceToSqr(ou) < 1);
+                b.domes.add(new Onde(ou, Hachibi4.RAYON_PLUIE, maintenant));
+                tremble(ou, 1F, 70);
+            }
+            case Hachibi4.GESTE_FONCE -> b.fonce = b.faites[8] = maintenant;
             default -> { }
         }
     }
@@ -261,7 +331,10 @@ public final class ClientHachibi4 {
         double cri = lisse(t / 0.25) * (1 - lisse((t - 1.1) / 0.4));
         double charge = b.charge < 0 ? b.tir >= 0 && secondes(b.tir) < 0.4 ? 1 - secondes(b.tir) / 0.4 : 0 : lisse(secondes(b.charge) / 0.3);
         double crache = b.encre < 0 ? 0 : lisse(secondes(b.encre) / 0.15) * (1 - lisse((secondes(b.encre) - 0.6) / 0.3));
-        double gueule = Math.max(cri, Math.max(charge, crache));
+        double rayonK = pendant(b.rayon, 0.4, Hachibi4.OUVRE_RAYON / 20.0 + Hachibi4.DUREE_RAYON / 20.0, 0.3), pluieK = pendant(b.pluie, 0.3, 1.1, 0.4);
+        double fonceK = pendant(b.fonce, 0.25, Hachibi4.DUREE_FONCE / 20.0, 0.4);
+        double tt = b.toupie < 0 ? 9 : secondes(b.toupie), dureeToupie = Hachibi4.DUREE_TOUPIE / 20.0;
+        double gueule = Math.max(Math.max(cri, rayonK), Math.max(Math.max(charge, crache), pluieK));
         double temps = (j.level().getGameTime() + partiel) / 20.0;
         // la marche à quatre pattes, en gorille : les poings se lèvent l'un après l'autre, le corps tangue et se soulève
         double pas = Mth.lerp(partiel, b.pasO, b.pas);
@@ -279,6 +352,11 @@ public final class ClientHachibi4 {
             tourne += (float) ((k == 0 ? -1 : 1) * 8 * poidsPoing(b.poings[k]));
         }
         ps.mulPose(Axis.YP.rotationDegrees(tourne));
+        // la toupie : deux tours sur lui-même ; la charge : il se penche en avant
+        if (tt < dureeToupie) {
+            ps.mulPose(Axis.YP.rotationDegrees((float) (720 * lisse(tt / dureeToupie))));
+        }
+        ps.mulPose(Axis.XP.rotationDegrees((float) (9 * fonceK)));
         ps.pushPose();
         ps.translate(0, Math.sin(temps * 0.9) * 0.2 * G + cri * 0.4 * G, 0);
         dessiner(c, ps, ModeleBete.CORPS);
@@ -287,7 +365,7 @@ public final class ClientHachibi4 {
         Vec3 pt = ModeleBete.PIVOT_TETE;
         ps.translate(pt.x, pt.y, pt.z);
         ps.mulPose(Axis.YP.rotationDegrees((float) (6 * Math.sin(temps * 0.23) + 4 * cri * Math.sin(temps * 23))));
-        ps.mulPose(Axis.XP.rotationDegrees((float) (3 * Math.sin(temps * 0.31) - 18 - 24 * cri - 10 * charge - 8 * crache + 4 * marche * Math.sin(2 * pas + 0.6))));
+        ps.mulPose(Axis.XP.rotationDegrees((float) (3 * Math.sin(temps * 0.31) - 18 - 24 * cri - 10 * charge - 8 * crache - 30 * pluieK + 40 * fonceK + 4 * marche * Math.sin(2 * pas + 0.6))));
         ps.translate(-pt.x, -pt.y, -pt.z);
         dessiner(c, ps, ModeleBete.TETE);
         Vec3 ch = ModeleBete.CHARNIERE;
@@ -332,6 +410,12 @@ public final class ClientHachibi4 {
         } else if (tq < 2.3) {
             a = ModeleBete.ABATTUES;
             k = lisse((tq - 1.6) / 0.7);
+        }
+        if (tt < dureeToupie + 0.4) {
+            // la toupie : les queues couchées à plat, qui fauchent tout autour pendant qu'il tourne
+            a = ModeleBete.EVENTAIL;
+            z = ModeleBete.ABATTUES;
+            k = lisse(tt / 0.25) * (1 - lisse((tt - dureeToupie) / 0.4));
         }
         double calme = (a == ModeleBete.EVENTAIL ? 1 - k : 0) + (z == ModeleBete.EVENTAIL ? k : 0);
         if (a == z) {
@@ -395,10 +479,10 @@ public final class ClientHachibi4 {
 
     // ================================================================ les effets : la boule, la Bijuu Dama, l'éclat
 
-    private static final float[] ROUGE_SOMBRE = {0.43F, 0.03F, 0.04F}, ROUGE = {0.89F, 0.12F, 0.09F}, ROUGE_VIF = {1F, 0.36F, 0.2F},
+    public static final float[] ROUGE_SOMBRE = {0.43F, 0.03F, 0.04F}, ROUGE = {0.89F, 0.12F, 0.09F}, ROUGE_VIF = {1F, 0.36F, 0.2F},
             BRAISE = {1F, 0.84F, 0.6F}, NOIR = {0.04F, 0.02F, 0.06F}, VIOLET = {0.3F, 0.17F, 0.45F}, VIOLET_CLAIR = {0.7F, 0.5F, 1F};
 
-    private interface Teinte {
+    public interface Teinte {
         float[] couleur(double theta, double phi);
     }
 
@@ -449,6 +533,7 @@ public final class ClientHachibi4 {
                 }
             }
         }
+        nouvelles(voile, lueur, m, cam, b, j, pied, lacet, partiel);
         if (b.boum >= 0 && b.boumPos != null) {
             double u = secondes(b.boum) / 0.9;
             if (u < 1) {
@@ -457,6 +542,142 @@ public final class ClientHachibi4 {
                 boule(voile, m, c, r, 16, 26, (th, ph) -> Math.cos(th) > 0.2 ? VIOLET : NOIR, (float) (0.85 * (1 - u)));
                 boule(lueur, m, c, r * 1.08, 12, 20, (th, ph) -> VIOLET_CLAIR, (float) (0.55 * (1 - u)));
                 anneau(lueur, m, c.add(0, -r * 0.3, 0), r * 1.4, 2.5, VIOLET_CLAIR, (float) (0.6 * (1 - u)));
+            }
+        }
+    }
+
+    private static final float[] BLANC = {1F, 0.95F, 1F}, ROSE = {0.7F, 0.42F, 0.49F}, ROSE_CLAIR = {0.87F, 0.67F, 0.69F}, ALERTE = {1F, 0.2F, 0.15F};
+
+    /** Les nouvelles attaques : le rayon, la queue qui saisit, les ondes, la pluie de Bijuu Dama. */
+    private static void nouvelles(VertexConsumer voile, VertexConsumer lueur, Matrix4f m, Vec3 cam, Bete b, Player j, Vec3 pied, float lacet, float partiel) {
+        Vec3 bouche = monde(pied, lacet, Hachibi4.BOUCHE.add(0, TETE_HAUTE * 0.6, 2));
+        if (b.rayon >= 0) {
+            double t = secondes(b.rayon), ouvre = Hachibi4.OUVRE_RAYON / 20.0, fin = ouvre + Hachibi4.DUREE_RAYON / 20.0;
+            if (t < ouvre) {
+                boule(lueur, m, bouche.subtract(cam), 1 + 3 * t / ouvre, 10, 16, (th, ph) -> VIOLET_CLAIR, 0.7F);
+            } else if (t < fin) {
+                Vec3 d = j.getViewVector(partiel).normalize(), bout = Hachibi4.boutRayon(j.level(), j, bouche, d);
+                double vibre = 1 + 0.08 * Math.sin(t * 40);
+                faisceau(voile, m, bouche.subtract(cam), bout.subtract(cam), 1.5 * vibre, BLANC, 0.95F);
+                faisceau(lueur, m, bouche.subtract(cam), bout.subtract(cam), Hachibi4.LARGEUR_RAYON * vibre, VIOLET_CLAIR, 0.5F);
+                faisceau(lueur, m, bouche.subtract(cam), bout.subtract(cam), Hachibi4.LARGEUR_RAYON * 1.5 * vibre, VIOLET, 0.25F);
+                boule(lueur, m, bout.subtract(cam), 5 + Math.sin(t * 30), 10, 16, (th, ph) -> BLANC, 0.7F);
+                boule(lueur, m, bouche.subtract(cam), 4.5, 10, 16, (th, ph) -> VIOLET_CLAIR, 0.6F);
+            } else {
+                b.rayon = -1;
+            }
+        }
+        // la queue qui saisit : de son dos, par-dessus sa tête, jusqu'à sa proie ; elle se retire après l'avoir écrasée
+        if (b.saisie >= 0) {
+            Entity proie = j.level().getEntity(b.proie);
+            if (b.ecrase < 0 && proie != null) {
+                b.proiePos = proie.getPosition(partiel).add(0, proie.getBbHeight() / 2, 0);
+            }
+            double sort = b.ecrase < 0 ? lisse(secondes(b.saisie) / 0.35) : 1 - lisse(secondes(b.ecrase) / 0.6);
+            if (b.ecrase >= 0 && secondes(b.ecrase) > 0.6) {
+                b.saisie = -1;
+            } else if (b.proiePos != null) {
+                Vec3 depart = monde(pied, lacet, new Vec3(0, 30 * G, -8 * G)), haut = monde(pied, lacet, new Vec3(0, 72 * G, 2 * G));
+                java.util.List<Vec3> ligne = new java.util.ArrayList<>();
+                int n = Math.max(2, (int) Math.round(36 * sort));
+                for (int i = 0; i <= n; i++) {
+                    double u = i / 36.0;
+                    ligne.add(depart.scale((1 - u) * (1 - u)).add(haut.scale(2 * (1 - u) * u)).add(b.proiePos.scale(u * u)).subtract(cam));
+                }
+                tube(voile, m, ligne, 4.6 * G, 1.3 * G);
+            }
+        }
+        for (java.util.Iterator<Onde> it = b.ondes.iterator(); it.hasNext();) {
+            Onde o = it.next();
+            double u = secondes(o.debut) / 0.7;
+            if (u >= 1) {
+                it.remove();
+                continue;
+            }
+            Vec3 c = o.p.add(0, 0.4, 0).subtract(cam);
+            anneau(lueur, m, c, o.r * Math.sqrt(u), 1 + o.r * 0.1, BRAISE, (float) (0.7 * (1 - u)));
+            anneau(lueur, m, c.add(0, 0.3, 0), o.r * 0.7 * Math.sqrt(u), 1 + o.r * 0.06, new float[] {1, 1, 1}, (float) (0.5 * (1 - u)));
+        }
+        // la pluie : la boule qui monte de sa gueule, puis, pour chaque goutte, le cercle rouge et la boule qui tombe
+        if (b.pluie >= 0) {
+            double t = secondes(b.pluie);
+            if (t < 1.4) {
+                dama(voile, lueur, m, bouche.add(0, 4 + 70 * t * t, 3).subtract(cam), 4.5, t);
+            } else {
+                b.pluie = -1;
+            }
+        }
+        for (java.util.Iterator<Goutte> it = b.gouttes.iterator(); it.hasNext();) {
+            Goutte g = it.next();
+            double t = secondes(g.debut), u = t / g.delai;
+            if (u > 1.3) {
+                it.remove();
+                continue;
+            }
+            Vec3 c = g.p.subtract(cam);
+            float clignote = (float) (0.55 + 0.35 * Math.sin(t * 18));
+            anneau(lueur, m, c.add(0, 0.3, 0), Hachibi4.RAYON_PLUIE - 0.8, 0.8, ALERTE, clignote);
+            anneau(lueur, m, c.add(0, 0.3, 0), Hachibi4.RAYON_PLUIE * 0.35 * (1 - Math.min(1, u)), 0.5, ALERTE, clignote);
+            if (u < 1) {
+                dama(voile, lueur, m, c.add(0, 3 + 90 * (1 - u), 0), 3.2, t);
+            }
+        }
+        for (java.util.Iterator<Onde> it = b.domes.iterator(); it.hasNext();) {
+            Onde o = it.next();
+            double u = secondes(o.debut) / 0.8;
+            if (u >= 1) {
+                it.remove();
+                continue;
+            }
+            Vec3 c = o.p.subtract(cam);
+            double r = 2 + (o.r + 1) * Math.sqrt(u);
+            boule(voile, m, c, r, 14, 22, (th, ph) -> Math.cos(th) > 0.2 ? VIOLET : NOIR, (float) (0.85 * (1 - u)));
+            boule(lueur, m, c, r * 1.08, 10, 16, (th, ph) -> VIOLET_CLAIR, (float) (0.5 * (1 - u)));
+            anneau(lueur, m, c.add(0, 0.4, 0), r * 1.3, 1.5, VIOLET_CLAIR, (float) (0.6 * (1 - u)));
+        }
+    }
+
+    /** Un rayon : un cylindre de a à b, de rayon r. */
+    private static void faisceau(VertexConsumer c, Matrix4f m, Vec3 a, Vec3 b, double r, float[] col, float alpha) {
+        Vec3 d = b.subtract(a).normalize(), u = d.cross(Math.abs(d.y) > 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0)).normalize(), v = d.cross(u);
+        int cotes = 12;
+        for (int k = 0; k < cotes; k++) {
+            double a0 = Mth.TWO_PI * k / cotes, a1 = Mth.TWO_PI * (k + 1) / cotes;
+            Vec3 e0 = u.scale(Math.cos(a0) * r).add(v.scale(Math.sin(a0) * r)), e1 = u.scale(Math.cos(a1) * r).add(v.scale(Math.sin(a1) * r));
+            for (Vec3 p : new Vec3[] {a.add(e0), b.add(e0), b.add(e1), a.add(e1)}) {
+                c.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(col[0], col[1], col[2], alpha);
+            }
+        }
+    }
+
+    /** Une queue rose le long d'une ligne (déjà ramenée à la caméra), de rayon r0 au départ à r1 au bout. */
+    private static void tube(VertexConsumer c, Matrix4f m, java.util.List<Vec3> ligne, double r0, double r1) {
+        int n = ligne.size() - 1, cotes = 10;
+        Vec3 normale = null;
+        Vec3[] nn = new Vec3[n + 1], bb = new Vec3[n + 1];
+        for (int i = 0; i <= n; i++) {
+            Vec3 t = ligne.get(Math.min(n, i + 1)).subtract(ligne.get(Math.max(0, i - 1))).normalize();
+            if (normale == null) {
+                normale = t.cross(new Vec3(1, 0, 0));
+            }
+            normale = normale.subtract(t.scale(normale.dot(t))).normalize();
+            nn[i] = normale;
+            bb[i] = t.cross(normale).normalize();
+        }
+        for (int i = 0; i < n; i++) {
+            double ra = r0 + (r1 - r0) * i / 36.0, rb = r0 + (r1 - r0) * (i + 1) / 36.0;
+            for (int k = 0; k < cotes; k++) {
+                double a0 = Mth.TWO_PI * k / cotes, a1 = Mth.TWO_PI * (k + 1) / cotes, am = (a0 + a1) / 2;
+                Vec3 dehors = nn[i].scale(Math.cos(am)).add(bb[i].scale(Math.sin(am)));
+                float[] col = mix(ROSE, ROSE_CLAIR, (float) Mth.clamp(0.5 - dehors.y * 0.5 + ((i + k) % 2) * 0.12, 0, 1));
+                float ombre = (float) (0.78 + 0.22 * dehors.y);
+                Vec3[] q = {ligne.get(i).add(nn[i].scale(Math.cos(a0) * ra)).add(bb[i].scale(Math.sin(a0) * ra)),
+                        ligne.get(i + 1).add(nn[i + 1].scale(Math.cos(a0) * rb)).add(bb[i + 1].scale(Math.sin(a0) * rb)),
+                        ligne.get(i + 1).add(nn[i + 1].scale(Math.cos(a1) * rb)).add(bb[i + 1].scale(Math.sin(a1) * rb)),
+                        ligne.get(i).add(nn[i].scale(Math.cos(a1) * ra)).add(bb[i].scale(Math.sin(a1) * ra))};
+                for (Vec3 p : q) {
+                    c.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(col[0] * ombre, col[1] * ombre, col[2] * ombre, 1F);
+                }
             }
         }
     }
@@ -531,18 +752,18 @@ public final class ClientHachibi4 {
 
     // ================================================================ les formes de base
 
-    private static float[] mix(float[] a, float[] b, float k) {
+    public static float[] mix(float[] a, float[] b, float k) {
         return new float[] {a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k};
     }
 
-    private static double hache(int i, int j) {
+    public static double hache(int i, int j) {
         int h = i * 374761393 + j * 668265263 + 900 * 2147483647;
         h = (h ^ (h >>> 13)) * 1274126177;
         return ((h ^ (h >>> 16)) >>> 0 & 0xFFFFFFFFL) / 4294967296.0;
     }
 
     /** Une sphère en quadrilatères (latitude, longitude), colorée case par case. */
-    private static void boule(VertexConsumer c, Matrix4f m, Vec3 o, double r, int lat, int lon, Teinte teinte, float alpha) {
+    public static void boule(VertexConsumer c, Matrix4f m, Vec3 o, double r, int lat, int lon, Teinte teinte, float alpha) {
         for (int i = 0; i < lat; i++) {
             double t0 = Math.PI * i / lat, t1 = Math.PI * (i + 1) / lat;
             for (int jj = 0; jj < lon; jj++) {
@@ -579,7 +800,7 @@ public final class ClientHachibi4 {
     }
 
     /** Un anneau à plat (une onde au sol), de rayon r et de largeur l. */
-    private static void anneau(VertexConsumer c, Matrix4f m, Vec3 o, double r, double l, float[] col, float a) {
+    public static void anneau(VertexConsumer c, Matrix4f m, Vec3 o, double r, double l, float[] col, float a) {
         int pas = 64;
         for (int k = 0; k < pas; k++) {
             double a0 = Mth.TWO_PI * k / pas, a1 = Mth.TWO_PI * (k + 1) / pas;
@@ -591,7 +812,7 @@ public final class ClientHachibi4 {
     }
 
     /** Un petit cube plein (un filet de chakra, un morceau de coquille). */
-    private static void cube(VertexConsumer c, Matrix4f m, Vec3 o, double h, float[] col, float a) {
+    public static void cube(VertexConsumer c, Matrix4f m, Vec3 o, double h, float[] col, float a) {
         float x0 = (float) (o.x - h), x1 = (float) (o.x + h), y0 = (float) (o.y - h), y1 = (float) (o.y + h), z0 = (float) (o.z - h), z1 = (float) (o.z + h);
         float[][] f = {{x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1}, {x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0},
                 {x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1}, {x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0},
@@ -603,11 +824,11 @@ public final class ClientHachibi4 {
         }
     }
 
-    private static final class Types extends RenderType {
-        static final RenderType TRANSLUCIDE = create("cabane_hachibi4_translucide", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144,
+    public static final class Types extends RenderType {
+        public static final RenderType TRANSLUCIDE = create("cabane_hachibi4_translucide", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144,
                 false, true, CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY).setCullState(NO_CULL).createCompositeState(false));
-        static final RenderType LUMIERE = create("cabane_hachibi4_lumiere", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144,
+        public static final RenderType LUMIERE = create("cabane_hachibi4_lumiere", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 262144,
                 false, true, CompositeState.builder().setShaderState(RENDERTYPE_LIGHTNING_SHADER).setWriteMaskState(COLOR_WRITE)
                         .setTransparencyState(LIGHTNING_TRANSPARENCY).setCullState(NO_CULL).createCompositeState(false));
 
@@ -644,7 +865,7 @@ public final class ClientHachibi4 {
         }
         String titre;
         String[][] lignes;
-        boolean[] gris = new boolean[4];
+        boolean[] gris = new boolean[10];
         if (b.fin >= 0) {
             return;
         }
@@ -662,9 +883,22 @@ public final class ClientHachibi4 {
             lignes = new String[][] {{Clavier.gauche(), "Poings"},
                     {Clavier.droite(), b.charge >= 0 ? "Bijuu Dama (charge…)" : dama > 0 ? String.format("Bijuu Dama (%.0f s)", Math.ceil(dama)) : "Bijuu Dama"},
                     {Clavier.accroupi(), queues > 0 ? String.format("Coup des 8 queues (%.0f s)", Math.ceil(queues)) : "Coup des 8 queues"},
-                    {Clavier.accroupi() + " + " + Clavier.droite(), encre > 0 ? String.format("Encre (%.0f s)", Math.ceil(encre)) : "Encre"}};
+                    {Clavier.accroupi() + " + " + Clavier.droite(), encre > 0 ? String.format("Encre (%.0f s)", Math.ceil(encre)) : "Encre"},
+                    {Clavier.accroupi() + " + " + Clavier.gauche(), ligne(b, 4, "Saisie", Hachibi4.RECHARGE_SAISIE, gris)},
+                    {Clavier.nom(fr.cabane.client.pouvoir.ClientSharingan.SUSANO), ligne(b, 5, "Rayon", Hachibi4.RECHARGE_RAYON, gris)},
+                    {Clavier.saut(), ligne(b, 6, "Saut écrasant", Hachibi4.RECHARGE_SAUT, gris)},
+                    {Clavier.accroupi() + " + " + Clavier.saut(), ligne(b, 7, "Toupie géante", Hachibi4.RECHARGE_TOUPIE, gris)},
+                    {Clavier.nom(mc.options.keySprint), ligne(b, 8, "Charge du taureau", Hachibi4.RECHARGE_FONCE, gris)},
+                    {Clavier.nom(fr.cabane.client.pouvoir.ClientManteau.GRANDE), ligne(b, 9, "Pluie de Bijuu Dama", Hachibi4.RECHARGE_PLUIE, gris)}};
         }
         fr.cabane.client.pouvoir.PanneauPouvoir.dessiner(g, mc.font, titre, 0xFFFF5A3C, lignes, gris);
+    }
+
+    /** La ligne d'une nouvelle attaque (i : sa place dans le panneau) : son nom, ou ce qui reste de sa recharge. */
+    private static String ligne(Bete b, int i, String nom, int ticks, boolean[] gris) {
+        double reste = recharge(b.faites[i], ticks);
+        gris[i] = reste > 0;
+        return reste > 0 ? String.format("%s (%.0f s)", nom, Math.ceil(reste)) : nom;
     }
 
     /** Ce qui reste de la recharge (en secondes) d'une attaque faite à ce moment-là. */
@@ -699,6 +933,25 @@ public final class ClientHachibi4 {
         Bete moi = moi();
         // s'accroupir (un appui court, sans clic droit entre-temps) : le coup des huit queues
         boolean accroupi = mc.options.keyShift.isDown();
+        boolean saut = mc.options.keyJump.isDown(), course = mc.options.keySprint.isDown(), technique = fr.cabane.client.pouvoir.ClientSharingan.SUSANO.isDown();
+        if (moi != null && moi.fin < 0 && age(moi) >= ECLAT && mc.screen == null) {
+            // les nouvelles attaques : Technique le rayon, Saut le saut écrasant (accroupi : la toupie), Courir la charge
+            if (technique && !techniqueAvant) {
+                PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.RAYON_T));
+            }
+            if (saut && !sautAvant) {
+                if (accroupi) {
+                    encreFaite = true;
+                }
+                PacketDistributor.sendToServer(new Hachibi4.Touche(accroupi ? Hachibi4.TOUPIE_T : Hachibi4.SAUT_T));
+            }
+            if (course && !courseAvant) {
+                PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.FONCE_T));
+            }
+        }
+        sautAvant = saut;
+        courseAvant = course;
+        techniqueAvant = technique;
         if (moi != null && moi.fin < 0 && age(moi) >= ECLAT) {
             if (accroupi && !accroupiAvant) {
                 accroupiDebut = System.nanoTime();
@@ -832,7 +1085,7 @@ public final class ClientHachibi4 {
         }
     }
 
-    private static void secouer(float force) {
+    public static void secouer(float force) {
         if (secousse < 0 || secondes(secousse) > 0.3 || force > forceSecousse) {
             secousse = System.nanoTime();
             forceSecousse = force;
@@ -882,7 +1135,10 @@ public final class ClientHachibi4 {
                 return;
             }
             dernierClic = System.nanoTime();
-            if (event.isAttack()) {
+            if (event.isAttack() && mc.options.keyShift.isDown()) {
+                encreFaite = true;
+                PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.SAISIE_T));
+            } else if (event.isAttack()) {
                 PacketDistributor.sendToServer(new Hachibi4.Touche(Hachibi4.POING_T));
             } else if (mc.options.keyShift.isDown()) {
                 encreFaite = true;

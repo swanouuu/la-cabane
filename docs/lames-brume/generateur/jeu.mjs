@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { KUBI, KIBA, NUI, SHIB, HACHE, MARTEAU, HIRA } from "./rendu.mjs";
+import { KUBI, KIBA, NUI, SHIB, HACHE, MARTEAU, HIRA, DAGUE } from "./rendu.mjs";
 import { voxels } from "./samehada3d.mjs";
 import { COMBOS, SPECIAUX, TENUE, TRAINEES } from "./combos.mjs";
 
@@ -141,6 +141,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   ecrire("shibuki", [facesPixels(SHIB)]);
   ecrire("kabutowari", [facesPixels(HACHE), facesPixels(MARTEAU)]);
   ecrire("hiramekarei", [facesPixels(HIRA), facesPixels(HIRA, "chakra"), facesPixels(HIRA, "chakra", { chakra: true })]);
+  ecrire("dague_phenix", [facesPixels(DAGUE)]);
   ecrireCombos();
 }
 
@@ -169,6 +170,7 @@ function ecrireCombos() {
   const longueurs = {
     kubikiribocho: pointe(facesPixels(KUBI)), samehada: pointe(facesVoxels(voxels("normale"), 0.5, 7)), kiba: pointe(facesPixels(KIBA)),
     nuibari: pointe(facesPixels(NUI)), shibuki: pointe(facesPixels(SHIB)), kabutowari: pointe(facesPixels(HACHE)), hiramekarei: pointe(facesPixels(HIRA)),
+    dague_phenix: pointe(facesPixels(DAGUE)),
   };
   const sortie = {};
   for (const [id, combo] of Object.entries(COMBOS)) {

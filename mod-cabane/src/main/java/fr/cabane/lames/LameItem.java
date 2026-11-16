@@ -63,7 +63,7 @@ public class LameItem extends Item {
         var b = ItemAttributeModifiers.builder()
                 .add(Attributes.ATTACK_DAMAGE, new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, s.degats - 1, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
                 .add(Attributes.ATTACK_SPEED, new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, s.vitesse - 4, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND);
-        if (s.portee > 0) {
+        if (s.portee != 0) {
             b.add(Attributes.ENTITY_INTERACTION_RANGE, new AttributeModifier(PORTEE, s.portee, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND);
         }
         return b.build();
@@ -136,10 +136,19 @@ public class LameItem extends Item {
                 int n = COUPS.merge(attaquant.getUUID(), 1, Integer::sum);
                 if (n >= 3 && attaquant instanceof ServerPlayer j) {
                     COUPS.put(attaquant.getUUID(), 0);
-                    Lames.boom(level, j, cible.position().add(0, cible.getBbHeight() * 0.5, 0), 1.4F, 4);
+                    Lames.boom(level, j, cible.position().add(0, cible.getBbHeight() * 0.5, 0), 1.4F, 3.5F);
                 }
             }
             case SAMEHADA -> level.sendParticles(BLEU, cible.getX(), cible.getY(0.6), cible.getZ(), 10, 0.3, 0.4, 0.3, 0);
+            case DAGUE -> {
+                // les flammes du phénix à chaque coup ; le dernier du combo met le feu
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, cible.getX(), cible.getY(0.6), cible.getZ(), fin ? 18 : 6, 0.25, 0.35, 0.25, 0.03);
+                level.sendParticles(OR, cible.getX(), cible.getY(0.6), cible.getZ(), fin ? 6 : 2, 0.25, 0.35, 0.25, 0);
+                if (fin) {
+                    cible.setRemainingFireTicks(Math.max(cible.getRemainingFireTicks(), FEU));
+                    level.playSound(null, cible.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.7F, 1.5F);
+                }
+            }
             default -> {
             }
         }
@@ -188,6 +197,10 @@ public class LameItem extends Item {
             }
             case KABUTOWARI -> {
                 Lames.sauter(j);
+                yield true;
+            }
+            case DAGUE -> {
+                Lames.plusTard(j, sorte, 4, () -> pique(monde, j));
                 yield true;
             }
             default -> false;
@@ -247,7 +260,7 @@ public class LameItem extends Item {
         monde.sendParticles(ParticleTypes.ELECTRIC_SPARK, j.getX(), j.getY() + 2.6, j.getZ(), 25, 0.4, 0.3, 0.4, 0.2);
         for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(ou, ou).inflate(2.5, 3, 2.5))) {
             if (e != j && e.isAlive() && e.distanceToSqr(ou) < 2.5 * 2.5 + 4) {
-                e.hurt(monde.damageSources().playerAttack(j), 9 * Zones.force(j));
+                e.hurt(monde.damageSources().playerAttack(j), 8 * Zones.force(j));
                 e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1));
             }
         }
@@ -269,7 +282,7 @@ public class LameItem extends Item {
             cousus = new ArrayList<>(cousus.subList(0, 3));
         }
         for (LivingEntity e : cousus) {
-            e.hurt(monde.damageSources().playerAttack(j), 6 * Zones.force(j));
+            e.hurt(monde.damageSources().playerAttack(j), 5.5F * Zones.force(j));
             Vec3 vers = j.position().subtract(e.position()).normalize();
             e.setDeltaMovement(vers.x * 1.5, 0.35, vers.z * 1.5);
             e.hurtMarked = true;
@@ -288,9 +301,9 @@ public class LameItem extends Item {
         Vec3 vue = j.getLookAngle(), dir = new Vec3(vue.x, 0, vue.z);
         dir = dir.lengthSqr() < 1e-4 ? Vec3.directionFromRotation(0, j.getYRot()) : dir.normalize();
         Vec3 pied = j.position();
-        Lames.exploser(j, pied.add(dir.scale(2.6)).add(0, 0.5, 0), 1.7F, 6, 0);
-        Lames.exploser(j, pied.add(dir.scale(4.2)).add(0, 0.7, 0), 2.2F, 7, 3);
-        Lames.exploser(j, pied.add(dir.scale(6)).add(0, 0.9, 0), 2.7F, 8, 6);
+        Lames.exploser(j, pied.add(dir.scale(2.6)).add(0, 0.5, 0), 1.7F, 5.5F, 0);
+        Lames.exploser(j, pied.add(dir.scale(4.2)).add(0, 0.7, 0), 2.2F, 6, 3);
+        Lames.exploser(j, pied.add(dir.scale(6)).add(0, 0.9, 0), 2.7F, 7, 6);
         monde.playSound(null, j.blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 1F, 1.3F);
         return true;
     }
@@ -311,8 +324,8 @@ public class LameItem extends Item {
             if (e == j || !e.isAlive() || d > 5.5) {
                 continue;
             }
-            // le plus gros coup des lames : 12 au contact, encore 7,5 au bord de l'onde (5,5 blocs)
-            e.hurt(monde.damageSources().playerAttack(j), (float) (13 - d) * Zones.force(j));
+            // le plus gros coup des lames : 10,5 au contact, encore 6 au bord de l'onde (5,5 blocs)
+            e.hurt(monde.damageSources().playerAttack(j), (float) (11.5 - d) * Zones.force(j));
             Vec3 loin = e.position().subtract(ou).normalize();
             e.setDeltaMovement(loin.x * 0.6, 0.7, loin.z * 0.6);
             e.hurtMarked = true;
@@ -320,9 +333,76 @@ public class LameItem extends Item {
             e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80, 0));
             ItemStack casque = e.getItemBySlot(EquipmentSlot.HEAD);
             if (casque.isDamageableItem()) {
-                casque.hurtAndBreak(Math.max(1, casque.getMaxDamage() / 3), e, EquipmentSlot.HEAD);
+                // entre joueurs, les armures s'usent quatre fois moins (Equilibrage.USURE)
+                float part = e instanceof Player ? fr.cabane.pouvoir.Equilibrage.USURE / 3 : 1 / 3F;
+                casque.hurtAndBreak(Math.max(1, (int) (casque.getMaxDamage() * part)), e, EquipmentSlot.HEAD);
             }
         }
+    }
+
+    // ------------------------------------------------------------------ la dague du phénix
+
+    private static final DustParticleOptions OR = new DustParticleOptions(new org.joml.Vector3f(1F, 0.82F, 0.25F), 1.1F);
+    private static final DustParticleOptions CYAN = new DustParticleOptions(new org.joml.Vector3f(0.35F, 0.9F, 1F), 1.3F);
+    /** Le feu de la dague : 3 secondes. */
+    private static final int FEU = 60;
+    /** Le Piqué du phénix : la longueur de la ruée (blocs), ses dégâts, et les cœurs rendus (un par ennemi, trois au plus). */
+    private static final double PIQUE = 7;
+    private static final float DEGATS_PIQUE = 7;
+    private static final int SOINS_PIQUE = 3;
+
+    /**
+     * La dague du phénix : il fonce droit devant (à plat, 7 blocs, arrêté par les murs) dans un sillage de flammes
+     * bleues ; tout ce qu'il traverse prend 7, brûle 3 s, et lui rend un cœur (trois au plus).
+     */
+    private static boolean pique(ServerLevel monde, ServerPlayer j) {
+        Vec3 vue = j.getLookAngle(), plat = new Vec3(vue.x, 0, vue.z);
+        Vec3 dir = plat.lengthSqr() < 1e-4 ? Vec3.directionFromRotation(0, j.getYRot()) : plat.normalize();
+        Vec3 depart = j.position();
+        // jusqu'où : pas à travers les murs (à hauteur des yeux et des genoux), et là où il tient debout
+        double d = PIQUE;
+        for (double h : new double[]{j.getEyeHeight(), 0.6}) {
+            Vec3 o = depart.add(0, h, 0);
+            HitResult mur = monde.clip(new ClipContext(o, o.add(dir.scale(PIQUE)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, j));
+            if (mur.getType() != HitResult.Type.MISS) {
+                d = Math.min(d, o.distanceTo(mur.getLocation()) - 0.4);
+            }
+        }
+        while (d > 0 && !monde.noCollision(j, j.getBoundingBox().move(dir.scale(d)))) {
+            d -= 0.5;
+        }
+        d = Math.max(0, d);
+        Vec3 arrivee = depart.add(dir.scale(d));
+        Vec3 a = depart.add(0, 1, 0), b = arrivee.add(0, 1, 0);
+        int touches = 0;
+        for (LivingEntity e : monde.getEntitiesOfClass(LivingEntity.class, new AABB(a, b).inflate(1.2),
+                e -> e != j && e.isAlive() && !e.isSpectator() && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand)
+                        && !Lames.avale(e) && e.getBoundingBox().inflate(0.7).clip(a, b).isPresent())) {
+            if (e.hurt(monde.damageSources().playerAttack(j), DEGATS_PIQUE * Zones.force(j))) {
+                touches++;
+                e.setRemainingFireTicks(Math.max(e.getRemainingFireTicks(), FEU));
+                monde.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, e.getX(), e.getY(0.6), e.getZ(), 24, 0.3, 0.5, 0.3, 0.05);
+            }
+        }
+        if (touches > 0) {
+            j.heal(2F * Math.min(SOINS_PIQUE, touches));
+            monde.sendParticles(ParticleTypes.HEART, arrivee.x, arrivee.y + 2.1, arrivee.z, Math.min(SOINS_PIQUE, touches), 0.3, 0.1, 0.3, 0);
+        }
+        // le sillage, du départ à l'arrivée
+        int n = (int) Math.ceil(d / 0.35);
+        for (int k = 0; k <= n; k++) {
+            Vec3 p = depart.lerp(arrivee, n == 0 ? 0 : k / (double) n);
+            monde.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, p.x, p.y + 0.9, p.z, 4, 0.25, 0.5, 0.25, 0.02);
+            monde.sendParticles(k % 3 == 0 ? OR : CYAN, p.x, p.y + 1, p.z, 2, 0.3, 0.5, 0.3, 0);
+        }
+        if (d > 0.3) {
+            j.stopRiding();
+            j.teleportTo(arrivee.x, arrivee.y, arrivee.z);
+            j.fallDistance = 0;
+        }
+        monde.playSound(null, depart.x, depart.y, depart.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1F, 1.4F);
+        monde.playSound(null, arrivee.x, arrivee.y, arrivee.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1F, 1.2F);
+        return true;
     }
 
     /** Ce que le joueur vise (une créature vivante), jusqu'à cette distance. */

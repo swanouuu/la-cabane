@@ -13,6 +13,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
+import net.neoforged.neoforge.event.entity.living.ArmorHurtEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -28,6 +29,8 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  * <li>Ces coups traversent la moitié de l'armure et de ses enchantements de protection.</li>
  * <li>Un joueur ne perd jamais plus de {@link #PLAFOND 80 %} de sa vie à cause du même joueur en {@link #FENETRE 5 s} :
  * toujours pas de one-shot d'un joueur en pleine forme, mais deux gros sorts suffisent.</li>
+ * <li>Entre joueurs, un coup (arme ou pouvoir) n'use l'armure qu'au {@link #USURE quart} de l'usure normale (2026-11-16 :
+ * « sinon on détruit trop facilement nos armures ») ; contre les monstres, rien ne change.</li>
  * </ol>
  */
 @EventBusSubscriber(modid = Cabane.MODID)
@@ -37,6 +40,8 @@ public final class Equilibrage {
     /** La part de l'armure (et de ses enchantements) qui protège encore d'un coup de joueur. */
     private static final float ARMURE = 0.5F;
     private static final float PLAFOND = 0.8F;
+    /** La part de l'usure normale que prend l'armure d'un joueur frappé par un autre joueur. */
+    public static final float USURE = 0.25F;
     private static final int FENETRE = 5 * 20;
 
     private record Paire(UUID victime, UUID attaquant) {
@@ -98,6 +103,20 @@ public final class Equilibrage {
         event.setNewDamage(degats);
         if (degats > 0) {
             coups.addLast(new Coup(maintenant, degats));
+        }
+    }
+
+    /** L'armure d'un joueur frappé par un joueur s'use quatre fois moins (l'arrondi est tiré au sort : 1 point d'usure = 1 chance sur 4). */
+    @SubscribeEvent
+    public static void menager(ArmorHurtEvent event) {
+        if (adversaire(event.getEntity(), event.getDamageSource()) == null) {
+            return;
+        }
+        var hasard = event.getEntity().getRandom();
+        for (ArmorHurtEvent.ArmorEntry piece : event.getArmorMap().values()) {
+            float usure = piece.newDamage * USURE;
+            int entier = (int) usure;
+            piece.newDamage = entier + (hasard.nextFloat() < usure - entier ? 1 : 0);
         }
     }
 

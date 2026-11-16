@@ -76,7 +76,12 @@ import org.joml.Vector3f;
  * (25 blocs, 12 à 4 blocs, en l'air, flammes bleues, 20 s). I : le vol bleu (15 blocs en ligne, 10 à qui il traverse,
  * sa traînée soigne ses alliés 4, 12 s). Virgule : le brasier (un cercle de flammes bleues de 4 blocs, 5 s ; lui +1 cœur
  * par seconde dedans, les autres brûlent, 20 s). Point : le tourbillon de plumes (4 s, 3 toutes les 0,5 s à 3 blocs,
- * 24 au plus, 18 s). J : l'aube du phénix (une fois par éveil). Passif : la renaissance (une fois par éveil).</li>
+ * 24 au plus, 18 s). J : l'aube du phénix (une fois par éveil).</li>
+ * </ul>
+ * Niveau 2 aussi : technique, le coup d'aile (un croissant de feu, 8 blocs) ; L, l'envol ardent (une colonne de feu).
+ * Passifs, toujours (éveillé ou pas, à tous les niveaux) : il se soigne, pas de dégâts de chute, le feu ne lui fait rien,
+ * et la renaissance (au plus une fois toutes les 10 minutes).
+ * <ul>
  * </ul>
  * Rien ne casse. Ce qu'on voit est dessiné par {@link ClientPhenix} ; les flammes au sol sont de vrais blocs
  * ({@link FeuBleu}).
@@ -93,19 +98,24 @@ public final class Phenix {
 
     /** Les touches (client → serveur). */
     public static final int DROIT = 0, ACCROUPI = 1, TECHNIQUE = 2, PIQUE = 3, VOL_BLEU = 4, BRASIER = 5, TOURBILLON = 6, ULTI = 7,
-            GRAND = 8, GRAND_LACHE = 9, BATTEMENT = 10;
+            GRAND = 8, GRAND_LACHE = 9, BATTEMENT = 10, COUP_AILE = 11, ENVOL = 12;
 
     public static final int RECHARGE_JET = 6 * 20, RECHARGE_REGEN = 20 * 20, RECHARGE_SERRE = 8 * 20, RECHARGE_PLUIE = 25 * 20,
             RECHARGE_EVENTAIL = 10 * 20, RECHARGE_GRAND = 30 * 20, RECHARGE_COCON = 25 * 20, RECHARGE_PIQUE = 20 * 20, RECHARGE_VOL = 12 * 20,
-            RECHARGE_BRASIER = 20 * 20, RECHARGE_TOURBILLON = 18 * 20;
+            RECHARGE_BRASIER = 20 * 20, RECHARGE_TOURBILLON = 18 * 20, RECHARGE_AILE = 12 * 20, RECHARGE_ENVOL = 15 * 20;
+    /** La renaissance : au plus une fois toutes les 10 minutes (elle marche même endormi, à tous les niveaux). */
+    public static final int RECHARGE_RENAISSANCE = 10 * 60 * 20;
     private static final float COUP_1 = 2, COUP_2 = 4, ECLAT_2 = 3, COUP_3 = 6, CROIX = 8, JET = 6, SERRE = 12, PLUME_PLUIE = 5, PLUIE_MAX = 15,
             PLUME = 6, PLUME_MAX = 12, GRAND_MILIEU = 20, GRAND_BORD = 12, COCON = 4, PIQUE_DEGATS = 12, VOL_DEGATS = 10, TOURBILLON_COUP = 3,
-            TOURBILLON_MAX = 24, VAGUE = 8, DOME = 25, ONDE = 6;
+            TOURBILLON_MAX = 24, VAGUE = 8, DOME = 25, ONDE = 6, AILE = 8, ENVOL_DEGATS = 6, COCON_OUVERTURE = 6;
     public static final double PORTEE_JET = 12, PORTEE_PLUIE = 30, RAYON_PLUIE = 4, PORTEE_PLUME = 20, VITESSE_PLUME = 1.4, PORTEE_PIQUE = 25,
             RAYON_BRASIER = 4, RAYON_TOURBILLON = 3, RAYON_GRAND = 5, RAYON_VAGUE = 18, RAYON_DOME = 12;
-    public static final int DUREE_PLUIE = 60, DUREE_GRAND = 100, DUREE_COCON = 60, DUREE_BRASIER = 100, DUREE_TOURBILLON = 80, DUREE_RENAISSANCE = 80;
-    /** L'ulti : le phénix géant monte (0), la 1re vague (30), la 2e (60), le dôme (100), la fin (130). */
-    public static final int U_VAGUE1 = 30, U_VAGUE2 = 60, U_DOME = 100, U_FIN = 130;
+    public static final int DUREE_PLUIE = 60, DUREE_GRAND = 100, DUREE_COCON = 60, DUREE_BRASIER = 100, DUREE_TOURBILLON = 80, DUREE_RENAISSANCE = 92;
+    /**
+     * L'ulti (comme l'aperçu docs/phenix/apercu) : la colonne de feu et le phénix géant (0 → 3,4 s), la 1re vague (71), la
+     * 2e (91), le plongeon puis le dôme (132), la pluie de plumes et la fin (190).
+     */
+    public static final int U_VAGUE1 = 71, U_VAGUE2 = 91, U_DOME = 132, U_FIN = 190;
     /** Au niveau 3, il vole 30 s au plus d'affilée (comme le vent 3) ; la jauge se remplit au sol, deux fois plus vite. */
     public static final int VOL_MAX = 30 * 20;
     private static final float VITESSE_VOL = 0.045F;
@@ -118,7 +128,8 @@ public final class Phenix {
     private static final Map<UUID, Integer> R_GRAND = new HashMap<>(), R_PIQUE = new HashMap<>(), R_VOL = new HashMap<>(), R_BRASIER = new HashMap<>(),
             R_TOURBILLON = new HashMap<>();
     private static final Set<UUID> ULTI_FAITE = new HashSet<>();
-    private static final Set<UUID> RENAISSANCE_FAITE = new HashSet<>();
+    /** Quand sa renaissance sera de nouveau prête (tick du serveur). */
+    private static final Map<UUID, Integer> RENAISSANCE_PRETE = new HashMap<>();
     private static final Map<UUID, Integer> VOL_RESTE = new HashMap<>();
     private static final Set<UUID> VOL_EPUISE = new HashSet<>();
     /** Qui vient de s'endormir (ou de finir une attaque) en l'air : pas de dégâts de chute jusqu'au sol. Le tick, et s'il a quitté le sol. */
@@ -134,6 +145,12 @@ public final class Phenix {
 
     public static int niveau(ServerPlayer joueur) {
         return eveille(joueur) ? EVEILLES.get(joueur.getUUID()) : 0;
+    }
+
+    /** Le niveau de son fruit (sa liste blanche), éveillé ou pas : 1, 2, 3 ; 0 s'il n'est pas phénix. */
+    public static int niveauFruit(ServerPlayer joueur) {
+        String p = Pouvoirs.pouvoir(joueur);
+        return NOM3.equals(p) ? 3 : NOM2.equals(p) ? 2 : NOM.equals(p) ? 1 : 0;
     }
 
     /** L'ulti, ou la renaissance, en cours : l'éveil ne s'endort pas avant la fin. */
@@ -154,7 +171,6 @@ public final class Phenix {
         if (niveau >= 3) {
             son(monde, p, SoundEvents.ENDER_DRAGON_GROWL, 0.6F, 1.8F);
             ULTI_FAITE.remove(joueur.getUUID());
-            RENAISSANCE_FAITE.remove(joueur.getUUID());
             VOL_RESTE.put(joueur.getUUID(), VOL_MAX);
             VOL_EPUISE.remove(joueur.getUUID());
             voler(joueur, true);
@@ -179,6 +195,8 @@ public final class Phenix {
         VOLS.remove(id);
         SERRES.remove(id);
         TOURBILLONS.remove(id);
+        AILES.remove(id);
+        ENVOLS.remove(id);
         if (etait != null) {
             if (etait >= 3) {
                 voler(joueur, false);
@@ -226,7 +244,7 @@ public final class Phenix {
     /** Ce que montre un {@link Effet}. */
     public static final int E_JET = 0, E_REGEN = 1, E_SERRE = 2, E_PLUIE = 3, E_COUP = 4, E_CROIX = 5, E_PLUME = 6, E_PLUME_FIN = 7, E_GRAND = 8,
             E_COCON = 9, E_PIQUE = 10, E_VOL_BLEU = 11, E_BRASIER = 12, E_TOURBILLON = 13, E_ULTI = 14, E_RENAISSANCE = 15, E_REPAS = 16,
-            E_BATTEMENT = 17, E_VOL = 18;
+            E_BATTEMENT = 17, E_VOL = 18, E_AILE = 19, E_ENVOL = 20;
 
     /** Serveur → ceux qui sont autour : un coup de flammes. {@code pos}, {@code dir} : où et vers où ; {@code n} : un nombre (un numéro, une entité…). */
     public record Effet(UUID joueur, int sorte, int phase, Vector3f pos, Vector3f dir, int n) implements CustomPacketPayload {
@@ -302,7 +320,8 @@ public final class Phenix {
         if (niveau == 0 || ultiActif(joueur) || RENAISSANCES.containsKey(joueur.getUUID()) || fr.cabane.police.Police.menotte(joueur)) {
             return;
         }
-        boolean occupe = COCONS.containsKey(joueur.getUUID()) || PIQUES.containsKey(joueur.getUUID()) || VOLS.containsKey(joueur.getUUID());
+        boolean occupe = COCONS.containsKey(joueur.getUUID()) || PIQUES.containsKey(joueur.getUUID()) || VOLS.containsKey(joueur.getUUID())
+                || ENVOLS.containsKey(joueur.getUUID());
         switch (action) {
             case DROIT -> {
                 if (occupe) {
@@ -362,6 +381,16 @@ public final class Phenix {
             case ULTI -> {
                 if (niveau >= 3 && !occupe) {
                     lancerUlti(joueur);
+                }
+            }
+            case COUP_AILE -> {
+                if (niveau == 2 && !occupe) {
+                    coupAile(joueur);
+                }
+            }
+            case ENVOL -> {
+                if (niveau == 2 && !occupe) {
+                    envol(joueur);
                 }
             }
             case BATTEMENT -> {
@@ -542,6 +571,124 @@ public final class Phenix {
         });
     }
 
+    /**
+     * Le coup d'aile (niveau 2, touche technique) : il ramène ses ailes devant lui, un croissant de flammes bleues part
+     * droit devant (6 blocs de large, 8 de long, en 0,8 s) : 8 et gros recul à qui il traverse, des flammes bleues au sol.
+     */
+    private record Aile(int debut, Vec3 depart, Vec3 dir, Set<Integer> touches) {
+    }
+
+    private static final Map<UUID, Aile> AILES = new HashMap<>();
+
+    private static void coupAile(ServerPlayer joueur) {
+        if (!pret(R.technique, joueur)) {
+            return;
+        }
+        armer(R.technique, joueur, RECHARGE_AILE);
+        Vec3 l = joueur.getLookAngle(), dir = new Vec3(l.x, 0, l.z);
+        dir = dir.lengthSqr() < 1e-4 ? new Vec3(0, 0, 1) : dir.normalize();
+        AILES.put(joueur.getUUID(), new Aile(joueur.server.getTickCount(), joueur.position(), dir, new HashSet<>()));
+        effet(joueur, E_AILE, 0, joueur.position(), dir, 0);
+        son(joueur.serverLevel(), joueur.position(), SoundEvents.ENDER_DRAGON_FLAP, 1.6F, 0.9F);
+        son(joueur.serverLevel(), joueur.position(), SoundEvents.BLAZE_SHOOT, 1.2F, 0.8F);
+    }
+
+    private static void ailes(MinecraftServer server, int maintenant) {
+        AILES.entrySet().removeIf(en -> {
+            ServerPlayer joueur = server.getPlayerList().getPlayer(en.getKey());
+            Aile a = en.getValue();
+            int age = maintenant - a.debut() - 3;
+            if (joueur == null || age > 16) {
+                return true;
+            }
+            if (age < 0) {
+                return false;
+            }
+            ServerLevel monde = joueur.serverLevel();
+            double front = 1 + 8 * age / 16.0;
+            Vec3 cote = new Vec3(-a.dir().z, 0, a.dir().x);
+            for (LivingEntity e : ennemis(joueur, a.depart().add(a.dir().scale(front)), 4)) {
+                Vec3 rel = e.position().subtract(a.depart());
+                double le = rel.dot(a.dir()), tr = Math.abs(rel.dot(cote));
+                if (le < front - 1.4 || le > front + 0.8 || tr > 3.2 || Math.abs(rel.y) > 3 || !a.touches().add(e.getId())) {
+                    continue;
+                }
+                frapper(joueur, e, AILE);
+                e.igniteForSeconds(3);
+                e.setDeltaMovement(a.dir().scale(1.5).add(0, 0.45, 0));
+                e.hurtMarked = true;
+                flammes(monde, milieu(e), 12, 0.4);
+            }
+            if (age % 3 == 0) {
+                for (int s = -1; s <= 1; s++) {
+                    Vec3 p = a.depart().add(a.dir().scale(front)).add(cote.scale(s * 2.2));
+                    BlockPos b = FeuBleu.sol(monde, BlockPos.containing(p.x, p.y + 0.5, p.z));
+                    if (b != null && monde.random.nextInt(3) > 0) {
+                        FeuBleu.poser(monde, b, joueur.getUUID());
+                    }
+                }
+            }
+            return false;
+        });
+    }
+
+    /**
+     * L'envol ardent (niveau 2, touche L) : il s'accroupit 0,35 s, puis décolle de 7 blocs dans une colonne de feu bleu ;
+     * à 3 blocs : 6, projetés en l'air, un cercle de flammes bleues au sol. Puis il plane (ses battements sont finis).
+     */
+    private static final Map<UUID, Integer> ENVOLS = new HashMap<>();
+
+    private static void envol(ServerPlayer joueur) {
+        if (!joueur.onGround() || !pret(R_PIQUE, joueur)) {
+            return;
+        }
+        armer(R_PIQUE, joueur, RECHARGE_ENVOL);
+        ENVOLS.put(joueur.getUUID(), joueur.server.getTickCount());
+        effet(joueur, E_ENVOL, 0, joueur.position(), Vec3.ZERO, 0);
+        son(joueur.serverLevel(), joueur.position(), SoundEvents.FIRECHARGE_USE, 1.2F, 0.6F);
+    }
+
+    private static void envols(MinecraftServer server, int maintenant) {
+        ENVOLS.entrySet().removeIf(en -> {
+            ServerPlayer joueur = server.getPlayerList().getPlayer(en.getKey());
+            int age = maintenant - en.getValue();
+            if (joueur == null) {
+                return true;
+            }
+            if (age < 7) {
+                joueur.setDeltaMovement(0, Math.min(0, joueur.getDeltaMovement().y), 0);
+                joueur.hurtMarked = true;
+                return false;
+            }
+            ServerLevel monde = joueur.serverLevel();
+            Vec3 c = joueur.position();
+            joueur.setDeltaMovement(joueur.getDeltaMovement().x, 1.15, joueur.getDeltaMovement().z);
+            joueur.hurtMarked = true;
+            joueur.fallDistance = 0;
+            SANS_CHUTE.put(joueur.getUUID(), new int[]{maintenant, 0});
+            effet(joueur, E_ENVOL, 1, c, Vec3.ZERO, 0);
+            son(monde, c, SoundEvents.BLAZE_SHOOT, 1.6F, 0.6F);
+            son(monde, c, SoundEvents.ENDER_DRAGON_FLAP, 1.6F, 1.2F);
+            flammes(monde, c.add(0, 1, 0), 60, 1);
+            for (LivingEntity e : ennemis(joueur, c.add(0, 1, 0), 3)) {
+                frapper(joueur, e, ENVOL_DEGATS);
+                e.igniteForSeconds(3);
+                Vec3 h = new Vec3(e.getX() - c.x, 0, e.getZ() - c.z);
+                h = h.lengthSqr() < 1e-3 ? new Vec3(1, 0, 0) : h.normalize();
+                e.setDeltaMovement(h.scale(0.5).add(0, 0.95, 0));
+                e.hurtMarked = true;
+            }
+            for (int k = 0; k < 12; k++) {
+                double a = k * Mth.TWO_PI / 12;
+                BlockPos b = FeuBleu.sol(monde, BlockPos.containing(c.x + Math.cos(a) * 3, c.y + 0.3, c.z + Math.sin(a) * 3));
+                if (b != null) {
+                    FeuBleu.poser(monde, b, joueur.getUUID());
+                }
+            }
+            return true;
+        });
+    }
+
     // ---------------------------------------------------------------- niveau 3 : l'éventail (des plumes qui volent)
 
     private static final class Plume {
@@ -718,12 +865,6 @@ public final class Phenix {
         son(monde, joueur.position(), SoundEvents.ENDER_DRAGON_FLAP, 1.4F, 0.8F);
         son(monde, joueur.position(), SoundEvents.FIRECHARGE_USE, 1.2F, 0.7F);
         flammes(monde, joueur.position().add(0, 1, 0), 60, 1.2);
-        for (LivingEntity e : ennemis(joueur, joueur.position().add(0, 1, 0), 4)) {
-            frapper(joueur, e, COCON);
-            Vec3 h = e.position().subtract(joueur.position());
-            e.knockback(1.6, -h.x, -h.z);
-            e.igniteForSeconds(2);
-        }
         joueur.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, DUREE_COCON, 3, false, false, false));
     }
 
@@ -733,6 +874,28 @@ public final class Phenix {
             int age = maintenant - en.getValue();
             if (joueur == null || age > DUREE_COCON) {
                 return true;
+            }
+            ServerLevel monde = joueur.serverLevel();
+            // ceux qui le touchent brûlent : 4 par seconde à 2 blocs
+            if (age % 20 == 10) {
+                for (LivingEntity e : ennemis(joueur, joueur.position().add(0, 1, 0), 2)) {
+                    frapper(joueur, e, COCON);
+                    e.igniteForSeconds(2);
+                }
+            }
+            // il s'ouvre comme une fleur : 6 et recul à 4 blocs
+            if (age == DUREE_COCON) {
+                son(monde, joueur.position(), SoundEvents.ENDER_DRAGON_FLAP, 1.6F, 0.9F);
+                son(monde, joueur.position(), SoundEvents.BLAZE_SHOOT, 1.4F, 0.7F);
+                flammes(monde, joueur.position().add(0, 1, 0), 60, 1.6);
+                for (LivingEntity e : ennemis(joueur, joueur.position().add(0, 1, 0), 4)) {
+                    frapper(joueur, e, COCON_OUVERTURE);
+                    Vec3 h = new Vec3(e.getX() - joueur.getX(), 0, e.getZ() - joueur.getZ());
+                    h = h.lengthSqr() < 1e-3 ? new Vec3(1, 0, 0) : h.normalize();
+                    e.setDeltaMovement(h.scale(1.3).add(0, 0.5, 0));
+                    e.hurtMarked = true;
+                    e.igniteForSeconds(2);
+                }
             }
             // 10 de soin en 3 s : 1 toutes les 6 ticks
             if (age % 6 == 0 && age > 0) {
@@ -1092,12 +1255,13 @@ public final class Phenix {
             joueur.setHealth(1);
             return;
         }
-        if (niveau(joueur) < 3 || RENAISSANCE_FAITE.contains(joueur.getUUID())) {
+        int maintenant = joueur.server.getTickCount();
+        if (niveauFruit(joueur) == 0 || RENAISSANCE_PRETE.getOrDefault(joueur.getUUID(), 0) > maintenant) {
             return;
         }
         event.setCanceled(true);
         joueur.setHealth(1);
-        RENAISSANCE_FAITE.add(joueur.getUUID());
+        RENAISSANCE_PRETE.put(joueur.getUUID(), maintenant + RECHARGE_RENAISSANCE);
         ServerLevel monde = joueur.serverLevel();
         Vec3 p = joueur.position();
         double y = sol(monde, p.add(0, 0.5, 0));
@@ -1112,6 +1276,8 @@ public final class Phenix {
         SERRES.remove(joueur.getUUID());
         joueur.clearFire();
         joueur.stopUsingItem();
+        AILES.remove(joueur.getUUID());
+        ENVOLS.remove(joueur.getUUID());
         effet(joueur, E_RENAISSANCE, 0, p, Vec3.ZERO, DUREE_RENAISSANCE);
         son(monde, p, SoundEvents.FIRECHARGE_USE, 2F, 0.5F);
         son(monde, p, SoundEvents.BLAZE_SHOOT, 1.6F, 0.4F);
@@ -1140,7 +1306,7 @@ public final class Phenix {
             joueur.setDeltaMovement(Vec3.ZERO);
             joueur.fallDistance = 0;
             joueur.clearFire();
-            joueur.setInvisible(age >= 10 && age < 70);
+            joueur.setInvisible(age >= 12 && age < DUREE_RENAISSANCE);
             if (age < 10) {
                 flammes(monde, p.add(0, 1, 0), 10, 0.5);
             } else if (age < 30) {
@@ -1152,7 +1318,7 @@ public final class Phenix {
             if (age == 30) {
                 son(monde, p, SoundEvents.FIRECHARGE_USE, 1.4F, 0.7F);
             }
-            if (age == 50) {
+            if (age == 48) {
                 son(monde, p, SoundEvents.TURTLE_EGG_CRACK, 2F, 0.6F);
                 son(monde, p, SoundEvents.AMETHYST_BLOCK_RESONATE, 2F, 1.4F);
             }
@@ -1230,19 +1396,20 @@ public final class Phenix {
             if (joueur.isInWater() && !joueur.isCreative() && maintenant % 20 == 0) {
                 joueur.hurt(new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(Fruit.EAU)), 1);
             }
-            int niveau = niveau(joueur);
-            if (niveau == 0) {
-                continue;
-            }
-            // il se soigne tout seul : un demi-cœur toutes les 4 s (niveau 1), toutes les 2 s ensuite
-            if (maintenant % (niveau >= 2 ? 40 : 80) == 0 && !joueur.isInWater() && joueur.getHealth() < joueur.getMaxHealth()) {
+            int niveau = niveau(joueur), passif = Math.max(niveau, niveauFruit(joueur));
+            // ses passifs marchent toujours, éveillé ou pas : il se soigne tout seul (un demi-cœur toutes les 4 s au
+            // niveau 1, toutes les 2 s ensuite) et le feu ne lui fait rien
+            if (maintenant % (passif >= 2 ? 40 : 80) == 0 && !joueur.isInWater() && joueur.getHealth() < joueur.getMaxHealth()) {
                 joueur.heal(1);
-            }
-            if (niveau >= 3 && !joueur.isCreative()) {
-                jaugeVol(joueur);
             }
             if (joueur.isOnFire()) {
                 joueur.clearFire();
+            }
+            if (niveau == 0) {
+                continue;
+            }
+            if (niveau >= 3 && !joueur.isCreative()) {
+                jaugeVol(joueur);
             }
             // des flammèches bleues sur lui, plus il monte de niveau
             if (maintenant % (niveau >= 3 ? 2 : 5) == 0 && !joueur.isInvisible()) {
@@ -1272,6 +1439,8 @@ public final class Phenix {
         vols(server, maintenant);
         brasiers(maintenant);
         tourbillons(server, maintenant);
+        ailes(server, maintenant);
+        envols(server, maintenant);
         ultis(server, maintenant);
         renaissances(server, maintenant);
     }
@@ -1305,11 +1474,11 @@ public final class Phenix {
 
     // ================================================================ les coups reçus et donnés
 
-    /** Pas de dégâts de chute, éveillé (ni juste après s'être endormi en l'air, ni pendant la renaissance). */
+    /** Pas de dégâts de chute : un passif, toujours (éveillé ou pas). */
     @SubscribeEvent
     public static void chute(LivingFallEvent event) {
         if (event.getEntity() instanceof ServerPlayer joueur
-                && (niveau(joueur) > 0 || SANS_CHUTE.containsKey(joueur.getUUID()) || RENAISSANCES.containsKey(joueur.getUUID()))) {
+                && (niveauFruit(joueur) > 0 || SANS_CHUTE.containsKey(joueur.getUUID()) || RENAISSANCES.containsKey(joueur.getUUID()))) {
             event.setCanceled(true);
         }
     }
@@ -1407,7 +1576,9 @@ public final class Phenix {
             m.clear();
         }
         ULTI_FAITE.clear();
-        RENAISSANCE_FAITE.clear();
+        RENAISSANCE_PRETE.clear();
+        AILES.clear();
+        ENVOLS.clear();
         VOL_EPUISE.clear();
         SANS_CHUTE.clear();
         SERIE.clear();

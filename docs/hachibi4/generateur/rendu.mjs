@@ -282,7 +282,7 @@ function resume(sc) {
 }
 
 // les briques servent aussi à la transformation (transformation.mjs)
-export { G, K, sol, debris, anneau, traits, legende, ecrire, FOND, HERBE, TERRE };
+export { G, K, sol, debris, anneau, traits, legende, ecrire, fissures, bijuuDama, chakra, dome, FOND, HERBE, TERRE };
 
 // ------------------------------------------------------------------ la planche
 const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

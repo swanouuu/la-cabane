@@ -5,6 +5,7 @@
 // Coordonnées du perso en pixels du modèle (pieds à y = 0, il regarde vers +z, sa gauche vers +x), le monde en blocs.
 // node rendu.mjs                 → ../planche-lames-brume.png
 // node rendu.mjs essai 0,1,2,3   → ../essai.png (quelques cases seulement)
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { lire, ecrirePng, PARTIES, texels, hache, ecrireTexte, POLICE } from "../../hachibi2/generateur/moteur.mjs";
@@ -426,6 +427,37 @@ const NUI = {
     return j === 1 ? (i > 76 ? "e" : i % 6 < 3 ? "a" : "A") : null;
   },
   epais(i, j, k) { return k === "r" ? 1.2 : k === "t" ? 2.8 : k === "T" ? 3.1 : k === "c" ? 2.4 : Math.max(0.6, 1.4 - (0.7 * (i - 22)) / 62); },
+};
+
+/**
+ * La dague du phénix (hors des sept lames : l'arme du fruit du phénix, à ses couleurs). Une lame courte et ondulée comme
+ * une flamme, en acier bleu, le fil qui brille en cyan, une veine d'or au milieu ; la garde : deux ailes dorées ouvertes
+ * vers la pointe, une braise orange au centre ; le manche bleu nuit bagué d'or, un pommeau doré.
+ */
+const DAGUE = {
+  n: [52, 19], g: [7, 9], ech: 0.3, ep: 2, net: true,
+  pal: { m: { c: [22, 40, 84] }, M: { c: [236, 186, 62] }, G: { c: [244, 196, 66] }, g: { c: [255, 236, 140], g: 0.7 }, r: { c: [255, 140, 40], g: 0.9 },
+    a: { c: [30, 96, 180] }, c: { c: [64, 196, 255], g: 0.55 }, e: { c: [196, 244, 255], g: 0.95 }, o: { c: [255, 214, 90], g: 0.6 } },
+  forme(i, j) {
+    const d = j - 9, D = Math.abs(d);
+    if (i === 0) return D <= 1 ? "g" : null;
+    if (i === 1) return D <= 2 ? (D === 0 ? "r" : "G") : null;
+    if (i === 2) return D <= 1 ? "G" : null;
+    if (i <= 12) return D <= 1 ? (i % 3 === 0 ? "M" : "m") : null;
+    // la garde : deux ailes qui s'ouvrent vers la pointe
+    if (i === 13) return D <= 3 ? "G" : null;
+    if (i === 14) return D <= 6 ? (D === 0 ? "r" : "G") : null;
+    if (i === 15 && D >= 4) return D <= 8 ? "G" : null;
+    if (i === 16 && D >= 6) return D === 9 ? "g" : "G";
+    if (i === 17 && D >= 8) return "g";
+    // la lame : une flamme qui ondule et s'affine
+    const t = (i - 15) / 36, cj = 1.3 * Math.sin((i - 15) * 0.42) * (1 - t * 0.5), w = 3.4 * (1 - t ** 1.5) + 0.35, dd = Math.abs(d - cj);
+    if (dd > w) return null;
+    if (dd > w - 1) return "e";
+    if (dd < 0.6 && t < 0.78) return "o";
+    return t > 0.82 || dd > w - 2 ? "c" : "a";
+  },
+  epais(i, j, k) { return k === "m" ? 3.2 : k === "M" ? 3.8 : k === "G" ? 2.6 : k === "g" ? 1.6 : k === "r" ? 4 : k === "e" ? 0.8 : k === "c" ? 1.5 : k === "o" ? 2.4 : 2; },
 };
 
 /** Un cœur en pixels. */
@@ -919,27 +951,109 @@ const CASES = [
   }],
 ];
 
+// ================================================================== la dague du phénix (node rendu.mjs dague)
+
+const CYAN = [70, 200, 255], PALE = [200, 245, 255], OR = [255, 214, 90], BRAISE = [255, 150, 50];
+/** Une flamme bleue du phénix : des cubes qui brillent, cyan en bas, pâles en haut, quelques-uns dorés. */
+function flamme(E, c, h, r, graine, n = 16) {
+  for (let k = 0; k < n; k++) {
+    const t = hache(k, graine, 1), u = hache(k, graine, 2) * TOUR, rr = r * (1 - t) * (0.3 + 0.7 * hache(k, graine, 3));
+    const p = add(c, [Math.cos(u) * rr, h * t, Math.sin(u) * rr]);
+    const col = hache(k, graine, 4) < 0.18 ? (hache(k, graine, 5) < 0.5 ? OR : BRAISE) : mix(CYAN, PALE, t);
+    cube(E, p, r * (0.5 - 0.3 * t), col, { g: 1.1, graine: k + graine * 13, alpha: 0.85 });
+  }
+}
+const dagueDos = { def: DAGUE, o: [5.5, 13.5, -2.8], L: norm([-0.85, -0.5, 0]), W: norm([-0.5, 0.85, 0]) };
+const dagueMain = { armes: [{ def: DAGUE, cote: "D", L: norm([0, 0.35, 1]), W: [1, 0, 0] }] };
+const dagueCles = [
+  { brasD: norm([-1, 0.35, 0.25]), torse: -45, armes: [{ L: norm([-0.8, 0.3, -0.5]), W: [0, 1, 0] }] },
+  { brasD: norm([-0.2, 0.15, 1]), torse: -5, armes: [{ L: norm([0.05, 0.15, 1]), W: [0, 1, 0] }] },
+  { brasD: norm([0.65, 0.0, 1]), torse: 35, jambeD: -24, jambeG: 14, armes: [{ L: norm([1, 0.05, 0.3]), W: [0, 1, 0] }] },
+];
+const FEU = { teinte: CYAN, teinteK: 0.4 };
+const CASES_DAGUE = [
+  [T("LA DAGUE DU PHENIX", "LAME EN FLAMME, FIL CYAN QUI BRILLE, VEINE D'OR, GARDE EN AILES"), () => vitrine([{ def: DAGUE, frame: centree(DAGUE, [0, 0, 0], -28, 12) }], { distance: 1.75,
+    effets: (E) => { for (let k = 0; k < 5; k++) flamme(E, [-0.22 + k * 0.11, -0.05 + k * 0.1, 0.02], 0.2, 0.05, k + 3, 7); } })],
+  [T("SOUS TOUS LES ANGLES", "DE DOS / DE PROFIL (ELLE EST FINE) / DE TROIS QUARTS"), () => vitrine([
+    { def: DAGUE, frame: centree(DAGUE, [-0.55, 0, 0], 0, 180) },
+    { def: DAGUE, frame: centree(DAGUE, [0, 0, 0], 0, 0, 82) },
+    { def: DAGUE, frame: centree(DAGUE, [0.55, 0, 0], 8, -40, 25) }], { distance: 2.5, tangage: 8 })],
+  [T("RANGEE : DANS LE BAS DU DOS", "EN TRAVERS, A LA CEINTURE, LE MANCHE A PORTEE DE MAIN"), () => cas({ cam: { lacet: 160, tangage: 10, distance: 3.6, cible: [0, 0.95, 0] }, solide: (E) => ninja(E, { armes: [dagueDos] }) })],
+  [T("EN MAIN", "UNE SEULE MAIN, LEGERE : TU FRAPPES VITE, MAIS DE PRES"), () => {
+    const base = avec(dagueMain, { brasD: norm([-0.25, -0.35, 1]), brasG: norm([0.4, -0.8, 0.3]), torse: -15, jambeD: 10, jambeG: -12 });
+    return cas({ cam: { lacet: -55, tangage: 10, distance: 2.9, cible: [-0.15, 1.0, 0.4] }, solide: (E) => ninja(E, base) });
+  }],
+  [T("CLIC GAUCHE : PLUMES DE FEU", "3 COUPS TRES RAPIDES. LE 3E MET LE FEU A LA CIBLE (3 S)"), () => {
+    const base = avec({ brasG: norm([0.35, -0.9, 0.1]), armes: [{ def: DAGUE, cote: "D", L: [1, 0, 0], W: [0, 1, 0] }] }, dagueCles[2]);
+    return cas({ cam: { lacet: -30, tangage: 22, distance: 4.6, cible: [0.3, 1.0, 0.8] },
+      solide: (E) => { ninja(E, base); perso(E, STEVE, cible([0.7, 0, 1.55], { ...FEU, lacet: 205, roule: 6 })); },
+      effets: (E) => {
+        trainee(E, base, { arme: 0, cles: dagueCles, f0: 0.35, couleur: CYAN, vif: PALE, lueur: 0.5 });
+        for (let k = 0; k < 4; k++) flamme(E, [0.7 + (hache(k, 1, 2) - 0.5) * 0.5, 0.5 + k * 0.35, 1.5 + (hache(k, 3, 2) - 0.5) * 0.4], 0.5, 0.13, k + 20, 10);
+      } });
+  }],
+  [T("CLIC DROIT : PIQUE DU PHENIX", "TU FONCES DE 7 BLOCS A TRAVERS TOUT LE MONDE, DANS UN SILLAGE DE FLAMMES BLEUES"), () => {
+    const base = { pos: [0, 0, 4.6], brasD: norm([0, 0.04, 1]), brasG: norm([0.3, -0.5, -0.8]), torse: -18, penche: 16, jambeD: -46, jambeG: 26,
+      armes: [{ def: DAGUE, cote: "D", L: norm([0, 0.02, 1]), W: [1, 0, 0] }] };
+    return cas({ cam: { lacet: -62, tangage: 16, distance: 9.5, cible: [0, 1.0, 1.6] },
+      solide: (E) => {
+        ninja(E, base);
+        perso(E, STEVE, cible([0.25, 0, 0.2], { ...FEU, lacet: 150, roule: 14, saut: 0.15 }));
+        perso(E, STEVE, cible([-0.3, 0, 2.5], { ...FEU, lacet: 215, roule: -14, saut: 0.2 }));
+      },
+      effets: (E) => {
+        // le sillage : deux rubans qui s'ouvrent comme des ailes, et des flammes tout du long
+        const N = 40;
+        for (const sg of [-1, 1]) for (let k = 0; k < N; k++) {
+          const z0 = -2.4 + (7.4 * k) / N, z1 = -2.4 + (7.4 * (k + 1)) / N, t = k / N;
+          const aile = (z, tt) => [sg * (0.25 + 0.9 * Math.sin(Math.PI * tt) * (1 - tt * 0.4)), 1.05 + 0.75 * Math.sin(Math.PI * tt), z];
+          voile(E, [[0, 1.0, z0], [0, 1.0, z1], aile(z1, (k + 1) / N), aile(z0, t)], mix(CYAN, PALE, t), 0.08 + 0.32 * t, 0.5);
+        }
+        for (let k = 0; k < 16; k++) flamme(E, [(hache(k, 1, 6) - 0.5) * 0.7, 0.05, -2.2 + k * 0.42], 0.5 + 0.5 * hache(k, 2, 6), 0.14, k + 40, 9);
+        trait(E, [0, 1.05, -2.4], [0, 1.05, 5.2], PALE, 0.8, 1, 0.03);
+      } });
+  }],
+  [T("LES FLAMMES DU PHENIX", "CEUX QUE TU TRAVERSES BRULENT 3 S, ET CHACUN TE REND 1 COEUR (3 AU PLUS)"), () => cas({ cam: { lacet: -25, tangage: 12, distance: 5.2, cible: [0.3, 1.0, 0.6] },
+    solide: (E) => {
+      ninja(E, avec(dagueMain, { pos: [-0.9, 0, 0], lacet: 60, brasD: norm([-0.2, -0.3, 1]), brasG: norm([0.4, -0.85, 0.2]) }));
+      perso(E, STEVE, cible([1.2, 0, 1.2], { ...FEU, lacet: 240, penche: 18, brasD: norm([0.5, -0.4, 0.6]), brasG: norm([-0.5, -0.4, 0.6]) }));
+    },
+    effets: (E) => {
+      for (let k = 0; k < 9; k++) flamme(E, [1.2 + Math.cos(k * 0.7) * 0.4, 0.05 + (k % 3) * 0.5, 1.2 + Math.sin(k * 0.7) * 0.4], 0.7, 0.16, k + 60, 11);
+      for (let k = 0; k < 3; k++) lameMonde(E, COEUR, [-0.9 + (k - 1) * 0.3, 2.25 + (k === 1 ? 0.12 : 0), 0], [0, 1, 0], [1, 0, 0.3], { echelle: 0.55 });
+    } })],
+  [{ titre: "LES CHIFFRES", sous: "EQUILIBREE COMME LES LAMES DE LA BRUME : PLUS VITE, MOINS FORT, DE PLUS PRES", lignes: [
+    "COUP NORMAL", "  6 DEGATS  (LES LAMES : 8.5)", "  2 COUPS/S (LES LAMES : 1.6)", "  PORTEE : -0.5 BLOC", "  3E COUP : BRULE 3 S", "",
+    "PIQUE DU PHENIX (CLIC DROIT)", "  FONCE DE 7 BLOCS", "  7 DEGATS A TOUT CE QU'IL TRAVERSE", "  + BRULE 3 S", "  + 1 COEUR RENDU PAR ENNEMI (MAX 3)", "  RECHARGE : 10 S", "",
+    "INCASSABLE, DONNEE PAR L'HOTE (/GIVE)"] },
+    () => vitrine([{ def: DAGUE, frame: centree(DAGUE, [0.62, -0.3, 0], -20, 20) }], { distance: 2.6 })],
+];
+
 // ================================================================== la planche
 
 const sansAccent = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
 const texte = (img, W, s, x, y, t, c) => ecrireTexte(img, W, sansAccent(s).split("").map((ch) => (POLICE[ch.toUpperCase()] ? ch : " ")).join(""), x, y, t, c);
 
 // les lames, pour le jeu (jeu.mjs) : importer ce fichier ne dessine pas la planche
-export { KUBI, SAME, KIBA, NUI, SHIB, HACHE, MARTEAU, HIRA };
+export { KUBI, SAME, KIBA, NUI, SHIB, HACHE, MARTEAU, HIRA, DAGUE };
 const PRINCIPAL = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (PRINCIPAL) {
 const args = process.argv.slice(2);
-const essai = args[0] === "essai";
-const choix = essai ? args[1].split(",").map(Number) : CASES.map((_, i) => i);
+const essai = args[0] === "essai", dague = args[0] === "dague";
+const LISTE = dague ? CASES_DAGUE : CASES;
+const choix = essai ? args[1].split(",").map(Number) : LISTE.map((_, i) => i);
 const colonnes = 4, lignes = Math.ceil(choix.length / colonnes), HAUT = essai ? 0 : 70;
 const W = CW * colonnes, H = HAUT + (M + CH) * lignes;
 const planche = Buffer.alloc(W * H * 4, 255);
-if (!essai) {
+if (dague) {
+  texte(planche, W, "LA DAGUE DU PHENIX - CROQUIS", 14, 14, 5, [24, 28, 40, 255]);
+  texte(planche, W, "L'ARME DU FRUIT DU PHENIX : FLAMMES BLEUES ET OR. RAPIDE, COURTE, ELLE BRULE ET ELLE SOIGNE", 14, 48, 2, [90, 94, 110, 255]);
+} else if (!essai) {
   texte(planche, W, "LES 7 LAMES DE LA BRUME - CROQUIS 2", 14, 14, 5, [24, 28, 40, 255]);
   texte(planche, W, "PAR LAME : L'ARME / OU ELLE SE RANGE QUAND ON NE LA TIENT PAS / CLIC GAUCHE / CLIC DROIT", 14, 48, 2, [90, 94, 110, 255]);
 }
 choix.forEach((n, k) => {
-  const [{ titre, sous }, f] = CASES[n];
+  const [{ titre, sous, lignes: chiffres }, f] = LISTE[n];
   const E = f();
   const c = k % colonnes, l = Math.floor(k / colonnes), y0 = HAUT + l * (M + CH);
   for (let y = 0; y < CH; y++) E.img.copy(planche, ((y0 + M + y) * W + c * CW) * 4, y * CW * 4, (y + 1) * CW * 4);
@@ -950,9 +1064,11 @@ choix.forEach((n, k) => {
     if ((lignesTxt[l2] + " " + m).trim().length > 50) lignesTxt.push(m); else lignesTxt[l2] = (lignesTxt[l2] + " " + m).trim();
   }
   lignesTxt.slice(0, 2).forEach((s, i) => texte(planche, W, s, c * CW + 10, y0 + 30 + i * 13, 2, [96, 100, 116, 255]));
+  (chiffres ?? []).forEach((s, i) => texte(planche, W, s, c * CW + 14, y0 + M + 22 + i * 24, 2, s.startsWith(" ") ? [200, 240, 255, 255] : [255, 214, 90, 255]));
   if (c === 0 && l > 0) for (let x = 0; x < W; x++) for (let e = 0; e < 3; e++) planche.set([60, 70, 90, 255], ((y0 + e) * W + x) * 4);
 });
-const sortie = path.join(ICI, "..", essai ? "essai.png" : "planche-lames-brume.png");
+const sortie = dague ? path.join(ICI, "..", "..", "dague-phenix", "planche-dague-phenix.png") : path.join(ICI, "..", essai ? "essai.png" : "planche-lames-brume.png");
+if (dague) fs.mkdirSync(path.dirname(sortie), { recursive: true });
 ecrirePng(sortie, W, H, planche);
 console.log("ok", sortie, W, H);
 }

@@ -128,7 +128,15 @@ public final class ClientPoulpe {
         }
     }
 
+    /** Vrai le temps de dessiner les queues du manteau de chakra : du rouge qui brille, sans ventouses claires. */
+    static boolean chakra;
+    private static final float[] CHAKRA = {236, 44, 20}, CHAKRA_CLAIR = {255, 138, 60};
+
     private static int couleur(float[] a, float[] b, float k, float lum) {
+        if (chakra) {
+            a = CHAKRA;
+            b = a == b ? CHAKRA : CHAKRA_CLAIR;
+        }
         int r = Math.round(Mth.lerp(k, a[0], b[0]) * lum), g = Math.round(Mth.lerp(k, a[1], b[1]) * lum), bl = Math.round(Mth.lerp(k, a[2], b[2]) * lum);
         return 0xFF000000 | Math.min(255, r) << 16 | Math.min(255, g) << 8 | Math.min(255, bl);
     }

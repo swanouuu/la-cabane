@@ -5,6 +5,7 @@
   ],
   "titre": "Le géant de fer",
   "pitch": "Sous la terre, il y a un géant de fer. Le Wroughtnaut. Son armure, c'est le meilleur métal du monde. Va le battre. Brokk veut savoir que c'est possible. Brokk veut le métal.",
+  "rappel": "La croix rouge, sur la carte de Brokk. Le géant dort sous la terre, entre la couche 20 et la couche 50. Creuse. Et frappe dans le dos : devant, c'est du fer.",
   "objectifs": [
     {
       "type": "tuer",

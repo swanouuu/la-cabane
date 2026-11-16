@@ -85,7 +85,7 @@ public class LameChakra extends Entity {
             Vec3 rel = e.position().subtract(position());
             double long_ = rel.x * dir.x + rel.z * dir.z, travers = Math.abs(rel.x * dir.z - rel.z * dir.x);
             if (long_ > 0.3 && long_ < lg + 0.5 && travers < 1.6 && rel.y > -2.5 && rel.y < 2) {
-                e.hurt(p != null ? monde.damageSources().playerAttack(p) : monde.damageSources().magic(), (6 + 6 * charge()) * (p instanceof net.minecraft.server.level.ServerPlayer sp ? Zones.force(sp) : 1));
+                e.hurt(p != null ? monde.damageSources().playerAttack(p) : monde.damageSources().magic(), (5.5F + 5 * charge()) * (p instanceof net.minecraft.server.level.ServerPlayer sp ? Zones.force(sp) : 1));
                 e.setDeltaMovement(dir.x * 0.8, 0.25, dir.z * 0.8);
                 e.hurtMarked = true;
             }

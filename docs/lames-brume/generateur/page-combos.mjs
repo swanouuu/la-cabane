@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { KUBI, KIBA, NUI, SHIB, HACHE, MARTEAU, HIRA } from "./rendu.mjs";
+import { KUBI, KIBA, NUI, SHIB, HACHE, MARTEAU, HIRA, DAGUE } from "./rendu.mjs";
 import { voxels } from "./samehada3d.mjs";
 import { facesPixels, facesVoxels } from "./jeu.mjs";
 import { COMBOS, TENUE, TRAINEES, SPECIAUX } from "./combos.mjs";
@@ -17,10 +17,11 @@ const LAMES = {
   kubikiribocho: plat(facesPixels(KUBI)), samehada: plat(facesVoxels(voxels("normale"), 0.5, 7)), kiba: plat(facesPixels(KIBA)),
   nuibari: plat(facesPixels(NUI)), shibuki: plat(facesPixels(SHIB)), kabutowari: plat(facesPixels(HACHE)), marteau: plat(facesPixels(MARTEAU)),
   hiramekarei: plat(facesPixels(HIRA)), hiramekarei_chakra: plat(facesPixels(HIRA, "chakra")),
+  dague_phenix: plat(facesPixels(DAGUE)),
   samehada_pleine: plat(facesVoxels(voxels("pleine"), 0.5, 7)), samehada_ouverte: plat(facesVoxels(voxels("ouverte"), 0.5, 7)),
 };
 const PEAU = "data:image/png;base64," + fs.readFileSync(path.join(ICI, "..", "..", "missions", "skins", "ninjaBrume.png")).toString("base64");
-const NOMS = { kubikiribocho: "Kubikiribôchô", samehada: "Samehada", kiba: "Kiba", nuibari: "Nuibari", shibuki: "Shibuki", kabutowari: "Kabutowari", hiramekarei: "Hiramekarei" };
+const NOMS = { kubikiribocho: "Kubikiribôchô", samehada: "Samehada", kiba: "Kiba", nuibari: "Nuibari", shibuki: "Shibuki", kabutowari: "Kabutowari", hiramekarei: "Hiramekarei", dague_phenix: "Dague du phénix" };
 
 const html = `<title>Combos des lames</title>
 <meta name="claude:viewport-fit-sides" content="cover">

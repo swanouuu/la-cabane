@@ -197,17 +197,41 @@ export const COMBOS = {
         k(22, "doux", G2)] },
     ],
   },
+  // la dague du phénix (hors des sept lames) : une main, des coups courts et très rapides (2 par seconde)
+  dague_phenix: {
+    garde: G1,
+    coups: [
+      { nom: "Plume", trace: [2, 6], cles: [
+        k(0, "doux", G1),
+        k(2, "sortie", G1, { bd: [-1.25, 1.1, 0.4], cd: -1.0, bg: [-0.3, 0, -0.4], tour: -0.5, haut: -0.8 }),
+        k(4, "entree", G1, { bd: [-1.4, -0.15, 0.1], cd: -0.15, bg: [-0.25, 0, -0.5], tour: 0.1, haut: -1.3, jd: -0.4, jg: 0.3, gd: 0.4, avant: 1.5 }),
+        k(6, "sortie", G1, { bd: [-1.2, -1.3, -0.1], cd: -0.25, bg: [-0.2, 0, -0.55], tour: 0.7, haut: -1.5, jd: -0.45, jg: 0.35, gd: 0.45, avant: 1.8 }),
+        k(9, "doux", G1)] },
+      { nom: "Revers", trace: [2, 6], cles: [
+        k(0, "doux", G1),
+        k(2, "sortie", G1, { bd: [-1.4, -1.3, 0], cd: -1.05, bg: [-0.3, 0, -0.45], tour: 0.5, haut: -0.8 }),
+        k(4, "entree", G1, { bd: [-1.4, 0.15, 0.2], cd: -0.15, bg: [-0.3, 0, -0.6], tour: -0.1, haut: -1.3, jd: -0.35, jg: 0.3, gd: 0.4, avant: 1.8 }),
+        k(6, "sortie", G1, { bd: [-1.1, 1.35, 0.45], cd: -0.2, bg: [-0.3, 0, -0.65], tour: -0.7, haut: -1.5, jd: -0.4, jg: 0.35, gd: 0.45, avant: 2 }),
+        k(9, "doux", G1)] },
+      { nom: "Serre", trace: [2, 7], cles: [
+        k(0, "doux", G1),
+        k(2, "sortie", G1, { bd: [-0.7, 0.5, 0], cd: -1.5, tour: 0.5, jd: 0.35, gd: 0.5, haut: -1.3 }),
+        k(4, "entree", G1, { bd: [-1.6, -0.05, 0], cd: 0, poignet: 1, tour: -0.25, jd: -1.0, gd: 0.8, jg: 0.55, avant: 4, haut: -2.5, penche: -0.2, bg: [0.5, 0, -0.5] }),
+        k(7, "sortie", G1, { bd: [-1.6, -0.05, 0], cd: 0, poignet: 1, tour: -0.25, jd: -1.0, gd: 0.8, jg: 0.55, avant: 4.3, haut: -2.5, penche: -0.2, bg: [0.5, 0, -0.5] }),
+        k(10, "doux", G1)] },
+    ],
+  },
 };
 
 /** Comment chaque lame est tenue : deux mains, une lame par main (Kiba), la hache et le marteau (Kabutowari). */
 export const TENUE = {
   kubikiribocho: { deuxMains: true }, hiramekarei: { deuxMains: true }, samehada: {}, shibuki: {}, nuibari: {},
-  kiba: { gauche: "kiba" }, kabutowari: { gauche: "marteau" },
+  kiba: { gauche: "kiba" }, kabutowari: { gauche: "marteau" }, dague_phenix: {},
 };
 
 /** La couleur de la traînée de chaque lame. */
 export const TRAINEES = {
-  kubikiribocho: 0xd2dcf0, samehada: 0x5a8cff, kiba: 0x78dcff, nuibari: 0xe8e8ff, shibuki: 0xff8c32, kabutowari: 0xffdc78, hiramekarei: 0x6ee6ff,
+  kubikiribocho: 0xd2dcf0, samehada: 0x5a8cff, kiba: 0x78dcff, nuibari: 0xe8e8ff, shibuki: 0xff8c32, kabutowari: 0xffdc78, hiramekarei: 0x6ee6ff, dague_phenix: 0x46c8ff,
 };
 
 // Le poignet pendant les coups : en garde la lame part devant le poing ; armée, elle se cale un peu ; à l'impact
@@ -276,5 +300,12 @@ export const SPECIAUX = {
     k(23, "entree", G2, { bd: [-1.0, -0.1, 0], bg: [-1.05, 0.45, 0], cd: -0.05, cg: -0.1, poignet: 0.8, penche: -0.6, haut: -3.5, jd: -0.9, jg: 0.5, gd: 1.0, avant: 2.5 }),
     k(32, "doux", G2, { bd: [-0.95, -0.1, 0], bg: [-1.0, 0.45, 0], cd: -0.05, cg: -0.1, poignet: 0.8, penche: -0.55, haut: -3.5, jd: -0.9, jg: 0.5, gd: 1.0, avant: 2.5 }),
     k(40, "doux", G2)] },
+  // le serveur le déplace pour de vrai (7 blocs) : ici seulement la fente, le bras tendu
+  dague_phenix: { nom: "Piqué du phénix", recharge: 10, effet: "pique", trace: [3, 12], cles: [
+    k(0, "doux", G1),
+    k(3, "sortie", G1, { bd: [-0.7, 0.5, 0], cd: -1.5, bg: [-0.3, 0, -0.5], tour: 0.55, penche: -0.15, haut: -3, jd: 0.4, jg: -0.5, gd: 1.1, gg: 0.8 }),
+    k(5, "entree", G1, { bd: [-1.6, -0.05, 0], cd: 0, poignet: 1, bg: [0.8, 0, -0.5], cg: 0, tour: -0.3, penche: -0.4, haut: -2, jd: -1.2, jg: 0.8, gd: 0.6, avant: 3 }),
+    k(12, "sortie", G1, { bd: [-1.58, -0.05, 0], cd: 0, poignet: 1, bg: [0.8, 0, -0.5], cg: 0, tour: -0.3, penche: -0.4, haut: -3, jd: -1.2, jg: 0.8, gd: 1.0, avant: 3 }),
+    k(18, "doux", G1)] },
 };
 for (const s of Object.values(SPECIAUX)) for (const c of s.cles) { c.poignet ??= 0; c.roulis ??= 0; }

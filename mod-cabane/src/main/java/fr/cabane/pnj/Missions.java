@@ -511,6 +511,7 @@ public final class Missions extends SimpleJsonResourceReloadListener {
         for (ItemStack s : m.donnes()) {
             donner(joueur, s.copy());
         }
+        CarteGeant.donner(joueur, m);
         Donnees.get(joueur.server).setDirty();
         joueur.level().playSound(null, joueur.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1F, 1F);
         joueur.displayClientMessage(Component.literal("✦ Nouvelle mission : " + m.titre()).withStyle(ChatFormatting.GOLD), true);

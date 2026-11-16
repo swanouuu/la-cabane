@@ -108,27 +108,27 @@ public final class Cartel {
         return CabaneItems.ITEMS.register(id, () -> new ArmeItem(new Item.Properties().stacksTo(1), spec));
     }
 
-    public static final DeferredItem<ArmeItem> AK47 = arme("ak47", Spec.balle(4, 3, 72, 30, 50, 1.6F, true, Prise.FUSIL, SON_AK));
-    public static final DeferredItem<ArmeItem> AK47_OR = arme("ak47_or", Spec.balle(5, 3, 72, 30, 50, 1.2F, true, Prise.FUSIL, SON_AK_OR));
-    public static final DeferredItem<ArmeItem> UZI = arme("uzi", Spec.balle(2.5F, 2, 40, 32, 40, 4, true, Prise.FUSIL, SON_UZI));
-    public static final DeferredItem<ArmeItem> MAC10 = arme("mac10", Spec.balle(2.5F, 2, 40, 30, 40, 3.5F, true, Prise.MAIN, SON_MAC10));
-    public static final DeferredItem<ArmeItem> THOMPSON = arme("thompson", Spec.balle(3, 3, 48, 50, 60, 3, true, Prise.FUSIL, SON_THOMPSON));
-    public static final DeferredItem<ArmeItem> DESERT_EAGLE = arme("desert_eagle_or", Spec.balle(9, 10, 64, 7, 35, 0.8F, false, Prise.MAIN, SON_EAGLE));
-    public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(3, 14, 20, 2, 40, 5, false, Prise.FUSIL, SON_CANON).plombs(8));
-    public static final DeferredItem<ArmeItem> BARRETT = arme("barrett", Spec.balle(22, 30, 160, 5, 70, 0.2F, false, Prise.FUSIL, SON_BARRETT).avecLunette());
-    public static final DeferredItem<ArmeItem> M60 = arme("m60", Spec.balle(4, 3, 72, 100, 90, 3, true, Prise.FUSIL, SON_M60).lourde());
-    public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(3, 1, 56, 200, 120, 5, true, Prise.HANCHE, SON_MINIGUN).lourde());
+    public static final DeferredItem<ArmeItem> AK47 = arme("ak47", Spec.balle(3.5F, 3, 72, 30, 50, 1.6F, true, Prise.FUSIL, SON_AK));
+    public static final DeferredItem<ArmeItem> AK47_OR = arme("ak47_or", Spec.balle(4.5F, 3, 72, 30, 50, 1.2F, true, Prise.FUSIL, SON_AK_OR));
+    public static final DeferredItem<ArmeItem> UZI = arme("uzi", Spec.balle(2.2F, 2, 40, 32, 40, 4, true, Prise.FUSIL, SON_UZI));
+    public static final DeferredItem<ArmeItem> MAC10 = arme("mac10", Spec.balle(2.2F, 2, 40, 30, 40, 3.5F, true, Prise.MAIN, SON_MAC10));
+    public static final DeferredItem<ArmeItem> THOMPSON = arme("thompson", Spec.balle(2.6F, 3, 48, 50, 60, 3, true, Prise.FUSIL, SON_THOMPSON));
+    public static final DeferredItem<ArmeItem> DESERT_EAGLE = arme("desert_eagle_or", Spec.balle(8, 10, 64, 7, 35, 0.8F, false, Prise.MAIN, SON_EAGLE));
+    public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(2.6F, 14, 20, 2, 40, 5, false, Prise.FUSIL, SON_CANON).plombs(8));
+    public static final DeferredItem<ArmeItem> BARRETT = arme("barrett", Spec.balle(19, 30, 160, 5, 70, 0.2F, false, Prise.FUSIL, SON_BARRETT).avecLunette());
+    public static final DeferredItem<ArmeItem> M60 = arme("m60", Spec.balle(3.5F, 3, 72, 100, 90, 3, true, Prise.FUSIL, SON_M60).lourde());
+    public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(2.6F, 1, 56, 200, 120, 5, true, Prise.HANCHE, SON_MINIGUN).lourde());
     public static final DeferredItem<ArmeItem> RPG7 = arme("rpg7",
-            new Spec(0, 40, 120, 1, 60, 0, 1, false, false, false, Tir.ROQUETTE, 3.2F, Prise.EPAULE, SON_RPG));
+            new Spec(0, 40, 120, 1, 60, 0, 1, false, false, false, Tir.ROQUETTE, 2.9F, Prise.EPAULE, SON_RPG));
     public static final DeferredItem<ArmeItem> M79 = arme("m79",
-            new Spec(0, 20, 60, 1, 40, 0, 1, false, false, false, Tir.OBUS, 2.4F, Prise.FUSIL, SON_M79));
+            new Spec(0, 20, 60, 1, 40, 0, 1, false, false, false, Tir.OBUS, 2.2F, Prise.FUSIL, SON_M79));
     public static final DeferredItem<ArmeItem> GRENADE = CabaneItems.ITEMS.register("grenade", () -> new ArmeItem(new Item.Properties().stacksTo(16),
-            new Spec(0, 15, 0, 0, 0, 0, 1, false, false, false, Tir.GRENADE, 3F, Prise.LANCER, SON_EXPLOSION)));
+            new Spec(0, 15, 0, 0, 0, 0, 1, false, false, false, Tir.GRENADE, 2.7F, Prise.LANCER, SON_EXPLOSION)));
     public static final DeferredItem<ArmeItem> MOLOTOV = CabaneItems.ITEMS.register("molotov", () -> new ArmeItem(new Item.Properties().stacksTo(16),
             new Spec(0, 15, 0, 0, 0, 0, 1, false, false, false, Tir.MOLOTOV, 0, Prise.LANCER, SON_EXPLOSION)));
     /** La machette : une épée de fer un peu plus lourde. */
     public static final DeferredItem<SwordItem> MACHETTE = CabaneItems.ITEMS.register("machette",
-            () -> new SwordItem(Tiers.IRON, new Item.Properties().attributes(SwordItem.createAttributes(Tiers.IRON, 4, -2.6F))));
+            () -> new SwordItem(Tiers.IRON, new Item.Properties().attributes(SwordItem.createAttributes(Tiers.IRON, 3, -2.6F))));
 
     /** Ce qui vole (jamais dans l'inventaire) : la roquette et l'obus, dessinés en 3D pendant leur vol. */
     private static final DeferredRegister.Items CACHES = DeferredRegister.createItems(Cabane.MODID);

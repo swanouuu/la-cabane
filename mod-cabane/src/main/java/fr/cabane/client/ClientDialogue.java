@@ -330,8 +330,12 @@ public final class ClientDialogue {
         suivi = lignes;
     }
 
+    /** Le bas du panneau des missions à l'écran (0 s'il n'est pas affiché) : le solde se range en dessous. */
+    public static int basSuivi;
+
     private static void dessinerSuivi(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
+        basSuivi = 0;
         if (suivi.isEmpty() || mc.options.hideGui || mc.player == null || mc.screen instanceof Ecran) {
             return;
         }
@@ -353,6 +357,7 @@ public final class ClientDialogue {
         if (suivi.size() > montrees) {
             h += 10;
         }
+        basSuivi = y + h;
         g.fill(x, y, x + largeur, y + h, 0x70000000);
         g.fill(x, y, x + 2, y + h, 0xFFFFC23D);
         g.drawString(font, "MISSIONS", x + 7, y + 4, 0xFFFFC23D, false);

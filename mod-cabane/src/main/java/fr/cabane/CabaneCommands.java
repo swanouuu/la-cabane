@@ -141,6 +141,11 @@ public final class CabaneCommands {
                 // le marché noir : seulement à côté du Fourgue
                 .then(Commands.literal("fourgue").executes(ctx -> run(ctx, fr.cabane.drogue.MarcheNoir::ouvrir))
                         .then(Commands.literal("vendre").executes(ctx -> run(ctx, fr.cabane.drogue.MarcheNoir::vendre))))
+                // l'hôte donne la carte du géant de fer (la salle du Wroughtnaut la plus proche) à quelqu'un qui ne la trouve pas
+                .then(Commands.literal("cartegeant").requires(CabaneCommands::hote)
+                        .executes(ctx -> fr.cabane.pnj.CarteGeant.donner(ctx.getSource().getPlayerOrException()) ? 1 : 0)
+                        .then(Commands.argument("joueur", EntityArgument.player())
+                                .executes(ctx -> fr.cabane.pnj.CarteGeant.donner(EntityArgument.getPlayer(ctx, "joueur")) ? 1 : 0)))
                 // utilisée par les quêtes : une carte au trésor vers le donjon le plus proche d'un point lointain
                 .then(Commands.literal("carte").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("joueur", EntityArgument.player())

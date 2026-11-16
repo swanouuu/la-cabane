@@ -429,7 +429,7 @@ public final class ClientHachibi {
     }
 
     /** Passe dans le repère du modèle du joueur (comme le fait le jeu avant de le dessiner). */
-    private static void repereModele(PoseStack ps, Player joueur, float partiel, float taille) {
+    static void repereModele(PoseStack ps, Player joueur, float partiel, float taille) {
         ps.mulPose(Axis.YP.rotationDegrees(180 - Mth.rotLerp(partiel, joueur.yBodyRotO, joueur.yBodyRot)));
         ps.scale(-1, -1, 1);
         ps.scale(0.9375F * taille, 0.9375F * taille, 0.9375F * taille);
@@ -888,7 +888,7 @@ public final class ClientHachibi {
         Minecraft mc = Minecraft.getInstance();
         Hachi h = mc.player == null ? null : HACHIS.get(mc.player.getUUID());
         // dans l'ulti de Hachibi 4, c'est son écran à lui (ClientHachibi4)
-        if (!actif(h) || fr.cabane.client.hachibi4.ClientHachibi4.enUlti(mc.player.getUUID())) {
+        if (!actif(h) || fr.cabane.client.hachibi4.ClientHachibi4.enUlti(mc.player.getUUID()) || ClientManteau.actif(mc.player.getUUID())) {
             return;
         }
         int w = g.guiWidth();
@@ -1003,7 +1003,10 @@ public final class ClientHachibi {
             }
             Hachi moi = HACHIS.get(mc.player.getUUID());
             boolean accroupi = mc.options.keyShift.isDown();
-            if (actif(moi) && moi.forme == 4) {
+            if (ClientManteau.actif(mc.player.getUUID())) {
+                // le manteau de chakra a ses propres touches (ClientManteau)
+                bombeFaite = true;
+            } else if (actif(moi) && moi.forme == 4) {
                 // au niveau 4, s'accroupir sert aussi à la bombe noire (avec le clic droit) : la tentacule attrape quand on
                 // relâche un appui court, si la bombe n'est pas partie entre-temps
                 if (accroupi && !accroupiAvant) {
@@ -1075,7 +1078,7 @@ public final class ClientHachibi {
         public static void clic(InputEvent.InteractionKeyMappingTriggered event) {
             Minecraft mc = Minecraft.getInstance();
             Hachi h = mc.player == null ? null : HACHIS.get(mc.player.getUUID());
-            if (!(event.isAttack() || event.isUseItem()) || !actif(h) || secondes(h.debut) < 0.6) {
+            if (!(event.isAttack() || event.isUseItem()) || !actif(h) || secondes(h.debut) < 0.6 || ClientManteau.actif(mc.player.getUUID())) {
                 return;
             }
             event.setCanceled(true);
@@ -1123,7 +1126,11 @@ public final class ClientHachibi {
             Hachi h = HACHIS.get(event.getEntity().getUUID());
             if (h != null && h.forme == 4 && event.getEntity() instanceof AbstractClientPlayer joueur && !joueur.isInvisible()
                     && !fr.cabane.client.hachibi4.ClientHachibi4.enUlti(joueur.getUUID())) {
-                tentacules(event, h, joueur);
+                if (ClientManteau.actif(joueur.getUUID())) {
+                    ClientManteau.apres(event, joueur);
+                } else {
+                    tentacules(event, h, joueur);
+                }
             }
         }
 

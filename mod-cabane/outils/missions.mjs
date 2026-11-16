@@ -156,6 +156,7 @@ const MISSIONS = {
     objectifs: [tuer("alexsmobs:centipede_head", 3, "Vaincre 3 mille-pattes des cavernes")],
     merci: "Les mineurs redescendent. Grosh aussi. Grosh avait peur. Grosh dira que non.", recompense: argent(300) },
   brokk_geant: { qui: "forgeron", apres: ["brokk_fer"], titre: "Le géant de fer", pitch: "Sous la terre, il y a un géant de fer. Le Wroughtnaut. Son armure, c'est le meilleur métal du monde. Va le battre. Brokk veut savoir que c'est possible. Brokk veut le métal.",
+    rappel: "La croix rouge, sur la carte de Brokk. Le géant dort sous la terre, entre la couche 20 et la couche 50. Creuse. Et frappe dans le dos : devant, c'est du fer.",
     objectifs: [tuer("mowziesmobs:ferrous_wroughtnaut", 1, "Vaincre le Wroughtnaut, le géant de fer")], merci: "Tu as battu le géant ?! … Brokk respecte. Brokk respecte beaucoup. Tiens. Du fer, du vrai. Et la forge te fera un prix d'ami. Non. Brokk rigole. Pas de prix d'ami.",
     recompense: argent(2500, [["minecraft:iron_block", 4]], 8) },
   ovsie: { qui: "fee", titre: "La couronne d'Ovsie", pitch: "Ma couronne de fleurs a fané ! Je veux des coquelicots et des pissenlits. Seize de chaque. S'il te plaît, s'il te plaît, s'il te plaît !",

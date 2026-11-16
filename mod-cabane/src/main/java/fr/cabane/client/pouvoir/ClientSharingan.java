@@ -710,7 +710,7 @@ public final class ClientSharingan {
                 return;
             }
             int n = niveau(mc.player.getUUID());
-            boolean kamui = (n >= 2 || ClientMinato.eveille() || ClientPhenix.niveauLocal() >= 3) && KAMUI.isDown()
+            boolean kamui = (n >= 2 || ClientMinato.eveille() || ClientPhenix.niveauLocal() >= 2) && KAMUI.isDown()
                     && event.getNewScreen() instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
             if (kamui) {
                 event.setCanceled(true);

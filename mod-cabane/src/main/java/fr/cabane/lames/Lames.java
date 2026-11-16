@@ -56,10 +56,11 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Lames {
     /**
-     * Les dégâts d'un coup des lames : une épée en diamant (7) avec Tranchant IV (+2,5). Seule Kabutowari, le gros
-     * marteau, frappe plus fort (11) et un peu moins vite.
+     * Les dégâts d'un coup des lames. Baissés d'un cran le 2026-11-16 (« baisse juste un peu les dégâts de toutes les
+     * armes encore ») : 8,5 au lieu de 9,5 ; Kabutowari, le gros marteau, frappe plus fort (9,5 au lieu de 11) et un peu
+     * moins vite. Les coups spéciaux ont baissé du même cran (voir LameItem, LameLancee, LameChakra).
      */
-    public static final float DEGATS = 9.5F;
+    public static final float DEGATS = 8.5F;
 
     /**
      * Les sept lames : dégâts, coups par seconde, portée en plus, recharge du coup spécial (en ticks). Rééquilibrage du
@@ -74,8 +75,14 @@ public final class Lames {
         KIBA("kiba", DEGATS, 1.6F, 0, 200),
         NUIBARI("nuibari", DEGATS, 1.6F, 2, 240),
         SHIBUKI("shibuki", DEGATS, 1.6F, 0.5, 240),
-        KABUTOWARI("kabutowari", 11, 1.4F, 0.5, 240),
-        HIRAMEKAREI("hiramekarei", DEGATS, 1.6F, 0.5, 240);
+        KABUTOWARI("kabutowari", 9.5F, 1.4F, 0.5, 240),
+        HIRAMEKAREI("hiramekarei", DEGATS, 1.6F, 0.5, 240),
+        /**
+         * La dague du phénix (docs/dague-phenix) : pas une lame de la Brume, mais faite comme elles. Une dague : deux coups
+         * par seconde, 6 par coup, un demi-bloc de portée en moins ; le troisième coup du combo met le feu. Clic droit :
+         * le Piqué du phénix (LameItem.pique).
+         */
+        DAGUE("dague_phenix", 6, 2F, -0.5, 200);
 
         public final String id;
         public final float degats, vitesse;

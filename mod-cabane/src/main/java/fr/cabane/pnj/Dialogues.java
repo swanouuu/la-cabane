@@ -421,6 +421,8 @@ public final class Dialogues extends SimpleJsonResourceReloadListener {
         List<Suite> suites = new ArrayList<>();
         retourEtAuRevoir(choix, suites);
         if (!accepte) {
+            // le géant de fer : une nouvelle carte si on a perdu la sienne (ou si on avait accepté avant qu'il y en ait une)
+            CarteGeant.donner(joueur, m);
             choix.add(new Choix("Abandonner cette mission", NORMAL));
             suites.add((j, ss) -> {
                 Missions.abandonner(j, m);

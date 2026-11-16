@@ -527,7 +527,7 @@ Object.assign(lang, {
   "item.cabane.tuyau": "Tuyau de chicha", "block.cabane.chicha": "Chicha", "block.cabane.borne_terrain": "Borne de terrain à vendre",
   "item.cabane.menottes": "Menottes", "item.cabane.pistolet": "Pistolet de police", "item.cabane.tenue_police": "Tenue de police", "item.cabane.casquette_police": "Casquette de police", "item.cabane.veste_police": "Veste de police", "item.cabane.pantalon_police": "Pantalon de police", "item.cabane.chaussures_police": "Chaussures de police", "item.cabane.matraque": "Matraque",
   "item.cabane.voiture_police": "Voiture de police", "entity.cabane.voiture_police": "Voiture de police",
-  "key.cabane.sirene": "Sirène de la voiture de police", "key.cabane.eveil": "Éveil (pouvoir)", "key.cabane.ulti": "Ulti (pouvoir)", "block.cabane.partie_table": "Table du casino",
+  "key.cabane.sirene": "Sirène de la voiture de police", "key.cabane.eveil": "Éveil (pouvoir)", "key.cabane.ulti": "Ulti (pouvoir)", "key.cabane.grande": "Grande boule / pluie (Hachibi)", "block.cabane.partie_table": "Table du casino",
   "subtitles.cabane.voix": "Un habitant parle", "item.cabane.photo": "Photo imprimée", "entity.cabane.tableau_photo": "Photo accrochée", "subtitles.cabane.voiture": "Voiture de police",
   "death.attack.cabane.chidori": "%1$s a été transpercé par le Chidori de %2$s",
   "death.attack.cabane.chidori.item": "%1$s a été transpercé par le Chidori de %2$s",
@@ -553,6 +553,9 @@ Object.assign(lang, {
   "item.cabane.kabutowari.special": "sauter et tout écraser (onde de choc)",
   "item.cabane.hiramekarei": "Hiramekarei", "item.cabane.hiramekarei.qui": "Lame de la Brume · Chôjûrô",
   "item.cabane.hiramekarei.special": "maintenir pour charger, lâcher : une lame de chakra géante",
+  // la dague du phénix (docs/dague-phenix) : faite comme les lames de la Brume
+  "item.cabane.dague_phenix": "Dague du phénix", "item.cabane.dague_phenix.qui": "Arme du phénix · flammes bleues",
+  "item.cabane.dague_phenix.special": "Piqué du phénix : foncer à travers les ennemis (les brûle, te soigne)",
   "entity.cabane.lame_lancee": "Kubikiribôchô", "entity.cabane.lame_chakra": "Lame de chakra",
   "death.attack.cabane.eclair_jaune": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
   "death.attack.cabane.eclair_jaune.item": "%1$s a été foudroyé par l'Éclair Jaune de %2$s",
