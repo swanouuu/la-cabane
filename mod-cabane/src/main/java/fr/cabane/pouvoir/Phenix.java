@@ -100,6 +100,8 @@ public final class Phenix {
     public static final int DROIT = 0, ACCROUPI = 1, TECHNIQUE = 2, PIQUE = 3, VOL_BLEU = 4, BRASIER = 5, TOURBILLON = 6, ULTI = 7,
             GRAND = 8, GRAND_LACHE = 9, BATTEMENT = 10, COUP_AILE = 11, ENVOL = 12;
 
+    /** Combien de temps (ticks) après un coup reçu sa régénération passive reste coupée. */
+    private static final int REPOS_COMBAT = 8 * 20;
     public static final int RECHARGE_JET = 6 * 20, RECHARGE_REGEN = 20 * 20, RECHARGE_SERRE = 8 * 20, RECHARGE_PLUIE = 25 * 20,
             RECHARGE_EVENTAIL = 10 * 20, RECHARGE_GRAND = 30 * 20, RECHARGE_COCON = 25 * 20, RECHARGE_PIQUE = 20 * 20, RECHARGE_VOL = 12 * 20,
             RECHARGE_BRASIER = 20 * 20, RECHARGE_TOURBILLON = 18 * 20, RECHARGE_AILE = 12 * 20, RECHARGE_ENVOL = 15 * 20;
@@ -1398,9 +1400,11 @@ public final class Phenix {
                 joueur.hurt(new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(Fruit.EAU)), 1);
             }
             int niveau = niveau(joueur), passif = Math.max(niveau, niveauFruit(joueur));
-            // ses passifs marchent toujours, éveillé ou pas : il se soigne tout seul (un demi-cœur toutes les 4 s au
-            // niveau 1, toutes les 2 s ensuite) et le feu ne lui fait rien
-            if (maintenant % (passif >= 2 ? 40 : 80) == 0 && joueur.getHealth() < joueur.getMaxHealth() && !fr.cabane.accessoire.Bulle.noye(joueur)) {
+            // ses passifs marchent toujours, éveillé ou pas : il se soigne tout seul (un demi-cœur toutes les 10 s au
+            // niveau 1, toutes les 6 s ensuite), mais pas en plein combat (rien pendant 8 s après un coup reçu), et le
+            // feu ne lui fait rien
+            boolean enCombat = joueur.getLastHurtByMob() != null && joueur.tickCount - joueur.getLastHurtByMobTimestamp() < REPOS_COMBAT;
+            if (maintenant % (passif >= 2 ? 120 : 200) == 0 && !enCombat && joueur.getHealth() < joueur.getMaxHealth() && !fr.cabane.accessoire.Bulle.noye(joueur)) {
                 joueur.heal(1);
             }
             if (joueur.isOnFire()) {

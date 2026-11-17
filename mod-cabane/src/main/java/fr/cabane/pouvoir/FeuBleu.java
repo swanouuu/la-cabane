@@ -39,7 +39,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * Les flammes bleues du phénix, posées au sol par ses attaques (le grand phénix, le piqué, le brasier, l'ulti) : un vrai
  * bloc, avec la forme du feu de Minecraft et la texture du feu des âmes (un peu plus cyan, voir ClientFeuNoir). Comme
  * un feu normal, elles ne restent pas : 3 à 5 s, puis elles s'éteignent ; elles ne s'étendent jamais, et l'eau les
- * éteint. Celui qui les a posées y reprend des forces (+1 cœur par seconde dedans) ; les autres y brûlent comme dans du
+ * éteint. Celui qui les a posées y reprend des forces (+½ cœur par seconde dedans) ; les autres y brûlent comme dans du
  * feu normal (sauf ses alliés).
  */
 public class FeuBleu extends Block {
@@ -54,7 +54,7 @@ public class FeuBleu extends Block {
     private static final Map<GlobalPos, UUID> POSEURS = new HashMap<>();
     /** Quand chaque flamme s'éteint (temps du monde) : une attaque qui repasse dessus la rallume. */
     private static final Map<GlobalPos, Long> FINS = new HashMap<>();
-    /** Le dernier soin de chaque phénix dans ses flammes (temps du monde) : un cœur par seconde, pas plus. */
+    /** Le dernier soin de chaque phénix dans ses flammes (temps du monde) : un demi-cœur par seconde, pas plus. */
     private static final Map<UUID, Long> SOINS = new HashMap<>();
 
     public static void register(IEventBus modBus) {
@@ -191,7 +191,7 @@ public class FeuBleu extends Block {
     }
 
     /**
-     * Lui (celui qui les a posées) : +1 cœur par seconde, sans brûler. Ses alliés : rien. Les autres : comme dans du feu
+     * Lui (celui qui les a posées) : +½ cœur par seconde, sans brûler. Ses alliés : rien. Les autres : comme dans du feu
      * normal (ils prennent feu 8 s, et 1 de dégâts à chaque fois qu'ils peuvent en reprendre).
      */
     @Override
@@ -205,7 +205,7 @@ public class FeuBleu extends Block {
             long maintenant = level.getGameTime();
             if (maintenant - SOINS.getOrDefault(poseur, -100L) >= 20) {
                 SOINS.put(poseur, maintenant);
-                vivant.heal(2);
+                vivant.heal(1);
                 if (level instanceof ServerLevel s) {
                     s.sendParticles(ParticleTypes.HEART, vivant.getX(), vivant.getY() + 1.9, vivant.getZ(), 1, 0.2, 0.1, 0.2, 0);
                 }
