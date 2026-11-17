@@ -35,10 +35,9 @@ public final class ClientMaison {
         Minecraft mc = Minecraft.getInstance();
         preparer(mc);
         quel = Math.floorMod(k, 3);
-        depuis = System.currentTimeMillis();
         DecorParc.cri(k);
-        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvent.createVariableRangeEvent(Cabane.id(SONS[quel])), HAUTEURS[quel], 1F));
-        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.GHAST_SCREAM, 0.6F, 0.5F));
+        // le monstre des backrooms qui se jette sur l'écran (le Souriant, le Rampeur, le Sans-Visage), avec son cri
+        fr.cabane.client.backrooms.ClientBackrooms.screamerParc(new int[] {1, 0, 3}[quel]);
     }
 
     private static void preparer(Minecraft mc) {

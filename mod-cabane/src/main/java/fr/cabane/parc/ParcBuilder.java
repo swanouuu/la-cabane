@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  */
 final class ParcBuilder {
     /** À changer quand on modifie la construction : le parc se reconstruit à la visite suivante. */
-    static final int VERSION = 8;
+    static final int VERSION = 9;
     static final int SOL = Maneges.SOL;
     static final Vec3 ARRIVEE = new Vec3(0.5, SOL, 114.5);
     static final String TAG = "parc";

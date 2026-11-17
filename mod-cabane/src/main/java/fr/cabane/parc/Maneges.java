@@ -120,6 +120,8 @@ public final class Maneges {
     // ------------------------------------------------------------------ La Mine Hantée
 
     public static final double MINE_X = -95, MINE_Z = -40;
+    /** La Mine a été agrandie (parcours plus long, plus haut, montagne plus grande). */
+    public static final double MINE_S = 1.25;
 
     /**
      * La Mine Hantée : un wagonnet qui entre dans la montagne. Le noir, des lanternes, une montée au pas sous des yeux
@@ -130,8 +132,8 @@ public final class Maneges {
         Trajet.Liste l = new Trajet.Liste();
         int n = 1400;
         for (int i = 0; i < n; i++) {
-            double u = (double) i / n * TAU, r = 21 + 8 * Math.cos(u) + 3 * Math.sin(3 * u);
-            double y = SOL + 1.2 + 9.8 * (entre(1.9, 2.7, u) - entre(3.5, 4.0, u));
+            double u = (double) i / n * TAU, r = MINE_S * (21 + 8 * Math.cos(u) + 3 * Math.sin(3 * u));
+            double y = SOL + 1.2 + 9.8 * MINE_S * (entre(1.9, 2.7, u) - entre(3.5, 4.0, u));
             boolean gare = u < 0.24 || u > TAU - 0.24;
             byte mode = gare ? Trajet.GARE : u >= 1.9 && u < 2.75 ? Trajet.LENT : u >= 3.5 && u < 4.4 ? Trajet.CHUTE : Trajet.LIBRE;
             l.point(MINE_X + r * Math.cos(u), y, MINE_Z + r * Math.sin(u), mode, !gare, TAU * 2 * entre(1.05, 1.55, u), u);
@@ -150,7 +152,9 @@ public final class Maneges {
 
     // ------------------------------------------------------------------ Cosmos
 
-    public static final double COSMOS_X = 25, COSMOS_Z = -55, COSMOS_R = 26;
+    /** Le Cosmos a été agrandi de 20 % (dôme, rail, hauteurs). */
+    public static final double COSMOS_S = 1.2;
+    public static final double COSMOS_X = 25, COSMOS_Z = -55, COSMOS_R = 26 * COSMOS_S;
 
     /**
      * Cosmos : sous un dôme noir étoilé, un rail en néon qui ondule, et des wagons qui tournent sur eux-mêmes tout le
@@ -162,7 +166,7 @@ public final class Maneges {
         double garde = 0.25;
         for (int i = 0; i < n; i++) {
             double v = (double) i / n * TAU, u = v + Math.PI / 2, loin = Math.min(v, TAU - v);
-            double r = 13 + 5 * Math.sin(4 * u), y0 = 6.5 + 5 * Math.sin(3 * u);
+            double r = COSMOS_S * (13 + 5 * Math.sin(4 * u)), y0 = COSMOS_S * (6.5 + 5 * Math.sin(3 * u));
             double w = 1 - entre(garde, 0.6, loin);
             double y = SOL + y0 + (1.5 - y0) * w;
             double frac = Math.max(0, Math.min(1, (v - garde) / (TAU - 2 * garde)));
@@ -174,7 +178,9 @@ public final class Maneges {
 
     // ------------------------------------------------------------------ Rivière Splash
 
-    public static final double SPLASH_X = -95, SPLASH_Z = 52;
+    /** La Rivière Splash a été agrandie de 20 % (lac, parcours, grande descente) et décalée vers l'ouest. */
+    public static final double SPLASH_S = 1.2;
+    public static final double SPLASH_X = -105, SPLASH_Z = 48;
     /** Le paramètre u du splash (en bas de la grande descente) et de la photo (juste avant). */
     public static final double U_SPLASH = 4.89, U_PHOTO = 4.8;
 
@@ -187,8 +193,8 @@ public final class Maneges {
         int n = 1400;
         for (int i = 0; i < n; i++) {
             double u = (double) i / n * TAU;
-            double x = SPLASH_X + 30 * Math.cos(u) + 4 * Math.cos(3 * u), z = SPLASH_Z + 24 * Math.sin(u) + 3 * Math.sin(2 * u);
-            double y = EAU + 26 * (entre(3.2, 4.15, u) - entre(4.45, 4.88, u));
+            double x = SPLASH_X + SPLASH_S * (30 * Math.cos(u) + 4 * Math.cos(3 * u)), z = SPLASH_Z + SPLASH_S * (24 * Math.sin(u) + 3 * Math.sin(2 * u));
+            double y = EAU + 26 * SPLASH_S * (entre(3.2, 4.15, u) - entre(4.45, 4.88, u));
             boolean gare = u < 0.22 || u > TAU - 0.22;
             byte mode = gare ? Trajet.GARE : u >= 3.2 && u < 4.25 ? Trajet.LIFT : u >= 4.42 && u < 5.0 ? Trajet.CHUTE : Trajet.EAU;
             l.point(x, y, z, mode, u > 0.45 && u < 1.15, 0, u);
@@ -266,14 +272,14 @@ public final class Maneges {
             case MINE -> switch (p.mode) {
                 case Trajet.GARE -> 3;
                 case Trajet.LENT -> 2.4;
-                case Trajet.CHUTE -> Math.sqrt(9 + 34 * Math.max(0, 11.2 - h));
+                case Trajet.CHUTE -> Math.sqrt(9 + 34 * Math.max(0, 1.2 + 9.8 * MINE_S + 0.2 - h));
                 default -> 7.5;
             };
-            case COSMOS -> p.mode == Trajet.GARE ? 4 : Math.sqrt(40 + 32 * Math.max(0, 12 - h));
+            case COSMOS -> p.mode == Trajet.GARE ? 4 : Math.sqrt(40 + 32 * Math.max(0, 12 * COSMOS_S - h));
             case SPLASH -> switch (p.mode) {
                 case Trajet.GARE -> 3;
                 case Trajet.LIFT -> 4.5;
-                case Trajet.CHUTE -> Math.sqrt(16 + 34 * Math.max(0, 25.8 - h));
+                case Trajet.CHUTE -> Math.sqrt(16 + 34 * Math.max(0, 26 * SPLASH_S - 0.2 - h));
                 default -> 6.5;
             };
             default -> switch (p.mode) {

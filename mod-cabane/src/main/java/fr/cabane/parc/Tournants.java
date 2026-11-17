@@ -34,11 +34,18 @@ public final class Tournants {
     // ------------------------------------------------------------------ où sont les manèges
 
     public static final double TOUR_X = -30, TOUR_Z = -45;
-    public static final double ROUE_X = 45, ROUE_Y = SOL + 26.2, ROUE_Z = 85, ROUE_R = 20;
+    /** Tous les manèges qui tournent ont été agrandis de 20 % (rayons, hauteurs). */
+    public static final double S = 1.2;
+    public static final double ROUE_X = 45, ROUE_Y = SOL + 30.2, ROUE_Z = 85, ROUE_R = 24;
+    /** Le carrousel : rayon des chevaux (dehors, dedans) ; les tasses : rayon des petits plateaux et des tasses. */
+    public static final double CARROUSEL_R1 = 6.6 * S, CARROUSEL_R2 = 4.1 * S, TASSES_R1 = 6.3 * S, TASSES_R2 = 2.4 * S;
+    /** La hauteur de la tour, et celle où la nacelle s'arrête avant de lâcher. */
+    public static final int TOUR_H = 86;
+    public static final double TOUR_HAUT = 80;
     public static final double CARROUSEL_X = -24, CARROUSEL_Z = 35;
     public static final double TASSES_X = 24, TASSES_Z = 35;
-    public static final double BATEAU_X = -40, BATEAU_Y = SOL + 18, BATEAU_Z = 10;
-    public static final double TOUPIE_X = 50, TOUPIE_Y = SOL + 11, TOUPIE_Z = 25, TOUPIE_L = 9.5;
+    public static final double BATEAU_X = -40, BATEAU_Y = SOL + 18 * S, BATEAU_Z = 10;
+    public static final double TOUPIE_X = 54, TOUPIE_Y = SOL + 12.9, TOUPIE_Z = 25, TOUPIE_L = 9.5 * S;
 
     /** Le centre (x, z) de chaque manège, pour garder ses tronçons chargés. */
     public static double[][] centres() {
@@ -69,18 +76,19 @@ public final class Tournants {
             return 2;
         }
         if (t < 14) {
-            return 2 + 64 * lisse((t - 3) / 11);
+            return 2 + (TOUR_HAUT - 2) * lisse((t - 3) / 11);
         }
         if (t < 17) {
-            return 66;
+            return TOUR_HAUT;
         }
-        if (t < 18.4) {
+        if (t < 18.6) {
             double k = t - 17;
-            return 66 - 26 * k * k;
+            return TOUR_HAUT - 26 * k * k;
         }
-        if (t < 20.4) {
-            double k = (t - 18.4) / 2;
-            return 15 - 13 * (1 - (1 - k) * (1 - k));
+        if (t < 20.6) {
+            double k = (t - 18.6) / 2;
+            double bas = TOUR_HAUT - 26 * 1.6 * 1.6;
+            return bas - (bas - 2) * (1 - (1 - k) * (1 - k));
         }
         return 2;
     }
@@ -145,7 +153,7 @@ public final class Tournants {
                 poser(o, ROUE_X + Math.cos(a) * ROUE_R, ROUE_Y + Math.sin(a) * ROUE_R, ROUE_Z, 0, 1, 0, 0, 0, 1);
             }
             case CARROUSEL -> {
-                double r = k < 8 ? 6.6 : 4.1, a = k < 8 ? k * TAU / 8 : (k - 8 + 0.5) * TAU / 6, ph = k * 0.9;
+                double r = k < 8 ? CARROUSEL_R1 : CARROUSEL_R2, a = k < 8 ? k * TAU / 8 : (k - 8 + 0.5) * TAU / 6, ph = k * 0.9;
                 double b = a + plateauCarrousel(t);
                 double saut = 0.55 * Math.sin(2.2 * t + ph) * ampleur(t, fiche(CARROUSEL).duree);
                 poser(o, CARROUSEL_X + Math.sin(b) * r, SOL + 1.3 + saut, CARROUSEL_Z + Math.cos(b) * r, 0, 1, 0, Math.cos(b), 0, -Math.sin(b));
@@ -154,7 +162,7 @@ public final class Tournants {
                 int i = k / 3, j = k % 3;
                 double g = grandPlateau(t), p = g + petitPlateau(t);
                 double ai = i * TAU / 3 + g, bj = j * TAU / 3 + p;
-                double x = TASSES_X + Math.cos(ai) * 6.3 + Math.cos(bj) * 2.4, z = TASSES_Z + Math.sin(ai) * 6.3 + Math.sin(bj) * 2.4;
+                double x = TASSES_X + Math.cos(ai) * TASSES_R1 + Math.cos(bj) * TASSES_R2, z = TASSES_Z + Math.sin(ai) * TASSES_R1 + Math.sin(bj) * TASSES_R2;
                 double psi = p + TAU * (8 + k % 4) * rampe(t / fiche(TASSES).duree) + k * 0.7;
                 poser(o, x, SOL + 0.9, z, 0, 1, 0, Math.sin(psi), 0, Math.cos(psi));
             }
@@ -193,7 +201,7 @@ public final class Tournants {
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int r = 1; r <= 4; r++) {
                 for (int cote = -1; cote <= 1; cote += 2) {
-                    PLACES_BATEAU[n++] = new double[]{cote * 0.75, -11.7, sx * (r * 2 - 0.6), sx > 0 ? Math.PI : 0};
+                    PLACES_BATEAU[n++] = new double[]{cote * 0.75 * S, -11.7 * S, sx * (r * 2 - 0.6) * S, sx > 0 ? Math.PI : 0};
                 }
             }
         }
@@ -219,7 +227,7 @@ public final class Tournants {
     public static boolean roueEnBas(int k, double secondes) {
         double a = k * TAU / 16 + angleRoue(secondes);
         a = a - Math.floor((a + Math.PI) / TAU) * TAU;
-        return Math.abs(a) < 0.09;
+        return Math.abs(a) < 0.11;
     }
 
     private Tournants() {

@@ -287,6 +287,14 @@ public final class ClientParc {
         }
         if (ici()) {
             passages(mc);
+            // la musique de manège en boucle, tant qu'on est au parc (même en créatif, où le jeu joue la sienne)
+            if (musique == null || musique.isStopped() || !mc.getSoundManager().isActive(musique)) {
+                if (musique != null) {
+                    mc.getSoundManager().stop(musique);
+                }
+                musique = new Musique();
+                mc.getSoundManager().play(musique);
+            }
         }
         // en descendant du tronc du Splash, la photo souvenir arrive
         byte manege = j.getVehicle() instanceof WagonParc wv ? wv.manege() : -1;
@@ -353,6 +361,35 @@ public final class ClientParc {
     /** Est-on passé par {@code cible} entre {@code a} et {@code b} (des distances qui ne font que croître) ? */
     private static boolean passe(Trajet t, double a, double b, double cible) {
         return Math.floor((b - cible) / t.total) > Math.floor((a - cible) / t.total);
+    }
+
+    private static Musique musique;
+
+    /** La valse d'orgue du parc, partout dans le parc, en boucle. */
+    private static final class Musique extends AbstractTickableSoundInstance {
+        Musique() {
+            super(Parc.MUSIQUE.get(), SoundSource.RECORDS, SoundInstance.createUnseededRandom());
+            looping = true;
+            delay = 0;
+            volume = 0.55F;
+            relative = true;
+            attenuation = SoundInstance.Attenuation.NONE;
+        }
+
+        @Override
+        public void tick() {
+            if (!ici()) {
+                stop();
+            }
+        }
+    }
+
+    /** Au parc, les autres musiques du jeu se taisent : on n'entend que celle du parc. */
+    @SubscribeEvent
+    public static void autreMusique(net.neoforged.neoforge.client.event.sound.PlaySoundEvent event) {
+        if (ici() && event.getSound() != null && event.getSound().getSource() == SoundSource.MUSIC) {
+            event.setSound(null);
+        }
     }
 
     /** Le vent dans les oreilles, plus fort quand ça va vite. */

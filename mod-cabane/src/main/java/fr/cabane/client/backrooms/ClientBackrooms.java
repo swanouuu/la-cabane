@@ -72,6 +72,17 @@ public final class ClientBackrooms {
     private static DynamicTexture neige;
     private static final ModeleMonstres.Anim ANIM = new ModeleMonstres.Anim();
 
+    /** Le screamer de la Maison Hantée du parc : le même monstre qui se jette sur l'écran, sans « ATTRAPÉ » après. */
+    public static final int SCREAMER_PARC = 20;
+
+    /** Un screamer de la Maison Hantée (chez le joueur qui passe dans le tunnel des cris). */
+    public static void screamerParc(int s) {
+        genre = SCREAMER_PARC;
+        sorte = Monstre.Sorte.values()[Math.floorMod(s, Monstre.Sorte.values().length)];
+        debut = System.nanoTime();
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(Backrooms.CRIS.get(sorte).get(), 1F, 1F));
+    }
+
     /** Le serveur demande quelque chose à l'écran. */
     public static void ecran(Backrooms.Ecran p) {
         if (p.genre() == Backrooms.REPERE) {
@@ -92,7 +103,7 @@ public final class ClientBackrooms {
     }
 
     public static boolean screamerEnCours() {
-        return genre == Backrooms.SCREAMER || genre == Backrooms.SCREAMER_TEST;
+        return genre == Backrooms.SCREAMER || genre == Backrooms.SCREAMER_TEST || genre == SCREAMER_PARC;
     }
 
     /** Combien de temps dure chaque séquence (après quoi on la retire), en secondes. */
@@ -102,6 +113,7 @@ public final class ClientBackrooms {
             case Backrooms.ARRIVEE -> 2.7F;
             case Backrooms.SCREAMER -> (float) sorte.debut() + 4.6F;
             case Backrooms.SCREAMER_TEST -> (float) sorte.debut() + 3.4F;
+            case SCREAMER_PARC -> (float) sorte.debut() + 1.5F;
             case Backrooms.PIEGE -> 2.7F;
             case Backrooms.ASSOMME -> 3.2F;
             case Backrooms.FERMER -> 10;
@@ -266,7 +278,7 @@ public final class ClientBackrooms {
                 texte(g, font, Component.literal("Tu te réveilles ailleurs dans les backrooms."), w / 2F, h / 2F - 4, 1.1F, 0xBFB9A8,
                         fondu(t, 1.4F, 2.3F, 0.2F));
             }
-            case Backrooms.SCREAMER, Backrooms.SCREAMER_TEST -> screamer(g, mc, w, h, t, partiel);
+            case Backrooms.SCREAMER, Backrooms.SCREAMER_TEST, SCREAMER_PARC -> screamer(g, mc, w, h, t, partiel);
             default -> {
             }
         }
@@ -278,6 +290,10 @@ public final class ClientBackrooms {
         float d0 = (float) sorte.debut();
         boolean enJeu = genre == Backrooms.SCREAMER;
         if (t > d0 + 1.45F) {
+            if (genre == SCREAMER_PARC) {
+                // la Maison Hantée : il disparaît d'un coup, on se retrouve dans le tunnel
+                return;
+            }
             if (enJeu && t > d0 + 4.2F) {
                 // il se réveille ailleurs : les yeux se rouvrent
                 paupieres(g, w, h, ouverture(t));

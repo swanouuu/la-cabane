@@ -30,7 +30,7 @@ import net.minecraft.world.phys.Vec3;
 public class AutoParc extends Entity {
     private static final EntityDataAccessor<Byte> COULEUR = SynchedEntityData.defineId(AutoParc.class, EntityDataSerializers.BYTE);
     /** La piste (le centre et les demi-côtés, en blocs) : pour les autos qui roulent seules. */
-    public static final double PISTE_X = -35, PISTE_Z = 80, PISTE_W = 18, PISTE_D = 12;
+    public static final double PISTE_X = -38, PISTE_Z = 80, PISTE_W = 22, PISTE_D = 14;
     private static final double RAYON = 1.45;
 
     private int lerpPas;

@@ -393,14 +393,15 @@ final class DecorParc {
 
     static void ecran(PoseStack ps, Vec3 cam, MultiBufferSource.BufferSource buf) {
         ResourceLocation tex = ClientPhoto.texture();
-        if (tex == null || !pres(cam, -49, 49, 64)) {
+        if (tex == null || !pres(cam, fr.cabane.parc.ParcBuilder2.KIOSQUE_X, fr.cabane.parc.ParcBuilder2.KIOSQUE_Z, 64)) {
             return;
         }
         VertexConsumer v = buf.getBuffer(RenderType.entityCutoutNoCull(tex));
         PoseStack.Pose pose = ps.last();
         Matrix4f m = pose.pose();
-        float x = (float) (-47.93 - cam.x), y0 = (float) (SOL + 1.2 - cam.y), y1 = (float) (SOL + 4.5 - cam.y);
-        float z0 = (float) (47.3 - cam.z), z1 = (float) (51.7 - cam.z);
+        int kx = fr.cabane.parc.ParcBuilder2.KIOSQUE_X, kz = fr.cabane.parc.ParcBuilder2.KIOSQUE_Z;
+        float x = (float) (kx + 1.07 - cam.x), y0 = (float) (SOL + 1.2 - cam.y), y1 = (float) (SOL + 4.5 - cam.y);
+        float z0 = (float) (kz - 1.7 - cam.z), z1 = (float) (kz + 2.7 - cam.z);
         float[][] coins = {{z1, y0, 0, 1}, {z0, y0, 1, 1}, {z0, y1, 1, 0}, {z1, y1, 0, 0}};
         for (float[] k : coins) {
             v.addVertex(m, x, k[1], k[0]).setColor(1F, 1F, 1F, 1F).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(Boites.PLEIN)

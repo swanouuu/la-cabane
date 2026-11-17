@@ -138,7 +138,7 @@ public class NacelleParc extends Entity {
             case Tournants.ROUE -> new AABB(x - 1.4, y - 4.1, z - 1.3, x + 1.4, y - 0.4, z + 1.3);
             case Tournants.CARROUSEL -> new AABB(x - 0.7, y - 0.8, z - 0.7, x + 0.7, y + 1.4, z + 0.7);
             case Tournants.TASSES -> new AABB(x - 1.4, y, z - 1.4, x + 1.4, y + 1.5, z + 1.4);
-            case Tournants.BATEAU -> new AABB(x - 10.5, y - 16.5, z - 3.5, x + 10.5, y - 10.5, z + 3.5);
+            case Tournants.BATEAU -> new AABB(x - 12.6, y - 19.8, z - 4.2, x + 12.6, y - 12.6, z + 4.2);
             default -> new AABB(x - 6, y - 0.6, z - 1, x + 6, y + 2.4, z + 1);
         };
     }
@@ -215,8 +215,8 @@ public class NacelleParc extends Entity {
             }
             case Tournants.BATEAU -> {
                 x = Math.max(Tournants.BATEAU_X - 4, Math.min(Tournants.BATEAU_X + 4, t.x));
-                y = Maneges.SOL + 5;
-                z = Tournants.BATEAU_Z + 5;
+                y = Maneges.SOL + 6;
+                z = Tournants.BATEAU_Z + 5.6;
             }
             case Tournants.TOUPIE -> {
                 x = t.x;

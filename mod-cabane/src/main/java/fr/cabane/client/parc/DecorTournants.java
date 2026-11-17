@@ -112,8 +112,8 @@ final class DecorTournants {
         int l = lum(mc, cx + 10, SOL + 1, cz);
         for (int i = 0; i < 4; i++) {
             float[][] r = lacet(th + i * Math.PI / 8);
-            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 0.22, 0, 8.6F, 0.17F, 8.6F, 0xF6E7C8, l);
-            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 7.6, 0, 9.4F, 0.4F, 9.4F, 0xE8333F, l);
+            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 0.22, 0, 10.3F, 0.17F, 10.3F, 0xF6E7C8, l);
+            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 7.6, 0, 11.3F, 0.4F, 11.3F, 0xE8333F, l);
         }
         for (int i = 0; i < 2; i++) {
             float[][] r = lacet(th + i * Math.PI / 4);
@@ -127,11 +127,11 @@ final class DecorTournants {
         for (int k = 0; k < 32; k++) {
             float[][] r = lacet(th + k * TAU / 32);
             boolean allume = ((k & 1) == 0) == on;
-            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 7.6, 9.75, 0.15F, 0.15F, 0.15F, allume ? 0xFFE9A8 : 0xFFFFFF, allume ? Boites.PLEIN : l);
+            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 7.6, 11.7, 0.15F, 0.15F, 0.15F, allume ? 0xFFE9A8 : 0xFFFFFF, allume ? Boites.PLEIN : l);
         }
         // le toit rayé rouge et blanc, en gradins
         for (int k = 0; k < 6; k++) {
-            double rr = 9.6 * (1 - k / 6.5);
+            double rr = 11.5 * (1 - k / 6.5);
             for (int s = 0; s < 16; s++) {
                 float[][] r = lacet(th + s * TAU / 16);
                 boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 8.3 + k * 0.6, rr / 2, (float) (rr * Math.tan(Math.PI / 16) + 0.06), 0.3F, (float) rr / 2,
@@ -149,20 +149,20 @@ final class DecorTournants {
         int l = lum(mc, cx + 12, SOL + 1, cz);
         for (int i = 0; i < 4; i++) {
             float[][] r = lacet(g + i * Math.PI / 8);
-            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 0.47, 0, 10.8F, 0.08F, 10.8F, 0xC9B6F2, l);
+            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 0.47, 0, 13F, 0.08F, 13F, 0xC9B6F2, l);
         }
         boolean on = ((int) Math.floor(monde * 2) & 1) == 0;
         for (int k = 0; k < 24; k++) {
             float[][] r = lacet(g + k * TAU / 24);
             boolean allume = ((k & 1) == 0) == on;
-            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 0.62, 10.7, 0.25F, 0.08F, 0.25F, allume ? 0xFF8FB1 : 0xFFFFFF, allume ? Boites.PLEIN : l);
+            boite(c, pose, cam, cx, SOL, cz, r[0], r[1], r[2], 0, 0.62, 12.9, 0.25F, 0.08F, 0.25F, allume ? 0xFF8FB1 : 0xFFFFFF, allume ? Boites.PLEIN : l);
         }
         int[] couleurs = {0xFFD1E3, 0xD1FFF0, 0xFFF4C2};
         for (int i = 0; i < 3; i++) {
-            double a = i * TAU / 3 + g, px = cx + Math.cos(a) * 6.3, pz = cz + Math.sin(a) * 6.3;
+            double a = i * TAU / 3 + g, px = cx + Math.cos(a) * Tournants.TASSES_R1, pz = cz + Math.sin(a) * Tournants.TASSES_R1;
             for (int j = 0; j < 4; j++) {
                 float[][] r = lacet(p + j * Math.PI / 8);
-                boite(c, pose, cam, px, SOL, pz, r[0], r[1], r[2], 0, 0.68, 0, 4.1F, 0.1F, 4.1F, couleurs[i], l);
+                boite(c, pose, cam, px, SOL, pz, r[0], r[1], r[2], 0, 0.68, 0, 4.9F, 0.1F, 4.9F, couleurs[i], l);
             }
         }
     }

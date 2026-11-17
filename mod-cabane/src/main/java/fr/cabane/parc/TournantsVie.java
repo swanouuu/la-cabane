@@ -115,8 +115,13 @@ final class TournantsVie {
             for (NacelleParc n : nacelles) {
                 n.setLibre(true);
             }
+            // le manège ne part pas à vide : le compte à rebours ne commence que quand quelqu'un est monté
+            if (!monde()) {
+                attente = Math.max(attente, fiche.attente() * 20);
+                return;
+            }
             attente--;
-            if (attente > 0 && attente % 20 == 0 && monde()) {
+            if (attente > 0 && attente % 20 == 0) {
                 message(Component.literal("Départ dans " + attente / 20 + " s").withStyle(ChatFormatting.YELLOW));
             }
             if (attente <= 0) {
@@ -141,7 +146,7 @@ final class TournantsVie {
                 level.playSound(null, n.getX(), n.getY(), n.getZ(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.NEUTRAL, 2F, 0.6F);
                 message(Component.literal("…").withStyle(ChatFormatting.GRAY));
             }
-            if (avant < 18.4 && t >= 18.4) {
+            if (avant < 18.6 && t >= 18.6) {
                 level.playSound(null, n.getX(), n.getY(), n.getZ(), SoundEvents.PISTON_CONTRACT, SoundSource.NEUTRAL, 2F, 0.5F);
             }
         }
@@ -184,7 +189,7 @@ final class TournantsVie {
         // les autos-tamponneuses, rangées sur deux lignes au départ
         for (int k = 0; k < AUTOS.length; k++) {
             if (AUTOS[k] == null || AUTOS[k].isRemoved()) {
-                double x = AutoParc.PISTE_X - 12 + (k % 5) * 6, z = AutoParc.PISTE_Z + (k < 5 ? -5 : 5);
+                double x = AutoParc.PISTE_X - 14 + (k % 5) * 7, z = AutoParc.PISTE_Z + (k < 5 ? -6 : 6);
                 AutoParc a = AutoParc.creer(parc, k, x, z, k < 5 ? 0F : 180F);
                 a.addTag(ParcBuilder.TAG);
                 parc.addFreshEntity(a);

@@ -27,9 +27,12 @@ import net.minecraft.world.level.block.state.properties.SlabType;
  * Hantée (couloir aux bougies, galerie des portraits, tunnel des cris, cimetière). Les rails, la goulotte du Splash,
  * les étoiles, les fantômes et les screamers sont dessinés par le client ; ici on ne pose que les blocs.
  */
-final class ParcBuilder2 {
+public final class ParcBuilder2 {
     private static final int SOL = Maneges.SOL;
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
+    /** Le kiosque des photos de la Rivière Splash (le bloc du coin est de son mur). */
+    public static final int KIOSQUE_X = -50, KIOSQUE_Z = 38;
 
     private final ParcBuilder b;
     private final ServerLevel level;
@@ -170,10 +173,10 @@ final class ParcBuilder2 {
     }
 
     private void chemins() {
-        double[] m = anneau(-40, -24), c = anneau(10, -25);
-        route(m[0], m[1], -40, -24, -60, -40);
-        route(c[0], c[1], 10, -25, 25, -26);
-        route(-6, 58, -52, 58, -55, 53);
+        double[] m = anneau(-40, -24), c = anneau(10, -22);
+        route(m[0], m[1], -40, -24, -48, -40);
+        route(c[0], c[1], 10, -22, 25, -19);
+        route(-6, 58, -50, 58, -57, 49);
         route(-6, 102, -76, 102, -76, 120, -97, 120);
     }
 
@@ -190,17 +193,18 @@ final class ParcBuilder2 {
         }
         // la montagne : une grosse colline de pierre, herbue en bas, creuse là où passe le rail
         double cx = Maneges.MINE_X, cz = Maneges.MINE_Z;
-        for (int x = (int) cx - 40; x <= cx + 40; x++) {
-            for (int z = (int) cz - 40; z <= cz + 40; z++) {
-                double d = Math.hypot(x + 0.5 - cx, z + 0.5 - cz) / 37;
+        double rm = 37 * Maneges.MINE_S;
+        for (int x = (int) (cx - rm - 3); x <= cx + rm + 3; x++) {
+            for (int z = (int) (cz - rm - 3); z <= cz + rm + 3; z++) {
+                double d = Math.hypot(x + 0.5 - cx, z + 0.5 - cz) / rm;
                 if (d >= 1) {
                     continue;
                 }
                 // l'allée qui monte à la gare reste libre
-                if (distanceSegment(x + 0.5, z + 0.5, -40, -24, -60, -40) < 4) {
+                if (distanceSegment(x + 0.5, z + 0.5, -40, -24, -48, -40) < 4) {
                     continue;
                 }
-                int h = (int) Math.round(36 * (1 - Math.pow(d, 1.7)) + (bruit(x >> 1, z >> 1) - 0.5) * 5);
+                int h = (int) Math.round(36 * Maneges.MINE_S * (1 - Math.pow(d, 1.7)) + (bruit(x >> 1, z >> 1) - 0.5) * 5);
                 double proche = 1e9;
                 double[] e = null;
                 for (double[] q : ech) {
@@ -374,9 +378,10 @@ final class ParcBuilder2 {
     private void splash() {
         double cx = Maneges.SPLASH_X, cz = Maneges.SPLASH_Z;
         // le lac
-        for (int x = (int) cx - 40; x <= cx + 40; x++) {
-            for (int z = (int) cz - 33; z <= cz + 33; z++) {
-                double e = Math.pow((x + 0.5 - cx) / 38, 2) + Math.pow((z + 0.5 - cz) / 31, 2);
+        double la = 38 * Maneges.SPLASH_S, lb = 31 * Maneges.SPLASH_S;
+        for (int x = (int) (cx - la - 2); x <= cx + la + 2; x++) {
+            for (int z = (int) (cz - lb - 2); z <= cz + lb + 2; z++) {
+                double e = Math.pow((x + 0.5 - cx) / la, 2) + Math.pow((z + 0.5 - cz) / lb, 2);
                 if (e > 1) {
                     continue;
                 }
@@ -389,7 +394,7 @@ final class ParcBuilder2 {
                 b.bloc(x, -1, z, Blocks.WATER);
             }
         }
-        b.occuper(cx, cz, 38);
+        b.occuper(cx, cz, la);
         Trajet t = Maneges.trajet(Maneges.SPLASH);
         Point p = new Point();
         // les pilotis sous la goulotte, là où elle est en l'air : un poteau au milieu, qui s'arrête sous le bois
@@ -478,7 +483,7 @@ final class ParcBuilder2 {
         b.bloc(px, 4, pz, Blocks.BLACK_CONCRETE);
         a(ap[2], ap[3], ap[4], Blocks.GRAY_CONCRETE.defaultBlockState());
         // le kiosque des photos, à la sortie (l'écran est dessiné par le client)
-        int kx = -49, kz = 49;
+        int kx = KIOSQUE_X, kz = KIOSQUE_Z;
         b.remplir(kx - 2, 0, kz - 3, kx, 4, kz + 3, Blocks.WHITE_TERRACOTTA);
         b.remplir(kx - 3, 5, kz - 4, kx + 1, 5, kz + 4, Blocks.BLUE_CONCRETE);
         b.remplir(kx + 1, 0, kz - 3, kx + 1, 0, kz + 3, Blocks.BLUE_CONCRETE);
@@ -728,7 +733,7 @@ final class ParcBuilder2 {
             b.employe(p.x + g[0] * 2.4, Math.max(Math.floor(p.y + 0.05), SOL) - SOL, p.z + g[1] * 2.4, lisibleDepuis(-g[0], -g[1]));
         }
         // la photographe du kiosque, et un guide devant la maison hantée
-        b.employe(-47.5, 0, 47.2, -90F);
+        b.employe(KIOSQUE_X + 1.5, 0, KIOSQUE_Z - 1.8, -90F);
         b.employe(Maneges.MAISON_X + 0.5, 0, Maneges.MAISON_Z + 13.5, 0F);
         // des promeneurs sur les nouvelles allées
         for (int k = 0; k < 6; k++) {
@@ -744,7 +749,7 @@ final class ParcBuilder2 {
             b.promeneur(12 + b.alea() * 10, -25, 6);
         }
         for (int k = 0; k < 3; k++) {
-            b.promeneur(-53 + b.alea() * 3, 53 - b.alea() * 6, 4);
+            b.promeneur(KIOSQUE_X + 3 + b.alea() * 3, KIOSQUE_Z - 2 + b.alea() * 5, 4);
         }
     }
 }

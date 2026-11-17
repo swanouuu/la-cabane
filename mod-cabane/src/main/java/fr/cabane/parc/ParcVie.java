@@ -68,11 +68,16 @@ final class ParcVie {
             double dt = 0.05;
             trajet.a(s, tete);
             if (attente > 0) {
-                attente--;
                 v = 0;
                 boolean monde = false;
                 for (WagonParc w : wagons) {
                     monde |= w.isVehicle();
+                }
+                // le train ne part pas à vide : le compte à rebours ne commence que quand quelqu'un est monté
+                if (!monde) {
+                    attente = Math.max(attente, fiche.attente());
+                } else {
+                    attente--;
                 }
                 if (monde && attente % 20 == 0 && attente > 0) {
                     for (WagonParc w : wagons) {

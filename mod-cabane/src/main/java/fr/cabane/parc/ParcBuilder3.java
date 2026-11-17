@@ -102,7 +102,7 @@ final class ParcBuilder3 {
         double[] t = anneau(-30, -34), ba = anneau(-30, 24), tp = anneau(38, 18);
         route(t[0], t[1], -30, -34);
         route(ba[0], ba[1], -30, 24, -40, 23);
-        route(tp[0], tp[1], 38, 18, 39, 29);
+        route(tp[0], tp[1], 38, 18, 40, 29);
         route(5, 76, 45, 76, 45, 79);
         route(-6, 35, -14, 35);
         route(5, 35, 12, 35);
@@ -113,26 +113,29 @@ final class ParcBuilder3 {
 
     private void tour() {
         double cx = Tournants.TOUR_X, cz = Tournants.TOUR_Z;
-        disque(cx, cz, 9.4, 0.9, Blocks.SMOOTH_STONE, Blocks.POLISHED_ANDESITE);
+        disque(cx, cz, 11, 0.9, Blocks.SMOOTH_STONE, Blocks.POLISHED_ANDESITE);
         // la barrière jaune tout autour (ouverte au sud)
         for (int k = 0; k < 24; k++) {
             double an = k * Math.PI * 2 / 24;
             if (Math.abs(an - Math.PI / 2) < 0.3) {
                 continue;
             }
-            a(cx + Math.cos(an) * 9, SOL, cz + Math.sin(an) * 9, Blocks.YELLOW_CONCRETE.defaultBlockState());
+            a(cx + Math.cos(an) * 10.6, SOL, cz + Math.sin(an) * 10.6, Blocks.YELLOW_CONCRETE.defaultBlockState());
         }
         // le fût rayé rouge et blanc, le chapeau, l'antenne et ses lumières
         int x0 = (int) cx - 2, z0 = (int) cz - 2;
-        for (int y = 0; y < 72; y++) {
+        int H = Tournants.TOUR_H;
+        // l'ancien chapeau (la tour faisait 72 blocs) est plus haut que le nettoyage du parc : on l'efface
+        b.remplir(x0 - 1, 60, z0 - 1, x0 + 4, H + 8, z0 + 4, Blocks.AIR);
+        for (int y = 0; y < H; y++) {
             b.remplir(x0, y, z0, x0 + 3, y, z0 + 3, (y / 4) % 2 == 0 ? Blocks.RED_CONCRETE : Blocks.WHITE_CONCRETE);
         }
-        b.remplir(x0 - 1, 72, z0 - 1, x0 + 4, 72, z0 + 4, Blocks.CYAN_CONCRETE);
+        b.remplir(x0 - 1, H, z0 - 1, x0 + 4, H, z0 + 4, Blocks.CYAN_CONCRETE);
         for (int[] c : new int[][]{{x0 - 1, z0 - 1}, {x0 + 4, z0 - 1}, {x0 - 1, z0 + 4}, {x0 + 4, z0 + 4}}) {
-            b.bloc(c[0], 73, c[1], Blocks.GLOWSTONE);
+            b.bloc(c[0], H + 1, c[1], Blocks.GLOWSTONE);
         }
-        b.remplir(x0 + 1, 73, z0 + 1, x0 + 1, 77, z0 + 1, Blocks.WHITE_CONCRETE);
-        b.bloc(x0 + 1, 78, z0 + 1, Blocks.SHROOMLIGHT);
+        b.remplir(x0 + 1, H + 1, z0 + 1, x0 + 1, H + 5, z0 + 1, Blocks.WHITE_CONCRETE);
+        b.bloc(x0 + 1, H + 6, z0 + 1, Blocks.SHROOMLIGHT);
         b.texte(cx, 6.5, z0 + 4.05, 0F, ParcBuilder.json("LA CHUTE", "#ffffff"), 2.2F, 0xEEE8333F);
     }
 
@@ -142,9 +145,9 @@ final class ParcBuilder3 {
         double cx = Tournants.ROUE_X, cz = Tournants.ROUE_Z, cy = Tournants.ROUE_Y - SOL;
         for (int sz = -1; sz <= 1; sz += 2) {
             for (int sx = -1; sx <= 1; sx += 2) {
-                poutre(cx + sx * 11, 0, cz + sz * 5.5, cx + sx * 0.6, cy, cz + sz * 3.2, Blocks.WHITE_CONCRETE);
+                poutre(cx + sx * 13, 0, cz + sz * 6.6, cx + sx * 0.7, cy, cz + sz * 3.2, Blocks.WHITE_CONCRETE);
             }
-            poutre(cx - 6, 12, cz + sz * 4.4, cx + 6, 12, cz + sz * 4.4, Blocks.WHITE_CONCRETE);
+            poutre(cx - 7, 14, cz + sz * 4.7, cx + 7, 14, cz + sz * 4.7, Blocks.WHITE_CONCRETE);
         }
         poutre(cx, cy - 0.6, cz - 3.4, cx, cy - 0.6, cz + 3.4, Blocks.IRON_BLOCK);
         // le quai (deux blocs de haut) et ses marches, côté allée
@@ -157,20 +160,20 @@ final class ParcBuilder3 {
             b.bloc(x, 0, z0 - 2, Blocks.SMOOTH_SANDSTONE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM));
         }
         b.texte(cx + 4.5, 0.55, z0 - 0.05, 180F, ParcBuilder.json("GRANDE ROUE", "#ffffff"), 1.3F, 0xEEFF5C8A);
-        b.occuper(cx, cz, 14);
+        b.occuper(cx, cz, 16);
     }
 
     // ================================================================== le Carrousel et les Tasses
 
     private void carrousel() {
         double cx = Tournants.CARROUSEL_X, cz = Tournants.CARROUSEL_Z;
-        disque(cx, cz, 9.6, 0.8, Blocks.SMOOTH_SANDSTONE, Blocks.POLISHED_DIORITE);
-        pancarte((int) cx + 11, (int) cz - 4, 1, 0, "LE CARROUSEL", "#ffffff", 0xEEE8B800);
+        disque(cx, cz, 11.5, 0.8, Blocks.SMOOTH_SANDSTONE, Blocks.POLISHED_DIORITE);
+        pancarte((int) cx + 13, (int) cz - 4, 1, 0, "LE CARROUSEL", "#ffffff", 0xEEE8B800);
     }
 
     private void tasses() {
         double cx = Tournants.TASSES_X, cz = Tournants.TASSES_Z;
-        disque(cx, cz, 11.8, 0.8, Blocks.WHITE_CONCRETE, Blocks.PINK_TERRACOTTA);
+        disque(cx, cz, 14.2, 0.8, Blocks.WHITE_CONCRETE, Blocks.PINK_TERRACOTTA);
         // la grosse théière au milieu : un ventre blanc, un couvercle rose, un bec et une anse
         for (int x = -3; x <= 3; x++) {
             for (int z = -3; z <= 3; z++) {
@@ -186,7 +189,7 @@ final class ParcBuilder3 {
         b.bloc((int) cx, 5, (int) cz, Blocks.YELLOW_CONCRETE);
         poutre(cx + 2.2, 2.6, cz + 0.5, cx + 3.9, 4.2, cz + 0.5, Blocks.WHITE_CONCRETE);
         b.remplir((int) cx - 3, 3, (int) cz, (int) cx - 3, 3, (int) cz, Blocks.WHITE_CONCRETE);
-        pancarte((int) cx - 13, (int) cz - 4, -1, 0, "LES TASSES FOLLES", "#ffffff", 0xEEFF8FB1);
+        pancarte((int) cx - 16, (int) cz - 4, -1, 0, "LES TASSES FOLLES", "#ffffff", 0xEEFF8FB1);
     }
 
     // ================================================================== le Bateau Pirate
@@ -194,8 +197,8 @@ final class ParcBuilder3 {
     private void bateau() {
         double cx = Tournants.BATEAU_X, cz = Tournants.BATEAU_Z, cy = Tournants.BATEAU_Y - SOL;
         // le bassin
-        for (int x = (int) cx - 12; x <= cx + 11; x++) {
-            for (int z = (int) cz - 6; z <= cz + 6; z++) {
+        for (int x = (int) cx - 14; x <= cx + 14; x++) {
+            for (int z = (int) cz - 8; z <= cz + 8; z++) {
                 b.bloc(x, -2, z, Blocks.SAND);
                 b.bloc(x, -1, z, Blocks.WATER);
             }
@@ -203,28 +206,28 @@ final class ParcBuilder3 {
         // le portique en bois et l'axe
         for (int sz = -1; sz <= 1; sz += 2) {
             for (int sx = -1; sx <= 1; sx += 2) {
-                poutre(cx + sx * 9, 0, cz + sz * 5.8, cx, cy + 0.4, cz + sz * 4.6, Blocks.STRIPPED_SPRUCE_LOG);
+                poutre(cx + sx * 10.8, 0, cz + sz * 7.0, cx, cy + 0.4, cz + sz * 5.5, Blocks.STRIPPED_SPRUCE_LOG);
             }
-            poutre(cx - 5, 8, cz + sz * 5.3, cx + 5, 8, cz + sz * 5.3, Blocks.STRIPPED_SPRUCE_LOG);
+            poutre(cx - 6, 9.6, cz + sz * 6.4, cx + 6, 9.6, cz + sz * 6.4, Blocks.STRIPPED_SPRUCE_LOG);
         }
-        poutre(cx, cy - 0.5, cz - 4.6, cx, cy - 0.5, cz + 4.6, Blocks.IRON_BLOCK);
+        poutre(cx, cy - 0.5, cz - 5.5, cx, cy - 0.5, cz + 5.5, Blocks.IRON_BLOCK);
         // la passerelle pour monter à bord, et son escalier
-        int px0 = (int) cx - 5, pz = (int) cz + 4;
-        b.remplir(px0, 0, pz, px0 + 10, 4, pz + 1, Blocks.SPRUCE_PLANKS);
+        int px0 = (int) cx - 5, pz = (int) cz + 5;
+        b.remplir(px0, 0, pz, px0 + 10, 5, pz + 1, Blocks.SPRUCE_PLANKS);
         for (int x = px0; x <= px0 + 10; x++) {
-            b.bloc(x, 5, pz + 1, Blocks.SPRUCE_FENCE);
+            b.bloc(x, 6, pz + 1, Blocks.SPRUCE_FENCE);
         }
-        for (int k = 0; k < 5; k++) {
+        for (int k = 0; k < 6; k++) {
             for (int x = (int) cx - 1; x <= cx + 1; x++) {
-                if (k < 4) {
-                    b.remplir(x, 0, pz + 2 + k, x, 3 - k, pz + 2 + k, Blocks.SPRUCE_PLANKS);
+                if (k < 5) {
+                    b.remplir(x, 0, pz + 2 + k, x, 4 - k, pz + 2 + k, Blocks.SPRUCE_PLANKS);
                 }
-                b.bloc(x, 4 - k, pz + 2 + k, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH));
+                b.bloc(x, 5 - k, pz + 2 + k, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH));
             }
         }
-        b.remplir((int) cx - 1, 5, pz + 1, (int) cx + 1, 5, pz + 1, Blocks.AIR);
-        b.texte(cx + 0.5, cy + 3, cz + 6.2, 0F, ParcBuilder.json("LE BATEAU PIRATE", "#ffd23f"), 2.4F, 0xEE5A3418);
-        b.occuper(cx, cz, 16);
+        b.remplir((int) cx - 1, 6, pz + 1, (int) cx + 1, 6, pz + 1, Blocks.AIR);
+        b.texte(cx + 0.5, cy + 3, cz + 7.6, 0F, ParcBuilder.json("LE BATEAU PIRATE", "#ffd23f"), 2.4F, 0xEE5A3418);
+        b.occuper(cx, cz, 19);
     }
 
     // ================================================================== la Toupie
@@ -232,9 +235,9 @@ final class ParcBuilder3 {
     private void toupie() {
         int cx = (int) Tournants.TOUPIE_X, cz = (int) Tournants.TOUPIE_Z;
         int pivot = (int) (Tournants.TOUPIE_Y - SOL);
-        b.remplir(cx - 9, -1, cz - 9, cx + 9, -1, cz + 9, Blocks.POLISHED_BLACKSTONE);
-        for (int x = cx - 9; x <= cx + 9; x++) {
-            b.bloc(x, -1, cz + 9, (x & 1) == 0 ? Blocks.YELLOW_CONCRETE : Blocks.BLACK_CONCRETE);
+        b.remplir(cx - 11, -1, cz - 11, cx + 11, -1, cz + 11, Blocks.POLISHED_BLACKSTONE);
+        for (int x = cx - 11; x <= cx + 11; x++) {
+            b.bloc(x, -1, cz + 11, (x & 1) == 0 ? Blocks.YELLOW_CONCRETE : Blocks.BLACK_CONCRETE);
         }
         // les deux tours, le néon en haut, l'axe entre elles
         for (int sx : new int[]{-1, 1}) {
@@ -246,17 +249,17 @@ final class ParcBuilder3 {
         b.texte(cx - 7.5, pivot + 1.4, cz + 2.05, 0F, ParcBuilder.json("LA TOUPIE", "#00f0ff"), 1.6F, 0xEE2A2A3A);
         b.texte(cx + 8.5, pivot + 1.4, cz + 2.05, 0F, ParcBuilder.json("LA TOUPIE", "#00f0ff"), 1.6F, 0xEE2A2A3A);
         // la grille autour (ouverte au sud)
-        for (int x = cx - 10; x <= cx + 10; x++) {
-            b.bloc(x, 0, cz - 10, Blocks.IRON_BARS);
+        for (int x = cx - 12; x <= cx + 12; x++) {
+            b.bloc(x, 0, cz - 12, Blocks.IRON_BARS);
             if (Math.abs(x - cx) > 3) {
-                b.bloc(x, 0, cz + 10, Blocks.IRON_BARS);
+                b.bloc(x, 0, cz + 12, Blocks.IRON_BARS);
             }
         }
-        for (int z = cz - 10; z <= cz + 10; z++) {
-            b.bloc(cx - 10, 0, z, Blocks.IRON_BARS);
-            b.bloc(cx + 10, 0, z, Blocks.IRON_BARS);
+        for (int z = cz - 12; z <= cz + 12; z++) {
+            b.bloc(cx - 12, 0, z, Blocks.IRON_BARS);
+            b.bloc(cx + 12, 0, z, Blocks.IRON_BARS);
         }
-        b.occuper(cx, cz, 12);
+        b.occuper(cx, cz, 14);
     }
 
     // ================================================================== les autos-tamponneuses
@@ -284,7 +287,7 @@ final class ParcBuilder3 {
             b.bloc(x1 + 1, 0, z, (z & 1) == 0 ? Blocks.YELLOW_CONCRETE : Blocks.BLACK_CONCRETE);
         }
         // les piliers rouges, le toit, ses rayures et ses lumières de couleur
-        for (int x : new int[]{x0 - 1, cx - 6, cx + 6, x1 + 1}) {
+        for (int x : new int[]{x0 - 1, cx - 7, cx + 7, x1 + 1}) {
             for (int z : new int[]{z0 - 1, z1 + 1}) {
                 b.remplir(x, 0, z, x, 7, z, Blocks.RED_CONCRETE);
             }
@@ -313,13 +316,13 @@ final class ParcBuilder3 {
     // ================================================================== les gens
 
     private void gens() {
-        b.employe(Tournants.TOUR_X + 5.5, 0, Tournants.TOUR_Z + 8.5, 160F);
+        b.employe(Tournants.TOUR_X + 6.5, 0, Tournants.TOUR_Z + 10.5, 160F);
         b.employe(Tournants.ROUE_X + 4.5, 2, Tournants.ROUE_Z - 2.5, 90F);
-        b.employe(Tournants.CARROUSEL_X + 10.5, 0, Tournants.CARROUSEL_Z - 2.5, 90F);
-        b.employe(Tournants.TASSES_X - 12.5, 0, Tournants.TASSES_Z - 2.5, -90F);
-        b.employe(Tournants.BATEAU_X - 3.5, 5, Tournants.BATEAU_Z + 4.5, 180F);
-        b.employe(Tournants.TOUPIE_X - 8.5, 0, Tournants.TOUPIE_Z + 7.5, -90F);
-        b.employe(AutoParc.PISTE_X + 21.5, 0, AutoParc.PISTE_Z - 3.5, 90F);
+        b.employe(Tournants.CARROUSEL_X + 12.5, 0, Tournants.CARROUSEL_Z - 2.5, 90F);
+        b.employe(Tournants.TASSES_X - 15, 0, Tournants.TASSES_Z - 2.5, -90F);
+        b.employe(Tournants.BATEAU_X - 3.5, 6, Tournants.BATEAU_Z + 5.5, 180F);
+        b.employe(Tournants.TOUPIE_X - 10.5, 0, Tournants.TOUPIE_Z + 9.5, -90F);
+        b.employe(AutoParc.PISTE_X + AutoParc.PISTE_W + 3.5, 0, AutoParc.PISTE_Z - 3.5, 90F);
         for (int k = 0; k < 5; k++) {
             b.promeneur(-14 - b.alea() * 6, 30 + b.alea() * 10, 6);
             b.promeneur(14 + b.alea() * 6, 30 + b.alea() * 10, 6);

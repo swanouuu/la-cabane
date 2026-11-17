@@ -161,6 +161,8 @@ public class RenduNacelleParc extends EntityRenderer<NacelleParc> {
     }
 
     private static void bateau(VertexConsumer c, PoseStack ps, int lum) {
+        // le bateau a été agrandi comme les autres manèges
+        ps.scale((float) Tournants.S, (float) Tournants.S, (float) Tournants.S);
         int bois = 0x7A4A24, bois2 = 0x5A3418, rouge = 0xC0392B;
         for (int sz = -1; sz <= 1; sz += 2) {
             for (int sx = -1; sx <= 1; sx += 2) {
