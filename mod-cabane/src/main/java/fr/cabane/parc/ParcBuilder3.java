@@ -256,7 +256,10 @@ final class ParcBuilder3 {
             }
         }
         for (int z = cz - 12; z <= cz + 12; z++) {
-            b.bloc(cx - 12, 0, z, Blocks.IRON_BARS);
+            // une porte côté ouest, là où arrive l'allée
+            if (Math.abs(z - (cz + 4)) > 2) {
+                b.bloc(cx - 12, 0, z, Blocks.IRON_BARS);
+            }
             b.bloc(cx + 12, 0, z, Blocks.IRON_BARS);
         }
         b.occuper(cx, cz, 14);
