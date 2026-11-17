@@ -245,13 +245,13 @@ final class DecorParc {
         double dt = Mth.clamp(temps - tempsAvant, 0, 0.1);
         tempsAvant = temps;
         long now = maintenant();
-        if (pres(cam, Maneges.MINE_X, Maneges.MINE_Z, 90)) {
+        if (pres(cam, Maneges.MINE_X, Maneges.MINE_Z, 37 * Maneges.MINE_S + 30)) {
             mine(mc, c, pose, cam, temps, dt, now);
         }
-        if (pres(cam, Maneges.COSMOS_X, Maneges.COSMOS_Z, 60)) {
+        if (pres(cam, Maneges.COSMOS_X, Maneges.COSMOS_Z, Maneges.COSMOS_R + 20)) {
             cosmos(c, pose, cam, temps);
         }
-        if (pres(cam, Maneges.SPLASH_X, Maneges.SPLASH_Z, 120)) {
+        if (pres(cam, Maneges.SPLASH_X, Maneges.SPLASH_Z, 50 * Maneges.SPLASH_S + 60)) {
             float k = flashDepuis < 0 ? 0 : Math.max(0, 1 - (now - flashDepuis) / 300F);
             Repere r = debout(cam, Math.floor(photo[0]) + 0.5, SOL + 5.15, Math.floor(photo[1]) + 0.5, 1, 0, 1);
             r.pave(c, pose, -0.35F, 0, -0.25F, 0.35F, 0.25F, 0.25F, k > 0 ? 0xFFFFFF : 0x555555, k > 0 ? Boites.PLEIN : lumiere(mc, photo[0], SOL + 5, photo[1]));
@@ -342,9 +342,11 @@ final class DecorParc {
         }
         double cx = Maneges.COSMOS_X, cz = Maneges.COSMOS_Z;
         double[][] planetes = {{8, 17, 4, 2.6, 0xFF9A3C, 0xFFE2A8}, {-10, 14, -6, 1.4, 0x4DC9FF, 0}, {2, 20, -10, 0.9, 0xC77DFF, 0}, {-6, 18, 9, 1.8, 0x7BFF9B, 0x2A8A5A}};
+        // (les planètes ont été placées pour le dôme de départ : elles grandissent avec lui)
+        double k = Maneges.COSMOS_S / 1.2;
         for (double[] pl : planetes) {
-            Repere r = debout(cam, cx + pl[0], SOL + pl[1], cz + pl[2], Math.cos(temps * 0.1 + pl[0]), Math.sin(temps * 0.1 + pl[0]), 1);
-            float h = (float) pl[3];
+            Repere r = debout(cam, cx + pl[0] * k, SOL + pl[1] * k, cz + pl[2] * k, Math.cos(temps * 0.1 + pl[0]), Math.sin(temps * 0.1 + pl[0]), 1);
+            float h = (float) (pl[3] * k);
             r.pave(c, pose, -h, -h * 0.8F, -h * 0.8F, h, h * 0.8F, h * 0.8F, (int) pl[4], Boites.PLEIN);
             r.pave(c, pose, -h * 0.8F, -h, -h * 0.8F, h * 0.8F, h, h * 0.8F, (int) pl[4], Boites.PLEIN);
             r.pave(c, pose, -h * 0.8F, -h * 0.8F, -h, h * 0.8F, h * 0.8F, h, (int) pl[4], Boites.PLEIN);

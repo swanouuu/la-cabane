@@ -356,6 +356,10 @@ public final class ClientParc {
                     if (passe(t, avant, apres, DecorParc.sSquelette() - 4)) {
                         DecorParc.squelette();
                     }
+                    // le dernier coup de la Mine : un monstre des backrooms saute à l'écran de ceux qui sont dans ce wagon
+                    if (mc.player.getVehicle() == w && passe(t, avant, apres, DecorParc.sSquelette() + 1.5)) {
+                        fr.cabane.client.backrooms.ClientBackrooms.screamerParc(4);
+                    }
                 }
                 default -> {
                 }

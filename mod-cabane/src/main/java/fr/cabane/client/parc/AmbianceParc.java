@@ -307,9 +307,9 @@ public final class AmbianceParc {
             }
         }
         // le lac de la Rivière Splash
-        if (pres(j, Maneges.SPLASH_X, Maneges.SPLASH_Z, 70) && r.nextFloat() < 0.05F) {
+        if (pres(j, Maneges.SPLASH_X, Maneges.SPLASH_Z, 45 * Maneges.SPLASH_S) && r.nextFloat() < 0.05F) {
             double a = r.nextDouble() * Math.PI * 2;
-            son(mc, Maneges.SPLASH_X + Math.cos(a) * 40, sol, Maneges.SPLASH_Z + Math.sin(a) * 32, SoundEvents.WATER_AMBIENT, 1.2F, 0.7F + r.nextFloat() * 0.3F);
+            son(mc, Maneges.SPLASH_X + Math.cos(a) * 36 * Maneges.SPLASH_S, sol, Maneges.SPLASH_Z + Math.sin(a) * 29 * Maneges.SPLASH_S, SoundEvents.WATER_AMBIENT, 1.2F, 0.7F + r.nextFloat() * 0.3F);
         }
         // les stands : la friture qui grésille, le pop-corn qui éclate, les bouteilles des boissons
         for (int k = 0; k < Guirlandes.STANDS.length; k++) {
@@ -355,9 +355,9 @@ public final class AmbianceParc {
             }
         }
         // la Mine : la montagne qui goutte, et parfois un grondement de caverne
-        if (pres(j, Maneges.MINE_X, Maneges.MINE_Z, 62)) {
+        if (pres(j, Maneges.MINE_X, Maneges.MINE_Z, 37 * Maneges.MINE_S + 8)) {
             if (r.nextFloat() < 0.04F) {
-                son(mc, Maneges.MINE_X + r.nextGaussian() * 18, sol + 4, Maneges.MINE_Z + r.nextGaussian() * 18, SoundEvents.POINTED_DRIPSTONE_DRIP_WATER, 1F,
+                son(mc, Maneges.MINE_X + r.nextGaussian() * 14 * Maneges.MINE_S, sol + 4, Maneges.MINE_Z + r.nextGaussian() * 14 * Maneges.MINE_S, SoundEvents.POINTED_DRIPSTONE_DRIP_WATER, 1F,
                         0.8F + r.nextFloat() * 0.4F);
             }
             if (r.nextFloat() < 0.002F) {
@@ -365,7 +365,7 @@ public final class AmbianceParc {
             }
         }
         // le Cosmos : des carillons d'améthyste, comme des étoiles
-        if (pres(j, Maneges.COSMOS_X, Maneges.COSMOS_Z, 45) && r.nextFloat() < 0.05F) {
+        if (pres(j, Maneges.COSMOS_X, Maneges.COSMOS_Z, Maneges.COSMOS_R + 5) && r.nextFloat() < 0.05F) {
             son(mc, Maneges.COSMOS_X + r.nextGaussian() * 8, sol + 6 + r.nextFloat() * 10, Maneges.COSMOS_Z + r.nextGaussian() * 8,
                     SoundEvents.AMETHYST_BLOCK_CHIME, 1.2F, 0.6F + r.nextFloat() * 1.2F);
         }

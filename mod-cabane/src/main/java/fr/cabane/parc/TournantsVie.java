@@ -142,11 +142,11 @@ final class TournantsVie {
             }
             double avant = t - 0.05;
             NacelleParc n = nacelles[0];
-            if (avant < 16.4 && t >= 16.4) {
+            if (avant < Tournants.TOUR_LACHE - 0.6 && t >= Tournants.TOUR_LACHE - 0.6) {
                 level.playSound(null, n.getX(), n.getY(), n.getZ(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.NEUTRAL, 2F, 0.6F);
                 message(Component.literal("…").withStyle(ChatFormatting.GRAY));
             }
-            if (avant < 18.6 && t >= 18.6) {
+            if (avant < Tournants.TOUR_FREIN && t >= Tournants.TOUR_FREIN) {
                 level.playSound(null, n.getX(), n.getY(), n.getZ(), SoundEvents.PISTON_CONTRACT, SoundSource.NEUTRAL, 2F, 0.5F);
             }
         }

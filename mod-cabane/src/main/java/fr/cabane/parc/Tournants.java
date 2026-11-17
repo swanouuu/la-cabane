@@ -19,12 +19,12 @@ public final class Tournants {
     }
 
     private static final Fiche[] FICHES = {
-            new Fiche(TOUR, "La Tour de la Chute", 1, 22, 12, false),
+            new Fiche(TOUR, "La Tour de la Chute", 1, 30, 12, false),
             new Fiche(ROUE, "La Grande Roue", 16, 80, 0, false),
-            new Fiche(CARROUSEL, "Le Carrousel", 14, 40, 12, false),
-            new Fiche(TASSES, "Les Tasses Folles", 9, 40, 12, true),
-            new Fiche(BATEAU, "Le Bateau Pirate", 1, 39.6, 12, true),
-            new Fiche(TOUPIE, "La Toupie", 1, 36, 12, true),
+            new Fiche(CARROUSEL, "Le Carrousel", 14, 60, 12, false),
+            new Fiche(TASSES, "Les Tasses Folles", 9, 60, 12, true),
+            new Fiche(BATEAU, "Le Bateau Pirate", 1, 59.4, 12, true),
+            new Fiche(TOUPIE, "La Toupie", 1, 54, 12, true),
     };
 
     public static Fiche fiche(byte id) {
@@ -70,23 +70,26 @@ public final class Tournants {
         return Math.max(0, Math.min(1, Math.min(t / 3, (duree - t) / 3)));
     }
 
-    /** La hauteur de la nacelle de la Tour : la montée, l'attente en haut, la chute libre, le freinage. */
+    /** Quand la Tour lâche (secondes après le départ), et quand ses freins prennent. */
+    public static final double TOUR_LACHE = 23, TOUR_FREIN = TOUR_LACHE + 1.6;
+
+    /** La hauteur de la nacelle de la Tour : la montée (lente), la longue attente en haut, la chute libre, le freinage. */
     public static double hauteurTour(double t) {
         if (t < 3) {
             return 2;
         }
-        if (t < 14) {
-            return 2 + (TOUR_HAUT - 2) * lisse((t - 3) / 11);
+        if (t < 18) {
+            return 2 + (TOUR_HAUT - 2) * lisse((t - 3) / 15);
         }
-        if (t < 17) {
+        if (t < TOUR_LACHE) {
             return TOUR_HAUT;
         }
-        if (t < 18.6) {
-            double k = t - 17;
+        if (t < TOUR_FREIN) {
+            double k = t - TOUR_LACHE;
             return TOUR_HAUT - 26 * k * k;
         }
-        if (t < 20.6) {
-            double k = (t - 18.6) / 2;
+        if (t < TOUR_FREIN + 2) {
+            double k = (t - TOUR_FREIN) / 2;
             double bas = TOUR_HAUT - 26 * 1.6 * 1.6;
             return bas - (bas - 2) * (1 - (1 - k) * (1 - k));
         }
@@ -99,15 +102,15 @@ public final class Tournants {
     }
 
     public static double plateauCarrousel(double t) {
-        return TAU * 3 * rampe(t / fiche(CARROUSEL).duree);
+        return TAU * 5 * rampe(t / fiche(CARROUSEL).duree);
     }
 
     public static double grandPlateau(double t) {
-        return TAU * 2 * rampe(t / fiche(TASSES).duree);
+        return TAU * 3 * rampe(t / fiche(TASSES).duree);
     }
 
     public static double petitPlateau(double t) {
-        return -TAU * 6 * rampe(t / fiche(TASSES).duree);
+        return -TAU * 9 * rampe(t / fiche(TASSES).duree);
     }
 
     public static double balancement(double t) {
@@ -118,12 +121,12 @@ public final class Tournants {
     /** L'angle des bras de la Toupie, et celui de la nacelle (qui se retourne dans l'autre sens). */
     public static double brasToupie(double t) {
         double d = fiche(TOUPIE).duree, env = Math.sin(Math.PI * Math.max(0, Math.min(1, t / d)));
-        return TAU * 5 * rampe(t / d) + 1.6 * Math.sin(1.05 * t) * env;
+        return TAU * 7 * rampe(t / d) + 1.6 * Math.sin(1.05 * t) * env;
     }
 
     public static double nacelleToupie(double t) {
         double d = fiche(TOUPIE).duree, env = Math.sin(Math.PI * Math.max(0, Math.min(1, t / d)));
-        return -TAU * 4 * rampe(t / d) + (2.2 * Math.sin(0.7 * t) - 1.6 * Math.sin(1.05 * t)) * env;
+        return -TAU * 6 * rampe(t / d) + (2.2 * Math.sin(0.7 * t) - 1.6 * Math.sin(1.05 * t)) * env;
     }
 
     private static void poser(Trajet.Point o, double x, double y, double z, double ux, double uy, double uz, double fx, double fy, double fz) {

@@ -32,11 +32,11 @@ import net.minecraft.world.phys.Vec3;
  */
 final class ParcBuilder {
     /** À changer quand on modifie la construction : le parc se reconstruit à la visite suivante. */
-    static final int VERSION = 10;
+    static final int VERSION = 11;
     static final int SOL = Maneges.SOL;
     static final Vec3 ARRIVEE = new Vec3(0.5, SOL, 114.5);
     static final String TAG = "parc";
-    private static final int X0 = -152, X1 = 162, Z0 = -132, Z1 = 124, HAUT = 60;
+    private static final int X0 = -224, X1 = 166, Z0 = -184, Z1 = 124, HAUT = 80;
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     final ServerLevel level;
@@ -591,7 +591,7 @@ final class ParcBuilder {
 
     private void arbres() {
         int poses = 0;
-        for (int i = 0; i < 4000 && poses < 170; i++) {
+        for (int i = 0; i < 9000 && poses < 300; i++) {
             double x = X0 + 4 + alea() * (X1 - X0 - 8), z = Z0 + 4 + alea() * (Z1 - Z0 - 8);
             if (!libre(x, z) || !libre(x + 3, z) || !libre(x - 3, z) || !libre(x, z + 3) || !libre(x, z - 3)) {
                 continue;
@@ -601,7 +601,7 @@ final class ParcBuilder {
             poses++;
         }
         Block[] fleurs = {Blocks.POPPY, Blocks.DANDELION, Blocks.ALLIUM, Blocks.OXEYE_DAISY, Blocks.CORNFLOWER, Blocks.AZURE_BLUET, Blocks.SHORT_GRASS, Blocks.SHORT_GRASS};
-        for (int i = 0; i < 3000; i++) {
+        for (int i = 0; i < 5500; i++) {
             double x = X0 + 2 + alea() * (X1 - X0 - 4), z = Z0 + 2 + alea() * (Z1 - Z0 - 4);
             if (libre(x, z)) {
                 BlockPos q = new BlockPos((int) Math.floor(x), SOL, (int) Math.floor(z));

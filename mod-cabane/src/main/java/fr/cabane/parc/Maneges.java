@@ -101,17 +101,28 @@ public final class Maneges {
      */
     private static Trajet construireDragon() {
         Trajet.Tortue t = new Trajet.Tortue(120, SOL + 4, 60, 0, -1);
+        // l'aller, vers le nord : la chaîne jusqu'à 62 blocs, le grand plongeon, le looping, une bosse, la vrille, une bosse
         t.droit(30, 0, Trajet.GARE, false);
-        t.droit(40, 46, Trajet.LIFT, false);
+        t.droit(44, 58, Trajet.LIFT, false);
         t.droit(6, 0);
-        t.droit(45, -45);
-        t.boucle(14, 5);
-        t.droit(12, 0);
-        t.virage(22, Math.PI, 13, 0.9, Trajet.LIBRE, false);
-        t.droit(20, -10);
+        t.droit(42, -58);
+        t.boucle(16, 5);
+        t.droit(8, 0);
+        t.colline(34, 20);
+        t.vrille(28, 5);
+        t.colline(26, 12);
+        // tout au nord : un virage penché au-delà de la verticale, qui remonte
+        t.virage(22, Math.PI, 16, 1.9, Trajet.LIBRE, false);
+        // le retour, vers le sud : la plongée, l'hélice, la relance, la deuxième vrille, les bosses, le tunnel du dragon
+        t.droit(32, -16);
+        t.virage(12, Math.PI * 2, 10, 1.2, Trajet.LIBRE, false);
+        t.droit(24, -10, Trajet.BOOST, false);
         t.vrille(30, 5);
-        t.colline(30, 12);
-        t.droit(10, -5);
+        t.colline(26, 10);
+        t.colline(22, 8);
+        t.droit(4, 0);
+        t.colline(30, 14);
+        t.droit(7, -1);
         t.droit(45, 0, Trajet.BOOST, true);
         t.virage(19.5, Math.PI, 1, 0.6, Trajet.FREIN, false);
         return t.fermer(Trajet.GARE);
@@ -119,23 +130,30 @@ public final class Maneges {
 
     // ------------------------------------------------------------------ La Mine Hantée
 
-    public static final double MINE_X = -95, MINE_Z = -40;
-    /** La Mine a été agrandie (parcours plus long, plus haut, montagne plus grande). */
-    public static final double MINE_S = 1.25;
+    public static final double MINE_X = -125, MINE_Z = -85;
+    /** La Mine a été agrandie deux fois (parcours bien plus long, plus haut, montagne plus grande). */
+    public static final double MINE_S = 1.75;
 
     /**
-     * La Mine Hantée : un wagonnet qui entre dans la montagne. Le noir, des lanternes, une montée au pas sous des yeux
-     * rouges, la salle où le wagon tourne deux fois sur lui-même, la salle des fantômes, la chute dans le noir complet et
-     * le squelette qui tombe du plafond avant la sortie. La gare est à l'est (u = 0), le train y va vers le sud.
+     * La Mine Hantée : un wagonnet qui entre dans la montagne et plonge tout de suite sous terre. Le noir, des lanternes,
+     * la salle où le wagon tourne deux fois sur lui-même, une montée au pas sous des yeux rouges, la salle des fantômes,
+     * la chute dans le noir complet, une remontée et le grand plongeon dans le puits, des virages serrés, le squelette
+     * qui tombe du plafond (et le monstre qui saute à l'écran), un dernier creux avant la sortie. La gare est à l'est
+     * (u = 0), le train y va vers le sud.
      */
     private static Trajet construireMine() {
         Trajet.Liste l = new Trajet.Liste();
         int n = 1400;
         for (int i = 0; i < n; i++) {
-            double u = (double) i / n * TAU, r = MINE_S * (21 + 8 * Math.cos(u) + 3 * Math.sin(3 * u));
-            double y = SOL + 1.2 + 9.8 * MINE_S * (entre(1.9, 2.7, u) - entre(3.5, 4.0, u));
+            double u = (double) i / n * TAU;
+            double r = MINE_S * (21 + 8 * Math.cos(u) + 3 * Math.sin(3 * u) + 3.5 * Math.sin(14 * u) * bosse(4.4, 5.5, u));
+            double y = SOL + 1.2 + MINE_S * (9.8 * (entre(1.9, 2.7, u) - entre(3.5, 4.0, u))
+                    - 3.4 * (entre(0.33, 0.55, u) - entre(0.72, 0.95, u))
+                    + 5 * entre(4.45, 4.75, u) - 8.4 * entre(4.85, 5.1, u) + 3.4 * entre(5.2, 5.45, u)
+                    - 1.6 * (entre(5.68, 5.8, u) - entre(5.84, 5.97, u)));
             boolean gare = u < 0.24 || u > TAU - 0.24;
-            byte mode = gare ? Trajet.GARE : u >= 1.9 && u < 2.75 ? Trajet.LENT : u >= 3.5 && u < 4.4 ? Trajet.CHUTE : Trajet.LIBRE;
+            boolean chute = u >= 0.33 && u < 0.58 || u >= 3.5 && u < 4.4 || u >= 4.85 && u < 5.12;
+            byte mode = gare ? Trajet.GARE : u >= 1.9 && u < 2.75 ? Trajet.LENT : chute ? Trajet.CHUTE : Trajet.LIBRE;
             l.point(MINE_X + r * Math.cos(u), y, MINE_Z + r * Math.sin(u), mode, !gare, TAU * 2 * entre(1.05, 1.55, u), u);
         }
         return l.fermer();
@@ -152,13 +170,14 @@ public final class Maneges {
 
     // ------------------------------------------------------------------ Cosmos
 
-    /** Le Cosmos a été agrandi de 20 % (dôme, rail, hauteurs). */
-    public static final double COSMOS_S = 1.2;
-    public static final double COSMOS_X = 25, COSMOS_Z = -55, COSMOS_R = 26 * COSMOS_S;
+    /** Le Cosmos a été agrandi de 70 % (dôme, rail, hauteurs). */
+    public static final double COSMOS_S = 1.7;
+    public static final double COSMOS_X = 22, COSMOS_Z = -100, COSMOS_R = 26 * COSMOS_S;
 
     /**
-     * Cosmos : sous un dôme noir étoilé, un rail en néon qui ondule, et des wagons qui tournent sur eux-mêmes tout le
-     * long. La gare est au sud du dôme, au point le plus bas ; les wagons n'y tournent pas.
+     * Cosmos : sous un dôme noir étoilé, un rail en néon ; la chaîne monte au plus haut, puis quatre grandes plongées de
+     * plus en plus basses (en haut près du milieu du dôme, en bas contre le bord) avec des petites bosses, et des wagons
+     * qui tournent sur eux-mêmes tout le long. La gare est au sud du dôme, au point le plus bas ; les wagons n'y tournent pas.
      */
     private static Trajet construireCosmos() {
         Trajet.Liste l = new Trajet.Liste();
@@ -166,27 +185,30 @@ public final class Maneges {
         double garde = 0.25;
         for (int i = 0; i < n; i++) {
             double v = (double) i / n * TAU, u = v + Math.PI / 2, loin = Math.min(v, TAU - v);
-            double r = COSMOS_S * (13 + 5 * Math.sin(4 * u)), y0 = COSMOS_S * (6.5 + 5 * Math.sin(3 * u));
+            double avance = v / TAU, milieu = 9.5 - 4.5 * avance, ampleur = 6 - 3 * avance;
+            double r = COSMOS_S * (13 + 5 * Math.sin(4 * u)), y0 = COSMOS_S * (milieu - ampleur * Math.sin(4 * v) + 0.8 * Math.sin(12 * v) * bosse(1.4, 5.8, v));
             double w = 1 - entre(garde, 0.6, loin);
             double y = SOL + y0 + (1.5 - y0) * w;
             double frac = Math.max(0, Math.min(1, (v - garde) / (TAU - 2 * garde)));
             double tour = TAU * 5 * lisse(frac) + 2.2 * Math.sin(3 * TAU * frac) * Math.sin(Math.PI * frac);
-            l.point(COSMOS_X + r * Math.cos(u), y, COSMOS_Z + r * Math.sin(u), loin < garde ? Trajet.GARE : Trajet.LIBRE, true, tour, v);
+            byte mode = loin < garde ? Trajet.GARE : v > garde && v < 1.12 ? Trajet.LIFT : Trajet.LIBRE;
+            l.point(COSMOS_X + r * Math.cos(u), y, COSMOS_Z + r * Math.sin(u), mode, true, tour, v);
         }
         return l.fermer();
     }
 
     // ------------------------------------------------------------------ Rivière Splash
 
-    /** La Rivière Splash a été agrandie de 20 % (lac, parcours, grande descente) et décalée vers l'ouest. */
-    public static final double SPLASH_S = 1.2;
-    public static final double SPLASH_X = -105, SPLASH_Z = 48;
+    /** La Rivière Splash a été agrandie de 70 % (lac, parcours, grande descente) et décalée vers l'ouest. */
+    public static final double SPLASH_S = 1.7;
+    public static final double SPLASH_X = -150, SPLASH_Z = 35;
     /** Le paramètre u du splash (en bas de la grande descente) et de la photo (juste avant). */
     public static final double U_SPLASH = 4.89, U_PHOTO = 4.8;
 
     /**
-     * La Rivière Splash : un tronc qui flotte sur le lac, passe dans la grotte aux cristaux, remonte au pas jusqu'à 26
-     * blocs, puis la grande descente et le splash. La gare est à l'est du lac (u = 0), le tronc y va vers le sud.
+     * La Rivière Splash : un tronc qui flotte sur le lac, passe dans la grotte aux cristaux, une première petite chute,
+     * puis remonte au pas tout en haut ; la grande descente en deux fois (un palier au milieu) et le splash. La gare est à
+     * l'est du lac (u = 0), le tronc y va vers le sud.
      */
     private static Trajet construireSplash() {
         Trajet.Liste l = new Trajet.Liste();
@@ -194,9 +216,11 @@ public final class Maneges {
         for (int i = 0; i < n; i++) {
             double u = (double) i / n * TAU;
             double x = SPLASH_X + SPLASH_S * (30 * Math.cos(u) + 4 * Math.cos(3 * u)), z = SPLASH_Z + SPLASH_S * (24 * Math.sin(u) + 3 * Math.sin(2 * u));
-            double y = EAU + 26 * SPLASH_S * (entre(3.2, 4.15, u) - entre(4.45, 4.88, u));
+            double y = EAU + SPLASH_S * (9 * (entre(1.3, 1.75, u) - entre(1.85, 2.1, u))
+                    + 26 * entre(3.2, 4.15, u) - 14 * entre(4.45, 4.62, u) - 12 * entre(4.7, 4.88, u));
             boolean gare = u < 0.22 || u > TAU - 0.22;
-            byte mode = gare ? Trajet.GARE : u >= 3.2 && u < 4.25 ? Trajet.LIFT : u >= 4.42 && u < 5.0 ? Trajet.CHUTE : Trajet.EAU;
+            boolean monte = u >= 1.3 && u < 1.8 || u >= 3.2 && u < 4.25, chute = u >= 1.85 && u < 2.15 || u >= 4.42 && u < 5.0;
+            byte mode = gare ? Trajet.GARE : monte ? Trajet.LIFT : chute ? Trajet.CHUTE : Trajet.EAU;
             l.point(x, y, z, mode, u > 0.45 && u < 1.15, 0, u);
         }
         return l.fermer();
@@ -294,6 +318,8 @@ public final class Maneges {
             };
             case COSMOS -> switch (p.mode) {
                 case Trajet.GARE -> vers(v, 4, 14, dt);
+                // la chaîne, jusqu'en haut de la première plongée
+                case Trajet.LIFT -> vers(v, 5, 6, dt);
                 default -> libre(p, v, dt, 0.003, 7.5);
             };
             case SPLASH -> switch (p.mode) {

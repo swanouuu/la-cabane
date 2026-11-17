@@ -56,9 +56,9 @@ public final class Guirlandes {
     }
 
     static {
-        ALLEES_2.add(ligne(anneau(-40, -24), -40, -24, -48, -40));
-        ALLEES_2.add(ligne(anneau(10, -22), 10, -22, 25, -19));
-        ALLEES_2.add(new double[]{-6, 58, -50, 58, -57, 49});
+        ALLEES_2.add(ligne(anneau(-40, -24), -40, -24, -59, -60, -69, -85));
+        ALLEES_2.add(ligne(anneau(10, -22), 12, -32, 22.5, -50));
+        ALLEES_2.add(new double[]{-6, 58, -80, 58, -87, 36});
         ALLEES_2.add(new double[]{-6, 102, -76, 102, -76, 120, -97, 120});
         ALLEES_3.add(ligne(anneau(-30, -34), -30, -34));
         ALLEES_3.add(ligne(anneau(-30, 24), -30, 24, -40, 23));

@@ -32,7 +32,7 @@ public final class ParcBuilder2 {
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     /** Le kiosque des photos de la Rivière Splash (le bloc du coin est de son mur). */
-    public static final int KIOSQUE_X = -50, KIOSQUE_Z = 38;
+    public static final int KIOSQUE_X = -78, KIOSQUE_Z = 25;
 
     private final ParcBuilder b;
     private final ServerLevel level;
@@ -187,7 +187,7 @@ public final class ParcBuilder2 {
                     continue;
                 }
                 // l'allée qui monte à la gare reste libre
-                if (distanceSegment(x + 0.5, z + 0.5, -40, -24, -48, -40) < 4) {
+                if (surAllee(x + 0.5, z + 0.5, Guirlandes.ALLEES_2.get(0), 4)) {
                     continue;
                 }
                 int h = (int) Math.round(36 * Maneges.MINE_S * (1 - Math.pow(d, 1.7)) + (bruit(x >> 1, z >> 1) - 0.5) * 5);
@@ -299,6 +299,16 @@ public final class ParcBuilder2 {
             q.move(Direction.UP);
         }
         return q.getY();
+    }
+
+    /** Ce point est-il à moins de {@code r} de cette allée (une ligne brisée x, z, x, z…) ? */
+    private static boolean surAllee(double x, double z, double[] l, double r) {
+        for (int i = 0; i + 3 < l.length; i += 2) {
+            if (distanceSegment(x, z, l[i], l[i + 1], l[i + 2], l[i + 3]) < r) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static double distanceSegment(double x, double z, double ax, double az, double bx, double bz) {
