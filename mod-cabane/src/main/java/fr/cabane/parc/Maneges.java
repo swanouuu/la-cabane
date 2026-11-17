@@ -262,32 +262,54 @@ public final class Maneges {
 
     // ------------------------------------------------------------------ vitesses et places
 
+    /** La pesanteur des manèges (blocs/s²) : un peu plus que sur Terre, pour que les descentes soient franches. */
+    private static final double G = 16;
+
+    /** Rapproche v de la vitesse voulue, d'au plus {@code a} blocs/s² (la chaîne, les freins, les roues motrices…). */
+    private static double vers(double v, double voulu, double a, double dt) {
+        return v < voulu ? Math.min(voulu, v + a * dt) : Math.max(voulu, v - a * dt);
+    }
+
+    /** La roue libre : la pente accélère ou ralentit le train, l'air le freine un peu ; jamais moins que le plancher. */
+    private static double libre(Trajet.Point p, double v, double dt, double frottement, double plancher) {
+        v += (-G * p.fy - frottement * v * v) * dt;
+        return Math.max(plancher, v);
+    }
+
     /**
-     * La vitesse visée (blocs par seconde) à cet endroit : lente en gare et à la chaîne, puis la gravité (plus on est
-     * bas, plus ça va vite), le lancement dans le tunnel et le gros freinage à la fin.
+     * La vitesse du train au tick suivant (blocs par seconde), {@code p} étant le milieu du train. En gare, à la chaîne,
+     * au frein et au lancement, le manège impose sa vitesse (avec une accélération qu'on sent) ; ailleurs c'est la
+     * physique : plus ça descend, plus ça va vite, et le train ralentit vraiment en remontant (en haut du looping, sur les
+     * bosses). Le Cosmos et la Mine ont des roues motrices : jamais en dessous de leur plancher.
      */
-    public static double vitesse(byte id, Trajet.Point p) {
-        double h = p.y - SOL;
+    public static double vitesseSuivante(byte id, Trajet.Point p, double v, double dt) {
         return switch (id) {
             case MINE -> switch (p.mode) {
-                case Trajet.GARE -> 3;
-                case Trajet.LENT -> 2.4;
-                case Trajet.CHUTE -> Math.sqrt(9 + 34 * Math.max(0, 1.2 + 9.8 * MINE_S + 0.2 - h));
-                default -> 7.5;
+                case Trajet.GARE -> vers(v, 3, 9, dt);
+                // la montée au pas, sous les yeux rouges
+                case Trajet.LENT -> vers(v, 2.6, 9, dt);
+                case Trajet.CHUTE -> libre(p, v, dt, 0.002, 4);
+                // dans les galeries, le wagonnet est poussé : il fonce, et les virages le secouent
+                default -> libre(p, vers(v, 11, 3, dt), dt, 0.004, 9);
             };
-            case COSMOS -> p.mode == Trajet.GARE ? 4 : Math.sqrt(40 + 32 * Math.max(0, 12 * COSMOS_S - h));
+            case COSMOS -> switch (p.mode) {
+                case Trajet.GARE -> vers(v, 4, 14, dt);
+                default -> libre(p, v, dt, 0.003, 7.5);
+            };
             case SPLASH -> switch (p.mode) {
-                case Trajet.GARE -> 3;
-                case Trajet.LIFT -> 4.5;
-                case Trajet.CHUTE -> Math.sqrt(16 + 34 * Math.max(0, 26 * SPLASH_S - 0.2 - h));
-                default -> 6.5;
+                case Trajet.GARE -> vers(v, 3, 4, dt);
+                case Trajet.LIFT -> vers(v, 4.8, 4, dt);
+                case Trajet.CHUTE -> libre(p, v, dt, 0.0008, 4.8);
+                // l'eau freine fort après la descente (le splash), puis le tronc se laisse porter
+                default -> vers(v, 6.5, v > 9 ? 14 : 2, dt);
             };
             default -> switch (p.mode) {
-                case Trajet.GARE -> 4;
-                case Trajet.LIFT -> 5;
-                case Trajet.FREIN -> 8;
-                case Trajet.BOOST -> 46;
-                default -> Math.sqrt(49 + 30 * Math.max(0, 50 - h));
+                case Trajet.GARE -> vers(v, 4, 6, dt);
+                case Trajet.LIFT -> vers(v, 5.5, 5, dt);
+                case Trajet.FREIN -> vers(v, 7, 16, dt);
+                // le lancement dans le tunnel du dragon : on est plaqué au siège
+                case Trajet.BOOST -> vers(v, 48, 26, dt);
+                default -> libre(p, v, dt, 0.0011, 6);
             };
         };
     }

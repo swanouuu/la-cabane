@@ -38,7 +38,7 @@ final class ParcVie {
         final double sSplash;
         /** Où la tête s'arrête en gare. */
         final double arret;
-        private final Trajet.Point tete = new Trajet.Point();
+        private final Trajet.Point tete = new Trajet.Point(), milieu = new Trajet.Point();
 
         Train(Maneges.Fiche fiche) {
             this.fiche = fiche;
@@ -95,9 +95,9 @@ final class ParcVie {
                     level.playSound(null, tete.x, tete.y, tete.z, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 1.2F, 1.2F);
                 }
             } else {
-                double cible = Maneges.vitesse(fiche.id(), tete);
-                double k = cible > v ? 7 : 2.6;
-                v += (cible - v) * Math.min(1, dt * k);
+                // la physique se fait au milieu du train (c'est lui qui « tire » dans les descentes et les montées)
+                trajet.a(s - (wagons.length - 1) * fiche.ecart() / 2, milieu);
+                v = Maneges.vitesseSuivante(fiche.id(), milieu, v, dt);
                 double avant = trajet.normaliser(s);
                 s = avant + v * dt;
                 double apres = trajet.normaliser(s);
