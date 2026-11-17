@@ -1,0 +1,23 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.8,
+  "downfall": 0,
+  "effects": {
+    "sky_color": 6075391,
+    "fog_color": 14085375,
+    "water_color": 4168703,
+    "water_fog_color": 2781104,
+    "grass_color": 7979098,
+    "foliage_color": 5877296,
+    "music": {
+      "sound": "cabane:musique.parc",
+      "min_delay": 20,
+      "max_delay": 120,
+      "replace_current_music": true
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {},
+  "features": []
+}

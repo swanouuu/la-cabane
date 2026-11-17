@@ -111,6 +111,14 @@ public final class Donjon {
             () -> EntityType.Builder.<RoiFourmi>of(RoiFourmi::new, MobCategory.MONSTER).sized(1.6F, 4.4F).fireImmune().clientTrackingRange(16)
                     .updateInterval(1).build("roi_fourmi"));
 
+    /** Les deux boss du donjon gaulois (l'événement du parc). */
+    public static final DeferredHolder<EntityType<?>, EntityType<Asterix>> ASTERIX = ENTITES.register("asterix",
+            () -> EntityType.Builder.<Asterix>of(Asterix::new, MobCategory.MONSTER).sized(1.6F, 4.3F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("asterix"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Obelix>> OBELIX = ENTITES.register("obelix",
+            () -> EntityType.Builder.<Obelix>of(Obelix::new, MobCategory.MONSTER).sized(3.4F, 7.4F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("obelix"));
+
     public static void register(IEventBus modBus) {
         ENTITES.register(modBus);
         modBus.addListener((EntityAttributeCreationEvent e) -> {
@@ -119,6 +127,8 @@ public final class Donjon {
             e.put(REINE.get(), Reine.attributs().build());
             e.put(LICHE.get(), Liche.attributs().build());
             e.put(ROI_FOURMI.get(), RoiFourmi.attributs().build());
+            e.put(ASTERIX.get(), Asterix.attributs().build());
+            e.put(OBELIX.get(), Obelix.attributs().build());
             e.put(GOBELIN.get(), Sbire.attributsGobelin().build());
             e.put(BRUTE.get(), Sbire.attributsBrute().build());
         });
@@ -244,7 +254,7 @@ public final class Donjon {
         DonjonData data = DonjonData.get(server);
         List<TypeDonjon> libres = new ArrayList<>();
         for (TypeDonjon t : TypeDonjon.values()) {
-            if (l == null || Boss.joueurs(l, t).isEmpty()) {
+            if (t.parJinwoo() && (l == null || Boss.joueurs(l, t).isEmpty())) {
                 libres.add(t);
             }
         }
@@ -478,6 +488,27 @@ public final class Donjon {
         }
         data.setRetour(j.getUUID(), new DonjonData.Retour(j.serverLevel().dimension().location(), j.getX(), j.getY(), j.getZ(), j.getYRot(), j.getXRot()));
         arriver(j, 0, 1);
+    }
+
+    /**
+     * Le portail d'un événement (le portail gaulois du parc) : ce joueur entre dans ce donjon, sans la scène de Jin-woo.
+     * S'il n'y a encore personne dedans, c'est un nouveau groupe : le donjon est remis à neuf. La sortie le ramène là
+     * d'où il est entré.
+     */
+    public static void entrerEvenement(ServerPlayer j, TypeDonjon type) {
+        ServerLevel donjon = niveau(j.server);
+        if (donjon == null || dedans(j)) {
+            return;
+        }
+        construireSiBesoin(donjon, type);
+        if (Boss.joueurs(donjon, type).isEmpty()) {
+            Boss.nouveauGroupe(j.server, type);
+        }
+        DonjonData data = DonjonData.get(j.server);
+        data.setDernier(j.getUUID(), type);
+        j.stopRiding();
+        data.setRetour(j.getUUID(), new DonjonData.Retour(j.serverLevel().dimension().location(), j.getX(), j.getY(), j.getZ() + 3, 0F, 0F));
+        arriver(j, Boss.joueurs(donjon, type).size(), Boss.joueurs(donjon, type).size() + 1);
     }
 
     /** Ramène le joueur exactement là d'où il est parti (ou, à défaut, près de Jin-woo, ou à son lit). */

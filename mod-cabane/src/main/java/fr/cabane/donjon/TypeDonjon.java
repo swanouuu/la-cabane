@@ -13,7 +13,9 @@ public enum TypeDonjon {
     GIVRE("Le Glacier hurlant", "Hrimgar, le Colosse de Givre", 0x7FE8FF),
     ARAIGNEE("Le Nid de soie", "Arachna, la Reine-Araignée", 0x9BFF5A),
     LICHE("La Nécropole", "Morvane, le Roi-Liche", 0xB86CFF),
-    FOURMI("La Fourmilière royale", "Kar'Thax, le Roi des Fourmis", 0xFFB040);
+    FOURMI("La Fourmilière royale", "Kar'Thax, le Roi des Fourmis", 0xFFB040),
+    /** Le donjon de l'événement du parc (/parc event) : on n'y entre que par le portail gaulois, jamais par Jin-woo. */
+    GAULOIS("La Forêt gauloise", "Astérix et Obélix", 0xFFC83D);
 
     /** L'écart entre deux donjons, d'ouest en est. */
     public static final int ECART = 1024;
@@ -49,6 +51,11 @@ public enum TypeDonjon {
 
     public boolean genere() {
         return this != OGRE;
+    }
+
+    /** Jin-woo peut-il y envoyer un groupe ? (pas le donjon gaulois, réservé à l'événement du parc) */
+    public boolean parJinwoo() {
+        return this != GAULOIS;
     }
 
     /** Où l'on arrive (face au sud, le portail de sortie dans le dos). */

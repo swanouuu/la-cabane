@@ -57,12 +57,26 @@ public abstract class BossDonjon extends Monster {
         super(type, level);
         setPersistenceRequired();
         xpReward = 500;
-        barre = new ServerBossEvent(Component.literal(typeDonjon().boss), couleurBarre(), BossEvent.BossBarOverlay.NOTCHED_10);
+        barre = new ServerBossEvent(Component.literal(nomBoss()), couleurBarre(), BossEvent.BossBarOverlay.NOTCHED_10);
         barre.setDarkenScreen(true);
         barre.setPlayBossMusic(true);
     }
 
     // ---------------------------------------------------------------- ce que chaque boss précise
+
+    /** Son nom (le donjon gaulois a deux boss : chacun le sien). */
+    public String nomBoss() {
+        return typeDonjon().boss;
+    }
+
+    /** Est-il le dernier boss debout de son donjon ? (sinon sa mort ne termine pas le donjon) */
+    protected boolean dernierDebout() {
+        return true;
+    }
+
+    /** Un autre boss du donjon est tombé : celui-ci continue seul (et le prend mal). */
+    public void partenaireTombe(ServerLevel sl) {
+    }
 
     public abstract TypeDonjon typeDonjon();
 
@@ -480,7 +494,7 @@ public abstract class BossDonjon extends Monster {
             case RAGE -> {
                 setDeltaMovement(0, getDeltaMovement().y, 0);
                 if (age() == 1) {
-                    Boss.annoncer(sl, typeDonjon(), "ALERTE", new String[] {typeDonjon().boss.split(",")[0] + " entre en rage !"}, "", 0);
+                    Boss.annoncer(sl, typeDonjon(), "ALERTE", new String[] {nomBoss().split(",")[0] + " entre en rage !"}, "", 0);
                 }
                 rage(sl, joueurs, age());
                 if (age() >= dureeRage()) {
@@ -492,7 +506,7 @@ public abstract class BossDonjon extends Monster {
                 setDeltaMovement(0, getDeltaMovement().y, 0);
                 int a = age();
                 if (a == 1) {
-                    Boss.annoncer(sl, typeDonjon(), "ALERTE", new String[] {typeDonjon().boss.split(",")[0] + " appelle des renforts !"}, "", 0);
+                    Boss.annoncer(sl, typeDonjon(), "ALERTE", new String[] {nomBoss().split(",")[0] + " appelle des renforts !"}, "", 0);
                 }
                 invocation(sl, a);
                 if (a == 26) {
@@ -539,7 +553,7 @@ public abstract class BossDonjon extends Monster {
         }
         int pv = Math.round(getHealth() * echellePv());
         int max = Math.round(getMaxHealth() * echellePv());
-        barre.setName(Component.literal(typeDonjon().boss.toUpperCase() + "   ").withStyle(ChatFormatting.BOLD)
+        barre.setName(Component.literal(nomBoss().toUpperCase() + "   ").withStyle(ChatFormatting.BOLD)
                 .withStyle(s -> s.withColor(typeDonjon().couleur))
                 .append(Component.literal(String.format("%,d / %,d PV", pv, max).replace(',', ' ')).withStyle(ChatFormatting.WHITE)));
         barre.setProgress(Mth.clamp(getHealth() / getMaxHealth(), 0, 1));
@@ -565,7 +579,16 @@ public abstract class BossDonjon extends Monster {
         barre.removeAllPlayers();
         setNoGravity(false);
         if (level() instanceof ServerLevel sl) {
-            Boss.victoire(sl, typeDonjon());
+            if (dernierDebout()) {
+                Boss.victoire(sl, typeDonjon());
+            } else {
+                Boss.annoncer(sl, typeDonjon(), "ALERTE", new String[] {nomBoss() + " est K.O. !", "L'autre est encore debout… et il est furieux."}, "", 0);
+                for (net.minecraft.world.entity.Mob m : Boss.boss(sl, typeDonjon())) {
+                    if (m != this && m instanceof BossDonjon b && b.isAlive()) {
+                        b.partenaireTombe(sl);
+                    }
+                }
+            }
         }
     }
 

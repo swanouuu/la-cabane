@@ -47,7 +47,13 @@ public class RenduSbire extends EntityRenderer<Sbire> {
             ps.mulPose(Axis.ZP.rotationDegrees(Math.min(1F, (s.deathTime + partiel) / 12F) * 85F));
         }
         ModeleOgre.debut(buffers, lumiere, overlay);
-        if (s.brute()) {
+        if (fr.cabane.donjon.TypeDonjon.de(s.getX()) == fr.cabane.donjon.TypeDonjon.GAULOIS) {
+            // dans la forêt gauloise, ce sont des légionnaires romains (la brute : un centurion)
+            if (s.brute()) {
+                ps.scale(1.6F, 1.6F, 1.6F);
+            }
+            legionnaire(ps, sw, bras, tete, s.brute());
+        } else if (s.brute()) {
             brute(ps, sw, bras, tete);
         } else {
             gobelin(ps, sw, bras, tete);
@@ -96,6 +102,51 @@ public class RenduSbire extends EntityRenderer<Sbire> {
                 ModeleOgre.tourner(ps, 0, -0.48F, 0.05F, 1.2F, 0, 0);
                 ModeleOgre.pave(ps, -0.05F, -0.05F, -0.1F, 0.05F, 0.05F, 0.55F, OS);
                 ModeleOgre.pave(ps, -0.1F, -0.1F, 0.5F, 0.1F, 0.1F, 0.75F, OS);
+            }
+            ps.popPose();
+        }
+        ps.popPose();
+    }
+
+    private static final int CHAIR = 0xF1C7A0, TUNIQUE = 0xC0392B, LORICA = 0xB8BEC6, LORICA_S = 0x7D848C, SANDALE = 0x6B4A2B, BOUCLIER = 0xB0322A,
+            DORE = 0xE8C04A;
+
+    /** Un légionnaire romain : tunique rouge, cuirasse à bandes, casque à cimier, bouclier rouge et glaive. */
+    private static void legionnaire(PoseStack ps, float sw, float bras, float tete, boolean centurion) {
+        jambe(ps, -0.12F, 0.72F, 0.22F, 0.72F, sw * 0.6F, CHAIR, SANDALE);
+        jambe(ps, 0.12F, 0.72F, 0.22F, 0.72F, -sw * 0.6F, CHAIR, SANDALE);
+        ps.pushPose();
+        ModeleOgre.tourner(ps, 0, 0.7F, 0, 0, 0, 0);
+        ModeleOgre.pave(ps, -0.3F, -0.05F, -0.17F, 0.3F, 0.3F, 0.17F, TUNIQUE);
+        ModeleOgre.pave(ps, -0.3F, 0.25F, -0.18F, 0.3F, 0.7F, 0.18F, LORICA);
+        for (int i = 0; i < 3; i++) {
+            ModeleOgre.pave(ps, -0.31F, 0.3F + i * 0.13F, -0.19F, 0.31F, 0.33F + i * 0.13F, 0.19F, LORICA_S);
+        }
+        // la tête et le casque à cimier (en travers pour le centurion)
+        ps.pushPose();
+        ModeleOgre.tourner(ps, 0, 0.7F, 0, 0, tete, 0);
+        ModeleOgre.pave(ps, -0.2F, 0, -0.2F, 0.2F, 0.4F, 0.2F, CHAIR);
+        ModeleOgre.pave(ps, -0.1F, 0.2F, 0.2F, -0.04F, 0.26F, 0.21F, 0x111111);
+        ModeleOgre.pave(ps, 0.04F, 0.2F, 0.2F, 0.1F, 0.26F, 0.21F, 0x111111);
+        ModeleOgre.pave(ps, -0.23F, 0.3F, -0.23F, 0.23F, 0.48F, 0.23F, LORICA);
+        if (centurion) {
+            ModeleOgre.pave(ps, -0.3F, 0.48F, -0.04F, 0.3F, 0.68F, 0.04F, TUNIQUE);
+        } else {
+            ModeleOgre.pave(ps, -0.04F, 0.48F, -0.24F, 0.04F, 0.68F, 0.24F, TUNIQUE);
+        }
+        ps.popPose();
+        // le bouclier rouge à bosse dorée (bras gauche), le glaive (bras droit)
+        for (int s : new int[] {-1, 1}) {
+            ps.pushPose();
+            ModeleOgre.tourner(ps, s * 0.36F, 0.65F, 0, s > 0 ? bras : -0.3F, 0, s * -0.1F);
+            ModeleOgre.pave(ps, -0.07F, -0.55F, -0.07F, 0.07F, 0.05F, 0.07F, CHAIR);
+            if (s < 0) {
+                ModeleOgre.pave(ps, -0.12F, -0.75F, 0.02F, -0.06F, 0.25F, 0.62F, BOUCLIER);
+                ModeleOgre.pave(ps, -0.15F, -0.32F, 0.24F, -0.11F, -0.18F, 0.4F, DORE);
+            } else {
+                ModeleOgre.tourner(ps, 0, -0.5F, 0.05F, 1.3F, 0, 0);
+                ModeleOgre.pave(ps, -0.03F, -0.03F, 0, 0.03F, 0.03F, 0.55F, LORICA);
+                ModeleOgre.pave(ps, -0.08F, -0.04F, -0.05F, 0.08F, 0.04F, 0.02F, DORE);
             }
             ps.popPose();
         }

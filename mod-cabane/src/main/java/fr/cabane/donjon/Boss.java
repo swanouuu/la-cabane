@@ -339,6 +339,7 @@ public final class Boss {
             case ARAIGNEE -> Donjon.REINE.get();
             case LICHE -> Donjon.LICHE.get();
             case FOURMI -> Donjon.ROI_FOURMI.get();
+            case GAULOIS -> Donjon.ASTERIX.get();
         };
         Mob o = t.create(donjon);
         if (o == null) {
@@ -351,6 +352,18 @@ public final class Boss {
         o.finalizeSpawn(donjon, donjon.getCurrentDifficultyAt(o.blockPosition()), MobSpawnType.EVENT, null);
         o.setHealth(o.getMaxHealth());
         donjon.addFreshEntity(o);
+        if (type == TypeDonjon.GAULOIS) {
+            // Obélix dort à côté de lui, adossé à son tas de menhirs
+            Mob b = Donjon.OBELIX.get().create(donjon);
+            if (b != null) {
+                b.moveTo(r.x + 7, r.y, r.z + 2, 180F, 0F);
+                b.yBodyRot = 180F;
+                b.yHeadRot = 180F;
+                b.finalizeSpawn(donjon, donjon.getCurrentDifficultyAt(b.blockPosition()), MobSpawnType.EVENT, null);
+                b.setHealth(b.getMaxHealth());
+                donjon.addFreshEntity(b);
+            }
+        }
     }
 
     /** Ugrak est mort. */
@@ -375,7 +388,7 @@ public final class Boss {
             }
             m.discard();
         }
-        annoncer(donjon, type, "SYSTÈME", new String[] {"Donjon terminé ! " + type.boss + " est vaincu.", "Récompense : " + Economie.format(PRIME) + " chacun.",
+        annoncer(donjon, type, "SYSTÈME", new String[] {"Donjon terminé ! " + type.boss + (type == TypeDonjon.GAULOIS ? " sont K.O. !" : " est vaincu."), "Récompense : " + Economie.format(PRIME) + " chacun.",
                 "Le portail de sortie est ouvert au milieu de l'arène.", "Le Système rachètera vos cristaux à la sortie."}, "", 0);
         for (ServerPlayer p : joueurs(donjon, type)) {
             PacketDistributor.sendToPlayer(p, new Victoire(true));

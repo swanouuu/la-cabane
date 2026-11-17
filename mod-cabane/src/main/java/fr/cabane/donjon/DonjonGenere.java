@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.state.properties.Half;
  */
 public final class DonjonGenere {
     /** À changer quand les donjons tracés changent : ils sont reconstruits au prochain démarrage. */
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
 
     private static final int Y0 = 50, Y1 = 92, Z0 = -15;
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
@@ -159,11 +159,37 @@ public final class DonjonGenere {
             case GIVRE -> tirer(r, 38, Blocks.PACKED_ICE, 50, Blocks.BLUE_ICE, 74, Blocks.SNOW_BLOCK, 88, Blocks.CALCITE, 100, Blocks.POLISHED_DIORITE);
             case ARAIGNEE -> tirer(r, 25, Blocks.MOSSY_COBBLESTONE, 45, Blocks.MOSS_BLOCK, 65, Blocks.DEEPSLATE, 80, Blocks.ROOTED_DIRT, 92, Blocks.COBBLESTONE,
                     100, Blocks.MUD);
+            case GAULOIS -> feuillage(r);
             case LICHE -> tirer(r, 2, Blocks.BONE_BLOCK, 36, Blocks.DEEPSLATE_BRICKS, 52, Blocks.CRACKED_DEEPSLATE_BRICKS, 68, Blocks.DEEPSLATE_TILES, 90,
                     Blocks.POLISHED_BLACKSTONE_BRICKS, 100, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS);
             default -> tirer(r, 3, Blocks.HONEYCOMB_BLOCK, 28, Blocks.TERRACOTTA, 43, Blocks.ORANGE_TERRACOTTA, 58, Blocks.BROWN_TERRACOTTA, 80,
                     Blocks.PACKED_MUD, 100, Blocks.MUD_BRICKS);
         };
+    }
+
+    /** Les feuilles posées par le donjon ne tombent jamais. */
+    private static BlockState feuilles(Block f) {
+        return f.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+    }
+
+    /** La forêt gauloise : un sous-bois épais, des troncs, de la mousse. */
+    private static BlockState feuillage(int r) {
+        if (r < 40) {
+            return feuilles(Blocks.AZALEA_LEAVES);
+        }
+        if (r < 52) {
+            return feuilles(Blocks.FLOWERING_AZALEA_LEAVES);
+        }
+        if (r < 64) {
+            return b(Blocks.OAK_LOG);
+        }
+        if (r < 78) {
+            return b(Blocks.MOSS_BLOCK);
+        }
+        if (r < 88) {
+            return feuilles(Blocks.AZALEA_LEAVES);
+        }
+        return r < 95 ? b(Blocks.DARK_OAK_LOG) : b(Blocks.MOSSY_COBBLESTONE);
     }
 
     private boolean couloir(int x, int z) {
@@ -190,6 +216,9 @@ public final class DonjonGenere {
             case ARAIGNEE -> anneau ? b(Blocks.MOSSY_STONE_BRICKS) : arene ? tirer(r, 50, Blocks.MOSS_BLOCK, 80, Blocks.COARSE_DIRT, 100, Blocks.ROOTED_DIRT)
                     : dalle ? tirer(r, 55, Blocks.MOSSY_STONE_BRICKS, 85, Blocks.CRACKED_STONE_BRICKS, 100, Blocks.MOSS_BLOCK)
                     : tirer(r, 45, Blocks.MOSS_BLOCK, 65, Blocks.COARSE_DIRT, 80, Blocks.ROOTED_DIRT, 100, Blocks.MOSSY_COBBLESTONE);
+            case GAULOIS -> anneau ? b(Blocks.MOSSY_COBBLESTONE) : arene ? tirer(r, 55, Blocks.MOSS_BLOCK, 80, Blocks.COARSE_DIRT, 100, Blocks.DIRT_PATH)
+                    : dalle ? tirer(r, 65, Blocks.DIRT_PATH, 100, Blocks.COARSE_DIRT)
+                    : tirer(r, 62, Blocks.MOSS_BLOCK, 80, Blocks.COARSE_DIRT, 100, Blocks.PODZOL);
             case LICHE -> anneau ? b(Blocks.CRYING_OBSIDIAN) : arene ? tirer(r, 70, Blocks.POLISHED_BLACKSTONE, 100, Blocks.POLISHED_BLACKSTONE_BRICKS)
                     : dalle ? tirer(r, 60, Blocks.POLISHED_DEEPSLATE, 85, Blocks.DEEPSLATE_TILES, 100, Blocks.CRACKED_DEEPSLATE_TILES)
                     : tirer(r, 35, Blocks.SOUL_SOIL, 70, Blocks.DEEPSLATE_TILES, 90, Blocks.DEEPSLATE_BRICKS, 100, Blocks.SOUL_SAND);
@@ -205,6 +234,7 @@ public final class DonjonGenere {
             case GIVRE -> tirer(r, 55, Blocks.PACKED_ICE, 80, Blocks.SNOW_BLOCK, 100, Blocks.BLUE_ICE);
             case ARAIGNEE -> tirer(r, 50, Blocks.ROOTED_DIRT, 80, Blocks.MOSS_BLOCK, 100, Blocks.DEEPSLATE);
             case LICHE -> tirer(r, 60, Blocks.DEEPSLATE_BRICKS, 85, Blocks.POLISHED_BLACKSTONE_BRICKS, 100, Blocks.DEEPSLATE_TILES);
+            case GAULOIS -> r < 70 ? feuilles(Blocks.AZALEA_LEAVES) : r < 85 ? feuilles(Blocks.FLOWERING_AZALEA_LEAVES) : b(Blocks.OAK_LOG);
             default -> tirer(r, 45, Blocks.PACKED_MUD, 75, Blocks.TERRACOTTA, 90, Blocks.HONEYCOMB_BLOCK, 100, Blocks.MUD_BRICKS);
         };
     }
@@ -255,6 +285,7 @@ public final class DonjonGenere {
             case GIVRE -> Blocks.POLISHED_DIORITE_STAIRS;
             case ARAIGNEE -> Blocks.MOSSY_STONE_BRICK_STAIRS;
             case LICHE -> Blocks.DEEPSLATE_BRICK_STAIRS;
+            case GAULOIS -> Blocks.OAK_STAIRS;
             default -> Blocks.MUD_BRICK_STAIRS;
         };
         return m.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM);
@@ -321,7 +352,7 @@ public final class DonjonGenere {
                     continue;
                 }
                 boolean arene = z > plan.grandePorteZ;
-                lumiere(x, plan.sol(x, z) + 4, z, arene ? 14 : 10);
+                lumiere(x, plan.sol(x, z) + 4, z, type == TypeDonjon.GAULOIS ? 15 : arene ? 14 : 10);
                 if (arene) {
                     lumiere(x, plan.sol(x, z) + 12, z, 15);
                 }
@@ -357,6 +388,8 @@ public final class DonjonGenere {
                         pose(x, s + 1, z, Blocks.SNOW.defaultBlockState().setValue(SnowLayerBlock.LAYERS, 1 + (int) (h % 2)));
                     } else if (type == TypeDonjon.ARAIGNEE && h < 70 && z < plan.grandePorteZ) {
                         pose(x, s + 1, z, b(Blocks.MOSS_CARPET));
+                    } else if (type == TypeDonjon.GAULOIS && h < 110 && herbe(x, s, z)) {
+                        pose(x, s + 1, z, b(h < 80 ? Blocks.MOSS_CARPET : h < 90 ? Blocks.DANDELION : h < 100 ? Blocks.POPPY : Blocks.CORNFLOWER));
                     }
                     continue;
                 }
@@ -381,6 +414,20 @@ public final class DonjonGenere {
                             pose(x, s + 3, z, b(Blocks.COBWEB));
                         } else if (h < 140) {
                             pose(x, s + 1, z, Blocks.GLOW_LICHEN.defaultBlockState().setValue(MultifaceBlock.getFaceProperty(contre), true));
+                        }
+                    }
+                    case GAULOIS -> {
+                        if (!herbe(x, s, z)) {
+                            continue;
+                        }
+                        if (h < 50) {
+                            pose(x, s + 1, z, b(Blocks.AZALEA));
+                        } else if (h < 100) {
+                            pose(x, s + 1, z, b(h < 75 ? Blocks.MOSS_CARPET : Blocks.FLOWERING_AZALEA));
+                        } else if (h < 112) {
+                            pose(x, s + 1, z, b((h & 1) == 0 ? Blocks.RED_MUSHROOM : Blocks.BROWN_MUSHROOM));
+                        } else if (h < 120) {
+                            pose(x, s + 1, z, b(Blocks.PINK_PETALS));
                         }
                     }
                     case LICHE -> {
@@ -410,6 +457,12 @@ public final class DonjonGenere {
                 }
             }
         }
+    }
+
+    /** Ce bloc de sol porte-t-il une plante ? */
+    private boolean herbe(int x, int s, int z) {
+        BlockState d = level.getBlockState(new BlockPos(x, s, z));
+        return d.is(Blocks.GRASS_BLOCK) || d.is(Blocks.MOSS_BLOCK) || d.is(Blocks.PODZOL) || d.is(Blocks.COARSE_DIRT);
     }
 
     private boolean roche(int x, int y, int z) {
@@ -448,6 +501,22 @@ public final class DonjonGenere {
                             pose(x, h, z, b(Blocks.SPORE_BLOSSOM));
                         } else if (k < 13) {
                             pose(x, h, z, b(Blocks.COBWEB));
+                        }
+                    }
+                    case GAULOIS -> {
+                        if (k < 5) {
+                            int n = 1 + (int) Math.floorMod(hash(z, 3, x), 3L);
+                            for (int j = 0; j < n; j++) {
+                                pose(x, h - j, z, feuilles(Blocks.AZALEA_LEAVES));
+                            }
+                        } else if (k < 8) {
+                            pose(x, h, z, b(Blocks.HANGING_ROOTS));
+                        } else if (k < 9) {
+                            int n = 2 + (int) Math.floorMod(hash(z, 5, x), 3L);
+                            for (int j = 0; j < n; j++) {
+                                pose(x, h - j, z, j == n - 1 ? Blocks.CAVE_VINES.defaultBlockState().setValue(CaveVines.BERRIES, true)
+                                        : Blocks.CAVE_VINES_PLANT.defaultBlockState().setValue(CaveVines.BERRIES, j % 2 == 0));
+                            }
                         }
                     }
                     case LICHE -> {
@@ -548,6 +617,7 @@ public final class DonjonGenere {
             case GIVRE -> b(y % 5 == 0 ? Blocks.BLUE_ICE : Blocks.PACKED_ICE);
             case ARAIGNEE -> b(y % 5 == 0 ? Blocks.CHISELED_STONE_BRICKS : Blocks.MOSSY_STONE_BRICKS);
             case LICHE -> b(y % 6 == 0 ? Blocks.CHISELED_DEEPSLATE : Blocks.DEEPSLATE_BRICKS);
+            case GAULOIS -> b(y % 6 == 0 ? Blocks.STRIPPED_OAK_LOG : Blocks.OAK_LOG);
             default -> b(y % 5 == 0 ? Blocks.HONEYCOMB_BLOCK : Blocks.MUD_BRICKS);
         };
     }
@@ -565,7 +635,7 @@ public final class DonjonGenere {
     }
 
     private BlockState feu() {
-        return (type == TypeDonjon.FOURMI || type == TypeDonjon.ARAIGNEE ? Blocks.CAMPFIRE : Blocks.SOUL_CAMPFIRE).defaultBlockState()
+        return (type == TypeDonjon.FOURMI || type == TypeDonjon.ARAIGNEE || type == TypeDonjon.GAULOIS ? Blocks.CAMPFIRE : Blocks.SOUL_CAMPFIRE).defaultBlockState()
                 .setValue(CampfireBlock.LIT, true);
     }
 
@@ -635,6 +705,7 @@ public final class DonjonGenere {
                     }
                 }
             }
+            case GAULOIS -> village(rx, rz, y);
             case LICHE -> {
                 // l'autel : une estrade, des bougies, deux braseros d'âmes
                 for (int m = 0; m < 2; m++) {
@@ -671,6 +742,63 @@ public final class DonjonGenere {
         }
     }
 
+    /**
+     * Le village gaulois au fond de l'arène : le tas de menhirs d'Obélix, le tonneau où Astérix dort, la grande table du
+     * banquet avec ses sangliers, et des huttes rondes au toit de chaume tout autour.
+     */
+    private void village(int rx, int rz, int y) {
+        // le tas de menhirs (à l'est du repos, là où Obélix dort)
+        for (int k = 0; k < 6; k++) {
+            int mx = rx + 9 + (k % 3) * 2, mz = rz + 3 + (k / 3) * 2;
+            int h = 3 + (int) Math.floorMod(hash(mx, 4, mz), 3L);
+            for (int j = 1; j <= h; j++) {
+                pose(mx, y + j, mz, b(j == h ? Blocks.ANDESITE : Blocks.STONE));
+            }
+        }
+        // le tonneau d'Astérix
+        pose(rx - 2, y + 1, rz + 2, b(Blocks.BARREL));
+        // la table du banquet, derrière eux
+        for (int dx = -7; dx <= 7; dx++) {
+            pose(rx + dx, y + 1, rz + 9, Blocks.OAK_SLAB.defaultBlockState().setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
+                    net.minecraft.world.level.block.state.properties.SlabType.TOP));
+            pose(rx + dx, y + 1, rz + 8, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH));
+            pose(rx + dx, y + 1, rz + 10, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH));
+        }
+        for (int dx = -6; dx <= 6; dx += 4) {
+            pose(rx + dx, y + 2, rz + 9, b(Blocks.BROWN_TERRACOTTA));
+        }
+        // les huttes, en arc de cercle contre la palissade
+        PlanDonjon.Salle a = plan.arene;
+        for (int k = 0; k < 7; k++) {
+            double ang = Math.PI * (0.15 + k * 0.7 / 6) + Math.PI * 0.5;
+            int hx = a.cx() + (int) Math.round(Math.cos(ang) * (a.rx() - 6)), hz = a.cz() + (int) Math.round(Math.sin(ang) * (a.rx() - 6));
+            hutte(hx, hz, y, a.cx(), a.cz());
+        }
+    }
+
+    /** Une hutte ronde : un mur de torchis, une porte tournée vers le milieu, un toit de chaume pointu. */
+    private void hutte(int cx, int cz, int y, int vx, int vz) {
+        double porte = Math.atan2(vz - cz, vx - cx);
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                double d = Math.sqrt(dx * dx + dz * dz);
+                for (int j = 1; j <= 3; j++) {
+                    if (d <= 3.2 && d > 2.2) {
+                        double ang = Math.atan2(dz, dx), diff = Math.abs(Math.atan2(Math.sin(ang - porte), Math.cos(ang - porte)));
+                        boolean ouverture = diff < 0.35 && j <= 2;
+                        pose(cx + dx, y + j, cz + dz, ouverture ? b(Blocks.AIR) : b(j == 3 ? Blocks.STRIPPED_OAK_LOG : Blocks.WHITE_TERRACOTTA));
+                    }
+                }
+                for (int j = 0; j < 4; j++) {
+                    double r = 4.2 - j * 1.2;
+                    if (d <= r) {
+                        pose(cx + dx, y + 4 + j, cz + dz, b(Blocks.HAY_BLOCK));
+                    }
+                }
+            }
+        }
+    }
+
     private void sallesDesEnigmes() {
         BlockState socle, bord, coeur;
         switch (type) {
@@ -683,6 +811,11 @@ public final class DonjonGenere {
                 socle = b(Blocks.MOSSY_STONE_BRICKS);
                 bord = b(Blocks.CHISELED_STONE_BRICKS);
                 coeur = b(Blocks.VERDANT_FROGLIGHT);
+            }
+            case GAULOIS -> {
+                socle = b(Blocks.MOSSY_COBBLESTONE);
+                bord = b(Blocks.MOSSY_STONE_BRICKS);
+                coeur = b(Blocks.OCHRE_FROGLIGHT);
             }
             case LICHE -> {
                 socle = b(Blocks.POLISHED_BLACKSTONE_BRICKS);

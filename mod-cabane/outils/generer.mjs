@@ -21,6 +21,7 @@ import { genererEntrainement } from "./entrainement.mjs";
 import { genererArene } from "./arene.mjs";
 import { genererSceau } from "./sceau.mjs";
 import { genererDonjon } from "./donjon.mjs";
+import { genererParc, sonsParc } from "./parc.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
 import { genererSharingan, sonsSharingan } from "./sharingan.mjs";
@@ -514,6 +515,8 @@ console.log(`Arène : ${genererArene({ ecrire, lang })} boutons`);
 genererSceau({ ecrire, lang });
 // le donjon de rang S de Sung Jin-woo (le portail) : dimension et biome (voir donjon/Donjon.java)
 genererDonjon({ ecrire });
+// le parc d'attractions (/parc) : dimension toujours au soleil, biome, bouton du retour (voir parc/Parc.java et docs/parc)
+genererParc({ ecrire, lang });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",
@@ -741,6 +744,8 @@ console.log("Ressources générées dans", RES);
   sons["musique.woohp"] = { sounds: [{ name: "minecraft:records/mall", stream: true, volume: 0.45 }] };
   // les armes du cartel : leurs bruits sont synthétisés par outils/cartel.mjs
   Object.assign(sons, sonsCartel(RES));
+  // la musique de manège du parc : synthétisée par outils/parc.mjs
+  Object.assign(sons, sonsParc(RES));
   // le catch : la cloche, le choc sur le tapis ; synthétisés par outils/catch.mjs
   Object.assign(sons, sonsCatch(RES));
   // les backrooms : le bourdon des néons, les pas, les cris des screamers ; synthétisés par outils/backrooms.mjs

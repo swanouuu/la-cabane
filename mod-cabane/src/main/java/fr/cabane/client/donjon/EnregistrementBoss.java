@@ -16,6 +16,8 @@ public final class EnregistrementBoss {
         event.registerEntityRenderer(Donjon.REINE.get(), RenduReine::new);
         event.registerEntityRenderer(Donjon.LICHE.get(), RenduLiche::new);
         event.registerEntityRenderer(Donjon.ROI_FOURMI.get(), RenduRoiFourmi::new);
+        event.registerEntityRenderer(Donjon.ASTERIX.get(), RenduAsterix::new);
+        event.registerEntityRenderer(Donjon.OBELIX.get(), RenduObelix::new);
     }
 
     private EnregistrementBoss() {

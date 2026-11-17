@@ -177,6 +177,15 @@
       }
     ]
   },
+  "musique.parc": {
+    "sounds": [
+      {
+        "name": "cabane:musique/parc",
+        "stream": true,
+        "volume": 0.6
+      }
+    ]
+  },
   "catch.cloche": {
     "subtitle": "subtitles.cabane.catch.cloche",
     "sounds": [

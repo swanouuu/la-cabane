@@ -1,0 +1,2501 @@
+<title>Parc de la Cabane</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Plein écran : le parc en 3D, la fiche des attractions à gauche, les vues en bas. Un seul thème : grand soleil. */
+:root {
+  --fond: #1c1830; --plaque: #2a2546; --plaque2: #433b6b; --craie: #f6f1ff; --brume: #b9b0d6;
+  --rose: #ff5c8a; --jaune: #ffd23f; --turquoise: #2ec4b6;
+  --titre: "Pixelify Sans", "Trebuchet MS", sans-serif; --texte: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--fond); color: var(--craie); font-family: var(--texte); overflow: hidden; }
+#scene { position: fixed; inset: 0; background: linear-gradient(#3f8fe0 0%, #8cc4f2 50%, #d6ecfb 100%); touch-action: none; }
+#scene canvas { display: block; }
+.plaque { background: color-mix(in srgb, var(--fond) 91%, transparent); border: 2px solid var(--plaque2); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--jaune); outline-offset: 2px; }
+
+#panneau {
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  width: min(340px, calc(100vw - 32px)); max-height: calc(100% - 96px); display: flex; flex-direction: column;
+}
+#bande { height: 6px; flex: none; background: repeating-linear-gradient(90deg, var(--rose) 0 18px, var(--jaune) 18px 36px, var(--turquoise) 36px 54px); }
+#panneau .corps { padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+h1 { font: 700 26px/1.05 var(--titre); margin: 0; }
+#sous { font: 500 14px var(--titre); color: var(--jaune); }
+#intro { font-size: 13px; line-height: 1.45; color: var(--brume); margin: 0; }
+#intro code { font-family: ui-monospace, Consolas, monospace; background: var(--plaque); padding: 1px 5px; color: var(--jaune); }
+#liste { display: flex; flex-direction: column; gap: 3px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+#liste button { display: grid; grid-template-columns: 10px 1fr; gap: 2px 9px; align-items: center; text-align: left; background: var(--plaque); border: 0; padding: 6px 9px; }
+#liste button:hover { background: var(--plaque2); }
+#liste button.actif { background: var(--plaque2); box-shadow: inset 3px 0 0 var(--jaune); }
+#liste i { width: 10px; height: 10px; grid-row: span 2; }
+#liste b { font: 700 14px var(--titre); }
+#liste small { font-size: 11px; color: var(--brume); grid-column: 2; }
+#fiche { background: var(--plaque); border: 1px solid var(--plaque2); padding: 10px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.45; flex: none; max-height: 42vh; overflow-y: auto; }
+#fiche h2 { font: 700 17px var(--titre); margin: 0; color: var(--jaune); }
+#fiche p { margin: 0; }
+#fiche .jeu { color: var(--brume); font-size: 12px; }
+#fiche .jeu b { color: var(--craie); }
+#monter { align-self: flex-start; background: var(--rose); border: 2px solid #ffb3c7; padding: 7px 14px; font-weight: 700; }
+
+#actions {
+  position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; max-width: calc(100vw - 32px); overflow-x: auto;
+}
+#actions button { padding: 10px 15px; border: 2px solid var(--plaque2); background: var(--plaque); font-weight: 600; font-size: 14px; white-space: nowrap; }
+#actions button[aria-pressed="true"] { background: var(--jaune); color: var(--fond); border-color: #fff0b0; }
+
+#etiquettes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.etiquette { position: absolute; left: 0; top: 0; background: var(--fond); border: 1px solid var(--jaune); color: var(--craie);
+  padding: 3px 7px; font-size: 12px; white-space: nowrap; will-change: transform; }
+
+#tour { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); padding: 9px 14px;
+  display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px); }
+#tour .nom { font: 700 18px var(--titre); color: var(--jaune); white-space: nowrap; }
+#tour .vit { font: 700 16px var(--titre); min-width: 76px; text-align: right; font-variant-numeric: tabular-nums; }
+#tour small { color: var(--brume); font-size: 12px; }
+#descendre { background: var(--rose); border: 2px solid #ffb3c7; padding: 7px 12px; font-weight: 700; white-space: nowrap; }
+#screamer { position: fixed; inset: 0; background: #000; display: grid; place-items: center; z-index: 50; pointer-events: none; }
+#screamer canvas { width: min(100vw, 100vh); height: min(100vw, 100vh); image-rendering: pixelated; }
+#screamer.on canvas { animation: crie 0.8s ease-out both; }
+#screamer.on { animation: tremble 0.06s steps(2) infinite; }
+@keyframes crie { 0% { transform: scale(0.35); } 12% { transform: scale(1.18); } 100% { transform: scale(1.32); } }
+@keyframes tremble { 0% { transform: translate(-9px, 6px); } 100% { transform: translate(8px, -7px); } }
+#nausee { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(120,190,60,0) 35%, rgba(90,160,40,0.55) 100%); transition: opacity 0.6s; }
+#mal { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); padding: 9px 14px; font: 700 16px var(--titre); color: #c8ff9a; text-align: center; max-width: calc(100vw - 32px); }
+#flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 40; }
+#flash.on { animation: flash 0.5s ease-out; }
+@keyframes flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+#photo { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: min(300px, calc(100vw - 32px)); padding: 10px; background: #fbf8f0; color: #1c1830; border: 0; box-shadow: 0 8px 24px #0007; display: flex; flex-direction: column; gap: 6px; z-index: 30; transform: rotate(-2deg); }
+#photo canvas { width: 100%; height: auto; display: block; }
+#photo .leg { font: 700 15px var(--titre); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#photo button { background: #1c1830; color: #fff; border: 0; padding: 5px 10px; font: 600 12px var(--texte); }
+#photo.arrive { animation: arrive 0.6s cubic-bezier(.2,1.4,.4,1); }
+@keyframes arrive { 0% { transform: translateY(40px) rotate(-8deg); opacity: 0; } 100% { transform: rotate(-2deg); opacity: 1; } }
+#liste button.evt { background: #4a3a12; box-shadow: inset 0 0 0 1px #ffc83d; }
+#liste button.evt b { color: #ffd23f; }
+#liste button.evt.actif { background: #6a5214; }
+#f-plus { display: flex; flex-direction: column; gap: 6px; }
+#f-plus h3 { font: 700 14px var(--titre); color: var(--jaune); margin: 4px 0 0; }
+#f-plus ul { margin: 0; padding-left: 18px; } #f-plus li { margin: 2px 0; } #f-plus p { margin: 0; }
+#f-texte code { font-family: ui-monospace, Consolas, monospace; background: var(--fond); padding: 1px 5px; color: var(--jaune); }
+.salles { display: flex; flex-wrap: wrap; gap: 4px; }
+.salles button { background: var(--fond); border: 1px solid var(--plaque2); padding: 5px 9px; font-size: 12px; font-weight: 600; }
+.salles button:hover { border-color: var(--jaune); }
+.salles button.fort { background: #c9971f; border-color: #ffe08a; color: #1c1830; }
+.etiquette.boss { font: 700 13px var(--titre); }
+#barres { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(16px + env(safe-area-inset-top, 0px)); width: min(380px, calc(100vw - 32px)); padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+#barres .barre { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; align-items: center; font: 700 13px var(--titre); }
+#barres i { height: 10px; background: var(--c); box-shadow: inset 0 0 0 1px #0006; }
+#barres b { font: 600 12px var(--texte); color: var(--brume); }
+@media (max-width: 640px) { #barres { top: auto; bottom: calc(68px + 46% + 8px); } }
+#erreur { position: fixed; inset: 0; display: grid; place-items: center; padding-inline: 24px; text-align: center; font-size: 16px; background: var(--fond); }
+
+@media (max-width: 640px) {
+  #panneau { top: auto; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); width: auto; right: max(16px, env(safe-area-inset-right, 0px)); max-height: 46%; }
+  h1 { font-size: 21px; }
+  #intro { display: none; }
+  #fiche { max-height: 30vh; }
+  #actions { left: 16px; right: 16px; transform: none; }
+  #tour small { display: none; }
+}
+</style>
+
+<div id="scene" aria-label="Croquis 3D du parc d'attractions"></div>
+<div id="etiquettes"></div>
+
+<section id="panneau" class="plaque">
+  <div id="bande"></div>
+  <div class="corps">
+    <h1>Parc de la Cabane</h1>
+    <div id="sous">Croquis · rien n'est construit en jeu</div>
+    <p id="intro"><code>/parc</code> t'emmène dans le parc. Là-bas il fait toujours grand soleil, avec une petite musique de fête foraine partout. Clique une attraction pour la voir, puis <b>Monter dedans</b> pour faire le tour à la place d'un passager.</p>
+    <div id="liste"></div>
+    <div id="fiche" hidden>
+      <h2 id="f-nom"></h2>
+      <p id="f-texte"></p>
+      <p class="jeu" id="f-jeu"></p>
+      <div id="f-plus" hidden></div>
+      <button id="monter" type="button">Monter dedans</button>
+    </div>
+  </div>
+</section>
+
+<div id="tour" class="plaque" hidden>
+  <span class="nom" id="t-nom"></span>
+  <span class="vit" id="t-vit">0 km/h</span>
+  <small>Glisse pour regarder autour</small>
+  <button id="descendre" type="button">Descendre</button>
+</div>
+
+<div id="actions">
+  <button id="ensemble" type="button">Vue d'ensemble</button>
+  <button id="balade" type="button" aria-pressed="false">Balade</button>
+  <button id="son" type="button" aria-pressed="false">Musique</button>
+  <button id="noms" type="button" aria-pressed="true">Noms</button>
+</div>
+<div id="nausee"></div>
+<div id="mal" class="plaque" hidden>Tu as un peu la nausée…</div>
+<div id="flash"></div>
+<div id="barres" class="plaque" hidden>
+  <div class="barre"><span>ASTÉRIX</span><i style="--c:#ffd23f"></i><b>3000 / 3000</b></div>
+  <div class="barre"><span>OBÉLIX</span><i style="--c:#4dc9ff"></i><b>3000 / 3000</b></div>
+</div>
+<div id="photo" hidden><canvas width="480" height="360"></canvas><div class="leg"><span>Ta photo souvenir</span><button id="photo-fermer" type="button">Fermer</button></div></div>
+<div id="screamer" hidden><canvas width="96" height="96"></canvas></div>
+<div id="erreur" hidden>La 3D ne peut pas démarrer sur cet appareil.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+(function () {
+const $ = (id) => document.getElementById(id);
+const erreur = () => { $("erreur").hidden = false; };
+if (!window.THREE || !THREE.OrbitControls) { erreur(); return; }
+
+// ================================================================ outils
+let graine = 9137;
+const alea = () => { graine = (graine * 16807) % 2147483647; return (graine - 1) / 2147483646; };
+const choix = (t) => t[Math.floor(alea() * t.length)];
+const lisse = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+const entre = (a, b, t) => lisse((t - a) / (b - a));
+const bosse = (a, b, t, bord = 0.12) => entre(a, a + bord, t) * (1 - entre(b - bord, b, t));
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const Y = V(0, 1, 0);
+const TAU = Math.PI * 2;
+const qY = (a) => new THREE.Quaternion().setFromAxisAngle(Y, a);
+const _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = V(), _p = V(), _v = V(), _n = V(), _c = new THREE.Color(), _nm = new THREE.Matrix3();
+
+// ================================================================ textures
+function toile(w, h, dessin, pixel = true) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  dessin(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (pixel) { t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearMipmapLinearFilter; }
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+  return t;
+}
+const bruit = (base, v) => (g, w, h) => {
+  const c = new THREE.Color(base);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = 1 + (alea() - 0.5) * 2 * v;
+    g.fillStyle = `rgb(${Math.min(255, c.r * 255 * k) | 0},${Math.min(255, c.g * 255 * k) | 0},${Math.min(255, c.b * 255 * k) | 0})`;
+    g.fillRect(x, y, 1, 1);
+  }
+};
+const GRAIN = toile(16, 16, bruit("#f4f4f4", 0.07));
+const HERBE = toile(16, 16, bruit("#6fae4a", 0.13)); HERBE.repeat.set(500, 500);
+const EAU = toile(32, 32, (g, w, h) => {
+  bruit("#3d8fd6", 0.08)(g, w, h);
+  for (let i = 0; i < 26; i++) { g.fillStyle = "rgba(255,255,255,0.35)"; g.fillRect(Math.floor(alea() * w), Math.floor(alea() * h), 2 + Math.floor(alea() * 4), 1); }
+});
+const RAYURES = toile(64, 8, (g) => { for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? "#ffffff" : "#e8333f"; g.fillRect(i * 4, 0, 4, 8); } });
+
+// ================================================================ modèles fusionnés (une géométrie par objet = rapide)
+const BOX = new THREE.BoxGeometry(1, 1, 1);
+const MAT_L = new THREE.MeshLambertMaterial({ vertexColors: true, map: GRAIN });
+const MAT_B = new THREE.MeshBasicMaterial({ vertexColors: true });
+const sansIndex = new WeakMap();
+const ni = (g) => { let r = sansIndex.get(g); if (!r) { r = g.index ? g.toNonIndexed() : g; sansIndex.set(g, r); } return r; };
+class Modele {
+  constructor() { this.l = { p: [], n: [], u: [], c: [] }; this.b = { p: [], n: [], u: [], c: [] }; this.base = null; }
+  geo(g, m, c, lueur = false, varia = 0.07) {
+    g = ni(g);
+    const mm = this.base ? _m2.multiplyMatrices(this.base, m) : m;
+    const t = lueur ? this.b : this.l;
+    const P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv;
+    _nm.getNormalMatrix(mm); _c.set(c);
+    const k = 1 + (alea() - 0.5) * 2 * varia;
+    for (let i = 0; i < P.count; i++) {
+      _v.fromBufferAttribute(P, i).applyMatrix4(mm); t.p.push(_v.x, _v.y, _v.z);
+      _n.fromBufferAttribute(N, i).applyMatrix3(_nm).normalize(); t.n.push(_n.x, _n.y, _n.z);
+      if (U) t.u.push(U.getX(i), U.getY(i)); else t.u.push(0, 0);
+      t.c.push(Math.min(1, _c.r * k), Math.min(1, _c.g * k), Math.min(1, _c.b * k));
+    }
+    return this;
+  }
+  boite(x, y, z, w, h, d, c, lueur, varia) { return this.geo(BOX, _m.compose(_p.set(x, y, z), _q.identity(), _s.set(w, h, d)), c, lueur, varia); }
+  bloc(x, y, z, w, h, d, c, lueur, varia) { return this.boite(x + w / 2, y + h / 2, z + d / 2, w, h, d, c, lueur, varia); }
+  boiteQ(p, q, w, h, d, c, lueur, varia) { return this.geo(BOX, _m.compose(p, q, _s.set(w, h, d)), c, lueur, varia); }
+  poutre(a, b, e, c, lueur) {
+    const d = V().subVectors(b, a), L = d.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(Y, d.normalize());
+    return this.geo(BOX, _m.compose(V().addVectors(a, b).multiplyScalar(0.5), q, _s.set(e, L, e)), c, lueur);
+  }
+  forme(g, x, y, z, c, lueur, rx = 0, sx = 1, sy = 1, sz = 1) {
+    return this.geo(g, _m.compose(_p.set(x, y, z), _q.setFromEuler(new THREE.Euler(rx, 0, 0)), _s.set(sx, sy, sz)), c, lueur);
+  }
+  avec(x, y, z, rotY, fn) {
+    const avant = this.base;
+    const b = new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y, z);
+    this.base = avant ? avant.clone().multiply(b) : b;
+    fn(); this.base = avant;
+    return this;
+  }
+  maillage(ombre = true) {
+    const g = new THREE.Group();
+    for (const [t, mat] of [[this.l, MAT_L], [this.b, MAT_B]]) {
+      if (!t.p.length) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(t.p, 3));
+      geo.setAttribute("normal", new THREE.Float32BufferAttribute(t.n, 3));
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(t.u, 2));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(t.c, 3));
+      geo.computeBoundingSphere();
+      const m = new THREE.Mesh(geo, mat);
+      if (mat === MAT_L) { m.castShadow = ombre; m.receiveShadow = true; }
+      g.add(m);
+    }
+    return g;
+  }
+}
+const MONDE = new Modele();
+const CYL = (r1, r2, h, s = 16, ouvert = false) => new THREE.CylinderGeometry(r1, r2, h, s, 1, ouvert);
+const BOULE = (r, s = 12) => new THREE.SphereGeometry(r, s, Math.max(6, s >> 1));
+
+// ================================================================ scène
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { erreur(); return; }
+const hote = $("scene");
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x000000, 0);
+hote.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const BRUME_JOUR = new THREE.Color(0xcfe6f8), NOIR = new THREE.Color(0x030208);
+scene.fog = new THREE.Fog(BRUME_JOUR.clone(), 260, 700);
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1600);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.09;
+controls.maxPolarAngle = 1.52; controls.minDistance = 6; controls.maxDistance = 650;
+const VUE_ENSEMBLE = { pos: V(175, 150, 245), cible: V(-5, 0, -5) };
+camera.position.copy(VUE_ENSEMBLE.pos); controls.target.copy(VUE_ENSEMBLE.cible); controls.update();
+
+const ciel = new THREE.HemisphereLight(0xdcefff, 0x6f8f4a, 0.7);
+const soleil = new THREE.DirectionalLight(0xfff1d2, 0.85);
+const DIR_SOLEIL = V(110, 190, 120).normalize();
+soleil.position.copy(DIR_SOLEIL).multiplyScalar(320); soleil.target.position.set(0, 0, 0);
+soleil.castShadow = true;
+const tailleOmbre = renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048;
+soleil.shadow.mapSize.set(tailleOmbre, tailleOmbre);
+Object.assign(soleil.shadow.camera, { left: -215, right: 215, top: 215, bottom: -215, near: 20, far: 700 });
+soleil.shadow.bias = -0.0007;
+scene.add(ciel, soleil, soleil.target);
+// le soleil, bien visible dans le ciel
+{
+  const t = toile(128, 128, (g) => {
+    const d = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    d.addColorStop(0, "rgba(255,255,240,1)"); d.addColorStop(0.25, "rgba(255,245,190,1)"); d.addColorStop(0.32, "rgba(255,230,140,0.55)"); d.addColorStop(1, "rgba(255,220,120,0)");
+    g.fillStyle = d; g.fillRect(0, 0, 128, 128);
+  }, false);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, fog: false, depthWrite: false }));
+  s.position.copy(DIR_SOLEIL).multiplyScalar(1100); s.scale.set(260, 260, 1);
+  scene.add(s);
+}
+// les lampes des tunnels : 6 lumières qui se posent sur les lampes les plus proches de la caméra
+const POOL = [];
+for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffffff, 0, 13, 2); scene.add(l); POOL.push(l); }
+const LAMPE_POCHE = new THREE.PointLight(0xffe6c0, 0, 7, 2); scene.add(LAMPE_POCHE);   // un peu de lumière autour de toi dans le noir
+
+const sol = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), new THREE.MeshLambertMaterial({ map: HERBE }));
+sol.rotation.x = -Math.PI / 2; sol.receiveShadow = true; scene.add(sol);
+
+// ================================================================ panneaux écrits
+const panneaux = [];
+function panneau(texte, w, h, fond, encre, parent, x, y, z, rotY, bord = "#ffffff") {
+  const c = document.createElement("canvas"); c.width = 512; c.height = Math.round(512 * h / w);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+  const dessine = () => {
+    const g = c.getContext("2d");
+    g.fillStyle = bord; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = fond; g.fillRect(8, 8, c.width - 16, c.height - 16);
+    let taille = c.height * 0.62;
+    g.font = `700 ${taille}px "Pixelify Sans", "Trebuchet MS", sans-serif`;
+    while (g.measureText(texte).width > c.width - 40 && taille > 10) { taille -= 2; g.font = `700 ${taille}px "Pixelify Sans", "Trebuchet MS", sans-serif`; }
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillStyle = "rgba(0,0,0,0.35)"; g.fillText(texte, c.width / 2 + 4, c.height / 2 + 5);
+    g.fillStyle = encre; g.fillText(texte, c.width / 2, c.height / 2 + 1);
+    t.needsUpdate = true;
+  };
+  dessine(); panneaux.push(dessine);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t }));
+  m.position.set(x, y, z); m.rotation.y = rotY;
+  (parent || scene).add(m);
+  return m;
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => panneaux.forEach((d) => d()));
+
+// ================================================================ grille d'occupation (pour poser les arbres là où il n'y a rien)
+const OCC = { x0: -170, z0: -150, w: 175, h: 150, g: new Uint8Array(175 * 150) };
+function occuper(x, z, r) {
+  const i0 = Math.max(0, Math.floor((x - r - OCC.x0) / 2)), i1 = Math.min(OCC.w - 1, Math.floor((x + r - OCC.x0) / 2));
+  const j0 = Math.max(0, Math.floor((z - r - OCC.z0) / 2)), j1 = Math.min(OCC.h - 1, Math.floor((z + r - OCC.z0) / 2));
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+    const cx = OCC.x0 + i * 2 + 1, cz = OCC.z0 + j * 2 + 1;
+    if (Math.hypot(cx - x, cz - z) <= r + 1) OCC.g[j * OCC.w + i] = 1;
+  }
+}
+function libre(x, z) {
+  const i = Math.floor((x - OCC.x0) / 2), j = Math.floor((z - OCC.z0) / 2);
+  if (i < 0 || j < 0 || i >= OCC.w || j >= OCC.h) return false;
+  return !OCC.g[j * OCC.w + i];
+}
+function occSegment(a, b, r) { const L = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(L / 1.5)); for (let k = 0; k <= n; k++) occuper(a.x + (b.x - a.x) * k / n, a.z + (b.z - a.z) * k / n, r); }
+
+// ================================================================ parcours (rails) : points + « haut » de chaque point
+class Parcours {
+  constructor(pts, ups, infos) {
+    const P = [], U = [], I = [];
+    for (let i = 0; i < pts.length; i++) {
+      if (P.length && pts[i].distanceTo(P[P.length - 1]) < 0.05) continue;
+      P.push(pts[i]); U.push(ups ? ups[i].clone() : Y.clone()); I.push(infos[i]);
+    }
+    if (P[0].distanceTo(P[P.length - 1]) < 0.05) { P.pop(); U.pop(); I.pop(); }
+    const n = P.length; this.n = n; this.p = P; this.info = I; this.f = []; this.u = [];
+    for (let i = 0; i < n; i++) this.f.push(V().subVectors(P[(i + 1) % n], P[(i - 1 + n) % n]).normalize());
+    for (let i = 0; i < n; i++) {
+      const f = this.f[i], u = U[i];
+      u.addScaledVector(f, -f.dot(u));
+      if (u.lengthSq() < 1e-4) u.copy(i ? this.u[i - 1] : Y);
+      this.u.push(u.normalize());
+    }
+    this.cum = new Float64Array(n + 1);
+    for (let i = 0; i < n; i++) this.cum[i + 1] = this.cum[i] + P[i].distanceTo(P[(i + 1) % n]);
+    this.total = this.cum[n];
+  }
+  at(s, o) {
+    const T = this.total; s = ((s % T) + T) % T;
+    let a = 0, b = this.n;
+    while (b - a > 1) { const m = (a + b) >> 1; if (this.cum[m] <= s) a = m; else b = m; }
+    const j = (a + 1) % this.n, k = (s - this.cum[a]) / (this.cum[a + 1] - this.cum[a] || 1);
+    o.p.lerpVectors(this.p[a], this.p[j], k);
+    o.f.lerpVectors(this.f[a], this.f[j], k).normalize();
+    o.u.lerpVectors(this.u[a], this.u[j], k); o.u.addScaledVector(o.f, -o.f.dot(o.u)).normalize();
+    o.i = a; o.info = this.info[a]; o.s = s;
+    return o;
+  }
+  sIndex(test) { for (let i = 0; i < this.n; i++) if (test(this.info[i], i)) return this.cum[i]; return 0; }
+}
+const cadre = () => ({ p: V(), f: V(), u: V(), i: 0, info: null, s: 0 });
+const _r = V();
+function quatDe(c, q) { _r.crossVectors(c.u, c.f).normalize(); _m.makeBasis(_r, c.u, c.f); return q.setFromRotationMatrix(_m); }
+function orienter(obj, c, spin = 0) {
+  quatDe(c, obj.quaternion);
+  if (spin) obj.quaternion.multiply(_q.setFromAxisAngle(Y, spin));
+  obj.position.copy(c.p);
+}
+const droiteDe = (c) => V().crossVectors(c.u, c.f).normalize();   // côté « +x » du wagon
+
+// tortue : pose les morceaux de grand huit les uns après les autres
+class Tortue {
+  constructor(p, d) { this.p = p.clone(); this.d = d.clone(); this.p0 = p.clone(); this.d0 = d.clone(); this.pts = [p.clone()]; this.ups = [Y.clone()]; this.inf = [{ mode: "gare", noir: false }]; this.sommets = []; }
+  pose(p, u, mode, noir) { this.pts.push(p); this.ups.push(u); this.inf.push({ mode, noir }); this.p = p.clone(); }
+  gauche(d) { return V().crossVectors(Y, d).normalize(); }
+  droit(L, dy = 0, mode = "libre", noir = false) {
+    const p0 = this.p.clone(), n = Math.ceil(L / 0.5);
+    for (let k = 1; k <= n; k++) { const t = k / n; this.pose(p0.clone().addScaledVector(this.d, L * t).addScaledVector(Y, dy * lisse(t)), Y.clone(), mode, noir); }
+  }
+  virage(R, ang, dy, banque, mode = "libre", noir = false) {
+    const s = Math.sign(ang), p0 = this.p.clone(), d0 = this.d.clone();
+    const centre = p0.clone().addScaledVector(this.gauche(d0), s * R), n = Math.ceil(Math.abs(ang) * R / 0.5);
+    for (let k = 1; k <= n; k++) {
+      const t = k / n, d = d0.clone().applyAxisAngle(Y, ang * t), g = this.gauche(d);
+      const p = centre.clone().addScaledVector(g, -s * R); p.y = p0.y + dy * lisse(t);
+      const b = banque * Math.sin(Math.PI * t);
+      this.pose(p, Y.clone().multiplyScalar(Math.cos(b)).addScaledVector(g, s * Math.sin(b)), mode, noir);
+    }
+    this.d = d0.applyAxisAngle(Y, ang);
+  }
+  boucle(R, decal) {
+    const p0 = this.p.clone(), d = this.d.clone(), dr = V().crossVectors(d, Y).normalize(), n = Math.ceil(TAU * R / 0.5);
+    for (let k = 1; k <= n; k++) {
+      const th = TAU * k / n;
+      const p = p0.clone().addScaledVector(d, R * Math.sin(th)).addScaledVector(Y, R * (1 - Math.cos(th))).addScaledVector(dr, decal * lisse(k / n));
+      this.pose(p, Y.clone().multiplyScalar(Math.cos(th)).addScaledVector(d, -Math.sin(th)), "libre", false);
+    }
+    this.sommets.push({ haut: p0.clone().addScaledVector(Y, 2 * R).addScaledVector(dr, decal / 2), cote: dr });
+  }
+  vrille(L, r) {
+    const p0 = this.p.clone(), d = this.d.clone(), n = Math.ceil(L / 0.4);
+    for (let k = 1; k <= n; k++) {
+      const t = k / n, off = V(0, -r, 0).applyAxisAngle(d, TAU * lisse(t));
+      const p = p0.clone().addScaledVector(Y, r).addScaledVector(d, L * t).add(off);
+      this.pose(p, off.clone().multiplyScalar(-1 / r), "libre", false);
+    }
+  }
+  colline(L, h, mode = "libre") {
+    const p0 = this.p.clone(), n = Math.ceil(L / 0.5);
+    for (let k = 1; k <= n; k++) { const t = k / n; this.pose(p0.clone().addScaledVector(this.d, L * t).addScaledVector(Y, h * (1 - Math.cos(TAU * t)) / 2), Y.clone(), mode, false); }
+  }
+  fermer(mode) {
+    const a = this.p.clone(), b = this.p0, L = a.distanceTo(b), n = Math.ceil(L / 0.5);
+    for (let k = 1; k < n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      const p = a.clone().multiplyScalar(2 * t3 - 3 * t2 + 1).addScaledVector(this.d, L * (t3 - 2 * t2 + t))
+        .addScaledVector(b, -2 * t3 + 3 * t2).addScaledVector(this.d0, L * (t3 - t2));
+      this.pose(p, Y.clone(), mode, false);
+    }
+  }
+  parcours() { return new Parcours(this.pts, this.ups, this.inf); }
+}
+
+// rails en tubes
+function rails(P, { ecart = 0.6, rayon = 0.13, couleur, lueur = false, epine = null, rayonEpine = 0.28, profEpine = 0.5 }) {
+  const n = Math.ceil(P.total), c = cadre(), g = [], d = [], e = [];
+  for (let i = 0; i < n; i++) {
+    P.at(i * P.total / n, c); const r = droiteDe(c);
+    g.push(c.p.clone().addScaledVector(r, ecart)); d.push(c.p.clone().addScaledVector(r, -ecart)); e.push(c.p.clone().addScaledVector(c.u, -profEpine));
+  }
+  const tube = (pts, ray, coul, lu) => {
+    const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), pts.length * 2, ray, 6, true);
+    const m = new THREE.Mesh(geo, lu ? new THREE.MeshBasicMaterial({ color: coul }) : new THREE.MeshLambertMaterial({ color: coul }));
+    m.castShadow = !lu; m.receiveShadow = true; scene.add(m); return m;
+  };
+  const r = [tube(g, rayon, couleur, lueur), tube(d, rayon, couleur, lueur)];
+  if (epine) r.push(tube(e, rayonEpine, epine, false));
+  return r;
+}
+function traverses(P, pas, largeur, couleur, filtre = () => true) {
+  const c = cadre(), q = new THREE.Quaternion();
+  for (let s = 0; s < P.total; s += pas) {
+    P.at(s, c); if (!filtre(c)) continue;
+    MONDE.boiteQ(c.p.clone().addScaledVector(c.u, -0.22), quatDe(c, q), largeur, 0.14, 0.3, couleur);
+  }
+}
+function piliers(P, pas, epais, couleur, filtre = () => true, prof = 0.7) {
+  const c = cadre();
+  for (let s = 0; s < P.total; s += pas) {
+    P.at(s, c);
+    if (c.u.y < 0.5 || c.p.y < 1.6 || !filtre(c)) continue;
+    const b = c.p.clone().addScaledVector(c.u, -prof), h = b.y;
+    MONDE.boite(b.x, h / 2, b.z, epais, h, epais, couleur);
+    MONDE.boite(b.x, 0.2, b.z, epais + 0.8, 0.4, epais + 0.8, "#8d8d8d");
+  }
+}
+// tunnel qui suit un parcours : murs, plafond, sol
+function tunnel(P, { filtre, larg, haut, mur, plafond, pas = 1.1, decor, prof = 1.1 }) {
+  const c = cadre(), q = new THREE.Quaternion();
+  for (let s = 0; s < P.total; s += pas) {
+    P.at(s, c); if (!filtre(c.info)) continue;
+    const w = larg(c.info), h = haut(c.info); quatDe(c, q); const r = droiteDe(c);
+    for (const cote of [1, -1]) MONDE.boiteQ(c.p.clone().addScaledVector(r, cote * (w / 2 + 0.5)).addScaledVector(c.u, h / 2 - 1.2), q, 1, h + 1.4, pas + 0.6, mur(c));
+    MONDE.boiteQ(c.p.clone().addScaledVector(c.u, h), q, w + 2, 1, pas + 0.6, plafond(c));
+    MONDE.boiteQ(c.p.clone().addScaledVector(c.u, -prof), q, w + 2, 0.8, pas + 0.6, mur(c));
+    if (decor) decor(s, c, r, w, h, q);
+  }
+}
+
+// trains : wagons qui suivent un parcours avec une vitesse qui dépend de l'endroit
+class Train {
+  constructor(P, voitures, ecart, o) {
+    Object.assign(this, { P, vs: voitures, ecart, s: o.s0 || 0, v: 0, attente: 0, vitesse: o.vitesse, reactif: o.reactif, freinage: o.freinage, spin: o.spin, arrets: o.arrets || [], ecartMin: o.ecartMin || 12, c: cadre(), tete: cadre(), surArret: o.surArret, aPasse: o.aPasse || [] });
+  }
+  maj(dt, devant) {
+    const T = this.P.total;
+    this.P.at(this.s, this.tete);
+    const cible = this.vitesse(this.tete);
+    if (this.attente > 0) { this.attente -= dt; this.v = 0; }
+    else { const k = cible > this.v ? (this.reactif || 2.2) : (this.freinage || 3.5); this.v += (cible - this.v) * Math.min(1, dt * k); }
+    if (devant) {
+      const gap = (((devant.s - this.s) % T) + T) % T;
+      if (gap < this.ecartMin) this.v = Math.min(this.v, devant.v * Math.max(0, (gap - this.ecartMin * 0.55) / (this.ecartMin * 0.45)));
+    }
+    let a = this.s % T; if (a < 0) a += T;   // (pas de « + T » : l'arrondi relançait l'arrêt en gare)
+    this.s = a + this.v * dt;
+    const b = this.s % T;
+    const croise = (x) => (a <= b ? a < x && b >= x : x > a || x <= b);
+    if (this.attente <= 0) for (const ar of this.arrets) if (croise(ar.s)) { this.attente = ar.duree; this.s = ar.s; this.v = 0; }
+    for (const ev of this.aPasse) if (croise(ev.s)) ev.fn(this);
+    for (let k = 0; k < this.vs.length; k++) {
+      this.P.at(this.s - k * this.ecart, this.c);
+      orienter(this.vs[k], this.c, this.spin ? this.spin(this.c) : 0);
+    }
+  }
+}
+
+// ================================================================ personnages
+const PEAU = ["#f1c7a0", "#e0ac7e", "#b67b50", "#7a5034"];
+const CHEVEUX = ["#2b1d12", "#5a3a1e", "#d9b44a", "#1a1a1a", "#a0522d", "#e86f9a", "#3b6fd6"];
+const HAUTS = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22", "#1abc9c", "#ecf0f1", "#34495e", "#ff6fa8"];
+const BAS = ["#2c3e66", "#3b3b3b", "#6b4a2b", "#1f4d7a", "#7a7a7a"];
+function passager(M, x, y, z, rot = 0, bras = "haut") {
+  M.avec(x, y, z, rot, () => {
+    const haut = choix(HAUTS), peau = choix(PEAU), chev = choix(CHEVEUX), bas = choix(BAS);
+    M.boite(0, 0.36, -0.02, 0.62, 0.72, 0.36, haut);
+    M.boite(0, 0.98, 0, 0.5, 0.5, 0.5, peau);
+    M.boite(0, 1.26, -0.02, 0.54, 0.14, 0.56, chev);
+    M.boite(0, 1.06, -0.24, 0.54, 0.42, 0.1, chev);
+    M.boite(-0.12, 1.0, 0.255, 0.08, 0.08, 0.02, "#1b1b1b", false, 0); M.boite(0.12, 1.0, 0.255, 0.08, 0.08, 0.02, "#1b1b1b", false, 0);
+    if (bras === "haut") for (const s of [-1, 1]) { M.boite(s * 0.42, 1.08, 0.04, 0.2, 0.72, 0.2, haut); M.boite(s * 0.42, 1.52, 0.04, 0.2, 0.18, 0.2, peau); }
+    else for (const s of [-1, 1]) { M.boite(s * 0.42, 0.5, 0.22, 0.2, 0.2, 0.62, haut); M.boite(s * 0.42, 0.5, 0.58, 0.2, 0.2, 0.14, peau); }
+    for (const s of [-1, 1]) { M.boite(s * 0.15, 0.08, 0.32, 0.26, 0.24, 0.62, bas); M.boite(s * 0.15, -0.28, 0.6, 0.26, 0.62, 0.26, bas); }
+  });
+}
+function pieton(M) {
+  const haut = choix(HAUTS), peau = choix(PEAU), chev = choix(CHEVEUX), bas = choix(BAS);
+  for (const s of [-1, 1]) M.boite(s * 0.15, 0.4, 0, 0.26, 0.8, 0.28, bas);
+  M.boite(0, 1.15, 0, 0.62, 0.72, 0.34, haut);
+  for (const s of [-1, 1]) { M.boite(s * 0.42, 1.18, 0, 0.2, 0.66, 0.22, haut); M.boite(s * 0.42, 0.78, 0, 0.2, 0.16, 0.22, peau); }
+  M.boite(0, 1.78, 0, 0.5, 0.5, 0.5, peau);
+  M.boite(0, 2.06, -0.02, 0.54, 0.14, 0.56, chev); M.boite(0, 1.86, -0.24, 0.54, 0.42, 0.1, chev);
+  M.boite(-0.12, 1.8, 0.255, 0.08, 0.08, 0.02, "#1b1b1b", false, 0); M.boite(0.12, 1.8, 0.255, 0.08, 0.08, 0.02, "#1b1b1b", false, 0);
+  if (alea() < 0.25) { M.boite(0.55, 2.6, 0.1, 0.02, 1.6, 0.02, "#dddddd"); M.forme(BOULE(0.42, 10), 0.55, 3.55, 0.1, choix(["#ff4d6d", "#ffd23f", "#4dc9ff", "#7bff7b", "#c77dff"])); }
+}
+function siege(parent, x, y, z, rotY) { const o = new THREE.Object3D(); o.position.set(x, y, z); o.rotation.y = rotY; parent.add(o); return o; }
+const lampe = (p, c) => ({ p: p.clone(), c: new THREE.Color(c) });
+
+// ================================================================ décor du parc
+const ROUTES = {};   // chemins depuis la place jusqu'à l'entrée de chaque attraction
+function chemin(id, pts, larg = 4.2, couleur = "#dccfae") {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz);
+    MONDE.boiteQ(V((a.x + b.x) / 2, 0.05, (a.z + b.z) / 2), qY(Math.atan2(dx, dz)), larg, 0.1, L, couleur, false, 0.02);
+    occSegment(a, b, larg / 2 + 1.5);
+  }
+  for (const p of pts) MONDE.forme(CYL(larg / 2, larg / 2, 0.1, 14), p.x, 0.05, p.z, couleur, false);
+  if (id) ROUTES[id] = pts;
+}
+const ANNEAU = 18;
+const surAnneau = (x, z) => { const a = Math.atan2(z, x); return V(Math.cos(a) * ANNEAU, 0, Math.sin(a) * ANNEAU); };
+
+function arbre(x, z) {
+  const t = alea();
+  if (t < 0.55) {   // chêne
+    const h = 4 + Math.floor(alea() * 3), vert = choix(["#3f8a2e", "#4a9a35", "#367a28"]);
+    MONDE.bloc(x - 0.5, 0, z - 0.5, 1, h, 1, "#6b4a2b");
+    MONDE.bloc(x - 2.5, h - 1, z - 2.5, 5, 2, 5, vert, false, 0.12);
+    MONDE.bloc(x - 1.5, h + 1, z - 1.5, 3, 1.4, 3, vert, false, 0.12);
+  } else if (t < 0.8) {   // bouleau
+    const h = 5 + Math.floor(alea() * 3);
+    MONDE.bloc(x - 0.5, 0, z - 0.5, 1, h, 1, "#e8e4d8");
+    MONDE.bloc(x - 0.5, 1.5, z - 0.5, 1.02, 0.3, 1.02, "#3a3a3a", false, 0); MONDE.bloc(x - 0.5, 3.2, z - 0.5, 1.02, 0.3, 1.02, "#3a3a3a", false, 0);
+    MONDE.bloc(x - 2, h - 1, z - 2, 4, 2, 4, "#6db04a", false, 0.12); MONDE.bloc(x - 1, h + 1, z - 1, 2, 1, 2, "#6db04a", false, 0.12);
+  } else {   // sapin
+    const h = 7 + Math.floor(alea() * 4);
+    MONDE.bloc(x - 0.5, 0, z - 0.5, 1, h, 1, "#5a3d22");
+    for (let k = 0; k < 4; k++) { const r = 3 - k * 0.7; MONDE.bloc(x - r, 2 + k * 1.8, z - r, r * 2, 1.4, r * 2, "#2f6a35", false, 0.1); }
+  }
+}
+function lampadaire(x, z) {
+  MONDE.bloc(x - 0.15, 0, z - 0.15, 0.3, 4.6, 0.3, "#2f4a3a");
+  MONDE.bloc(x - 0.4, 4.4, z - 0.4, 0.8, 0.2, 0.8, "#2f4a3a");
+  MONDE.bloc(x - 0.3, 4.6, z - 0.3, 0.6, 0.6, 0.6, "#ffe9a8", true);
+  MONDE.bloc(x - 0.4, 5.2, z - 0.4, 0.8, 0.2, 0.8, "#2f4a3a");
+  occuper(x, z, 1);
+}
+function banc(x, z, rot) {
+  MONDE.avec(x, 0, z, rot, () => {
+    MONDE.boite(0, 0.55, 0, 2.4, 0.12, 0.7, "#a87a45"); MONDE.boite(0, 1.0, -0.33, 2.4, 0.6, 0.1, "#a87a45");
+    for (const s of [-1, 1]) MONDE.boite(s * 1.0, 0.27, 0, 0.12, 0.55, 0.6, "#333");
+  });
+  occuper(x, z, 1.5);
+}
+function stand(x, z, rot, nom, coul, deco) {
+  MONDE.avec(x, 0, z, rot, () => {
+    MONDE.boite(0, 1.6, -0.4, 4, 3.2, 2.4, "#fff3e0");
+    MONDE.boite(0, 0.6, 1.1, 4, 1.2, 0.6, coul);
+    MONDE.boite(0, 1.25, 1.1, 4.1, 0.1, 0.7, "#f4f4f4");
+    for (let i = 0; i < 8; i++) MONDE.boite(-1.75 + i * 0.5, 3.15, 1.2, 0.5, 0.18, 1.6, i % 2 ? "#ffffff" : coul, false, 0);
+    for (const s of [-1, 1]) MONDE.boite(s * 1.9, 2.3, 1.9, 0.12, 2.2, 0.12, "#ddd");
+    if (deco) deco(MONDE);
+  });
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g);
+  panneau(nom, 3.8, 0.8, coul, "#ffffff", g, 0, 3.75, 0.82, 0);
+  occuper(x, z, 3.5);
+}
+
+// ================================================================ la place, la fontaine, l'avenue, l'entrée
+const DECOR = [];   // petites choses qui bougent (jets d'eau, ballons, nuages, visiteurs…)
+MONDE.forme(CYL(21, 21, 0.12, 48), 0, 0.06, 0, "#e4d8bb", false);
+MONDE.forme(CYL(16, 16, 0.14, 48), 0, 0.07, 0, "#d1c19c", false);
+MONDE.forme(CYL(12, 12, 0.16, 48), 0, 0.08, 0, "#e9dfc6", false);
+occuper(0, 0, 21);
+// fontaine
+MONDE.forme(CYL(7.2, 7.4, 1.0, 40), 0, 0.5, 0, "#cfc8b8", false);
+MONDE.forme(CYL(1.0, 1.2, 3.4, 12), 0, 1.7, 0, "#e8e2d4", false);
+MONDE.forme(CYL(3.2, 1.6, 0.8, 24), 0, 3.4, 0, "#e8e2d4", false);
+MONDE.forme(CYL(0.5, 0.6, 2.2, 10), 0, 4.8, 0, "#e8e2d4", false);
+MONDE.forme(CYL(1.4, 0.7, 0.5, 16), 0, 5.9, 0, "#e8e2d4", false);
+const eauMat = new THREE.MeshLambertMaterial({ map: EAU, color: 0xbfe6ff, transparent: true, opacity: 0.88 });
+{
+  const e1 = new THREE.Mesh(new THREE.CircleGeometry(6.7, 40), eauMat); e1.rotation.x = -Math.PI / 2; e1.position.y = 0.85; e1.receiveShadow = true; scene.add(e1);
+  const e2 = new THREE.Mesh(new THREE.CircleGeometry(2.9, 24), eauMat); e2.rotation.x = -Math.PI / 2; e2.position.y = 3.78; scene.add(e2);
+}
+const jets = (() => {
+  const n = 900, pos = new Float32Array(n * 3), vit = new Float32Array(n * 3);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xe8f6ff, size: 0.32, transparent: true, opacity: 0.85 }));
+  scene.add(pts);
+  const relance = (i) => {
+    if (i % 3 === 0) { pos.set([0, 6.2, 0], i * 3); const a = alea() * TAU, r = alea() * 0.9; vit.set([Math.cos(a) * r, 10 + alea() * 2.5, Math.sin(a) * r], i * 3); }
+    else { const k = i % 8, a = k / 8 * TAU; pos.set([Math.cos(a) * 6.4, 1.0, Math.sin(a) * 6.4], i * 3); vit.set([-Math.cos(a) * 2.3, 6 + alea() * 0.8, -Math.sin(a) * 2.3], i * 3); }
+  };
+  for (let i = 0; i < n; i++) { relance(i); const k = alea() * 1.5; for (let j = 0; j < 3; j++) pos[i * 3 + j] += vit[i * 3 + j] * k; }
+  return { maj(dt) {
+    for (let i = 0; i < n; i++) {
+      vit[i * 3 + 1] -= 14 * dt;
+      pos[i * 3] += vit[i * 3] * dt; pos[i * 3 + 1] += vit[i * 3 + 1] * dt; pos[i * 3 + 2] += vit[i * 3 + 2] * dt;
+      if (pos[i * 3 + 1] < 0.9) relance(i);
+    }
+    geo.attributes.position.needsUpdate = true;
+  } };
+})();
+DECOR.push(jets);
+for (let k = 0; k < 8; k++) {   // massifs de fleurs autour de la place
+  const a = (k + 0.5) / 8 * TAU, x = Math.cos(a) * 14, z = Math.sin(a) * 14;
+  MONDE.forme(CYL(2.2, 2.4, 0.6, 12), x, 0.3, z, "#8a6a48", false);
+  for (let f = 0; f < 10; f++) { const b = alea() * TAU, r = alea() * 1.8; MONDE.boite(x + Math.cos(b) * r, 0.75, z + Math.sin(b) * r, 0.35, 0.35, 0.35, choix(["#ff4d6d", "#ffd23f", "#ffffff", "#c77dff", "#ff8c42"]), false, 0.05); }
+}
+for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; banc(Math.cos(a) * 19.5, Math.sin(a) * 19.5, -a - Math.PI / 2); }
+
+// avenue principale
+MONDE.bloc(-6, 0, 19, 12, 0.11, 125, "#dccfae", false, 0.02);
+for (let z = 22; z < 140; z += 4) { MONDE.bloc(-6.2, 0, z, 0.4, 0.13, 2, "#c4b38c", false, 0); MONDE.bloc(5.8, 0, z, 0.4, 0.13, 2, "#c4b38c", false, 0); }
+occSegment(V(0, 0, 19), V(0, 0, 145), 8);
+for (let z = 24; z <= 118; z += 13) { lampadaire(-7.2, z); lampadaire(7.2, z); }
+// stands
+const deco = {
+  barbe: (M) => { for (let i = 0; i < 3; i++) M.forme(BOULE(0.42, 10), -1.2 + i * 1.2, 2.0, 1.1, "#ffb3d1"); },
+  popcorn: (M) => { M.boite(1.2, 1.8, 1.1, 0.8, 1.0, 0.8, "#e8333f"); M.boite(1.2, 2.4, 1.1, 0.7, 0.3, 0.7, "#fff4b8"); },
+  glace: (M) => { for (let i = 0; i < 4; i++) { M.boite(-1.5 + i * 0.9, 1.6, 1.1, 0.3, 0.6, 0.3, "#e0b070"); M.forme(BOULE(0.25, 8), -1.5 + i * 0.9, 2.05, 1.1, choix(["#ffd1dc", "#c8f7c5", "#fff3b0", "#a9def9"])); } },
+};
+stand(-11.5, 48, Math.PI / 2, "BARBE À PAPA", "#ff5c8a", deco.barbe);
+stand(11.5, 48, -Math.PI / 2, "POPCORN", "#e8333f", deco.popcorn);
+stand(-11.5, 66, Math.PI / 2, "CHURROS", "#f39c12");
+stand(11.5, 66, -Math.PI / 2, "GLACES", "#2ec4b6", deco.glace);
+stand(-11.5, 96, Math.PI / 2, "CRÊPES", "#9b59b6");
+stand(11.5, 96, -Math.PI / 2, "BOISSONS", "#3498db");
+stand(-11.5, 108, Math.PI / 2, "BONBONS", "#e84393", deco.barbe);
+stand(11.5, 108, -Math.PI / 2, "HOT-DOGS", "#d35400");
+// entrée : la grande arche
+{
+  for (const s of [-1, 1]) {
+    MONDE.bloc(s * 10 - 2.5, 0, 120, 5, 15, 5, "#f3e7d3");
+    for (let y = 2; y < 15; y += 3) MONDE.bloc(s * 10 - 2.6, y, 119.9, 5.2, 0.5, 5.2, "#ff5c8a", false, 0);
+    MONDE.bloc(s * 10 - 3, 15, 119.5, 6, 1, 6, "#2ec4b6");
+    MONDE.forme(new THREE.ConeGeometry(3.6, 5, 4), s * 10, 18.5, 122.5, "#ff5c8a", false);
+    MONDE.boite(s * 10, 22.5, 122.5, 0.15, 3, 0.15, "#ddd");
+    MONDE.boite(s * 10 + 0.8, 23.4, 122.5, 1.5, 1, 0.08, "#ffd23f");
+    // guichets
+    MONDE.bloc(s * 16 - 2, 0, 121, 4, 3.4, 4, "#fff3e0"); MONDE.bloc(s * 16 - 2.3, 3.4, 120.7, 4.6, 0.6, 4.6, "#2ec4b6");
+    occuper(s * 10, 122.5, 4); occuper(s * 16, 123, 3);
+  }
+  MONDE.bloc(-7.5, 15.5, 121, 15, 4.5, 3, "#2ec4b6");
+  panneau("PARC DE LA CABANE", 14, 3.6, "#ff5c8a", "#ffffff", null, 0, 17.8, 124.05, 0, "#ffd23f");
+  panneau("PARC DE LA CABANE", 14, 3.6, "#ff5c8a", "#ffffff", null, 0, 17.8, 120.95, Math.PI, "#ffd23f");
+  for (let i = 0; i < 5; i++) MONDE.bloc(-4.6 + i * 2.2, 0, 122, 0.4, 1.2, 1.4, "#9aa3ad");   // tourniquets
+}
+// ballons de l'entrée
+{
+  const g = new THREE.Group(); g.position.set(8, 0, 112); scene.add(g);
+  const M = new Modele(); pieton(M); g.add(M.maillage());
+  const bal = [];
+  for (let i = 0; i < 9; i++) {
+    const b = new THREE.Mesh(BOULE(0.5, 10), new THREE.MeshLambertMaterial({ color: choix(["#ff4d6d", "#ffd23f", "#4dc9ff", "#7bff7b", "#c77dff", "#ff8c42"]) }));
+    const ph = alea() * TAU, dx = (alea() - 0.5) * 2.2, dz = (alea() - 0.5) * 2.2, h = 4.2 + alea() * 1.6;
+    b.castShadow = true; g.add(b); bal.push({ b, ph, dx, dz, h });
+    const fil = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0xdddddd })); g.add(fil); bal[i].fil = fil;
+  }
+  DECOR.push({ maj(dt, t) {
+    for (const o of bal) {
+      o.b.position.set(0.5 + o.dx + Math.sin(t * 1.3 + o.ph) * 0.15, o.h + Math.sin(t * 2 + o.ph) * 0.12, o.dz);
+      const a = V(0.55, 1.3, 0.1), d = V().subVectors(o.b.position, a); const L = d.length();
+      o.fil.position.copy(a).addScaledVector(d, 0.5); o.fil.scale.set(0.02, L, 0.02); o.fil.quaternion.setFromUnitVectors(Y, d.normalize());
+    }
+  } });
+}
+// la haie autour du parc
+{
+  const X0 = -152, X1 = 162, Z0 = -132, Z1 = 124;
+  const haie = (x, z, w, d) => MONDE.bloc(x, 0, z, w, 2.2, d, "#2f6f2b", false, 0.1);
+  for (let x = X0; x < X1; x += 4) { haie(x, Z0, 4, 1.4); if (Math.abs(x + 2) > 22) haie(x, Z1, 4, 1.4); }
+  for (let z = Z0; z < Z1; z += 4) { haie(X0, z, 1.4, 4); haie(X1, z, 1.4, 4); }
+}
+// nuages carrés façon Minecraft
+{
+  const M = new Modele();
+  for (let i = 0; i < 26; i++) {
+    const cx = (alea() - 0.5) * 900, cz = (alea() - 0.5) * 900;
+    for (let k = 0; k < 5; k++) M.boite(cx + (alea() - 0.5) * 30, 0, cz + (alea() - 0.5) * 18, 12 + alea() * 22, 4, 8 + alea() * 14, "#ffffff", true, 0);
+  }
+  const g = M.maillage(false); g.position.y = 200; g.children.forEach((m) => { m.material = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.86, fog: false }); });
+  scene.add(g);
+  DECOR.push({ maj(dt) { g.position.x += dt * 2.2; if (g.position.x > 450) g.position.x -= 900; } });
+}
+
+// ================================================================ les attractions
+const ATTRACTIONS = [];
+
+// ---------------------------------------------------------------- 1. LE DRAGON (grand huit à looping)
+ATTRACTIONS.push((() => {
+  const T = new Tortue(V(120, 4, 60), V(0, 0, -1));
+  T.droit(30, 0, "gare"); T.droit(40, 46, "lift"); T.droit(6, 0); T.droit(45, -45); T.boucle(14, 5); T.droit(12, 0);
+  T.virage(22, Math.PI, 13, 0.9); T.droit(20, -10); T.vrille(30, 5); T.colline(30, 12); T.droit(10, -5);
+  T.droit(45, 0, "boost", true); T.virage(19.5, Math.PI, 1, 0.6, "frein"); T.fermer("gare");
+  const P = T.parcours();
+  rails(P, { ecart: 0.62, rayon: 0.14, couleur: 0xd63031, epine: 0xf1c40f, rayonEpine: 0.3 });
+  traverses(P, 1.1, 1.5, "#7f8c8d");
+  piliers(P, 4, 0.75, "#ecf0f1", (c) => !c.info.noir);
+  for (const so of T.sommets) for (const s of [-1, 1]) {
+    MONDE.poutre(so.haut.clone().addScaledVector(so.cote, s * 11).setY(0), so.haut.clone().addScaledVector(so.cote, s * 1.4).add(V(0, -0.4, 0)), 0.8, "#ecf0f1");
+  }
+  for (let s = 0; s < P.total; s += 1.5) { const c = P.at(s, cadre()); occuper(c.p.x, c.p.z, 3); }
+  // la gare
+  MONDE.bloc(116.4, 0, 30, 2.6, 3.5, 30, "#b8b2a6");
+  for (let z = 30; z <= 60; z += 6) for (const x of [116.6, 123.6]) MONDE.bloc(x, 0, z - 0.3, 0.6, 9, 0.6, "#2d6a3e");
+  MONDE.bloc(115.4, 9, 29, 9.4, 0.7, 32, "#2d8a4e"); MONDE.bloc(115.2, 9.7, 29, 9.8, 0.4, 32, "#f1c40f", false, 0);
+  panneau("LE DRAGON", 12, 2.4, "#2d8a4e", "#ffd23f", null, 115.0, 11.2, 45, -Math.PI / 2, "#d63031");
+  MONDE.bloc(110, 0, 42, 6.4, 0.12, 6, "#dccfae");
+  // le tunnel du dragon (portion noire), avec des anneaux de lumière
+  const anneaux = [];
+  tunnel(P, {
+    filtre: (i) => i.noir, larg: () => 4.6, haut: () => 5,
+    mur: () => choix(["#244d33", "#2b5a3b", "#1f4530"]), plafond: () => "#1d3d2a",
+  });
+  {
+    const c = cadre(); let premier = null;
+    for (let s = 0; s < P.total; s += 0.5) { P.at(s, c); if (c.info.noir) { if (premier === null) premier = s; } }
+    let k = 0;
+    for (let s = premier + 1.5; ; s += 3) {
+      P.at(s, c); if (!c.info.noir) break;
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+      const g = new THREE.Group(); orienter(g, c); scene.add(g);
+      for (const [x, y, w, h] of [[0, 4.6, 4.6, 0.25], [2.2, 2.2, 0.25, 4.8], [-2.2, 2.2, 0.25, 4.8]]) { const m = new THREE.Mesh(BOX, mat); m.position.set(x, y, 0); m.scale.set(w, h, 0.25); g.add(m); }
+      anneaux.push({ mat, k: k++, l: lampe(c.p.clone().addScaledVector(c.u, 3.4), 0xff00ff) });
+    }
+    // la tête du dragon autour de l'entrée du tunnel
+    P.at(premier - 0.5, c); const q = quatDe(c, new THREE.Quaternion()), r = droiteDe(c);
+    const at = (dx, dy, dz) => c.p.clone().addScaledVector(r, dx).addScaledVector(c.u, dy).addScaledVector(c.f, dz);
+    MONDE.boiteQ(at(0, 8.2, -2), q, 9, 4.4, 5, "#2f8a3e"); for (const s of [-1, 1]) MONDE.boiteQ(at(s * 3.6, 3.0, -2), q, 2, 7, 5, "#2f8a3e");
+    MONDE.boiteQ(at(0, 6.4, -5.2), q, 8, 2.6, 2.2, "#3aa04a");
+    for (const s of [-1, 1]) { MONDE.boiteQ(at(s * 2.6, 9.6, -4.6), q, 1.4, 1.2, 0.4, "#ffe14d", true); MONDE.boiteQ(at(s * 2.6, 9.6, -4.75), q, 0.5, 1.0, 0.3, "#111", false); MONDE.boiteQ(at(s * 3, 12.2, -1), q, 0.8, 2.6, 0.8, "#f5e6c8"); }
+    for (let i = -2; i <= 2; i++) MONDE.boiteQ(at(i * 0.9, 5.2, -4.4), q, 0.5, 1.0, 0.5, "#ffffff");
+    for (const s of [-1, 1]) for (let j = 0; j < 4; j++) MONDE.boiteQ(at(s * 2.45, 1 + j * 1.1, -4.4), q, 0.4, 0.6, 0.5, "#ffffff");
+  }
+  // le train
+  const voitures = [];
+  let pov = null;
+  for (let k = 0; k < 4; k++) {
+    const M = new Modele();
+    M.boite(0, 0.3, 0, 1.7, 0.3, 2.4, "#333");
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) M.boite(sx * 0.75, 0.12, sz * 0.8, 0.3, 0.4, 0.4, "#555");
+    M.boite(0, 0.85, 0, 2.0, 0.8, 2.6, "#c0392b"); M.boite(0, 1.27, 0, 2.06, 0.08, 2.66, "#f1c40f", false, 0);
+    M.boite(0, 1.4, -1.15, 1.9, 1.1, 0.3, "#8e1f14");
+    M.boite(0, 1.5, 0.55, 1.7, 0.12, 0.12, "#f1c40f");
+    if (k > 0) passager(M, 0.45, 0.95, -0.35, 0, choix(["haut", "bas"]));
+    passager(M, -0.45, 0.95, -0.35, 0, k === 0 ? "haut" : choix(["haut", "bas"]));
+    if (k === 0) {
+      const v = "#2f8a3e";
+      // tête de dragon basse à l'avant (on voit par-dessus depuis le premier rang)
+      M.boite(0, 0.95, 1.55, 1.0, 0.6, 0.8, v); M.boite(0, 1.1, 2.3, 1.2, 0.6, 1.3, v); M.boite(0, 0.95, 3.15, 0.9, 0.4, 0.7, "#3aa04a");
+      for (const s of [-1, 1]) { M.boite(s * 0.55, 1.3, 2.5, 0.16, 0.16, 0.2, "#ffe14d", true); M.boite(s * 0.4, 1.5, 1.9, 0.14, 0.4, 0.14, "#f5e6c8"); M.boite(s * 0.3, 0.8, 3.45, 0.12, 0.16, 0.06, "#ffffff"); }
+    }
+    const g = M.maillage(); scene.add(g); voitures.push(g);
+    if (k === 0) pov = siege(g, 0.45, 2.1, -0.3, Math.PI);
+  }
+  const sGare = P.sIndex((i, n) => n > 30 && i.mode === "gare") || 0;
+  const train = new Train(P, voitures, 2.95, {
+    // ça joue sur les vitesses : montée lente, plongeon, ralenti en haut du looping, accélération d'un coup dans le tunnel, gros freinage
+    s0: 15, arrets: [{ s: 15, duree: 3 }], reactif: 7, freinage: 2.6,
+    vitesse: (c) => ({ gare: 4, lift: 5, frein: 8, boost: 48 }[c.info.mode] || Math.sqrt(49 + 30 * Math.max(0, 50 - c.p.y))),
+  });
+  void sGare;
+  return {
+    id: "dragon", nom: "Le Dragon", tags: "Grand huit · looping · vrille · tunnel lumineux", couleur: "#d63031",
+    texte: "Le gros grand huit du parc. Ça monte à 50 blocs, ça plonge, looping, virage penché, une vrille où t'es la tête en bas, une bosse où tu décolles du siège. Et pour finir tu rentres dans la gueule du dragon : un tunnel tout noir avec des anneaux de lumière qui défilent.",
+    jeu: "Un wagon du mod qui suit un rail calculé à l'avance. La caméra penche avec lui, donc dans le looping t'es vraiment la tête en bas. Il y a 1 chance sur 2 de descendre avec l'effet Nausée léger pendant 10 secondes.",
+    looping: true,
+    etiq: V(118, 56, -20), vue: { pos: V(185, 70, 30), cible: V(100, 18, -25) },
+    siege: pov, lampes: anneaux.map((a) => a.l),
+    sombre: () => (train.tete.info && train.tete.info.noir ? 1 : 0),
+    lift: () => train.tete.info && train.tete.info.mode === "lift",
+    maj(t, dt) {
+      train.maj(dt);
+      for (const a of anneaux) { a.mat.color.setHSL(((t * 0.6 + a.k * 0.08) % 1), 1, 0.55); a.l.c.copy(a.mat.color); }
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 2. LA MINE HANTÉE (train dans le noir)
+ATTRACTIONS.push((() => {
+  const C = V(-95, 0, -40), N = 1400, pts = [], inf = [];
+  for (let i = 0; i < N; i++) {
+    const u = i / N * TAU, r = 21 + 8 * Math.cos(u) + 3 * Math.sin(3 * u);
+    const y = 1.2 + 9.8 * (entre(1.9, 2.7, u) - entre(3.5, 4.0, u));
+    pts.push(V(C.x + r * Math.cos(u), y, C.z + r * Math.sin(u)));
+    const gare = u < 0.24 || u > TAU - 0.24;
+    const mode = gare ? "gare" : u >= 1.9 && u < 2.75 ? "lent" : u >= 3.5 && u < 4.4 ? "chute" : "normal";
+    const salleTourne = bosse(1.0, 1.6, u), salleFantomes = bosse(2.8, 3.45, u);
+    inf.push({ mode, noir: !gare, u, larg: 4.4 + 6 * salleTourne + 5 * salleFantomes, haut: 4.6 + 3.5 * salleTourne + 3 * salleFantomes });
+  }
+  const P = new Parcours(pts, null, inf);
+  rails(P, { ecart: 0.55, rayon: 0.1, couleur: 0x8a8f96 });
+  traverses(P, 0.9, 1.6, "#6b4a2b");
+  const lampes = [];
+  const cTmp = cadre();
+  // les murs du tunnel, les poutres de mine et les lanternes
+  let compte = 0;
+  tunnel(P, {
+    filtre: (i) => i.noir, larg: (i) => i.larg, haut: (i) => i.haut,
+    mur: () => choix(["#3b3a40", "#45434a", "#34333a", "#4a4040"]), plafond: () => choix(["#2f2e33", "#38363c"]),
+    decor: (s, c, r, w, h, q) => {
+      compte++;
+      const i = c.info;
+      if (compte % 5 === 0 && i.larg < 5) {
+        for (const sd of [1, -1]) MONDE.boiteQ(c.p.clone().addScaledVector(r, sd * (w / 2 - 0.2)).addScaledVector(c.u, h / 2 - 1.2), q, 0.4, h + 1.4, 0.4, "#6b4a2b");
+        MONDE.boiteQ(c.p.clone().addScaledVector(c.u, h - 0.7), q, w, 0.4, 0.4, "#6b4a2b");
+      }
+      if (compte % 7 === 0 && i.larg < 5) {
+        const sd = (compte / 7) % 2 ? 1 : -1, p = c.p.clone().addScaledVector(r, sd * (w / 2 - 0.25)).addScaledVector(c.u, 2.6);
+        MONDE.boiteQ(p, q, 0.36, 0.5, 0.36, "#ffb347", true); MONDE.boiteQ(p.clone().addScaledVector(c.u, 0.35), q, 0.44, 0.12, 0.44, "#222");
+        lampes.push(lampe(p.clone().addScaledVector(r, -sd * 0.6), 0xffa040));
+      }
+      if (i.mode === "lent" && compte % 6 === 3) {   // des yeux rouges dans le noir
+        const sd = compte % 12 === 3 ? 1 : -1, p = c.p.clone().addScaledVector(r, sd * (w / 2 - 0.05)).addScaledVector(c.u, 1.6 + alea() * 2);
+        for (const e of [-0.22, 0.22]) MONDE.boiteQ(p.clone().addScaledVector(c.f, e), q, 0.2, 0.14, 0.2, "#ff2a2a", true);
+      }
+    },
+  });
+  // salle qui tourne : spots de couleur
+  const spots = [];
+  {
+    const s0 = P.sIndex((i) => i.u > 1.3);
+    P.at(s0, cTmp); const r = droiteDe(cTmp), q = quatDe(cTmp, new THREE.Quaternion());
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * TAU, p = cTmp.p.clone().addScaledVector(r, Math.cos(a) * 4.2).addScaledVector(cTmp.f, Math.sin(a) * 4.2).addScaledVector(cTmp.u, 6.5);
+      const m = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0xffffff })); m.position.copy(p); m.scale.set(0.6, 0.3, 0.6); m.quaternion.copy(q); scene.add(m);
+      const l = lampe(p.clone().addScaledVector(cTmp.u, -2), 0xffffff); lampes.push(l); spots.push({ m, l, k });
+    }
+  }
+  // fantômes
+  const fantomes = [];
+  {
+    const sA = P.sIndex((i) => i.u > 2.85), sB = P.sIndex((i) => i.u > 3.4);
+    for (let k = 0; k < 6; k++) {
+      const s = sA + (sB - sA) * (k + 0.5) / 6; P.at(s, cTmp);
+      const sd = k % 2 ? 1 : -1, r = droiteDe(cTmp);
+      const base = cTmp.p.clone().addScaledVector(r, sd * 3.6).addScaledVector(cTmp.u, 2.5);
+      const g = new THREE.Group(); scene.add(g);
+      const corps = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0xeef8ff, transparent: true, opacity: 0.82 })); corps.scale.set(1.3, 1.7, 0.9); g.add(corps);
+      for (const e of [-0.28, 0.28]) { const o = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0x111111 })); o.position.set(e, 0.3, 0.46); o.scale.set(0.24, 0.34, 0.05); g.add(o); }
+      const bouche = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0x111111 })); bouche.position.set(0, -0.25, 0.46); bouche.scale.set(0.36, 0.4, 0.05); g.add(bouche);
+      for (let j = 0; j < 3; j++) { const q = new THREE.Mesh(BOX, corps.material); q.position.set(-0.45 + j * 0.45, -1.0, 0); q.scale.set(0.35, 0.4, 0.8); g.add(q); }
+      fantomes.push({ g, base, vers: cTmp.p.clone().addScaledVector(cTmp.u, 2.2), ph: k * 1.3, saut: 0 });
+      lampes.push(lampe(base, 0x9dffb0));
+    }
+  }
+  // squelette qui tombe du plafond
+  const sSquelette = P.sIndex((i) => i.u > 5.55);
+  const squelette = (() => {
+    P.at(sSquelette, cTmp);
+    const M = new Modele(), os = "#efeadc";
+    M.boite(0, 1.75, 0, 0.55, 0.55, 0.55, os); M.boite(-0.12, 1.78, 0.28, 0.12, 0.12, 0.02, "#000", false, 0); M.boite(0.12, 1.78, 0.28, 0.12, 0.12, 0.02, "#000", false, 0);
+    M.boite(0, 1.1, 0, 0.12, 0.8, 0.12, os); for (let k = 0; k < 4; k++) M.boite(0, 1.35 - k * 0.17, 0, 0.6, 0.06, 0.3, os);
+    for (const s of [-1, 1]) { M.boite(s * 0.38, 1.1, 0, 0.1, 0.8, 0.1, os); M.boite(s * 0.14, 0.35, 0, 0.1, 0.8, 0.1, os); }
+    const g = M.maillage(false); scene.add(g);
+    const haut = cTmp.p.clone().addScaledVector(cTmp.u, 3.6), bas = cTmp.p.clone().addScaledVector(cTmp.u, 0.6).addScaledVector(droiteDe(cTmp), 1.4);
+    g.position.copy(haut); g.quaternion.copy(quatDe(cTmp, new THREE.Quaternion())).multiply(qY(Math.PI));
+    lampes.push(lampe(bas.clone().addScaledVector(cTmp.u, 1.5), 0xff3030));
+    return { g, haut, bas, k: 0 };
+  })();
+  // la montagne autour
+  {
+    const ech = []; for (let s = 0; s < P.total; s += 1) ech.push(P.at(s, cadre()));
+    for (let x = C.x - 40; x <= C.x + 40; x += 2) for (let z = C.z - 40; z <= C.z + 40; z += 2) {
+      const d = Math.hypot(x + 1 - C.x, z + 1 - C.z) / 37;
+      if (d >= 1) continue;
+      let h = Math.round(36 * (1 - Math.pow(d, 1.7)) + (alea() - 0.5) * 5);
+      if (h < 1) continue;
+      let base = 0, plusProche = 99, ec = null;
+      for (const e of ech) { const dd = Math.hypot(e.p.x - x - 1, e.p.z - z - 1); if (dd < plusProche) { plusProche = dd; ec = e; } }
+      if (ec.info.mode === "gare" && plusProche < 9) continue;
+      if (plusProche < ec.info.larg / 2 + 1.8) { base = ec.p.y + ec.info.haut + 0.4; if (h < base + 1) continue; }
+      const herbe = h < 24;
+      MONDE.bloc(x, base, z, 2, h - base - (herbe ? 1 : 0), 2, choix(["#8a8a8a", "#7d7d7d", "#949494", "#6f6f6f"]), false, 0.05);
+      if (herbe) MONDE.bloc(x, h - 1, z, 2, 1, 2, choix(["#5f9a3c", "#6aa846", "#558f35"]), false, 0.05);
+      occuper(x + 1, z + 1, 1.5);
+    }
+  }
+  // la gare
+  {
+    const s0 = 0; P.at(s0, cTmp);
+    const q = quatDe(cTmp, new THREE.Quaternion()), r = droiteDe(cTmp);
+    const at = (dx, dy, dz) => cTmp.p.clone().addScaledVector(r, dx).addScaledVector(Y, dy).addScaledVector(cTmp.f, dz);
+    MONDE.boiteQ(at(3.4, -0.6, 0), q, 3.6, 1.2, 12, "#6b4a2b");
+    for (const dz of [-5.5, 0, 5.5]) for (const dx of [-1.9, 5]) MONDE.boiteQ(at(dx, 2.6, dz), q, 0.5, 6, 0.5, "#5a3d22");
+    MONDE.boiteQ(at(1.6, 5.8, 0), q, 9, 0.5, 13, "#4a3018");
+    panneau("MINE HANTÉE", 9, 1.8, "#2b1d12", "#ff9a3c", null, at(5.4, 7.2, 0).x, 7.2, at(5.4, 7.2, 0).z, Math.atan2(r.x, r.z), "#8a5a2b");
+    MONDE.bloc(-62, 0, -44, 6, 0.12, 8, "#dccfae");
+    for (const dz of [-6.4, 6.4]) { MONDE.boiteQ(at(5.2, 1.4, dz), q, 0.3, 0.6, 0.3, "#ffb347", true); }
+  }
+  // les wagonnets
+  const trains = [];
+  let pov = null;
+  for (let k = 0; k < 3; k++) {
+    const M = new Modele();
+    M.boite(0, 0.2, 0, 1.4, 0.3, 2.2, "#3a3a3a");
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) M.boite(sx * 0.68, 0.15, sz * 0.7, 0.2, 0.45, 0.45, "#222");
+    M.boite(0, 0.55, 0, 1.8, 0.2, 2.4, "#5b3b22"); for (const sx of [-1, 1]) M.boite(sx * 0.85, 1.0, 0, 0.12, 0.9, 2.4, "#6b4a2b"); for (const sz of [-1, 1]) M.boite(0, 1.0, sz * 1.15, 1.8, 0.9, 0.12, "#6b4a2b");
+    M.boite(0, 1.45, 0, 1.86, 0.08, 2.46, "#777", false, 0);
+    M.boite(0, 1.1, 1.25, 0.4, 0.3, 0.2, "#ffe48a", true);
+    passager(M, 0.4, 0.65, -0.45, 0, "bas");
+    if (k > 0) passager(M, -0.4, 0.65, 0.45, 0, "haut");
+    const g = M.maillage(); scene.add(g);
+    if (k === 0) pov = siege(g, -0.4, 1.75, 0.45, Math.PI);
+    trains.push(new Train(P, [g], 2.6, {
+      s0: (P.total * (1 - k / 3)) % P.total, arrets: [{ s: 0.01, duree: 2.5 }], ecartMin: 14,
+      vitesse: (c) => c.info.mode === "gare" ? 3 : c.info.mode === "lent" ? 2.2 : c.info.mode === "chute" ? Math.sqrt(9 + 34 * Math.max(0, 11 - c.p.y)) : 6.5,
+      reactif: 5,
+      spin: (c) => TAU * 2 * entre(1.05, 1.55, c.info.u),
+      aPasse: [{ s: sSquelette - 4, fn: () => { squelette.k = 1; } }],
+    }));
+  }
+  const cPov = cadre();
+  return {
+    id: "mine", nom: "La Mine Hantée", tags: "Train dans le noir · fantômes · salle qui tourne", couleur: "#ff9a3c",
+    texte: "Un wagonnet rentre dans la montagne. Dedans c'est le noir : juste des lanternes, des yeux rouges qui te regardent, une salle où le wagon tourne deux fois sur lui-même sous des spots de couleur, des fantômes qui te foncent dessus, une chute dans le noir complet et un squelette qui tombe du plafond juste avant la sortie.",
+    jeu: "Montagne creuse avec un rail dedans. Les lanternes et les spots sont de vrais blocs de lumière, le reste est noir pour de vrai.",
+    etiq: V(-95, 40, -40), vue: { pos: V(-30, 45, 10), cible: V(-85, 10, -40) },
+    siege: pov, lampes, _trains: trains,
+    sombre: () => { P.at(trains[0].s, cPov); return cPov.info.noir ? 1 : 0; },
+    lift: () => trains[0].tete.info && trains[0].tete.info.mode === "lent",
+    maj(t, dt) {
+      for (let k = 0; k < trains.length; k++) trains[k].maj(dt, trains.length > 1 ? trains[(k + trains.length - 1) % trains.length] : null);
+      for (const sp of spots) { sp.m.material.color.setHSL((t * 0.25 + sp.k / 8) % 1, 1, 0.55); sp.l.c.copy(sp.m.material.color); }
+      for (const f of fantomes) {
+        let pres = 99; for (const tr of trains) pres = Math.min(pres, tr.vs[0].position.distanceTo(f.base));
+        f.saut += ((pres < 7 ? 1 : 0) - f.saut) * Math.min(1, dt * (pres < 7 ? 5 : 1.2));
+        f.g.position.lerpVectors(f.base, f.vers, f.saut * 0.75).add(V(0, Math.sin(t * 2 + f.ph) * 0.3, 0));
+        f.g.lookAt(f.vers.x, f.g.position.y, f.vers.z);
+        const sc = 1 + f.saut * 0.4; f.g.scale.set(sc, sc, sc);
+      }
+      if (squelette.k > 0) { squelette.k += dt; if (squelette.k > 4.5) squelette.k = 0; }
+      const kk = squelette.k > 0 ? Math.min(1, (squelette.k - 1) * 6) * (1 - entre(2.5, 4.4, squelette.k)) : 0;
+      squelette.g.position.lerpVectors(squelette.haut, squelette.bas, kk);
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 3. COSMOS (wagons qui tournent, dôme noir étoilé)
+ATTRACTIONS.push((() => {
+  const C = V(25, 0, -55), R = 26, N = 1200, pts = [], inf = [];
+  for (let i = 0; i < N; i++) {
+    const u = i / N * TAU, r = 13 + 5 * Math.sin(4 * u);
+    pts.push(V(C.x + r * Math.cos(u), 6.5 + 5 * Math.sin(3 * u), C.z + r * Math.sin(u)));
+    inf.push({ mode: "libre", noir: true, u });
+  }
+  const P = new Parcours(pts, null, inf);
+  const [ra, rb, sp] = rails(P, { ecart: 0.55, rayon: 0.09, couleur: 0x00f0ff, lueur: true, epine: 0x2a2140, rayonEpine: 0.2, profEpine: 0.4 });
+  void ra; void rb; void sp;
+  const lampes = [];
+  { const c = cadre(); for (let s = 0; s < P.total; s += 3) { P.at(s, c); const b = c.p.clone().addScaledVector(c.u, -0.6); MONDE.boite(b.x, b.y / 2, b.z, 0.3, b.y, 0.3, "#4b2a7a", true); if (Math.round(s / 3) % 4 === 0) lampes.push(lampe(c.p.clone().addScaledVector(c.u, 1.5), choix([0x00f0ff, 0xff3df2, 0x7a5cff]))); } }
+  // le dôme : blanc dehors, nuit dedans
+  const dehors = new THREE.Mesh(new THREE.SphereGeometry(R, 40, 16, 0, TAU, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xf3f1fb }));
+  dehors.position.copy(C); dehors.castShadow = true; dehors.receiveShadow = true; scene.add(dehors);
+  const dedans = new THREE.Mesh(new THREE.SphereGeometry(R - 0.4, 40, 16, 0, TAU, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x0a0720, side: THREE.BackSide }));
+  dedans.position.copy(C); scene.add(dedans);
+  { const sol2 = new THREE.Mesh(new THREE.CircleGeometry(R - 0.4, 40), new THREE.MeshBasicMaterial({ color: 0x0d0a24 })); sol2.rotation.x = -Math.PI / 2; sol2.position.set(C.x, 0.13, C.z); scene.add(sol2); }
+  const bandeau = new THREE.Mesh(new THREE.TorusGeometry(R + 0.05, 0.35, 6, 64), new THREE.MeshBasicMaterial({ color: 0xff3df2 }));
+  bandeau.rotation.x = Math.PI / 2; bandeau.position.set(C.x, 1.6, C.z); scene.add(bandeau);
+  occuper(C.x, C.z, R + 2);
+  // étoiles et planètes
+  const ciel2 = new THREE.Group(); ciel2.position.copy(C); scene.add(ciel2);
+  {
+    const n = 1800, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = alea() * TAU, h = Math.acos(alea()), r = i < 1400 ? R - 0.8 : 6 + alea() * 16;
+      pos.set([r * Math.sin(h) * Math.cos(a), Math.max(0.5, r * Math.cos(h)), r * Math.sin(h) * Math.sin(a)], i * 3);
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    ciel2.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.28, fog: false })));
+    const planete = (r, col, x, y, z, anneau) => {
+      const m = new THREE.Mesh(BOULE(r, 20), new THREE.MeshBasicMaterial({ color: col, fog: false })); m.position.set(x, y, z); ciel2.add(m);
+      if (anneau) { const a = new THREE.Mesh(new THREE.TorusGeometry(r * 1.7, r * 0.12, 4, 40), new THREE.MeshBasicMaterial({ color: anneau, fog: false })); a.rotation.x = 1.2; m.add(a); }
+    };
+    planete(2.6, 0xff9a3c, 8, 17, 4, 0xffe2a8); planete(1.4, 0x4dc9ff, -10, 14, -6); planete(0.9, 0xc77dff, 2, 20, -10); planete(1.8, 0x7bff9b, -6, 18, 9, 0x2a8a5a);
+  }
+  // l'entrée
+  MONDE.bloc(C.x - 4, 0, C.z + R - 3, 8, 6, 6, "#e9e6f5"); MONDE.bloc(C.x - 2.2, 0, C.z + R + 2.9, 4.4, 4.4, 0.2, "#0a0720", false, 0);
+  MONDE.bloc(C.x - 4.2, 6, C.z + R - 3.2, 8.4, 0.4, 6.4, "#7a5cff", true, 0);
+  panneau("COSMOS", 7.4, 1.6, "#120c33", "#00f0ff", null, C.x, 7.6, C.z + R + 3.15, 0, "#ff3df2");
+  // wagons qui tournent
+  const trains = []; let pov = null;
+  for (let k = 0; k < 4; k++) {
+    const M = new Modele();
+    M.forme(CYL(1.35, 1.2, 0.5, 16), 0, 0.45, 0, "#2a2140", false);
+    M.forme(CYL(1.42, 1.42, 0.12, 16), 0, 0.72, 0, choix(["#00f0ff", "#ff3df2", "#ffe14d", "#7bff9b"]), true);
+    M.boite(0, 1.2, 0, 0.5, 1.0, 0.5, "#3a3060");
+    for (let j = 0; j < 4; j++) {
+      const a = j / 4 * TAU;
+      M.avec(Math.sin(a) * 0.55, 0, Math.cos(a) * 0.55, a, () => { M.boite(0, 1.2, -0.2, 0.9, 1.0, 0.15, "#5a4a9a"); if (!(k === 0 && j === 0)) passager(M, 0, 0.75, 0.15, 0, choix(["haut", "bas"])); });
+    }
+    const g = M.maillage(); scene.add(g);
+    if (k === 0) pov = siege(g, 0, 1.85, 0.7, Math.PI);
+    trains.push(new Train(P, [g], 0, {
+      s0: P.total * k / 4, ecartMin: 10,
+      vitesse: (c) => Math.sqrt(40 + 32 * Math.max(0, 12 - c.p.y)), reactif: 5,
+      spin: (c) => c.info.u * 5 + 2.2 * Math.sin(c.info.u * 7),
+    }));
+  }
+  return {
+    id: "cosmos", nom: "Cosmos", tags: "Dans le noir · wagons qui tournent sur eux-mêmes", couleur: "#7a5cff",
+    texte: "Un grand dôme blanc. Dedans c'est la nuit : des étoiles partout, des planètes qui flottent, des rails en néon. Les wagons tournent sur eux-mêmes pendant tout le trajet, tu sais jamais dans quel sens tu vas partir.",
+    jeu: "Dôme fermé tout noir dedans, les étoiles sont des petits blocs lumineux. Le wagon pivote tout seul pendant qu'il roule.",
+    etiq: V(25, 30, -55), vue: { pos: V(70, 38, -10), cible: V(25, 8, -55) },
+    siege: pov, lampes, sombre: () => 1,
+    maj(t, dt) { for (let k = 0; k < trains.length; k++) trains[k].maj(dt, trains[(k + 3) % 4]); ciel2.rotation.y = t * 0.02; bandeau.material.color.setHSL((t * 0.1) % 1, 1, 0.6); },
+  };
+})());
+
+// ---------------------------------------------------------------- 4. LA TOUR DE LA CHUTE
+ATTRACTIONS.push((() => {
+  const C = V(-30, 0, -45), H = 72;
+  for (let y = 0; y < H; y += 4) MONDE.bloc(C.x - 2, y, C.z - 2, 4, 4, 4, (y / 4) % 2 ? "#ffffff" : "#e8333f", false, 0.03);
+  MONDE.bloc(C.x - 3, H, C.z - 3, 6, 1.4, 6, "#2ec4b6");
+  MONDE.bloc(C.x - 0.4, H + 1.4, C.z - 0.4, 0.8, 6, 0.8, "#dddddd");
+  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; MONDE.boite(C.x + Math.cos(a) * 3, H + 1.6, C.z + Math.sin(a) * 3, 0.6, 0.6, 0.6, "#ffe14d", true); }
+  MONDE.boite(C.x, H + 7.6, C.z, 0.9, 0.9, 0.9, "#ff3030", true);
+  MONDE.forme(CYL(9, 9.4, 0.8, 24), C.x, 0.4, C.z, "#cfc8b8", false);
+  for (let k = 0; k < 24; k++) { const a = k / 24 * TAU; if (Math.abs(a - Math.PI / 2) < 0.3) continue; MONDE.boite(C.x + Math.cos(a) * 9, 1.4, C.z + Math.sin(a) * 9, 0.15, 1.2, 0.15, "#ffd23f"); }
+  occuper(C.x, C.z, 10);
+  panneau("LA CHUTE", 3.8, 1.0, "#e8333f", "#ffffff", null, C.x, 6.5, C.z + 2.02, 0);
+  const M = new Modele();
+  for (const [x, z, w, d] of [[0, 3.4, 8.4, 0.8], [0, -3.4, 8.4, 0.8], [3.4, 0, 0.8, 6], [-3.4, 0, 0.8, 6]]) M.boite(x, 0.3, z, w, 0.6, d, "#2a2a2a");
+  for (let side = 0; side < 4; side++) {
+    const a = side * Math.PI / 2;
+    M.avec(Math.sin(a) * 3.9, 0, Math.cos(a) * 3.9, a, () => {
+      for (let j = -1; j <= 1; j++) {
+        M.boite(j * 1.9, 1.3, -0.3, 1.2, 1.8, 0.2, "#e8333f"); M.boite(j * 1.9, 0.6, 0.1, 1.2, 0.2, 0.7, "#e8333f");
+        M.boite(j * 1.9, 1.75, 0.2, 1.0, 0.18, 0.4, "#ffd23f");
+        if (!(side === 0 && j === 0)) passager(M, j * 1.9, 0.75, 0.1, 0, choix(["haut", "bas"]));
+      }
+    });
+  }
+  const g = M.maillage(); scene.add(g); g.position.set(C.x, 2, C.z);
+  const pov = siege(g, 0, 1.85, 4.15, Math.PI);
+  const hauteur = (t) => {
+    const c = t % 24;
+    if (c < 3) return 2;
+    if (c < 14) return 2 + 64 * lisse((c - 3) / 11);
+    if (c < 17) return 66;
+    if (c < 18.4) { const k = c - 17; return 66 - 26 * k * k; }
+    if (c < 20.4) { const k = (c - 18.4) / 2; return 15 - 13 * (1 - (1 - k) * (1 - k)); }
+    return 2;
+  };
+  return {
+    id: "tour", nom: "La Tour de la Chute", tags: "Chute libre · 64 blocs", couleur: "#e8333f",
+    texte: "Tu montes doucement jusqu'à 64 blocs avec la vue sur tout le parc, les pieds dans le vide. Ça attend 3 secondes en haut… et ça lâche d'un coup. Freinage à la dernière seconde.",
+    jeu: "Une nacelle qui monte et descend le long de la tour, les sièges tournés vers l'extérieur.",
+    etiq: V(-30, 82, -45), vue: { pos: V(10, 40, -5), cible: V(-30, 30, -45) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t) { g.position.y = hauteur(t + 10); },
+  };
+})());
+
+// ---------------------------------------------------------------- 5. LA GRANDE ROUE
+ATTRACTIONS.push((() => {
+  const C = V(45, 26, 85), R = 20;
+  for (const sz of [-1, 1]) for (const sx of [-1, 1]) MONDE.poutre(V(C.x + sx * 11, 0, C.z + sz * 5.5), V(C.x + sx * 0.6, C.y, C.z + sz * 3.2), 1.0, "#f4f4f4");
+  for (const sz of [-1, 1]) MONDE.poutre(V(C.x - 6, 12, C.z + sz * 4.4), V(C.x + 6, 12, C.z + sz * 4.4), 0.5, "#f4f4f4");
+  MONDE.boite(C.x, C.y, C.z, 1.6, 1.6, 7, "#9aa3ad");
+  MONDE.bloc(C.x - 6, 0, C.z - 3.2, 12, 3.5, 6.4, "#c8b38a"); for (let i = 0; i < 4; i++) MONDE.bloc(C.x - 2, 0, C.z - 7.2 + i, 4, 3.5 - (3 - i) * 0.9 - 0.9, 1, "#b8a37a");
+  occuper(C.x, C.z, 12);
+  const roue = new THREE.Group(); roue.position.copy(C); scene.add(roue);
+  const M = new Modele();
+  for (const z of [-1.6, 1.6]) {
+    M.geo(new THREE.TorusGeometry(R, 0.32, 6, 72), new THREE.Matrix4().makeTranslation(0, 0, z), "#ff5c8a");
+    M.geo(new THREE.TorusGeometry(7, 0.22, 6, 40), new THREE.Matrix4().makeTranslation(0, 0, z), "#ffd23f");
+    for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; M.boiteQ(V(Math.cos(a) * R / 2, Math.sin(a) * R / 2, z), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), a + Math.PI / 2), 0.22, R, 0.22, "#ffffff"); }
+  }
+  M.forme(CYL(1.3, 1.3, 4.2, 16), 0, 0, 0, "#ffd23f", false, Math.PI / 2);
+  roue.add(M.maillage());
+  const ampoules = [0, 1].map((p) => {
+    const A = new Modele();
+    for (const z of [-1.9, 1.9]) for (let k = p; k < 64; k += 2) { const a = k / 64 * TAU; A.boite(Math.cos(a) * (R + 0.45), Math.sin(a) * (R + 0.45), z, 0.35, 0.35, 0.35, "#ffffff", true, 0); }
+    const g = A.maillage(false); g.children[0].material = new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xffffff }); roue.add(g); return g.children[0].material;
+  });
+  const cabines = []; let pov = null;
+  const couleurs = ["#ff5c8a", "#ffd23f", "#2ec4b6", "#4dc9ff", "#c77dff", "#ff8c42", "#7bd389", "#e8333f"];
+  for (let k = 0; k < 16; k++) {
+    const G = new Modele(), col = couleurs[k % 8];
+    G.boite(0, -0.6, 0, 0.3, 1.2, 0.3, "#888");
+    G.boite(0, -1.3, 0, 2.8, 0.3, 2.6, col);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) G.boite(sx * 1.2, -2.6, sz * 1.1, 0.14, 2.4, 0.14, "#ddd");
+    G.boite(0, -3.9, 0, 2.6, 0.2, 2.4, col); for (const sz of [-1, 1]) G.boite(0, -3.4, sz * 1.15, 2.6, 0.9, 0.1, col);
+    for (const sz of [-1, 1]) G.boite(0, -3.5, sz * 0.75, 2.2, 0.3, 0.5, "#f4f4f4");
+    if (k !== 0) { passager(G, -0.5, -3.35, 0.75, Math.PI, "bas"); if (k % 3) passager(G, 0.5, -3.35, -0.75, 0, "bas"); }
+    else passager(G, 0.5, -3.35, 0.75, Math.PI, "bas");
+    const g = G.maillage(); scene.add(g); cabines.push(g);
+    if (k === 0) pov = siege(g, -0.5, -2.0, 0.75, 0);
+  }
+  return {
+    id: "roue", nom: "La Grande Roue", tags: "Calme · vue sur tout le parc", couleur: "#ff5c8a",
+    texte: "Pour souffler entre deux manèges. 16 cabines de couleur, des ampoules qui clignotent tout autour, et en haut (46 blocs) tu vois tout le parc d'un coup.",
+    jeu: "Une roue qui tourne lentement, les cabines restent toujours droites.",
+    etiq: V(45, 50, 85), vue: { pos: V(30, 30, 140), cible: V(45, 24, 85) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t) {
+      const rot = t * TAU / 80;
+      roue.rotation.z = rot;
+      for (let k = 0; k < 16; k++) { const a = -Math.PI / 2 + k / 16 * TAU + rot; cabines[k].position.set(C.x + Math.cos(a) * R, C.y + Math.sin(a) * R, C.z); }
+      const on = Math.floor(t * 3) % 2;
+      ampoules[0].color.setHex(on ? 0xffffff : 0x8a6a2a); ampoules[1].color.setHex(on ? 0x8a6a2a : 0xffffff);
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 6. LE CARROUSEL
+ATTRACTIONS.push((() => {
+  const C = V(-24, 0, 35);
+  MONDE.forme(CYL(9.3, 9.5, 0.5, 32), C.x, 0.25, C.z, "#cfc8b8", false);
+  occuper(C.x, C.z, 10);
+  const plateau = new THREE.Group(); plateau.position.copy(C); scene.add(plateau);
+  const M = new Modele();
+  M.forme(CYL(8.8, 8.8, 0.35, 32), 0, 0.68, 0, "#f6e7c8", false);
+  M.forme(CYL(1.4, 1.4, 6.6, 16), 0, 4.0, 0, "#ffd23f", false);
+  for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; M.boite(Math.cos(a) * 1.45, 4.0, Math.sin(a) * 1.45, 0.3, 5.6, 0.3, "#cfe8ff", true, 0); }
+  M.forme(CYL(9.6, 9.6, 0.9, 32), 0, 7.6, 0, "#e8333f", false);
+  for (let k = 0; k < 32; k++) { const a = k / 32 * TAU; M.boite(Math.cos(a) * 9.7, 7.6, Math.sin(a) * 9.7, 0.3, 0.3, 0.3, k % 2 ? "#ffe9a8" : "#ffffff", true, 0); }
+  M.forme(BOULE(0.6, 10), 0, 11.8, 0, "#ffd23f", false);
+  M.boite(0, 13, 0, 0.1, 2, 0.1, "#ddd"); M.boite(0.6, 13.6, 0, 1.2, 0.7, 0.05, "#2ec4b6");
+  const chevaux = [];
+  const place = [];
+  for (let k = 0; k < 8; k++) place.push({ r: 6.6, a: k / 8 * TAU });
+  for (let k = 0; k < 6; k++) place.push({ r: 4.1, a: (k + 0.5) / 6 * TAU });
+  for (const pl of place) M.boite(Math.sin(pl.a) * pl.r, 4.0, Math.cos(pl.a) * pl.r, 0.14, 6.6, 0.14, "#ffd23f");
+  plateau.add(M.maillage());
+  const toit = new THREE.Mesh(new THREE.ConeGeometry(9.9, 3.6, 32, 1, true), new THREE.MeshLambertMaterial({ map: RAYURES, side: THREE.DoubleSide }));
+  RAYURES.repeat.set(4, 1); toit.position.y = 9.85; toit.castShadow = true; plateau.add(toit);
+  let pov = null;
+  place.forEach((pl, k) => {
+    const H = new Modele(), robe = choix(["#ffffff", "#f5deb3", "#5a3a1e", "#222222", "#d9d9d9"]), criniere = choix(["#ffd23f", "#2b1d12", "#ff5c8a", "#ffffff"]);
+    H.boite(0, 0, 0, 0.8, 0.8, 1.9, robe);
+    H.boiteQ(V(0, 0.55, 0.95), new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), 0.6), 0.5, 1.0, 0.55, robe);
+    H.boite(0, 1.05, 1.35, 0.5, 0.5, 0.95, robe); H.boite(0, 1.25, 1.0, 0.18, 0.6, 0.5, criniere);
+    for (const s of [-1, 1]) H.boite(s * 0.27, 1.2, 1.7, 0.08, 0.1, 0.08, "#111", false, 0);
+    for (const [x, z, a] of [[-0.25, 0.75, -0.7], [0.25, 0.75, -0.5], [-0.25, -0.75, 0.7], [0.25, -0.75, 0.5]]) H.boiteQ(V(x, -0.75, z + Math.sin(a) * 0.3), new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), a), 0.2, 0.9, 0.2, robe);
+    H.boite(0, 0.15, -1.05, 0.15, 0.9, 0.2, criniere);
+    H.boite(0, 0.45, 0.1, 0.84, 0.12, 0.8, "#c0392b"); H.boite(0, 0.42, 0.1, 0.86, 0.3, 0.1, "#ffd23f");
+    if (k % 3 !== 1 && k !== 0) passager(H, 0, 0.5, -0.05, 0, choix(["haut", "bas"]));
+    const g = H.maillage(); plateau.add(g);
+    g.position.set(Math.sin(pl.a) * pl.r, 2, Math.cos(pl.a) * pl.r); g.rotation.y = pl.a + Math.PI / 2;
+    chevaux.push({ g, ph: k * 0.9 });
+    if (k === 0) pov = siege(g, 0, 1.55, 0, Math.PI);
+  });
+  return {
+    id: "carrousel", nom: "Le Carrousel", tags: "Tranquille · chevaux qui montent et descendent", couleur: "#ffd23f",
+    texte: "Le manège à l'ancienne : 14 chevaux qui montent et descendent, un toit rayé rouge et blanc, des miroirs au milieu et des ampoules tout autour.",
+    jeu: "Plateau qui tourne, chaque cheval a sa barre et bouge tout seul.",
+    etiq: V(-24, 16, 35), vue: { pos: V(-2, 16, 60), cible: V(-24, 4, 35) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t) { plateau.rotation.y = t * 0.45; for (const ch of chevaux) ch.g.position.y = 2.2 + Math.sin(t * 2.2 + ch.ph) * 0.55; },
+  };
+})());
+
+// ---------------------------------------------------------------- 7. LES TASSES FOLLES
+ATTRACTIONS.push((() => {
+  const C = V(24, 0, 35);
+  MONDE.forme(CYL(11.6, 11.8, 0.4, 40), C.x, 0.2, C.z, "#cfc8b8", false);
+  MONDE.forme(BOULE(2.6, 20), C.x, 2.8, C.z, "#ffffff", false, 0, 1, 0.8, 1);
+  MONDE.forme(CYL(1.2, 1.6, 0.6, 16), C.x, 4.9, C.z, "#ff8fb1", false); MONDE.forme(BOULE(0.4, 8), C.x, 5.4, C.z, "#ffd23f", false);
+  MONDE.poutre(V(C.x + 2.2, 2.6, C.z), V(C.x + 4, 4.2, C.z), 0.5, "#ffffff"); MONDE.boite(C.x - 2.8, 2.9, C.z, 0.4, 1.6, 0.4, "#ffffff");
+  for (let k = 0; k < 10; k++) { const a = k / 10 * TAU; MONDE.boite(C.x + Math.cos(a) * 2.5, 2.8 + Math.sin(a * 3) * 0.6, C.z + Math.sin(a) * 2.5, 0.4, 0.4, 0.4, "#4dc9ff"); }
+  occuper(C.x, C.z, 12);
+  const grand = new THREE.Group(); grand.position.copy(C); scene.add(grand);
+  const M = new Modele(); M.forme(CYL(11, 11, 0.3, 40), 0, 0.55, 0, "#c9b6f2", false);
+  for (let k = 0; k < 24; k++) { const a = k / 24 * TAU; M.boite(Math.cos(a) * 10.7, 0.75, Math.sin(a) * 10.7, 0.5, 0.15, 0.5, k % 2 ? "#ffffff" : "#ff8fb1", true, 0); }
+  grand.add(M.maillage());
+  const petits = [], tasses = []; let pov = null;
+  const coulTasses = ["#ff8fb1", "#7fe3c9", "#ffe066", "#8fd3ff", "#d4a5ff", "#ffb38a", "#ff6b6b", "#a0e57a", "#ffc6e0"];
+  for (let i = 0; i < 3; i++) {
+    const a = i / 3 * TAU, pg = new THREE.Group(); pg.position.set(Math.cos(a) * 6.3, 0, Math.sin(a) * 6.3); grand.add(pg);
+    const PM = new Modele(); PM.forme(CYL(4.3, 4.3, 0.2, 24), 0, 0.82, 0, ["#ffd1e3", "#d1fff0", "#fff4c2"][i], false); pg.add(PM.maillage()); petits.push(pg);
+    for (let j = 0; j < 3; j++) {
+      const b = j / 3 * TAU, tg = new THREE.Group(); tg.position.set(Math.cos(b) * 2.4, 0.9, Math.sin(b) * 2.4); pg.add(tg);
+      const col = coulTasses[i * 3 + j];
+      const tasse = new THREE.Mesh(CYL(1.45, 1.0, 1.4, 16, true), new THREE.MeshLambertMaterial({ color: col, side: THREE.DoubleSide }));
+      tasse.position.y = 0.75; tasse.castShadow = true; tg.add(tasse);
+      const TM = new Modele();
+      TM.forme(CYL(1.0, 1.0, 0.12, 16), 0, 0.08, 0, col, false); TM.forme(new THREE.TorusGeometry(1.45, 0.09, 6, 24), 0, 1.45, 0, "#ffffff", false, Math.PI / 2);
+      TM.boite(1.65, 0.85, 0, 0.25, 0.8, 0.25, col); TM.forme(CYL(0.12, 0.12, 0.8, 8), 0, 0.5, 0, "#bbbbbb", false); TM.forme(CYL(0.45, 0.45, 0.1, 12), 0, 0.92, 0, "#ffffff", false, 0.4);
+      if (!(i === 0 && j === 0)) { passager(TM, 0, 0.35, -0.75, 0, choix(["haut", "bas"])); if ((i + j) % 2) passager(TM, 0, 0.35, 0.75, Math.PI, "haut"); }
+      else passager(TM, 0, 0.35, 0.75, Math.PI, "haut");
+      tg.add(TM.maillage());
+      tasses.push({ g: tg, ph: alea() * 6 });
+      if (i === 0 && j === 0) pov = siege(tg, 0, 1.75, -0.75, Math.PI);
+    }
+  }
+  return {
+    id: "tasses", nom: "Les Tasses Folles", tags: "Tu tournes sur toi-même · dans tous les sens", couleur: "#ff8fb1",
+    texte: "Le grand plateau tourne, les trois petits plateaux tournent dans l'autre sens, et chaque tasse tourne sur elle-même de plus en plus vite. Au milieu, une grosse théière.",
+    jeu: "Trois rotations l'une dans l'autre. Plus tu regardes le paysage, plus ça tourne la tête.",
+    etiq: V(24, 9, 35), vue: { pos: V(48, 18, 58), cible: V(24, 1, 35) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t, dt) {
+      grand.rotation.y = t * 0.35;
+      for (const p of petits) p.rotation.y = -t * 0.95;
+      for (const ta of tasses) { ta.a = (ta.a || ta.ph) + (2.2 + Math.sin(t * 0.35 + ta.ph) * 1.8) * dt; ta.g.rotation.y = ta.a; }
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 8. AUTOS-TAMPONNEUSES
+ATTRACTIONS.push((() => {
+  // piste plus grande et autos plus grosses (×1,4)
+  const C = V(-35, 0, 80), W = 18, D = 12, H = 8.2, S = 1.4;
+  MONDE.bloc(C.x - W - 1, 0, C.z - D - 1, 2 * W + 2, 0.35, 2 * D + 2, "#6e737a", false, 0.02);
+  for (let x = -W; x < W; x += 2) for (let z = -D; z < D; z += 2) if (((x + z) / 2) % 2 === 0) MONDE.bloc(C.x + x, 0.35, C.z + z, 2, 0.02, 2, "#7d828a", false, 0);
+  for (let x = -W - 1; x < W + 1; x += 1) for (const z of [-D - 1, D + 0.6]) MONDE.bloc(C.x + x, 0.35, C.z + z, 1, 0.7, 0.4, Math.floor(x) % 2 ? "#ffd23f" : "#222", false, 0);
+  for (let z = -D - 1; z < D + 1; z += 1) for (const x of [-W - 1, W + 0.6]) MONDE.bloc(C.x + x, 0.35, C.z + z, 0.4, 0.7, 1, Math.floor(z) % 2 ? "#ffd23f" : "#222", false, 0);
+  for (const x of [-W - 0.8, -W / 3, W / 3, W + 0.4]) for (const z of [-D - 0.8, D + 0.4]) MONDE.bloc(C.x + x, 0, C.z + z, 0.6, H, 0.6, "#e8333f");
+  MONDE.bloc(C.x - W - 1.6, H, C.z - D - 1.6, 2 * W + 3.2, 0.5, 2 * D + 3.2, "#5a5f66");
+  for (let i = 0; i < 2 * W + 3; i += 1.5) for (const z of [-D - 1.7, D + 1.5]) MONDE.bloc(C.x - W - 1.6 + i, H - 0.6, C.z + z, 1.5, 0.6, 0.2, Math.round(i / 1.5) % 2 ? "#ffffff" : "#e8333f", false, 0);
+  for (let i = 0; i < 2 * D + 3; i += 1.5) for (const x of [-W - 1.7, W + 1.5]) MONDE.bloc(C.x + x, H - 0.6, C.z - D - 1.6 + i, 0.2, 0.6, 1.5, Math.round(i / 1.5) % 2 ? "#ffffff" : "#e8333f", false, 0);
+  for (let x = -W + 1; x < W; x += 3) for (let z = -D + 1; z < D; z += 3) MONDE.boite(C.x + x, H - 0.2, C.z + z, 0.25, 0.2, 0.25, choix(["#ffe14d", "#ff5c8a", "#4dc9ff", "#7bff9b"]), true, 0);
+  panneau("AUTOS-TAMPONNEUSES", 16, 2, "#e8333f", "#ffffff", null, C.x + W + 1.72, H + 1.6, C.z, Math.PI / 2, "#ffd23f");
+  MONDE.bloc(C.x + W + 1.7, H + 0.2, C.z - 8.2, 0.2, 2.8, 16.4, "#ffd23f");
+  occuper(C.x, C.z, 22);
+  const autos = []; let pov = null;
+  const coul = ["#e8333f", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22", "#1abc9c", "#ff6fa8", "#34495e", "#ecf0f1"];
+  for (let k = 0; k < 10; k++) {
+    const M = new Modele();
+    M.boite(0, 0.3, 0, 2.1, 0.45, 2.8, "#1e1e1e"); M.boite(0, 0.75, 0, 1.7, 0.6, 2.3, coul[k]); M.boite(0, 1.25, -0.9, 1.6, 0.9, 0.35, coul[k]);
+    M.boite(0, 1.25, 0.65, 0.12, 0.5, 0.12, "#333"); M.forme(CYL(0.32, 0.32, 0.08, 12), 0, 1.5, 0.6, "#222", false, -0.9);
+    M.boite(0, 3.4, -1.15, 0.08, 4.5, 0.08, "#999");
+    if (k !== 0) passager(M, 0, 0.95, -0.2, 0, "bas");
+    const g = M.maillage(); g.scale.setScalar(S); scene.add(g);
+    const etincelle = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0xfff27a })); etincelle.position.set(0, 5.7, -1.15); etincelle.scale.set(0.35, 0.2, 0.35); g.add(etincelle);
+    if (k === 0) pov = siege(g, 0, 2.05, -0.15, Math.PI);
+    autos.push({ g, etincelle, x: (alea() - 0.5) * 2 * (W - 2), z: (alea() - 0.5) * 2 * (D - 2), cap: alea() * TAU, vx: 0, vz: 0, cible: null, choc: 0 });
+  }
+  const nouvelleCible = (a) => { a.cible = { x: (alea() - 0.5) * 2 * (W - 2), z: (alea() - 0.5) * 2 * (D - 2) }; };
+  autos.forEach(nouvelleCible);
+  return {
+    id: "autos", nom: "Autos-tamponneuses", tags: "Tu conduis · tu tapes les autres", couleur: "#3498db",
+    texte: "La grande piste sous le toit à rayures. Dix grosses autos, une perche avec des étincelles au plafond, et le but c'est de rentrer dans tout le monde.",
+    jeu: "Là c'est toi qui conduis avec tes touches pour avancer et tourner. Les autos rebondissent quand elles se cognent.",
+    etiq: V(-35, 13, 80), vue: { pos: V(-9, 6.2, 99), cible: V(-38, 1.2, 78) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t, dt) {
+      for (const a of autos) {
+        const dx = a.cible.x - a.x, dz = a.cible.z - a.z;
+        if (Math.hypot(dx, dz) < 2 || alea() < dt * 0.15) nouvelleCible(a);
+        let diff = Math.atan2(dx, dz) - a.cap; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        a.cap += Math.max(-2, Math.min(2, diff * 3)) * dt;
+        a.vx += Math.sin(a.cap) * 9 * dt; a.vz += Math.cos(a.cap) * 9 * dt;
+        const amort = Math.exp(-dt * 1.4); a.vx *= amort; a.vz *= amort;
+        a.x += a.vx * dt; a.z += a.vz * dt;
+        if (Math.abs(a.x) > W - 2) { a.x = Math.sign(a.x) * (W - 2); a.vx *= -0.8; a.choc = 0.3; }
+        if (Math.abs(a.z) > D - 2) { a.z = Math.sign(a.z) * (D - 2); a.vz *= -0.8; a.choc = 0.3; }
+      }
+      for (let i = 0; i < autos.length; i++) for (let j = i + 1; j < autos.length; j++) {
+        const a = autos[i], b = autos[j], dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+        if (d < 3.5 && d > 0.01) {
+          const nx = dx / d, nz = dz / d, pen = (3.5 - d) / 2;
+          a.x -= nx * pen; a.z -= nz * pen; b.x += nx * pen; b.z += nz * pen;
+          const rel = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
+          if (rel < 0) { a.vx += rel * nx * 1.1; a.vz += rel * nz * 1.1; b.vx -= rel * nx * 1.1; b.vz -= rel * nz * 1.1; a.choc = b.choc = 0.35; }
+        }
+      }
+      for (const a of autos) {
+        a.choc = Math.max(0, a.choc - dt);
+        a.g.position.set(C.x + a.x, 0.35 + (a.choc > 0 ? Math.sin(a.choc * 40) * 0.05 : 0), C.z + a.z); a.g.rotation.y = a.cap;
+        a.etincelle.visible = a.choc > 0 || alea() < 0.06;
+      }
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 9. LE BATEAU PIRATE
+ATTRACTIONS.push((() => {
+  const C = V(-40, 18, 10);
+  for (const sz of [-1, 1]) { for (const sx of [-1, 1]) MONDE.poutre(V(C.x + sx * 9, 0, C.z + sz * 5.8), V(C.x, C.y + 0.6, C.z + sz * 4.6), 0.9, "#7a4a24"); MONDE.poutre(V(C.x - 5, 8, C.z + sz * 5.3), V(C.x + 5, 8, C.z + sz * 5.3), 0.5, "#7a4a24"); }
+  MONDE.boite(C.x, C.y, C.z, 1.2, 1.2, 10, "#555");
+  MONDE.bloc(C.x - 12, 0, C.z - 6.5, 24, 0.3, 13, "#3d8fd6", false, 0.03);
+  for (let x = -12; x < 12; x += 2) MONDE.bloc(C.x + x, 0.3, C.z - 6.5 + (Math.abs(x) % 4) * 0.3, 1.2, 0.1, 0.4, "#e8f6ff", false, 0);
+  occuper(C.x, C.z, 16);
+  const balancier = new THREE.Group(); balancier.position.copy(C); scene.add(balancier);
+  const M = new Modele();
+  for (const sz of [-1, 1]) for (const sx of [-1, 1]) M.poutre(V(0, 0, sz * 3.6), V(sx * 4.5, -12.6, sz * 3.6), 0.55, "#c0392b");
+  const bois = "#7a4a24", bois2 = "#5a3418";
+  M.boite(0, -16.2, 0, 12, 1, 2.4, bois2); M.boite(0, -15.2, 0, 16, 1, 4.6, bois); M.boite(0, -14.0, 0, 19, 1.4, 6.2, bois);
+  M.boite(0, -13.0, 0, 20, 0.6, 6.8, "#c0392b"); M.boite(0, -12.55, 0, 20.2, 0.3, 7, "#ffd23f", false, 0);
+  M.boite(10.6, -11.4, 0, 2.6, 2.2, 5.6, bois); M.boite(-10.6, -10.8, 0, 2.8, 3.4, 6, bois);
+  M.boite(12.4, -11.0, 0, 1.4, 1.2, 1.2, "#efeadc"); M.boite(12.9, -11.1, 0.35, 0.3, 0.3, 0.1, "#111", false, 0); M.boite(12.9, -11.1, -0.35, 0.3, 0.3, 0.1, "#111", false, 0);
+  M.boite(-10.6, -6.2, 0, 0.18, 6, 0.18, "#ddd"); M.boite(-10.6, -4.2, 1.2, 0.1, 1.6, 2.4, "#1b1b1b"); M.boite(-10.6, -4.1, 1.2, 0.12, 0.6, 0.6, "#efeadc");
+  for (const sx of [-1, 1]) for (let r = 1; r <= 4; r++) {
+    const x = sx * (r * 2 - 0.6);
+    M.boite(x, -12.1, 0, 0.8, 0.5, 5.8, "#3d2a14"); M.boite(x + sx * 0.4, -11.4, 0, 0.2, 1.2, 5.8, "#3d2a14");
+    for (const z of [-2, -0.7, 0.7, 2]) if (!(sx === 1 && r === 4 && z === 0.7)) passager(M, x, -11.85, z, sx > 0 ? -Math.PI / 2 : Math.PI / 2, choix(["haut", "haut", "bas"]));
+  }
+  balancier.add(M.maillage());
+  const pov = siege(balancier, 7.4, -10.0, 0.7, Math.PI / 2);
+  return {
+    id: "bateau", nom: "Le Bateau Pirate", tags: "Balancier · presque à la verticale", couleur: "#c0392b",
+    texte: "Un vrai navire avec une tête de mort à l'avant. Il se balance de plus en plus fort jusqu'à monter presque à la verticale. Au fond du bateau, ton ventre reste en haut.",
+    jeu: "Un balancier : la nacelle pivote autour de l'axe en haut, de plus en plus fort.",
+    etiq: V(-40, 24, 10), vue: { pos: V(-40, 20, 52), cible: V(-40, 10, 10) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t) {
+      const c = (t % 40) / 40, amp = 0.25 + 1.15 * Math.sin(Math.PI * c);
+      balancier.rotation.z = amp * Math.sin(t * TAU / 6.6);
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 10. LA TOUPIE
+ATTRACTIONS.push((() => {
+  const C = V(50, 12, 25);
+  for (const sx of [-1, 1]) { MONDE.bloc(C.x + sx * 7.6 - 0.9, 0, C.z - 1.2, 1.8, 13, 2.4, "#2a2a3a"); MONDE.bloc(C.x + sx * 7.6 - 1.6, 0, C.z - 2.4, 3.2, 1, 4.8, "#3a3a4a"); MONDE.boite(C.x + sx * 7.6, 13.2, C.z, 2.2, 0.5, 2.6, "#ff3df2", true); }
+  MONDE.bloc(C.x - 9, 0, C.z - 9, 18, 0.3, 18, "#2a2a3a", false, 0.02);
+  for (let k = 0; k < 18; k++) MONDE.bloc(C.x - 9 + k, 0.3, C.z + 8.7, 1, 0.15, 0.3, k % 2 ? "#ffd23f" : "#111", false, 0);
+  occuper(C.x, C.z, 11);
+  panneau("LA TOUPIE", 5, 1.1, "#2a2a3a", "#00f0ff", null, C.x, 15.2, C.z + 1.32, 0, "#ff3df2");
+  panneau("LA TOUPIE", 5, 1.1, "#2a2a3a", "#00f0ff", null, C.x, 15.2, C.z - 1.32, Math.PI, "#ff3df2");
+  MONDE.bloc(C.x - 2.6, 13.8, C.z - 1.2, 5.2, 2.8, 2.4, "#2a2a3a");
+  const bras = new THREE.Group(); bras.position.copy(C); scene.add(bras);
+  const M = new Modele();
+  for (const sx of [-1, 1]) { M.boite(sx * 6.3, -3.4, 0, 0.9, 8.6, 1.0, "#e8333f"); M.boite(sx * 6.3, 2.6, 0, 1.6, 2.2, 1.6, "#3a3a4a"); M.boite(sx * 6.75, -3.4, 0, 0.05, 7.5, 0.3, "#00f0ff", true, 0); M.boite(sx * 6.3, 0, 0, 1.4, 1.4, 1.4, "#555"); }
+  bras.add(M.maillage());
+  const nacelle = new THREE.Group(); nacelle.position.set(0, -7, 0); bras.add(nacelle);
+  const N = new Modele();
+  N.boite(0, 0, -0.4, 12, 0.6, 0.8, "#3a3a4a"); N.boite(0, -0.45, -0.4, 12.2, 0.12, 1.0, "#ffd23f", true, 0);
+  for (let i = 0; i < 8; i++) {
+    const x = -4.4 + i * 1.26;
+    N.boite(x, 1.0, -0.45, 1.1, 2.2, 0.25, "#2a2a3a"); N.boite(x, 0.35, 0, 1.1, 0.2, 0.8, "#2a2a3a");
+    for (const s of [-1, 1]) N.boite(x + s * 0.45, 1.6, 0.05, 0.16, 0.9, 0.3, "#ffd23f");
+    N.boite(x, 1.05, 0.25, 0.9, 0.16, 0.16, "#ffd23f");
+    if (i !== 4) passager(N, x, 0.5, -0.05, 0, choix(["haut", "bas"]));
+  }
+  nacelle.add(N.maillage());
+  const pov = siege(nacelle, -4.4 + 4 * 1.26, 1.55, 0.05, Math.PI);
+  return {
+    id: "toupie", nom: "La Toupie", tags: "Tête en bas · tu te retournes sur toi-même", couleur: "#00c8d6",
+    texte: "Une rangée de sièges entre deux grands bras. Les bras font des tours complets et la nacelle se retourne dans l'autre sens en même temps : tu passes la tête en bas, tu regardes le ciel, puis le sol, puis le ciel.",
+    jeu: "Deux rotations : les bras autour de l'axe en haut, la nacelle autour de sa barre. Il y a 1 chance sur 2 de descendre avec l'effet Nausée léger pendant 10 secondes.",
+    looping: true,
+    etiq: V(50, 20, 25), vue: { pos: V(50, 12, 60), cible: V(50, 7, 25) },
+    siege: pov, lampes: [], sombre: () => 0,
+    maj(t) {
+      const a = t * 1.15 + 1.6 * Math.sin(t * 1.05);
+      bras.rotation.x = a;
+      nacelle.rotation.x = -a * 1.8 + 2.2 * Math.sin(t * 0.7);
+    },
+  };
+})());
+
+// ---------------------------------------------------------------- 11. RIVIÈRE SPLASH
+const eclaboussures = (() => {
+  const n = 5000, pos = new Float32Array(n * 3).fill(-999), vit = new Float32Array(n * 3), vie = new Float32Array(n);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xf2fbff, size: 0.75, transparent: true, opacity: 0.85, depthWrite: false })));
+  const vagues = [];
+  for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.TorusGeometry(1, 0.18, 4, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })); m.rotation.x = Math.PI / 2; scene.add(m); vagues.push({ m, t: 9 }); }
+  let k = 0, kv = 0;
+  return {
+    jet(p, dir) {
+      const cote = V().crossVectors(Y, dir).normalize();
+      for (let i = 0; i < 1800; i++) {
+        const j = k++ % n, f = alea(), type = i % 3;
+        pos.set([p.x + (alea() - 0.5) * 3, p.y + 0.3, p.z + (alea() - 0.5) * 3], j * 3);
+        if (type === 0) {   // la gerbe qui monte très haut devant le tronc
+          const a = alea() * TAU;
+          vit.set([Math.cos(a) * 4 * f + dir.x * 9, 14 + alea() * 12, Math.sin(a) * 4 * f + dir.z * 9], j * 3);
+        } else {   // les deux grandes ailes d'eau sur les côtés
+          const sd = type === 1 ? 1 : -1, l = 7 + alea() * 9;
+          vit.set([cote.x * sd * l + dir.x * (3 + alea() * 6) + (alea() - 0.5) * 2, 7 + alea() * 10, cote.z * sd * l + dir.z * (3 + alea() * 6) + (alea() - 0.5) * 2], j * 3);
+        }
+        vie[j] = 2.6;
+      }
+      const v = vagues[kv++ % vagues.length]; v.t = 0; v.m.position.set(p.x + dir.x * 3, 0.3, p.z + dir.z * 3);
+    },
+    maj(dt) {
+      for (const v of vagues) { v.t += dt; const k2 = Math.min(1, v.t / 2.2); v.m.scale.setScalar(1 + k2 * 16); v.m.material.opacity = v.t < 2.2 ? 0.75 * (1 - k2) : 0; }
+      for (let i = 0; i < n; i++) {
+        if (vie[i] <= 0) continue;
+        vie[i] -= dt; vit[i * 3 + 1] -= 20 * dt; const fr = Math.exp(-dt * 0.6); vit[i * 3] *= fr; vit[i * 3 + 2] *= fr;
+        pos[i * 3] += vit[i * 3] * dt; pos[i * 3 + 1] += vit[i * 3 + 1] * dt; pos[i * 3 + 2] += vit[i * 3 + 2] * dt;
+        if (vie[i] <= 0 || pos[i * 3 + 1] < 0) { vie[i] = 0; pos[i * 3 + 1] = -999; }
+      }
+      geo.attributes.position.needsUpdate = true;
+    },
+  };
+})();
+DECOR.push(eclaboussures);
+let PHOTO = null;   // l'appareil photo automatique de la Rivière Splash
+ATTRACTIONS.push((() => {
+  const C = V(-95, 0, 52), N = 1400, pts = [], inf = [];
+  for (let i = 0; i < N; i++) {
+    const u = i / N * TAU;
+    pts.push(V(C.x + 30 * Math.cos(u) + 4 * Math.cos(3 * u), 1 + 26 * (entre(3.2, 4.15, u) - entre(4.45, 4.88, u)), C.z + 24 * Math.sin(u) + 3 * Math.sin(2 * u)));
+    const gare = u < 0.18 || u > TAU - 0.18;
+    inf.push({ u, noir: u > 0.45 && u < 1.15, mode: gare ? "gare" : u >= 3.2 && u < 4.25 ? "lent" : u >= 4.42 && u < 5.0 ? "chute" : "eau" });
+  }
+  const P = new Parcours(pts, null, inf);
+  // le lac
+  const lac = new THREE.Mesh(new THREE.CircleGeometry(1, 48), eauMat); lac.rotation.x = -Math.PI / 2; lac.scale.set(38, 31, 1); lac.position.set(C.x, 0.14, C.z); lac.receiveShadow = true; scene.add(lac);
+  occuper(C.x, C.z, 38);
+  // la goulotte en bois, les pieds, et l'eau dedans
+  const c = cadre(), q = new THREE.Quaternion();
+  for (let s = 0; s < P.total; s += 1) {
+    P.at(s, c); quatDe(c, q); const r = droiteDe(c);
+    MONDE.boiteQ(c.p.clone().addScaledVector(c.u, -0.55), q, 3.4, 0.3, 1.5, "#8a5a2b");
+    for (const sd of [1, -1]) MONDE.boiteQ(c.p.clone().addScaledVector(r, sd * 1.6).addScaledVector(c.u, 0.1), q, 0.25, 1.3, 1.5, "#a0703a");
+    if (c.p.y > 1.8 && Math.round(s) % 3 === 0) for (const sd of [1, -1]) { const b = c.p.clone().addScaledVector(r, sd * 1.4); MONDE.boite(b.x, (b.y - 0.6) / 2, b.z, 0.35, b.y - 0.6, 0.35, "#6b4423"); }
+  }
+  {
+    const pos = [], uv = [], col = [], ind = []; let v = 0, i0 = 0;
+    for (let s = 0; s <= P.total; s += 0.6) {
+      P.at(s, c); const r = droiteDe(c), m = c.info.mode;
+      for (const sd of [-1, 1]) { const p = c.p.clone().addScaledVector(r, sd * 1.45).addScaledVector(c.u, -0.25); pos.push(p.x, p.y, p.z); uv.push(sd > 0 ? 1 : 0, v); const k = m === "lent" ? [0.55, 0.55, 0.6] : m === "chute" ? [1.3, 1.4, 1.5] : [1, 1, 1]; col.push(...k); }
+      if (i0 > 0) { const a = (i0 - 1) * 2; ind.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      i0++; v += 0.15;
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(ind); geo.computeVertexNormals();
+    const tex = EAU.clone(); tex.needsUpdate = true; tex.repeat.set(1, 1);
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, side: THREE.DoubleSide })); m.receiveShadow = true; scene.add(m);
+    DECOR.push({ maj(dt) { tex.offset.y -= dt * 0.9; } });
+  }
+  // la grotte aux cristaux
+  const lampes = [];
+  let n2 = 0;
+  tunnel(P, {
+    filtre: (i) => i.noir, larg: () => 4.6, haut: () => 5,
+    mur: () => choix(["#6f7a6a", "#5f6b5a", "#7c8576", "#4f6b3f"]), plafond: () => choix(["#5f6b5a", "#4f6b3f"]),
+    decor: (s, c2, r, w, h, q2) => {
+      n2++;
+      for (let k = 0; k < 2; k++) { const b = c2.p.clone().addScaledVector(r, (alea() - 0.5) * 9).addScaledVector(Y, h + 1 + alea() * 3); MONDE.boite(b.x, b.y, b.z, 2 + alea() * 2, 1.5 + alea() * 2, 2, choix(["#6f7a6a", "#5f9a3c", "#7c8576"])); }
+      if (n2 % 4 === 0) {
+        const sd = n2 % 8 ? 1 : -1, col = choix(["#4dfcff", "#c77dff", "#7a5cff", "#ff7af0"]);
+        const p = c2.p.clone().addScaledVector(r, sd * (w / 2 - 0.3)).addScaledVector(c2.u, 0.8 + alea() * 2.5);
+        MONDE.boiteQ(p, q2.clone().multiply(new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), 0.4 * sd)), 0.4, 1.3, 0.4, col, true, 0);
+        MONDE.boiteQ(p.clone().addScaledVector(c2.f, 0.4).addScaledVector(c2.u, -0.3), q2, 0.3, 0.8, 0.3, col, true, 0);
+        lampes.push(lampe(p.clone().addScaledVector(r, -sd * 0.8), col));
+      }
+    },
+  });
+  // la gare
+  {
+    P.at(0, c); const r = droiteDe(c), q2 = quatDe(c, new THREE.Quaternion());
+    const at = (dx, dy, dz) => c.p.clone().addScaledVector(r, dx).addScaledVector(Y, dy).addScaledVector(c.f, dz);
+    const cote = r.x > 0 ? 1 : -1;
+    MONDE.boiteQ(at(cote * 4.5, -0.5, 0), q2, 5.4, 1.2, 12, "#a0703a");
+    for (const dz of [-5.5, 0, 5.5]) for (const dx of [cote * 2.2, cote * 7]) MONDE.boiteQ(at(dx, 3, dz), q2, 0.4, 6, 0.4, "#6b4423");
+    MONDE.boiteQ(at(cote * 3.2, 6.2, 0), q2, 11, 0.5, 13, "#2ec4b6");
+    const ps = at(cote * 7.4, 7.4, 0);
+    panneau("RIVIÈRE SPLASH", 9, 1.6, "#1f6fb2", "#ffffff", null, ps.x, 7.4, ps.z, Math.atan2(r.x * cote, r.z * cote), "#ffd23f");
+  }
+  // les troncs
+  const sSplash = P.sIndex((i) => i.u > 4.89), sPhoto = P.sIndex((i) => i.u > 4.8);
+  // l'appareil photo : un poteau au bord, en bas de la descente, qui flashe chaque tronc
+  {
+    const cp = P.at(sSplash, cadre()), r = droiteDe(cp), sd = 1;
+    const pied = cp.p.clone().addScaledVector(r, sd * 7).addScaledVector(cp.f, 1.5); pied.y = 0;
+    MONDE.boite(pied.x, 2.2, pied.z, 0.35, 4.4, 0.35, "#333");
+    MONDE.boite(pied.x, 4.6, pied.z, 1.0, 0.7, 0.8, "#1b1b1b"); MONDE.boite(pied.x - r.x * sd * 0.5, 4.6, pied.z - r.z * sd * 0.5, 0.45, 0.45, 0.45, "#444");
+    const flash = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0x555555 })); flash.position.set(pied.x, 5.15, pied.z); flash.scale.set(0.7, 0.25, 0.5); scene.add(flash);
+    const oeil = V(pied.x - r.x * sd * 0.8, 4.6, pied.z - r.z * sd * 0.8);
+    // l'écran des photos à la sortie, comme dans les vrais parcs
+    const cv = document.createElement("canvas"); cv.width = 480; cv.height = 360; const g2 = cv.getContext("2d");
+    g2.fillStyle = "#123a5a"; g2.fillRect(0, 0, 480, 360); g2.fillStyle = "#ffffff"; g2.font = '700 34px "Pixelify Sans", sans-serif'; g2.textAlign = "center"; g2.fillText("TES PHOTOS ICI", 240, 190);
+    const ecran = new THREE.CanvasTexture(cv);
+    const B = V(-49, 0, 49);
+    MONDE.bloc(B.x - 2, 0, B.z - 3, 3, 4.6, 6, "#fff3e0"); MONDE.bloc(B.x - 2.3, 4.6, B.z - 3.3, 3.6, 0.5, 6.6, "#1f6fb2");
+    MONDE.bloc(B.x + 1, 0, B.z - 2.8, 0.8, 1.1, 5.6, "#1f6fb2");
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 3.3), new THREE.MeshBasicMaterial({ map: ecran })); m.position.set(B.x + 1.02, 2.8, B.z); m.rotation.y = Math.PI / 2; scene.add(m);
+    panneau("PHOTOS", 3.6, 0.8, "#1f6fb2", "#ffffff", null, B.x + 1.07, 5.4, B.z, Math.PI / 2, "#ffd23f");
+    occuper(B.x, B.z, 4);
+    const camPhoto = new THREE.PerspectiveCamera(42, 4 / 3, 0.2, 500);
+    let demande = null, eclair = 0;
+    PHOTO = {
+      declencher(bateau, pourMoi) { demande = { bateau, pourMoi, dans: 0.12 }; eclair = 0.25; if (pourMoi) { const f = $("flash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on"); } },
+      maj(dt) { eclair = Math.max(0, eclair - dt); flash.material.color.setHex(eclair > 0 ? 0xffffff : 0x555555); if (demande) demande.dans -= dt; },
+      // prend la photo depuis le poteau, juste avant l'image normale
+      capturer(rendu) {
+        if (!demande || demande.dans > 0) return;
+        const ecranGl = rendu.domElement, W = ecranGl.width, H = ecranGl.height;
+        camPhoto.position.copy(oeil); camPhoto.aspect = W / H; camPhoto.updateProjectionMatrix();
+        camPhoto.lookAt(demande.bateau.position.x, demande.bateau.position.y + 1.2, demande.bateau.position.z);
+        rendu.render(scene, camPhoto);
+        let sw = W, sh = W * 3 / 4; if (sh > H) { sh = H; sw = H * 4 / 3; }
+        g2.drawImage(ecranGl, (W - sw) / 2, (H - sh) / 2, sw, sh, 0, 0, 480, 360);
+        g2.fillStyle = "rgba(31,111,178,0.92)"; g2.fillRect(0, 316, 480, 44);
+        g2.fillStyle = "#ffffff"; g2.font = '700 22px "Pixelify Sans", sans-serif'; g2.textAlign = "left"; g2.fillText("RIVIÈRE SPLASH", 14, 346);
+        g2.textAlign = "right"; g2.fillStyle = "#ffd23f"; g2.fillText("PARC DE LA CABANE", 466, 346);
+        ecran.needsUpdate = true;
+        if (demande.pourMoi) {
+          const carte = $("photo"), c3 = carte.querySelector("canvas");
+          c3.getContext("2d").drawImage(cv, 0, 0);
+          setTimeout(() => { carte.hidden = false; carte.classList.remove("arrive"); void carte.offsetWidth; carte.classList.add("arrive"); }, 2200);
+        }
+        demande = null;
+      },
+    };
+    DECOR.push(PHOTO);
+  }
+  const trains = []; let pov = null;
+  for (let k = 0; k < 4; k++) {
+    const M = new Modele();
+    M.boite(0, 0.15, 0, 1.9, 0.9, 4.2, "#7a4a24"); M.boite(0, 0.35, 2.3, 1.4, 0.7, 0.6, "#7a4a24"); M.boite(0, 0.6, 0, 1.5, 0.3, 3.6, "#4a2c14");
+    for (let j = 0; j < 4; j++) M.boite(0, 0.15, -1.6 + j * 1.1, 1.95, 0.95, 0.12, "#5a3418", false, 0);
+    M.boite(0, 0.2, -2.25, 1.5, 0.8, 0.3, "#5a3418");
+    for (let j = 0; j < 3; j++) if (!(k === 0 && j === 0)) passager(M, 0, 0.5, 1.2 - j * 1.2, 0, choix(["haut", "bas"]));
+    const g = M.maillage(); scene.add(g);
+    if (k === 0) pov = siege(g, 0, 1.6, 1.2, Math.PI);
+    trains.push(new Train(P, [g], 0, {
+      s0: P.total * (1 - k / 4), ecartMin: 12, arrets: [{ s: 0.01, duree: 2 }],
+      vitesse: (c2) => ({ gare: 3, lent: 4.5 }[c2.info.mode] || (c2.info.mode === "chute" ? Math.sqrt(16 + 34 * Math.max(0, 27.5 - c2.p.y)) : 6)), reactif: 6, freinage: 1.6,
+      aPasse: [
+        { s: sSplash, fn: () => { const cc = P.at(sSplash, cadre()); eclaboussures.jet(cc.p, cc.f); } },
+        { s: sPhoto, fn: () => PHOTO.declencher(g, k === 0 && enTour === SPLASH) },
+      ],
+    }));
+  }
+  const cPov = cadre();
+  const SPLASH = {
+    id: "splash", nom: "Rivière Splash", tags: "Eau · grotte aux cristaux · grande descente", couleur: "#1f9bd6",
+    texte: "Un tronc qui flotte sur un lac. Ça passe dans une grotte noire éclairée par des cristaux de couleur, ça remonte doucement jusqu'à 27 blocs… puis la grande descente, et un énorme splash : une gerbe qui monte plus haut que la goulotte et deux grandes ailes d'eau sur les côtés. En bas de la descente, un appareil photo flashe tout le tronc : à la sortie, ta photo s'affiche sur l'écran PHOTOS et tu la récupères.",
+    jeu: "Le tronc suit le canal comme un wagon. La photo est prise d'un point fixe en bas de la descente, avec tous ceux qui sont dans le tronc, puis donnée en souvenir (une carte avec l'image).",
+    etiq: V(-120, 26, 40), vue: { pos: V(-50, 30, 105), cible: V(-100, 6, 50) },
+    siege: pov, lampes,
+    sombre: () => { P.at(trains[0].s, cPov); return cPov.info.noir ? 1 : 0; },
+    lift: () => trains[0].tete.info && trains[0].tete.info.mode === "lent",
+    maj(t, dt) { for (let k = 0; k < 4; k++) trains[k].maj(dt, trains[(k + 3) % 4]); },
+  };
+  return SPLASH;
+})());
+
+// ---------------------------------------------------------------- 12. LA MAISON HANTÉE (à pied, screamers dans le tunnel)
+// les screamers : seulement sur l'écran de ceux qui sont dans le tunnel
+function dessinVisage(k) {
+  const c = document.createElement("canvas"); c.width = c.height = 400; const g = c.getContext("2d");
+  const f = g.createRadialGradient(200, 200, 30, 200, 200, 280); f.addColorStop(0, ["#2a0505", "#3a0000", "#06140c"][k]); f.addColorStop(1, "#000"); g.fillStyle = f; g.fillRect(0, 0, 400, 400);
+  g.fillStyle = ["#d8ddd0", "#c9bfb2", "#b9cfc2"][k]; g.beginPath(); g.ellipse(200, 215, 118 - k * 10, 168, 0, 0, TAU); g.fill();
+  g.fillStyle = "rgba(0,0,0,0.25)"; g.beginPath(); g.ellipse(200, 300, 100, 80, 0, 0, TAU); g.fill();
+  for (const s of [-1, 1]) {
+    g.fillStyle = "#000"; g.beginPath(); g.ellipse(200 + s * 48, 160, 32 + k * 4, 44 + k * 7, s * 0.25, 0, TAU); g.fill();
+    g.fillStyle = k === 2 ? "#ff2020" : "#ffffff"; g.beginPath(); g.arc(200 + s * 46, 168, 5, 0, TAU); g.fill();
+    g.strokeStyle = "#8a0000"; g.lineWidth = 6; g.beginPath(); g.moveTo(200 + s * 48, 200); g.lineTo(200 + s * 52, 250 + k * 15); g.stroke();
+  }
+  g.fillStyle = "#000"; g.beginPath(); g.ellipse(200, 305, 48 + k * 8, 72 + k * 10, 0, 0, TAU); g.fill();
+  g.fillStyle = "#e8e2c8";
+  for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(200 + i * 13 - 6, 245 - k * 6); g.lineTo(200 + i * 13 + 6, 245 - k * 6); g.lineTo(200 + i * 13, 268); g.fill(); }
+  g.strokeStyle = "rgba(30,20,20,0.7)"; g.lineWidth = 3;
+  for (let i = 0; i < 6; i++) { g.beginPath(); let x = 120 + alea() * 160, y = 70 + alea() * 60; g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (alea() - 0.5) * 40; y += 15 + alea() * 15; g.lineTo(x, y); } g.stroke(); }
+  const p = document.createElement("canvas"); p.width = p.height = 96; p.getContext("2d").drawImage(c, 0, 0, 96, 96);   // en gros pixels
+  return p;
+}
+const screamer = (() => {
+  const el = $("screamer"), cv = el.querySelector("canvas"), g = cv.getContext("2d");
+  const visages = [0, 1, 2].map(dessinVisage);
+  let jusqua = 0;
+  return {
+    lancer(k) {
+      g.clearRect(0, 0, 96, 96); g.drawImage(visages[k % 3], 0, 0);
+      el.hidden = false; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+      jusqua = performance.now() + 800; Son.cri();
+      setTimeout(() => { if (performance.now() >= jusqua - 10) el.hidden = true; }, 810);
+    },
+    cacher() { el.hidden = true; },
+  };
+})();
+ATTRACTIONS.push((() => {
+  const C = V(-100, 0, 104), L = (x, y, z) => V(C.x + x, y, C.z + z);
+  // le chemin à pied : entrée par la porte de gauche, galerie des portraits, tunnel des cris, sortie par la porte de droite
+  const T = new Tortue(L(-3, 0.4, 15), V(0, 0, -1));
+  T.droit(8); T.virage(3, Math.PI / 2, 0, 0); T.droit(3); T.virage(3, -Math.PI / 2, 0, 0); T.droit(6); T.virage(3, -Math.PI / 2, 0, 0);
+  T.droit(18); T.virage(3, -Math.PI / 2, 0, 0); T.droit(6); T.virage(3, -Math.PI / 2, 0, 0); T.droit(3); T.virage(3, Math.PI / 2, 0, 0); T.droit(8);
+  T.virage(3, -Math.PI, 0, 0);
+  T.inf = T.pts.map((p) => { const lx = p.x - C.x, lz = p.z - C.z; return { mode: "marche", noir: lz < 11.6, tunnel: lz < -6.5 && lx > -9.5 && lx < 9.5, galerie: lx < -10 }; });
+  const P = T.parcours();
+  const lampes = [], bougies = [];
+  let n = 0;
+  tunnel(P, {
+    filtre: (i) => i.noir, larg: (i) => (i.tunnel ? 2.3 : 2.6), haut: (i) => (i.tunnel ? 2.9 : 3.4), prof: 0.4, pas: 0.9,
+    mur: (c) => (c.info.tunnel ? choix(["#2a1214", "#331a1c", "#24100f"]) : choix(["#3b2a3f", "#45304a", "#3a2438"])),
+    plafond: (c) => (c.info.tunnel ? "#140a0a" : "#1d1520"),
+    decor: (s, c, r, w, h, q) => {
+      n++;
+      if (n % 5 === 0) {   // bougies
+        const sd = n % 10 ? 1 : -1, p = c.p.clone().addScaledVector(r, sd * (w / 2 - 0.15)).addScaledVector(Y, 1.5);
+        MONDE.boiteQ(p, q, 0.3, 0.12, 0.3, "#2a2a2a"); MONDE.boiteQ(p.clone().addScaledVector(Y, 0.25), q, 0.14, 0.4, 0.14, "#efe6c8"); MONDE.boiteQ(p.clone().addScaledVector(Y, 0.55), q, 0.1, 0.16, 0.1, "#ffb347", true, 0);
+        const l = lampe(p.clone().addScaledVector(r, -sd * 0.5).addScaledVector(Y, 0.6), 0xff9a3c); lampes.push(l); bougies.push({ l, base: l.c.clone(), ph: alea() * 10 });
+      }
+      if (c.info.galerie && n % 4 === 2) {   // portraits dont les yeux brillent
+        for (const sd of [1, -1]) {
+          const p = c.p.clone().addScaledVector(r, sd * (w / 2 - 0.05)).addScaledVector(Y, 2.1);
+          MONDE.boiteQ(p, q, 0.1, 1.3, 1.0, "#b8892b"); MONDE.boiteQ(p.clone().addScaledVector(r, -sd * 0.06), q, 0.05, 1.05, 0.78, "#2a1d18");
+          for (const e of [-0.14, 0.14]) MONDE.boiteQ(p.clone().addScaledVector(r, -sd * 0.09).addScaledVector(c.f, e).addScaledVector(Y, 0.15), q, 0.03, 0.07, 0.07, "#ff2a2a", true, 0);
+        }
+      }
+      if (c.info.tunnel && n % 2 === 0) {   // mains sur les murs
+        const sd = alea() < 0.5 ? 1 : -1, p = c.p.clone().addScaledVector(r, sd * (w / 2 - 0.02)).addScaledVector(Y, 0.6 + alea() * 1.8);
+        MONDE.boiteQ(p, q, 0.05, 0.35, 0.3, "#8a0f0f", false, 0.2);
+        for (let d = 0; d < 3; d++) MONDE.boiteQ(p.clone().addScaledVector(Y, 0.3).addScaledVector(c.f, -0.1 + d * 0.1), q, 0.05, 0.25, 0.06, "#8a0f0f", false, 0.2);
+      }
+    },
+  });
+  // les screamers du tunnel : une silhouette cachée dans le mur qui saute sur le chemin
+  const sTunnel = P.sIndex((i) => i.tunnel);
+  const cris = [];
+  [3, 9, 15].forEach((d, k) => {
+    const c = P.at(sTunnel + d + 1.5, cadre()), r = droiteDe(c), sd = k % 2 ? 1 : -1;
+    const M = new Modele(), pale = "#d8ddd0";
+    M.boite(0, 1.1, 0, 0.7, 1.6, 0.4, "#111"); M.boite(0, 2.15, 0, 0.6, 0.7, 0.55, pale);
+    for (const e of [-0.14, 0.14]) M.boite(e, 2.22, 0.28, 0.16, 0.22, 0.02, "#000", false, 0);
+    M.boite(0, 1.95, 0.28, 0.2, 0.26, 0.02, "#000", false, 0);
+    for (const s of [-1, 1]) M.boiteQ(V(s * 0.45, 1.6, 0.35), new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), -1.3), 0.16, 1.0, 0.16, pale);
+    const g = M.maillage(false); scene.add(g);
+    const cache = c.p.clone().addScaledVector(r, sd * 2.3), sorti = c.p.clone().addScaledVector(r, sd * 0.4).addScaledVector(c.f, 0.6);
+    g.position.copy(cache); g.lookAt(c.p.x, g.position.y, c.p.z);
+    MONDE.boiteQ(c.p.clone().addScaledVector(r, sd * 2.4).addScaledVector(Y, 1.3), quatDe(c, new THREE.Quaternion()), 1.6, 3.2, 1.6, "#0a0505");
+    const flash = lampe(c.p.clone().addScaledVector(Y, 2.2), 0x000000); lampes.push(flash);
+    cris.push({ g, cache, sorti, k: 0, flash, s: sTunnel + d, regard: c.p.clone() });
+  });
+  // la maison vue de dehors
+  {
+    const mur = "#4a4458";
+    const z1 = 11.6;
+    for (const [x0, x1] of [[-18.5, -4.3], [-1.7, 1.7], [4.3, 18.5]]) MONDE.bloc(C.x + x0, 0, C.z + z1, x1 - x0, 12, 1, mur, false, 0.08);
+    for (const x0 of [-4.3, 1.7]) MONDE.bloc(C.x + x0, 3.9, C.z + z1, 2.6, 8.1, 1, mur, false, 0.08);
+    MONDE.bloc(C.x - 18.5, 0, C.z - 14.5, 37, 12, 1, mur, false, 0.08);
+    MONDE.bloc(C.x - 18.5, 0, C.z - 14.5, 1, 12, 27, mur, false, 0.08); MONDE.bloc(C.x + 17.5, 0, C.z - 14.5, 1, 12, 27, mur, false, 0.08);
+    MONDE.bloc(C.x - 18.5, 0, C.z - 14.5, 37, 0.38, 27, "#2a2026", false, 0.04);
+    MONDE.bloc(C.x - 18.8, 6, C.z - 14.8, 37.6, 0.5, 27.6, "#2a2433", false, 0);
+    for (let k = 0; k < 5; k++) MONDE.bloc(C.x - 19.5 + k * 2.6, 12 + k * 1.5, C.z - 15.5 + k * 2.2, 39 - k * 5.2, 1.5, 28.5 - k * 4.4, k % 2 ? "#1e1a24" : "#26202e", false, 0.06);
+    for (const [x, z, w, h] of [[-18, -14, 6, 21], [18, -14, 6, 21], [-15, 9, 5, 16]]) {
+      MONDE.bloc(C.x + x - w / 2, 0, C.z + z - w / 2, w, h, w, "#3f394d", false, 0.08);
+      MONDE.forme(new THREE.ConeGeometry(w * 0.82, 7, 4), C.x + x, h + 3.5, C.z + z, "#1a1620", false);
+      MONDE.boite(C.x + x, h + 7.6, C.z + z, 0.15, 1.6, 0.15, "#555");
+      MONDE.boite(C.x + x + w / 2 + 0.05, h - 4, C.z + z, 0.1, 1.8, 1.2, choix(["#9dff6a", "#ffb347"]), true, 0);
+    }
+    // fenêtres : certaines allumées (vert maladif ou orange), d'autres condamnées par des planches
+    for (let i = 0; i < 9; i++) for (const y of [8.4]) {
+      const x = -15 + i * 3.8; if (Math.abs(x) < 6) continue;
+      const allumee = alea() < 0.6, col = allumee ? choix(["#9dff6a", "#ffb347", "#ffe48a"]) : "#14101a";
+      MONDE.boite(C.x + x, y, C.z + z1 + 1.03, 1.4, 2.2, 0.08, col, allumee, 0);
+      if (!allumee) for (const a of [0.6, -0.6]) MONDE.boiteQ(V(C.x + x, y, C.z + z1 + 1.1), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), a), 1.9, 0.25, 0.06, "#6b4a2b");
+    }
+    for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) MONDE.boite(C.x + sx * 18.53, 8.4, C.z - 10 + i * 6, 0.08, 2.2, 1.4, alea() < 0.5 ? "#9dff6a" : "#14101a", true, 0);
+    // perron, colonnes, auvent
+    MONDE.bloc(C.x - 7, 0, C.z + 12.6, 14, 0.4, 6.8, "#3a2f28", false, 0.05);
+    for (const sx of [-6.5, 6.5]) MONDE.bloc(C.x + sx - 0.3, 0.4, C.z + 18.6, 0.6, 4.2, 0.6, "#d8d0c4");
+    MONDE.bloc(C.x - 7.6, 4.6, C.z + 12.4, 15.2, 0.5, 7.6, "#1e1a24");
+    panneau("MAISON HANTÉE", 10, 1.6, "#1a0f1f", "#9dff6a", null, C.x, 6.0, C.z + 20.05, 0, "#5a2a6a");
+    for (const sx of [-1, 1]) { MONDE.boite(C.x + sx * 7.2, 5.4, C.z + 19.8, 0.4, 0.5, 0.4, "#ff9a3c", true); MONDE.boite(C.x + sx * 3, 1.5, C.z + 12.15, 2.4, 3.0, 0.1, "#0a0608", false, 0); }
+    // cimetière et arbres morts
+    const tombe = (x, z) => { if (alea() < 0.35) { MONDE.boite(x, 0.9, z, 0.2, 1.8, 0.2, "#8a8a8a"); MONDE.boite(x, 1.3, z, 0.9, 0.2, 0.2, "#8a8a8a"); } else { MONDE.boite(x, 0.7, z, 0.9, 1.4, 0.3, choix(["#8a8a8a", "#7a7a7a", "#6b706b"])); MONDE.boite(x, 1.45, z, 0.7, 0.2, 0.3, "#8a8a8a"); } MONDE.boite(x, 0.04, z + 0.9, 0.8, 0.08, 1.5, "#5a4632", false, 0); };
+    for (let z = -12; z <= 10; z += 3.2) for (let x = -27; x <= -21; x += 2.4) tombe(C.x + x + (alea() - 0.5), C.z + z);
+    for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) tombe(C.x + sx * (9.5 + (i % 2) * 2.6), C.z + 13.5 + Math.floor(i / 2) * 3);
+    const arbreMort = (x, z) => {
+      MONDE.bloc(x - 0.4, 0, z - 0.4, 0.8, 7, 0.8, "#2a211c");
+      for (let k = 0; k < 4; k++) { const a = alea() * TAU, h = 3.5 + k * 0.9; MONDE.poutre(V(x, h, z), V(x + Math.cos(a) * 2.6, h + 1.6, z + Math.sin(a) * 2.6), 0.3, "#2a211c"); }
+    };
+    arbreMort(C.x - 24, C.z + 16); arbreMort(C.x + 21, C.z - 10); arbreMort(C.x - 25, C.z - 16);
+    for (let x = -29; x <= 21; x += 1.5) MONDE.boite(C.x + x, 1, C.z - 17, 0.12, 2, 0.12, "#1a1a1a", false, 0);
+    for (let z = -17; z <= 22; z += 1.5) { MONDE.boite(C.x - 29, 1, C.z + z, 0.12, 2, 0.12, "#1a1a1a", false, 0); if (Math.abs(z - 16) > 3) MONDE.boite(C.x + 21.5, 1, C.z + z, 0.12, 2, 0.12, "#1a1a1a", false, 0); }
+    occuper(C.x - 4, C.z + 2, 30);
+  }
+  // chauves-souris autour des tours
+  const chauves = [];
+  for (let k = 0; k < 7; k++) {
+    const M = new Modele(); M.boite(0, 0, 0, 0.35, 0.3, 0.5, "#111"); const g = M.maillage(false);
+    const ailes = []; for (const s of [-1, 1]) { const a = new THREE.Mesh(BOX, new THREE.MeshLambertMaterial({ color: 0x1a1a1a })); a.scale.set(0.9, 0.06, 0.45); a.position.x = s * 0.5; g.add(a); ailes.push(a); }
+    scene.add(g); chauves.push({ g, ailes, r: 9 + alea() * 9, h: 18 + alea() * 9, v: 0.5 + alea() * 0.5, ph: alea() * TAU });
+  }
+  // les visiteurs à pied (le premier, c'est toi quand tu montes dedans)
+  const marcheurs = []; let pov = null;
+  for (let k = 0; k < 4; k++) {
+    const g = new THREE.Group(); scene.add(g);
+    const corps = new THREE.Group(); g.add(corps);
+    if (k === 0) pov = siege(g, 0, 1.62, 0, Math.PI);
+    else { const M = new Modele(); pieton(M); corps.add(M.maillage()); }
+    marcheurs.push({ corps, tr: new Train(P, [g], 0, {
+      s0: (P.total * (1 - k / 4)) % P.total, ecartMin: 6,
+      vitesse: (c) => (c.info.tunnel ? 1.7 : 2.3),
+      aPasse: cris.map((cr, j) => ({ s: cr.s, fn: () => { cr.k = 0.001; if (k === 0 && enTour === MAISON) screamer.lancer(j); } })),
+    }) });
+  }
+  const cPov = cadre();
+  const MAISON = {
+    id: "maison", nom: "La Maison Hantée", tags: "À pied · tunnel des cris · screamers", couleur: "#9dff6a",
+    texte: "Un vieux manoir avec son cimetière et des chauves-souris autour des tours. On le traverse à pied : un couloir aux bougies, la galerie des portraits dont les yeux brillent, puis le tunnel des cris, étroit et rouge sang. Dans le tunnel, trois screamers te sautent au visage avec un hurlement.",
+    jeu: "Les screamers s'affichent en plein écran seulement pour ceux qui sont dans le tunnel à ce moment-là. Les autres dans le parc ne voient rien et n'entendent rien.",
+    etiq: V(-100, 30, 100), vue: { pos: V(-62, 26, 150), cible: V(-100, 7, 104) },
+    siege: pov, lampes,
+    sombre: () => { P.at(marcheurs[0].tr.s, cPov); return cPov.info.noir ? 1 : 0; },
+    maj(t, dt) {
+      marcheurs.forEach((m, k) => { m.tr.maj(dt, marcheurs[(k + 3) % 4].tr); m.corps.position.y = Math.abs(Math.sin(t * 7 + k)) * 0.07; });
+      pov.position.y = 1.62 + Math.sin(t * 7) * 0.035;
+      for (const b of bougies) b.l.c.copy(b.base).multiplyScalar(0.65 + 0.35 * Math.sin(t * 13 + b.ph) * Math.sin(t * 7.3 + b.ph * 2));
+      for (const cr of cris) {
+        if (cr.k > 0) { cr.k += dt; if (cr.k > 2.2) cr.k = 0; }
+        const a = cr.k > 0 ? Math.min(1, cr.k * 9) * (1 - entre(1.2, 2.1, cr.k)) : 0;
+        cr.g.position.lerpVectors(cr.cache, cr.sorti, a); cr.g.lookAt(cr.regard.x, cr.g.position.y, cr.regard.z);
+        cr.flash.c.setRGB(a * 1.2, a * 0.05, a * 0.05);
+      }
+      for (const b of chauves) {
+        const a = t * b.v + b.ph;
+        b.g.position.set(C.x + Math.cos(a) * b.r, b.h + Math.sin(t * 2 + b.ph) * 1.2, C.z - 4 + Math.sin(a) * b.r);
+        b.g.rotation.y = -a; const f = Math.sin(t * 18 + b.ph) * 0.7; b.ailes[0].rotation.z = f; b.ailes[1].rotation.z = -f;
+      }
+    },
+  };
+  return MAISON;
+})());
+
+// ================================================================ ÉVÉNEMENT /parc event : le portail gaulois et son donjon
+// même schéma que les donjons de Jin-woo : deux ailes à énigmes (l'indice est dans l'autre aile), culs-de-sac,
+// porte à deux joueurs, porte du groupe entier, arène du boss. Ici les boss sont Astérix et Obélix.
+const EVT = (() => {
+  const D = V(0, 0, -700);
+  const L = (x, y, z) => V(D.x + x, y, D.z + z);
+  const RAYURES_OBELIX = toile(16, 4, (g) => { for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? "#ffffff" : "#2f6fd6"; g.fillRect(i, 0, 1, 4); } });
+  RAYURES_OBELIX.repeat.set(6, 1);
+
+  // ---------------- le portail dans le parc (au-dessus de la place, côté nord)
+  const portail = new THREE.Group(); portail.position.set(0, 10, -27); portail.scale.setScalar(0.001); portail.visible = false; scene.add(portail);
+  const anneau = new THREE.Mesh(new THREE.TorusGeometry(7, 0.75, 8, 56), new THREE.MeshBasicMaterial({ color: 0xffc83d }));
+  portail.add(anneau);
+  const tourbillon = toile(256, 256, (g) => {
+    g.fillStyle = "#0d3a1c"; g.fillRect(0, 0, 256, 256);
+    for (let b = 0; b < 5; b++) for (let i = 0; i < 260; i++) {
+      const t = i / 260, a = t * 9 + b * TAU / 5, r = t * 128;
+      g.fillStyle = `rgba(${255},${200 + 55 * t | 0},${80 * (1 - t) | 0},${0.9 - t * 0.5})`;
+      g.beginPath(); g.arc(128 + Math.cos(a) * r, 128 + Math.sin(a) * r, 2 + t * 9, 0, TAU); g.fill();
+    }
+  }, false);
+  const disque = new THREE.Mesh(new THREE.CircleGeometry(6.6, 48), new THREE.MeshBasicMaterial({ map: tourbillon, side: THREE.DoubleSide }));
+  portail.add(disque);
+  for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, m = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0x9dff6a })); m.position.set(Math.cos(a) * 8.3, Math.sin(a) * 8.3, 0); m.scale.set(0.6, 0.6, 0.3); m.rotation.z = a; portail.add(m); }
+  // fissures dans le ciel autour
+  const fissures = new THREE.Group(); portail.add(fissures);
+  for (let k = 0; k < 9; k++) {
+    let p = V(0, 0, -0.2), a = k / 9 * TAU;
+    for (let j = 0; j < 5; j++) {
+      const q = p.clone().add(V(Math.cos(a) * (2.6 + alea() * 2), Math.sin(a) * (2.6 + alea() * 2), 0));
+      if (j > 1) { const m = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: 0xffe9a0 })); m.position.copy(p).add(q).multiplyScalar(0.5); m.scale.set(p.distanceTo(q), 0.18, 0.1); m.rotation.z = Math.atan2(q.y - p.y, q.x - p.x); fissures.add(m); }
+      p = q; a += (alea() - 0.5) * 0.9;
+    }
+  }
+  // le druide du parc, à côté du portail
+  const druide = (M) => {
+    for (const s of [-1, 1]) M.boite(s * 0.17, 0.45, 0, 0.3, 0.9, 0.34, "#f2efe6");
+    M.boite(0, 1.2, 0, 0.7, 0.9, 0.42, "#f2efe6"); M.boite(0, 1.1, -0.24, 0.8, 1.6, 0.08, "#c0392b");
+    M.boite(0, 1.85, 0, 0.52, 0.52, 0.52, "#f1c7a0"); M.boite(0, 1.55, 0.22, 0.46, 0.7, 0.14, "#ffffff"); M.boite(0, 2.12, 0, 0.55, 0.1, 0.55, "#ffffff");
+    for (const s of [-1, 1]) M.boite(s * 0.12, 1.92, 0.27, 0.08, 0.08, 0.02, "#111", false, 0);
+    M.boite(0.48, 1.25, 0.12, 0.18, 0.62, 0.2, "#f2efe6"); M.boite(0.55, 1.0, 0.35, 0.06, 0.06, 0.5, "#d9b44a", true, 0);
+  };
+  { const M = new Modele(); druide(M); const g = M.maillage(); g.position.set(-10, 0, -22); g.rotation.y = 0.3; g.visible = false; scene.add(g); portail.userData.druide = g; }
+
+  // ---------------- le donjon : une forêt gauloise
+  const sol2 = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), new THREE.MeshLambertMaterial({ map: HERBE.clone(), color: 0xd8f0b0 }));
+  sol2.material.map.repeat.set(90, 90); sol2.material.map.needsUpdate = true;
+  sol2.rotation.x = -Math.PI / 2; sol2.position.set(D.x, 0.02, D.z - 75); sol2.receiveShadow = true; scene.add(sol2);
+  const clairieres = [[0, 2, 15], [0, -45, 15], [-58, -45, 13], [58, -45, 13], [-58, -90, 11], [58, -90, 9], [0, -88, 14], [0, -106, 7], [0, -145, 33]];
+  const allees = [[0, -12, 0, -31], [-14, -45, -46, -45], [14, -45, 46, -45], [-58, -57, -58, -80], [58, -57, 58, -82], [0, -59, 0, -75], [0, -100, 0, -113]];
+  const distSeg = (x, z, [ax, az, bx, bz]) => { const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - ax - dx * t, z - az - dz * t); };
+  const ouvert = (x, z, m = 0) => clairieres.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r + m) || allees.some((s) => distSeg(x, z, s) < 4.5 + m);
+  for (const [cx, cz, r] of clairieres) MONDE.forme(CYL(r, r, 0.06, 32), D.x + cx, 0.06, D.z + cz, "#8fc25a", false, 0, 1, 1, 1);
+  for (const s of allees) { const a = V(D.x + s[0], 0, D.z + s[1]), b = V(D.x + s[2], 0, D.z + s[3]); MONDE.boiteQ(V((a.x + b.x) / 2, 0.08, (a.z + b.z) / 2), qY(Math.atan2(b.x - a.x, b.z - a.z)), 4.5, 0.08, a.distanceTo(b) + 3, "#9a7a52", false, 0.03); }
+  // arbres serrés : ce sont les murs du donjon
+  for (let x = -110; x <= 110; x += 5) for (let z = 28; z >= -190; z -= 5) {
+    const jx = x + (alea() - 0.5) * 3, jz = z + (alea() - 0.5) * 3;
+    if (ouvert(jx, jz, 2.5)) continue;
+    const h = 8 + Math.floor(alea() * 6), vert = choix(["#2f6a2a", "#3a7a30", "#2a5f26", "#44843a"]);
+    MONDE.bloc(D.x + jx - 0.7, 0, D.z + jz - 0.7, 1.4, h, 1.4, "#5a3d22");
+    MONDE.bloc(D.x + jx - 3.5, h - 2, D.z + jz - 3.5, 7, 3.5, 7, vert, false, 0.1); MONDE.bloc(D.x + jx - 2.2, h + 1.5, D.z + jz - 2.2, 4.4, 2, 4.4, vert, false, 0.1);
+  }
+  // petites choses : casques romains par terre (se ramassent et se revendent à la sortie)
+  const casque = (x, z) => { MONDE.forme(BOULE(0.35, 8), D.x + x, 0.2, D.z + z, "#c8ccd2", false, 0, 1, 0.7, 1); MONDE.boite(D.x + x, 0.5, D.z + z, 0.08, 0.25, 0.5, "#c0392b"); };
+  const legionnaire = (M, bouclier = true) => {
+    for (const s of [-1, 1]) { M.boite(s * 0.15, 0.4, 0, 0.26, 0.8, 0.28, "#f1c7a0"); M.boite(s * 0.15, 0.08, 0.04, 0.28, 0.16, 0.36, "#6b4a2b"); }
+    M.boite(0, 0.95, 0, 0.66, 0.4, 0.38, "#c0392b"); M.boite(0, 1.3, 0, 0.68, 0.5, 0.4, "#b8bec6"); for (let i = 0; i < 3; i++) M.boite(0, 1.12 + i * 0.16, 0, 0.7, 0.04, 0.42, "#7d848c", false, 0);
+    for (const s of [-1, 1]) M.boite(s * 0.44, 1.2, 0, 0.2, 0.62, 0.22, "#f1c7a0");
+    M.boite(0, 1.82, 0, 0.5, 0.5, 0.5, "#f1c7a0"); for (const s of [-1, 1]) M.boite(s * 0.12, 1.84, 0.255, 0.08, 0.08, 0.02, "#111", false, 0);
+    M.boite(0, 2.1, 0, 0.56, 0.2, 0.56, "#c8ccd2"); M.boite(0, 2.35, 0, 0.1, 0.32, 0.6, "#c0392b");
+    if (bouclier) { M.boite(-0.6, 1.1, 0.15, 0.1, 1.2, 0.8, "#b0322a"); M.boite(-0.66, 1.1, 0.15, 0.04, 0.25, 0.25, "#e8c04a"); }
+    M.boite(0.5, 1.0, 0.3, 0.06, 0.06, 0.8, "#c8ccd2");
+  };
+  const posePerso = (fn, x, z, rot) => { const M = new Modele(); fn(M); const g = M.maillage(); g.position.set(D.x + x, 0, D.z + z); g.rotation.y = rot; scene.add(g); return g; };
+  const hutte = (x, z, r = 3.4) => {
+    MONDE.forme(CYL(r, r, 3, 16), D.x + x, 1.5, D.z + z, "#c9a777", false);
+    MONDE.forme(new THREE.ConeGeometry(r + 1.3, 3.8, 16), D.x + x, 4.9, D.z + z, "#d8b14a", false);
+    const a = Math.atan2(-(x), -(z + 145)); MONDE.boiteQ(V(D.x + x + Math.sin(a) * r, 1.0, D.z + z + Math.cos(a) * r), qY(a), 1.2, 2, 0.2, "#5a3d22");
+  };
+  const pancarte = (txt, x, y, z, rot, fond = "#6b4a2b", encre = "#ffe9a8") => panneau(txt, 6, 1.1, fond, encre, null, D.x + x, y, D.z + z, rot, "#3a2614");
+
+  // arrivée : clairière, dolmen, portail de retour
+  { const r = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.4, 6, 40), new THREE.MeshBasicMaterial({ color: 0xffc83d })); r.position.set(D.x, 4, D.z + 10); scene.add(r);
+    const d2 = new THREE.Mesh(new THREE.CircleGeometry(3.1, 32), new THREE.MeshBasicMaterial({ map: tourbillon, side: THREE.DoubleSide })); d2.position.copy(r.position); scene.add(d2); DECOR.push({ maj(dt, t) { d2.rotation.z = -t; } }); }
+  MONDE.bloc(D.x - 9, 0, D.z - 5, 1.2, 2.6, 1.2, "#8d8f93"); MONDE.bloc(D.x - 6, 0, D.z - 5, 1.2, 2.6, 1.2, "#8d8f93"); MONDE.bloc(D.x - 9.5, 2.6, D.z - 5.5, 4.8, 0.9, 2.2, "#9aa0a6");
+  pancarte("FORÊT GAULOISE", 0, 3.2, -11, 0);
+  // carrefour : grand chêne, cercle de pierres, chaudron vide
+  MONDE.bloc(D.x - 1.5, 0, D.z - 46.5, 3, 15, 3, "#5a3d22"); MONDE.bloc(D.x - 7, 12, D.z - 52, 14, 5, 14, "#3a7a30", false, 0.1); MONDE.bloc(D.x - 4.5, 17, D.z - 49.5, 9, 3, 9, "#44843a", false, 0.1);
+  for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; MONDE.boite(D.x + Math.cos(a) * 10, 1.6 + (k % 3) * 0.4, D.z - 45 + Math.sin(a) * 10, 1.2, 3.2 + (k % 3) * 0.8, 1.0, "#8d8f93"); }
+  pancarte("← LE CHAUDRON", -6, 2.6, -36, 0); pancarte("LES BOUCLIERS →", 6, 2.6, -36, 0); pancarte("↑ LES MENHIRS", 0, 4.4, -36.2, 0);
+  // aile ouest : le chaudron du druide (4 ingrédients dans le bon ordre)
+  MONDE.forme(CYL(2.6, 2.0, 2.4, 20), D.x - 58, 1.5, D.z - 45, "#2a2a2a", false);
+  MONDE.forme(CYL(2.3, 2.3, 0.1, 20), D.x - 58, 2.65, D.z - 45, "#7bff7b", true);
+  for (let k = 0; k < 6; k++) MONDE.boite(D.x - 58 + Math.cos(k) * 1.4, 0.3, D.z - 45 + Math.sin(k) * 1.4, 0.5, 0.5, 0.5, "#ff9a3c", true);
+  [["#5fb33a", "#ffffff"], ["#7d93a8", "#4b6070"], ["#d8332a", "#8a1a14"], ["#e8333f", "#3a9a2a"]].forEach(([c1, c2], k) => {
+    const a = Math.PI + (k - 1.5) * 0.7, x = -58 + Math.cos(a) * 7.5, z = -45 + Math.sin(a) * 7.5;
+    MONDE.boite(D.x + x, 0.6, D.z + z, 1.4, 1.2, 1.4, "#9aa0a6"); MONDE.boite(D.x + x, 1.5, D.z + z, 0.7, 0.6, 0.7, c1); MONDE.boite(D.x + x, 1.95, D.z + z, 0.3, 0.3, 0.3, c2);
+  });
+  pancarte("LE CHAUDRON DU DRUIDE", -58, 4.2, -33.6, 0);
+  // aile est : les boucliers (bon code)
+  ["#c0392b", "#2f6fd6", "#3a9a2a", "#e8c04a"].forEach((c, k) => {
+    const x = 52 + k * 4, z = -51;
+    MONDE.boite(D.x + x, 1.4, D.z + z, 0.3, 2.8, 0.3, "#6b4a2b");
+    MONDE.forme(CYL(1.2, 1.2, 0.2, 20), D.x + x, 2.6, D.z + z + 0.2, c, false, Math.PI / 2);
+    MONDE.boite(D.x + x, 2.6, D.z + z + 0.35, 0.4, 0.4, 0.1, "#ffe9a8");
+    MONDE.boite(D.x + x, 0.6, D.z + z + 1.2, 0.2, 0.9, 0.2, "#555"); MONDE.boite(D.x + x, 1.1, D.z + z + 1.3, 0.3, 0.3, 0.3, "#c0392b");
+  });
+  pancarte("LES BOUCLIERS", 58, 4.6, -33.6, 0);
+  // cul-de-sac ouest : camp romain en embuscade (+ parchemin avec le code des boucliers)
+  for (const [x, z] of [[-63, -92], [-53, -94], [-58, -99]]) {
+    MONDE.boiteQ(V(D.x + x - 1.1, 1.4, D.z + z), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), 0.7), 0.15, 3.6, 4, "#b98a52");
+    MONDE.boiteQ(V(D.x + x + 1.1, 1.4, D.z + z), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), -0.7), 0.15, 3.6, 4, "#a77a46");
+  }
+  MONDE.boite(D.x - 58, 2.5, D.z - 86, 0.15, 5, 0.15, "#d9b44a"); MONDE.boite(D.x - 58, 5.2, D.z - 86, 1.2, 0.5, 0.3, "#d9b44a", true); MONDE.boite(D.x - 58, 4.3, D.z - 86, 0.9, 1.0, 0.08, "#c0392b");
+  MONDE.boite(D.x - 61.9, 1.6, D.z - 92, 0.05, 0.8, 0.6, "#f4ead0", true, 0);
+  pancarte("EMBUSCADE !", -58, 3.2, -79.5, 0, "#c0392b", "#ffffff");
+  for (let k = 0; k < 6; k++) posePerso(legionnaire, -58 + Math.cos(k) * 5, -90 + Math.sin(k) * 4, k + Math.PI);
+  // cul-de-sac est : le trésor (+ parchemin avec l'ordre des ingrédients)
+  MONDE.boite(D.x + 58, 0.6, D.z - 92, 2, 1.2, 1.2, "#7a4a24"); MONDE.boite(D.x + 58, 1.3, D.z - 92, 2.1, 0.25, 1.3, "#e8c04a", true);
+  MONDE.boite(D.x + 58.6, 1.5, D.z - 91.4, 0.6, 0.05, 0.45, "#f4ead0", true, 0);
+  for (let k = 0; k < 8; k++) casque(56 + alea() * 4, -88 - alea() * 6);
+  // la porte des menhirs : un joueur sur chaque pierre en même temps
+  for (const s of [-1, 1]) {
+    MONDE.forme(CYL(1.6, 1.8, 0.3, 16), D.x + s * 10, 0.15, D.z - 88, "#9aa0a6", false);
+    MONDE.forme(new THREE.TorusGeometry(1.4, 0.1, 4, 24), D.x + s * 10, 0.34, D.z - 88, "#9dff6a", true, Math.PI / 2);
+    MONDE.boite(D.x + s * 12.5, 3, D.z - 90, 1.6, 6, 1.3, "#8d8f93");
+  }
+  const palissade = (ax, az, bx, bz, saufMilieu = 0) => {
+    const L2 = Math.hypot(bx - ax, bz - az), n = Math.ceil(L2 / 0.9);
+    for (let i = 0; i <= n; i++) { const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (saufMilieu && Math.abs(t - 0.5) * L2 < saufMilieu) continue; const h = 5 + (i % 3) * 0.4; MONDE.boite(D.x + x, h / 2, D.z + z, 0.85, h, 0.85, choix(["#7a5634", "#6b4a2b", "#835c38"])); MONDE.forme(new THREE.ConeGeometry(0.5, 0.9, 4), D.x + x, h + 0.45, D.z + z, "#7a5634", false); }
+  };
+  palissade(-15, -98, 15, -98, 2.5);
+  const porteMenhirs = [-1, 1].map((s) => { const m = new THREE.Mesh(BOX, new THREE.MeshLambertMaterial({ color: 0x5a3d22 })); m.scale.set(2.4, 4.6, 0.4); m.position.set(D.x + s * 1.2, 2.3, D.z - 98); m.castShadow = true; scene.add(m); return { m, s }; });
+  pancarte("LA PORTE DES MENHIRS", 0, 6.6, -97.5, 0);
+  // l'antichambre et la grande porte du village (s'ouvre quand tout le groupe est là)
+  const C = L(0, 0, -145), R = 32;
+  for (let k = 0; k < 140; k++) {
+    const a = k / 140 * TAU; if (Math.abs(Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2))) < 0.09) continue;
+    const x = Math.cos(a) * R, z = -145 + Math.sin(a) * R, h = 6 + (k % 3) * 0.5;
+    MONDE.boite(D.x + x, h / 2, D.z + z, 1.2, h, 1.2, choix(["#7a5634", "#6b4a2b", "#835c38"])); MONDE.forme(new THREE.ConeGeometry(0.7, 1.2, 4), D.x + x, h + 0.6, D.z + z, "#7a5634", false);
+  }
+  for (const s of [-1, 1]) MONDE.bloc(D.x + s * 3.6 - 0.8, 0, D.z - 113.8, 1.6, 9, 1.6, "#5a3d22");
+  MONDE.bloc(D.x - 4.4, 9, D.z - 113.8, 8.8, 1.2, 1.6, "#5a3d22");
+  pancarte("VILLAGE GAULOIS", 0, 8.4, -112.9, 0, "#3a9a2a", "#ffffff");
+  const porteVillage = [-1, 1].map((s) => { const m = new THREE.Mesh(BOX, new THREE.MeshLambertMaterial({ color: 0x6b4a2b })); m.scale.set(2.8, 7.4, 0.4); m.position.set(D.x + s * 1.4, 3.7, D.z - 113); m.castShadow = true; scene.add(m); return { m, s }; });
+  // le village (arène) : huttes, banquet, l'arbre du barde, tas de menhirs
+  for (let k = 0; k < 9; k++) { const a = Math.PI / 2 + 0.55 + k / 9 * (TAU - 1.1); hutte(Math.cos(a) * 24, -145 + Math.sin(a) * 24); }
+  MONDE.boite(D.x, 1.0, D.z - 160, 14, 0.3, 2.4, "#8a5a2b"); for (const s of [-1, 1]) MONDE.boite(D.x, 0.5, D.z - 160 + s * 2, 14, 0.25, 0.7, "#7a4a24");
+  for (let k = 0; k < 4; k++) { MONDE.boite(D.x - 5 + k * 3.3, 1.55, D.z - 160, 1.6, 0.8, 1.0, "#8a4a24"); MONDE.boite(D.x - 5 + k * 3.3 + 0.9, 1.7, D.z - 160, 0.4, 0.4, 0.4, "#5a2a14"); }
+  MONDE.bloc(D.x - 19.5, 0, D.z - 168.5, 1.6, 9, 1.6, "#5a3d22"); MONDE.bloc(D.x - 23, 8, D.z - 172, 8, 4, 8, "#3a7a30", false, 0.1);
+  posePerso((M) => { pieton(M); M.boite(0.3, 1.2, 0.3, 0.4, 0.6, 0.1, "#d9b44a"); }, -18.7, -166.8, 0.5);
+  MONDE.boite(D.x - 18.7, 1.3, D.z - 166.6, 1.2, 0.15, 1.2, "#c8b48a"); MONDE.boite(D.x - 18.7, 0.7, D.z - 166.6, 1.2, 0.15, 1.2, "#c8b48a");
+  for (let k = 0; k < 6; k++) MONDE.boite(D.x + 16 + (k % 3) * 1.6, 1.6 + Math.floor(k / 3) * 0.2, D.z - 166 + Math.floor(k / 3) * 1.6, 1.2, 3.2, 1.0, "#9aa0a6");
+  for (let k = 0; k < 14; k++) { const a = alea() * TAU, r = 6 + alea() * 14; casque(Math.cos(a) * r, -145 + Math.sin(a) * r); }
+
+  // ---------------- les boss
+  const membre = (parent, x, y, z, fn) => { const p = new THREE.Group(); p.position.set(x, y, z); parent.add(p); const M = new Modele(); fn(M); p.add(M.maillage()); return p; };
+  // Astérix : petit, très rapide, casque ailé, grosse moustache, potion à la ceinture
+  const asterix = (() => {
+    const g = new THREE.Group(); scene.add(g); const corps = new THREE.Group(); corps.scale.setScalar(1.9); g.add(corps);
+    const jambes = [-1, 1].map((s) => membre(corps, s * 0.16, 0.62, 0, (M) => { M.boite(0, -0.26, 0, 0.28, 0.5, 0.32, "#d03a2a"); M.boite(0, -0.55, 0.05, 0.3, 0.16, 0.42, "#6b4a2b"); }));
+    const tronc = new Modele();
+    tronc.boite(0, 0.9, 0, 0.8, 0.56, 0.52, "#1b1b1b"); tronc.boite(0, 0.66, 0, 0.84, 0.12, 0.56, "#b8892b");
+    tronc.boite(-0.44, 0.5, 0, 0.06, 0.55, 0.1, "#c8ccd2"); tronc.boite(0.44, 0.62, 0.12, 0.16, 0.24, 0.12, "#8a5a2b");
+    tronc.boite(0, 1.5, 0, 0.64, 0.64, 0.64, "#f1c7a0"); tronc.boite(0, 1.44, 0.4, 0.22, 0.2, 0.22, "#f0a888");
+    for (const s of [-1, 1]) { tronc.boiteQ(V(s * 0.22, 1.33, 0.33), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), s * 0.5), 0.34, 0.09, 0.08, "#f5c542"); tronc.boite(s * 0.14, 1.58, 0.33, 0.08, 0.08, 0.02, "#111", false, 0); tronc.boite(s * 0.34, 1.32, -0.08, 0.08, 0.42, 0.08, "#f5c542"); }
+    tronc.boite(0, 1.88, 0, 0.7, 0.24, 0.7, "#2a2a2a"); tronc.boite(0, 2.02, 0, 0.5, 0.1, 0.5, "#2a2a2a");
+    for (const s of [-1, 1]) { tronc.boiteQ(V(s * 0.42, 2.08, -0.02), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), -s * 0.35), 0.06, 0.5, 0.34, "#ffffff"); tronc.boiteQ(V(s * 0.46, 2.32, -0.08), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), -s * 0.5), 0.05, 0.28, 0.22, "#f0f0f0"); }
+    corps.add(tronc.maillage());
+    const bras = [-1, 1].map((s) => membre(corps, s * 0.5, 1.12, 0, (M) => { M.boite(0, -0.13, 0, 0.22, 0.28, 0.24, "#1b1b1b"); M.boite(0, -0.42, 0, 0.2, 0.32, 0.2, "#f1c7a0"); M.boite(0, -0.64, 0, 0.25, 0.22, 0.25, "#f1c7a0"); if (s > 0) M.boite(0, -0.75, 0.1, 0.16, 0.26, 0.16, "#8a5a2b"); }));
+    const aura = new THREE.Mesh(BOULE(2.3, 16), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0, depthWrite: false })); aura.position.y = 1.9; g.add(aura);
+    return { g, corps, jambes, bras, aura };
+  })();
+  // Obélix : énorme, lent, pantalon rayé bleu et blanc, menhir sur le dos
+  const obelix = (() => {
+    const g = new THREE.Group(); scene.add(g);
+    const jambes = [-1, 1].map((s) => membre(g, s * 0.75, 1.9, 0, (M) => { for (let i = 0; i < 4; i++) M.boite(-0.36 + i * 0.24, -0.85, 0, 0.24, 1.7, 0.95, i % 2 ? "#ffffff" : "#2f6fd6", false, 0); M.boite(0, -1.75, 0.2, 1.05, 0.35, 1.4, "#6b4a2b"); }));
+    const ventre = new THREE.Mesh(BOULE(2.1, 24), new THREE.MeshLambertMaterial({ map: RAYURES_OBELIX })); ventre.scale.set(1.08, 1.0, 0.95); ventre.position.y = 3.3; ventre.castShadow = true; g.add(ventre);
+    const T2 = new Modele();
+    T2.geo(new THREE.TorusGeometry(2.05, 0.18, 6, 32), new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(0, 4.1, 0), "#3a9a2a");
+    T2.boite(0, 4.9, 0, 3.6, 1.1, 1.9, "#f1c7a0");
+    T2.boite(0, 6.0, 0, 1.3, 1.3, 1.3, "#f1c7a0"); T2.boite(0, 5.9, 0.75, 0.5, 0.5, 0.5, "#f0a888");
+    for (const s of [-1, 1]) { T2.boiteQ(V(s * 0.5, 5.6, 0.68), new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), s * 0.45), 0.8, 0.22, 0.2, "#e0662a"); T2.boite(s * 0.28, 6.2, 0.66, 0.12, 0.12, 0.02, "#111", false, 0); T2.boite(s * 0.7, 5.3, -0.2, 0.22, 1.5, 0.22, "#d8462a"); }
+    T2.boite(0, 6.55, -0.1, 1.36, 0.3, 1.2, "#d8462a"); T2.boite(0, 6.1, -0.66, 1.36, 0.9, 0.12, "#d8462a");
+    g.add(T2.maillage());
+    const bras = [-1, 1].map((s) => membre(g, s * 2.25, 5.2, 0, (M) => { M.boite(0, -0.6, 0, 0.65, 1.3, 0.65, "#f1c7a0"); M.boite(0, -1.5, 0.05, 0.6, 0.8, 0.6, "#f1c7a0"); M.boite(0, -2.05, 0.05, 0.72, 0.6, 0.72, "#f1c7a0"); M.boite(0, -1.1, 0, 0.7, 0.18, 0.7, "#e8c04a", false, 0); }));
+    const menhir = new THREE.Mesh(BOX, new THREE.MeshLambertMaterial({ color: 0x9aa0a6 })); menhir.scale.set(1.2, 4.2, 1.0); menhir.castShadow = true; scene.add(menhir);
+    return { g, jambes, bras, menhir };
+  })();
+  // les légionnaires de l'arène : ils s'envolent quand on les tape
+  const legion = [];
+  for (let k = 0; k < 9; k++) {
+    const M = new Modele(); legionnaire(M); const g = M.maillage(); scene.add(g);
+    const a = k / 9 * TAU + 0.3, r = 9 + (k % 3) * 4;
+    legion.push({ g, base: V(C.x + Math.cos(a) * r, 0, C.z + Math.sin(a) * r), vol: 0, rot: alea() * TAU });
+  }
+  const placerLegion = (l) => { const a = alea() * TAU, r = 7 + alea() * 14; l.base.set(C.x + Math.cos(a) * r, 0, C.z + Math.sin(a) * r); l.rot = alea() * TAU; };
+  const taper = (l, force = 1) => { if (l.vol === 0) { l.vol = 0.001; l.force = force; } };
+  const proche = (p, r) => legion.filter((l) => l.vol === 0 && Math.hypot(l.g.position.x - p.x, l.g.position.z - p.z) < r);
+  const poussiere = (() => {
+    const n = 600, pos = new Float32Array(n * 3).fill(-999), vit = new Float32Array(n * 3), vie = new Float32Array(n);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xc9b089, size: 0.7, transparent: true, opacity: 0.8, depthWrite: false })));
+    let k = 0;
+    return { jet(p, nb = 120, c) { for (let i = 0; i < nb; i++) { const j = k++ % n, a = alea() * TAU, f = 2 + alea() * 6; pos.set([p.x, p.y + 0.3, p.z], j * 3); vit.set([Math.cos(a) * f, 2 + alea() * 5, Math.sin(a) * f], j * 3); vie[j] = 1.2; } },
+      maj(dt) { for (let i = 0; i < n; i++) { if (vie[i] <= 0) continue; vie[i] -= dt; vit[i * 3 + 1] -= 9 * dt; for (let j = 0; j < 3; j++) pos[i * 3 + j] += vit[i * 3 + j] * dt; if (vie[i] <= 0 || pos[i * 3 + 1] < 0) { vie[i] = 0; pos[i * 3 + 1] = -999; } } geo.attributes.position.needsUpdate = true; } };
+  })();
+  DECOR.push(poussiere);
+  const etats = { asterix: "", obelix: "" };
+  const etiquettesBoss = [
+    { txt: () => "ASTÉRIX · " + etats.asterix, ancre: () => asterix.g.position.clone().add(V(0, 5.6, 0)), couleur: "#ffd23f" },
+    { txt: () => "OBÉLIX · " + etats.obelix, ancre: () => obelix.g.position.clone().add(V(0, 8.6, 0)), couleur: "#4dc9ff" },
+  ];
+  let ouverture = -1, ouvert2 = false;
+  const vise = V(), cibleSaut = { l: null, de: V() }, lance = { de: V(), vers: V(), fait: false }, tenu = { l: null };
+  const asterixPos = V(C.x, 0, C.z + 4), obelixPos = V(C.x + 6, 0, C.z - 6);
+  let cyA = -1, cyO = -1;
+  const marche = (j, b, t, v, amp) => { j[0].rotation.x = Math.sin(t * v) * amp; j[1].rotation.x = -Math.sin(t * v) * amp; if (b) { b[0].rotation.x = -Math.sin(t * v) * amp * 0.8; b[1].rotation.x = Math.sin(t * v) * amp * 0.8; } };
+  return {
+    D, L, C, etiquettesBoss,
+    portail,
+    ouvrir() { if (ouverture < 0) ouverture = 0; portail.visible = true; portail.userData.druide.visible = true; },
+    estOuvert: () => ouverture >= 0,
+    zone: () => camera.position.z < -400,
+    maj(dt, t) {
+      // portail du parc
+      if (ouverture >= 0) {
+        ouverture += dt; const k = Math.min(1, ouverture / 2.4), e = 1 - Math.pow(1 - k, 3) + Math.sin(k * Math.PI) * 0.12;
+        portail.scale.setScalar(Math.max(0.001, e)); disque.rotation.z = -t * 1.4; anneau.material.color.setHSL(0.12, 1, 0.55 + Math.sin(t * 4) * 0.08);
+        fissures.children.forEach((m, i) => { m.material.color.setHSL(0.13, 1, 0.75 + Math.sin(t * 6 + i) * 0.2); });
+      }
+      if (!this.zone() && !ouvert2) return;
+      // portes : elles s'ouvrent et se referment en boucle pour l'exemple
+      const cyc = (t % 14) / 14, o = bosse(0.15, 0.75, cyc, 0.1);
+      for (const p of porteMenhirs) { p.m.position.x = D.x + p.s * (1.2 + o * 2.4); }
+      for (const p of porteVillage) p.m.position.x = D.x + p.s * (1.4 + o * 2.7);
+      // ----- Astérix (cycle de 16 s)
+      const ta = t % 16, A = asterix;
+      if (ta < cyA) { A.aura.material.opacity = 0; }
+      cyA = ta;
+      if (ta < 4) {
+        etats.asterix = "Sprint";
+        const a = t * 1.9; asterixPos.set(C.x + Math.cos(a) * 11, 0, C.z + Math.sin(a) * 11);
+        A.g.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)); marche(A.jambes, A.bras, t, 22, 1.0);
+        for (const l of proche(asterixPos, 2.2)) taper(l, 0.7);
+      } else if (ta < 5.5) {
+        etats.asterix = "Saut";
+        if (!cibleSaut.l || cibleSaut.l.vol > 0) { cibleSaut.l = legion.find((l) => l.vol === 0) || legion[0]; cibleSaut.de.copy(asterixPos); }
+        const k = (ta - 4) / 1.5, c2 = cibleSaut.l.g.position;
+        asterixPos.lerpVectors(cibleSaut.de, V(c2.x - 1.6, 0, c2.z), lisse(k)); asterixPos.y = Math.sin(Math.PI * k) * 6;
+        A.g.rotation.y = Math.atan2(c2.x - asterixPos.x, c2.z - asterixPos.z);
+        A.jambes[0].rotation.x = -1.2; A.jambes[1].rotation.x = 0.4; A.bras[0].rotation.x = -2.6; A.bras[1].rotation.x = -2.6;
+      } else if (ta < 7) {
+        etats.asterix = "Uppercut";
+        asterixPos.y = 0; const k = (ta - 5.5) / 1.5;
+        A.bras[1].rotation.x = k < 0.25 ? 0.8 : -2.9; A.bras[0].rotation.x = 0.4; A.jambes[0].rotation.x = 0; A.jambes[1].rotation.x = 0;
+        if (k > 0.25 && cibleSaut.l) { taper(cibleSaut.l, 1.6); cibleSaut.l = null; }
+      } else if (ta < 10) {
+        etats.asterix = "Potion magique !";
+        const k = (ta - 7) / 3;
+        A.bras[1].rotation.x = k < 0.6 ? -2.3 : 0; A.bras[1].rotation.z = k < 0.6 ? 0.6 : 0; A.bras[0].rotation.x = 0;
+        A.aura.material.opacity = k > 0.5 ? 0.25 + Math.sin(t * 12) * 0.08 : 0;
+        if (k > 0.5 && Math.floor(t * 8) % 2 === 0) poussiere.jet(V(asterixPos.x, 1, asterixPos.z), 6);
+      } else {
+        etats.asterix = "Tourbillon (potion)";
+        const k = (ta - 10) / 6, a = t * 1.2;
+        asterixPos.set(C.x + Math.cos(a) * 6, 0, C.z + Math.sin(a) * 6);
+        A.g.rotation.y = t * 16; A.bras[0].rotation.z = -1.5; A.bras[1].rotation.z = 1.5; A.bras[0].rotation.x = A.bras[1].rotation.x = 0;
+        A.aura.material.opacity = 0.2 * (1 - k) + 0.05;
+        for (const l of proche(asterixPos, 3)) taper(l, 1.2);
+        if (Math.floor(t * 10) % 3 === 0) poussiere.jet(asterixPos, 4);
+      }
+      if (ta < 10 || ta >= 16) { A.bras[0].rotation.z = 0; if (ta < 7) A.bras[1].rotation.z = 0; }
+      A.g.position.copy(asterixPos);
+      // ----- Obélix (cycle de 18 s)
+      const to = t % 18, O = obelix;
+      const dos = () => { O.menhir.position.copy(obelixPos).add(V(-Math.sin(O.g.rotation.y) * 1.6, 4.4, -Math.cos(O.g.rotation.y) * 1.6)); O.menhir.quaternion.copy(O.g.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), 0.2)); };
+      if (to < cyO) { lance.fait = false; tenu.l = null; }
+      cyO = to;
+      O.bras[0].rotation.set(0, 0, 0); O.bras[1].rotation.set(0, 0, 0);
+      if (to < 4) {
+        etats.obelix = "Il marche";
+        const a = t * 0.25; vise.set(C.x + Math.cos(a) * 9, 0, C.z + Math.sin(a) * 9);
+        const d = V().subVectors(vise, obelixPos); d.y = 0; if (d.length() > 0.3) { obelixPos.addScaledVector(d.normalize(), Math.min(d.length(), 3 * dt)); O.g.rotation.y = Math.atan2(d.x, d.z); }
+        marche(O.jambes, O.bras, t, 5, 0.45); dos();
+      } else if (to < 6) {
+        etats.obelix = "Il soulève son menhir";
+        const k = (to - 4) / 2; O.bras[0].rotation.x = O.bras[1].rotation.x = -3.0 * lisse(k);
+        O.menhir.position.copy(obelixPos).add(V(0, 4.4 + 4.6 * lisse(k), 0)); O.menhir.quaternion.copy(O.g.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), Math.PI / 2 * lisse(k)));
+        if (!lance.fait) { const l = legion.find((x) => x.vol === 0) || legion[0]; lance.de.copy(O.menhir.position); lance.vers.copy(l.g.position); }
+      } else if (to < 7.6) {
+        etats.obelix = "LANCER DE MENHIR";
+        const k = (to - 6) / 1.6; O.bras[0].rotation.x = O.bras[1].rotation.x = -3.0 + 2.4 * Math.min(1, k * 4);
+        if (k < 1) { O.menhir.position.lerpVectors(V(obelixPos.x, 9, obelixPos.z), lance.vers, k); O.menhir.position.y = 9 * (1 - k) + Math.sin(Math.PI * k) * 9 + 1.8; O.menhir.rotation.x += dt * 9; }
+        if (k > 0.97 && !lance.fait) { lance.fait = true; poussiere.jet(lance.vers, 200); for (const l of proche(lance.vers, 5)) taper(l, 1.4); }
+      } else if (to < 8) { dos(); }
+      else if (to < 10.5) {
+        etats.obelix = "Charge du ventre";
+        const k = (to - 8) / 2.5;
+        if (k < 0.15) { vise.copy(C).add(V(Math.cos(t) * 12, 0, Math.sin(t) * 12)); }
+        const d = V().subVectors(vise, obelixPos); d.y = 0;
+        if (d.length() > 0.5) { obelixPos.addScaledVector(d.normalize(), Math.min(d.length(), 13 * dt)); O.g.rotation.y = Math.atan2(d.x, d.z); }
+        marche(O.jambes, null, t, 14, 0.7); O.bras[0].rotation.x = O.bras[1].rotation.x = 0.7; dos();
+        for (const l of proche(obelixPos, 3.4)) taper(l, 1.3);
+        if (Math.floor(t * 8) % 2 === 0) poussiere.jet(obelixPos, 5);
+      } else if (to < 14.5) {
+        etats.obelix = "Il t'attrape et te fait tourner";
+        const k = (to - 10.5) / 4;
+        if (!tenu.l) tenu.l = legion.find((x) => x.vol === 0) || null;
+        O.g.rotation.y += dt * (2 + k * 10);
+        O.bras[1].rotation.x = -1.5;
+        if (tenu.l) {
+          const main = V(2.25, 3.1, 2.1).applyQuaternion(O.g.quaternion).add(obelixPos);
+          tenu.l.g.position.copy(main).add(V(0, -1.2, 0)); tenu.l.g.rotation.set(0, O.g.rotation.y, -1.4); tenu.l.tenu = true;
+          if (k > 0.95) { tenu.l.tenu = false; tenu.l.base.copy(tenu.l.g.position).setY(0); taper(tenu.l, 2); tenu.l = null; }
+        }
+        dos();
+      } else {
+        etats.obelix = "Il mange un sanglier";
+        O.bras[0].rotation.x = -1.6 + Math.sin(t * 8) * 0.25; O.bras[1].rotation.x = -0.4;
+        O.g.rotation.y += Math.sin(t) * dt * 0.3; dos();
+      }
+      O.g.position.copy(obelixPos);
+      // ----- légionnaires (s'envolent, retombent, reviennent)
+      for (const l of legion) {
+        if (l.tenu) continue;
+        if (l.vol > 0) {
+          l.vol += dt; const T3 = 2.2 * (l.force || 1), v0 = 11 * T3 / 2.2 * 1.0, y = v0 * l.vol - 0.5 * (2 * v0 / T3) * l.vol * l.vol;
+          l.g.position.set(l.base.x, Math.max(0, y), l.base.z); l.g.rotation.x += dt * 9; l.g.rotation.z += dt * 4;
+          if (l.vol > T3) { poussiere.jet(l.base, 40); l.vol = 0; placerLegion(l); }
+        } else { l.g.position.copy(l.base); l.g.rotation.set(0, l.rot + Math.sin(t * 0.7 + l.rot) * 0.3, 0); }
+      }
+    },
+  };
+})();
+DECOR.push(EVT);
+
+// ================================================================ chemins vers chaque attraction
+const ENTREES = {
+  dragon: [V(60, 0, -4), V(100, 0, -4), V(112, 0, 45)],
+  mine: [V(-40, 0, -24), V(-60, 0, -40)],
+  cosmos: [V(10, 0, -25), V(25, 0, -26)],
+  tour: [V(-30, 0, -34)],
+  roue: [V(0, 0, 76), V(45, 0, 76)],
+  carrousel: [V(0, 0, 35), V(-14, 0, 35)],
+  tasses: [V(0, 0, 35), V(12, 0, 35)],
+  autos: [V(0, 0, 80), V(-14, 0, 80)],
+  bateau: [V(-40, 0, 22)],
+  toupie: [V(38, 0, 18)],
+  splash: [V(0, 0, 58), V(-52, 0, 58), V(-55, 0, 53)],
+  maison: [V(0, 0, 102), V(-76, 0, 102), V(-76, 0, 120), V(-97, 0, 120)],
+  sortie: [V(0, 0, 118)],
+};
+for (const [id, pts] of Object.entries(ENTREES)) {
+  const debut = pts[0].x === 0 ? V(0, 0, ANNEAU + 1) : surAnneau(pts[0].x, pts[0].z);
+  const tout = [debut, ...pts];
+  if (pts[0].x !== 0) chemin(id, tout); else { chemin(null, pts.slice(1).length ? [pts[0], ...pts.slice(1)] : pts); ROUTES[id] = tout; }
+}
+// bancs et lampadaires le long des chemins
+for (const pts of Object.values(ROUTES)) for (let i = 0; i < pts.length - 1; i++) {
+  const a = pts[i], b = pts[i + 1], L = a.distanceTo(b);
+  if (L < 14 || (a.x === 0 && b.x === 0)) continue;
+  const d = V().subVectors(b, a).normalize(), n = V(-d.z, 0, d.x);
+  for (let s = 7; s < L - 4; s += 14) { const p = a.clone().addScaledVector(d, s); lampadaire(p.x + n.x * 3.2, p.z + n.z * 3.2); }
+}
+
+// ================================================================ arbres et fleurs dans les coins libres
+for (let i = 0, poses = 0; i < 3000 && poses < 330; i++) {
+  const x = -148 + alea() * 306, z = -128 + alea() * 250;
+  if (!libre(x, z) || !libre(x + 3, z) || !libre(x - 3, z) || !libre(x, z + 3) || !libre(x, z - 3)) continue;
+  arbre(Math.round(x), Math.round(z)); occuper(x, z, 3.5); poses++;
+}
+for (let i = 0; i < 2500; i++) {
+  const x = -148 + alea() * 306, z = -128 + alea() * 250;
+  if (!libre(x, z)) continue;
+  const c = choix(["#ff4d6d", "#ffd23f", "#ffffff", "#c77dff", "#ff8c42", "#4dc9ff"]);
+  MONDE.boite(x, 0.25, z, 0.08, 0.5, 0.08, "#3d7a2a", false, 0); MONDE.boite(x, 0.55, z, 0.3, 0.25, 0.3, c, false, 0.05);
+}
+
+// ================================================================ visiteurs qui se baladent
+{
+  const ids = Object.keys(ROUTES);
+  const versPlace = (id) => ROUTES[id].slice().reverse();
+  const arc = (a, b) => {   // tour de la place par le bord, pour ne pas traverser la fontaine
+    const r = [], a1 = Math.atan2(a.z, a.x); let d = Math.atan2(b.z, b.x) - a1; d = Math.atan2(Math.sin(d), Math.cos(d));
+    const n = Math.max(1, Math.ceil(Math.abs(d) / 0.35));
+    for (let k = 1; k <= n; k++) { const ang = a1 + d * k / n; r.push(V(Math.cos(ang) * ANNEAU, 0, Math.sin(ang) * ANNEAU)); }
+    return r;
+  };
+  const gens = [];
+  for (let i = 0; i < 46; i++) {
+    const M = new Modele(); pieton(M); const g = M.maillage(); scene.add(g);
+    const p = { g, chemin: [], ou: choix(ids), v: 2 + alea() * 1.2, ph: alea() * 6, pause: 0 };
+    const pts = ROUTES[p.ou]; const k = Math.floor(alea() * (pts.length - 1)), f = alea();
+    g.position.lerpVectors(pts[k], pts[k + 1], f);
+    p.chemin = pts.slice(k + 1);
+    gens.push(p);
+  }
+  DECOR.push({ maj(dt, t) {
+    for (const p of gens) {
+      if (p.pause > 0) { p.pause -= dt; continue; }
+      if (!p.chemin.length) {
+        const dest = choix(ids.filter((x) => x !== p.ou));
+        const retour = versPlace(p.ou), aller = ROUTES[dest];
+        p.chemin = [...retour.slice(1), ...arc(retour[retour.length - 1], aller[0]), ...aller.slice(1)];
+        p.ou = dest; p.pause = 1 + alea() * 5; continue;
+      }
+      const cible = p.chemin[0], d = V().subVectors(cible, p.g.position); d.y = 0;
+      const L = d.length();
+      if (L < 0.4) { p.chemin.shift(); continue; }
+      d.normalize();
+      const decal = Math.sin(p.ph) * 1.3;
+      p.g.position.addScaledVector(d, Math.min(L, p.v * dt));
+      p.g.position.y = Math.abs(Math.sin(t * 8 + p.ph)) * 0.08;
+      p.g.rotation.y = Math.atan2(d.x, d.z);
+      void decal;
+    }
+  } });
+}
+
+scene.add(MONDE.maillage());
+
+// ================================================================ son : petite musique de fête foraine (composée ici) + vent dans les manèges
+const Son = (() => {
+  let ctx = null, maitre, musique, vent, filtreVent, lfo, prochain = 0, pas = 0, actif = false, minuterie = null, clac = 0;
+  const TEMPO = 0.42;
+  const MELODIE = [[67, 1], [72, 1], [76, 1], [79, 2], [76, 1], [77, 1], [76, 1], [74, 1], [71, 3], [74, 1], [77, 1], [79, 1], [83, 2], [79, 1], [81, 1], [79, 1], [76, 1], [72, 3],
+    [69, 1], [72, 1], [77, 1], [81, 2], [77, 1], [79, 1], [76, 1], [72, 1], [76, 3], [74, 1], [76, 1], [77, 1], [79, 1], [71, 1], [74, 1], [77, 1], [74, 1], [71, 1], [72, 3]];
+  const ACC = "CCGGGGCCFFCCGGGC";
+  const BASSE = { C: 48, G: 43, F: 41 }, ACCORD = { C: [60, 64, 67], G: [59, 62, 67], F: [60, 65, 69] };
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const temps = []; { let b = 0; for (const [n, d] of MELODIE) { temps.push({ n, d, b }); b += d; } }
+  function voix(t, f, dur, vol, type, cible, detune = true) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = f; if (detune) lfo.connect(o.detune);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(vol * 0.55, t + 0.14);
+    g.gain.setValueAtTime(vol * 0.55, t + dur * 0.85); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); g.connect(cible); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function planifie() {
+    while (prochain < ctx.currentTime + 0.4) {
+      const tour = Math.floor(pas / 48), b = pas % 48, mes = Math.floor(b / 3), acc = ACC[mes];
+      for (const n of temps) if (n.b === b) {
+        voix(prochain, hz(n.n), n.d * TEMPO * 0.95, 0.09, "square", musique);
+        voix(prochain, hz(n.n) * 2, n.d * TEMPO * 0.9, 0.035, "sine", musique);
+        if (tour % 2) voix(prochain, hz(n.n + 12), 0.25, 0.05, "triangle", musique, false);
+      }
+      if (b % 3 === 0) voix(prochain, hz(BASSE[acc]), TEMPO * 0.8, 0.16, "triangle", musique, false);
+      else for (const m of ACCORD[acc]) voix(prochain, hz(m), TEMPO * 0.35, 0.022, "square", musique, false);
+      prochain += TEMPO; pas++;
+    }
+  }
+  function init() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    maitre = ctx.createGain(); maitre.gain.value = 0.55; maitre.connect(ctx.destination);
+    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 3200; f.connect(maitre);
+    musique = ctx.createGain(); musique.gain.value = 0; musique.connect(f);
+    lfo = ctx.createGain(); lfo.gain.value = 14;   // vibrato de l'orgue de manège
+    const vibrato = ctx.createOscillator(); vibrato.frequency.value = 5.5; vibrato.connect(lfo); vibrato.start();
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    filtreVent = ctx.createBiquadFilter(); filtreVent.type = "bandpass"; filtreVent.frequency.value = 600; filtreVent.Q.value = 0.6;
+    vent = ctx.createGain(); vent.gain.value = 0; src.connect(filtreVent); filtreVent.connect(vent); vent.connect(maitre); src.start();
+    Son.bruit = buf;
+    prochain = ctx.currentTime + 0.1;
+  }
+  return {
+    allumer() {
+      if (!ctx) { try { init(); } catch (e) { return false; } }
+      ctx.resume(); actif = true;
+      musique.gain.setTargetAtTime(1, ctx.currentTime, 0.3);
+      if (!minuterie) { prochain = Math.max(prochain, ctx.currentTime + 0.05); minuterie = setInterval(planifie, 100); }
+      return true;
+    },
+    couper() {
+      if (!ctx) return; actif = false;
+      musique.gain.setTargetAtTime(0, ctx.currentTime, 0.2); vent.gain.setTargetAtTime(0, ctx.currentTime, 0.2);
+      setTimeout(() => { if (!actif && minuterie) { clearInterval(minuterie); minuterie = null; } }, 600);
+    },
+    get actif() { return actif; },
+    cri() {   // hurlement de screamer : deux voix en dents de scie qui dégringolent + souffle, saturés
+      if (!ctx || !actif) return;
+      const t = ctx.currentTime, g = ctx.createGain(), sat = ctx.createWaveShaper(), courbe = new Float32Array(256);
+      for (let i = 0; i < 256; i++) { const x = i / 128 - 1; courbe[i] = Math.tanh(x * 4); }
+      sat.curve = courbe; sat.connect(g); g.connect(maitre);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.75, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+      for (const r of [1, 1.06, 1.5]) {
+        const o = ctx.createOscillator(); o.type = "sawtooth";
+        o.frequency.setValueAtTime(1300 * r, t); o.frequency.exponentialRampToValueAtTime(320 * r, t + 0.95);
+        const gg = ctx.createGain(); gg.gain.value = 0.3; o.connect(gg); gg.connect(sat); o.start(t); o.stop(t + 1.05);
+      }
+      const s = ctx.createBufferSource(); s.buffer = Son.bruit; const gs = ctx.createGain(); gs.gain.value = 0.6; s.connect(gs); gs.connect(sat); s.start(t, Math.random()); s.stop(t + 1);
+    },
+    maj(dt, vitesse, enManege, chaine, sombre) {
+      if (!ctx || !actif) return;
+      const v = enManege ? Math.min(0.55, Math.pow(vitesse / 30, 2) * 0.55) : 0;
+      vent.gain.setTargetAtTime(v, ctx.currentTime, 0.12);
+      filtreVent.frequency.setTargetAtTime(400 + vitesse * 30, ctx.currentTime, 0.2);
+      musique.gain.setTargetAtTime(enManege ? (sombre > 0.5 ? 0.15 : 0.5) : 1, ctx.currentTime, 0.4);
+      clac -= dt;
+      if (chaine && clac <= 0) {
+        clac = 0.17;
+        const s = ctx.createBufferSource(); s.buffer = Son.bruit; const g = ctx.createGain(), h = ctx.createBiquadFilter(); h.type = "highpass"; h.frequency.value = 2500;
+        g.gain.setValueAtTime(0.35, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
+        s.connect(h); h.connect(g); g.connect(maitre); s.start(ctx.currentTime, Math.random()); s.stop(ctx.currentTime + 0.05);
+      }
+    },
+  };
+})();
+
+// ================================================================ interface
+const liste = $("liste"), fiche = $("fiche");
+let choisie = null, enTour = null;
+const boutons = new Map();
+for (const a of ATTRACTIONS) {
+  const b = document.createElement("button"); b.type = "button";
+  b.innerHTML = `<i style="background:${a.couleur}"></i><b></b><small></small>`;
+  b.querySelector("b").textContent = a.nom; b.querySelector("small").textContent = a.tags;
+  b.addEventListener("click", () => choisir(a));
+  liste.appendChild(b); boutons.set(a, b);
+}
+function choisir(a) {
+  choisie = a;
+  bEvt.classList.remove("actif"); $("f-plus").hidden = true;
+  if (EVT.zone()) { camera.position.set(a.vue.pos.x, a.vue.pos.y, a.vue.pos.z); controls.target.copy(a.vue.cible); controls.update(); }
+  for (const [x, b] of boutons) b.classList.toggle("actif", x === a);
+  fiche.hidden = false;
+  $("f-nom").textContent = a.nom; $("f-texte").textContent = a.texte;
+  $("f-jeu").innerHTML = "<b>En jeu :</b> "; $("f-jeu").append(a.jeu);
+  $("monter").hidden = !a.siege;
+  arreterBalade();
+  voler(a.vue.pos, a.vue.cible);
+}
+$("monter").addEventListener("click", () => { if (choisie) monter(choisie); });
+$("descendre").addEventListener("click", descendre);
+$("photo-fermer").addEventListener("click", () => { $("photo").hidden = true; });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && enTour) descendre(); });
+
+let vol = null;
+function voler(pos, cible, duree = 1.4) {
+  vol = { t: 0, d: duree, p0: camera.position.clone(), c0: controls.target.clone(), p1: pos.clone(), c1: cible.clone() };
+}
+$("ensemble").addEventListener("click", () => { arreterBalade(); if (enTour) descendre(); if (EVT.zone()) { camera.position.set(0, 60, 120); controls.target.set(0, 0, 0); } voler(VUE_ENSEMBLE.pos, VUE_ENSEMBLE.cible); });
+function arreterBalade() { controls.autoRotate = false; $("balade").setAttribute("aria-pressed", "false"); }
+$("balade").addEventListener("click", () => {
+  if (enTour) descendre();
+  const on = !controls.autoRotate; controls.autoRotate = on; controls.autoRotateSpeed = 0.55;
+  $("balade").setAttribute("aria-pressed", String(on));
+  if (on) voler(V(150, 95, 170), V(0, 0, -5), 1.6);
+});
+controls.addEventListener("start", () => { vol = null; if (controls.autoRotate) arreterBalade(); });
+
+let sonVoulu = true;
+$("son").addEventListener("click", () => {
+  sonVoulu = !Son.actif;
+  if (sonVoulu) Son.allumer(); else Son.couper();
+  $("son").setAttribute("aria-pressed", String(Son.actif));
+});
+addEventListener("pointerdown", () => { if (sonVoulu && !Son.actif && Son.allumer()) $("son").setAttribute("aria-pressed", "true"); }, { once: true });
+
+let noms = true;
+$("noms").addEventListener("click", () => { noms = !noms; $("noms").setAttribute("aria-pressed", String(noms)); });
+
+// étiquettes
+const calque = $("etiquettes");
+const etiquettes = ATTRACTIONS.map((a) => {
+  const el = document.createElement("div"); el.className = "etiquette"; el.textContent = a.nom; el.style.borderColor = a.couleur; calque.appendChild(el);
+  return { el, ancre: a.etiq };
+});
+
+const etiquettesBoss = EVT.etiquettesBoss.map((b) => { const el = document.createElement("div"); el.className = "etiquette boss"; el.style.borderColor = b.couleur; calque.appendChild(el); return { el, b }; });
+
+// ---------------- l'événement dans le panneau
+const bEvt = document.createElement("button"); bEvt.type = "button"; bEvt.className = "evt";
+bEvt.innerHTML = '<i style="background:#ffc83d"></i><b>★ Événement : /parc event</b><small>Portail gaulois · donjon · boss Astérix et Obélix</small>';
+liste.prepend(bEvt);
+const VUES_EVT = [
+  ["Arrivée", EVT.L(0, 8, 12), EVT.L(0, 2, -24)],
+  ["Le chaudron", EVT.L(-58, 15, -24), EVT.L(-58, 1, -46)],
+  ["Les boucliers", EVT.L(58, 15, -26), EVT.L(56, 1, -50)],
+  ["L'embuscade", EVT.L(-58, 13, -72), EVT.L(-58, 1, -92)],
+  ["Les menhirs", EVT.L(0, 15, -68), EVT.L(0, 2, -94)],
+  ["Le village (boss)", EVT.L(16, 24, -110), EVT.L(-9, 2, -150)],
+];
+function entrerPortail() {
+  if (enTour) descendre();
+  arreterBalade();
+  if (!EVT.estOuvert()) EVT.ouvrir();
+  voler(V(0, 10, -6), V(0, 10, -27), 1.6);
+  setTimeout(() => voler(V(0, 10, -29), V(0, 10, -60), 0.7), 2900);
+  setTimeout(() => {
+    const f = $("flash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+    vol = null; camera.position.copy(VUES_EVT[0][1]); controls.target.copy(VUES_EVT[0][2]); controls.update();
+  }, 3550);
+}
+function choisirEvenement() {
+  choisie = null; for (const [, b] of boutons) b.classList.remove("actif"); bEvt.classList.add("actif");
+  fiche.hidden = false; $("monter").hidden = true;
+  $("f-nom").textContent = "Le portail gaulois";
+  $("f-texte").innerHTML = "<b>Lancement :</b> toi (l'hôte) tu tapes <code>/parc event</code>. Tout le monde dans le parc reçoit l'alerte, le ciel se fissure au-dessus de la place et un grand portail doré s'ouvre. Le druide à côté emmène tous ceux qui sont autour de lui, et vous entrez ensemble.";
+  $("f-jeu").innerHTML = "<b>En jeu :</b> c'est un donjon de plus dans le système de Jin-woo (mêmes règles), ouvert seulement pendant l'événement. Comme toujours, seuls ceux qui entrent voient la cinématique du portail.";
+  const plus = $("f-plus"); plus.hidden = false;
+  plus.innerHTML = `<div class="salles"></div>
+    <h3>Dans le donjon (une forêt gauloise)</h3><ul>
+    <li>Arrivée dans une clairière, le portail de retour derrière vous.</li>
+    <li>Carrefour du grand chêne : à gauche le chaudron, à droite les boucliers, tout droit les menhirs.</li>
+    <li><b>Le chaudron du druide</b> : mettre les 4 ingrédients dans le bon ordre. L'ordre est sur le parchemin du trésor, dans l'aile de droite.</li>
+    <li><b>Les boucliers</b> : trouver le bon code. Il est sur le parchemin du camp romain, dans l'aile de gauche, gardé par une embuscade de légionnaires.</li>
+    <li><b>La porte des menhirs</b> : un joueur sur chaque pierre en même temps (il faut se séparer).</li>
+    <li><b>La porte du village</b> s'ouvre seulement quand tout le groupe est devant.</li>
+    <li>Les sbires sont des légionnaires romains : quand on les tape, ils s'envolent dans le ciel. Leurs casques restent par terre : tu les ramasses et ils se revendent à la sortie (comme les cristaux).</li></ul>
+    <h3>Les boss : Astérix et Obélix en même temps</h3><ul>
+    <li><b>Astérix</b> : petit et très rapide. Sprint, saut + uppercut qui t'envoie en l'air. À 50 % il boit la potion magique : il brille, tape deux fois plus fort et part en tourbillon.</li>
+    <li><b>Obélix</b> : énorme et lent. Il lance son menhir, charge avec son ventre, t'attrape et te fait tourner avant de te lancer, et s'arrête pour manger un sanglier (c'est le moment de taper). Pas de potion pour lui : il est tombé dedans quand il était petit.</li>
+    <li>Une barre de vie chacun. Quand l'un tombe, l'autre s'énerve et va plus vite.</li></ul>
+    <h3>La fin</h3><p>1500 chacun + les casques revendus, un portail de sortie s'ouvre au milieu du village. Comme les autres donjons : un groupe à la fois, et 10 minutes avant de pouvoir y retourner.</p>`;
+  const salles = plus.querySelector(".salles");
+  const bouton = (txt, fn, fort) => { const b = document.createElement("button"); b.type = "button"; b.textContent = txt; if (fort) b.className = "fort"; b.addEventListener("click", fn); salles.appendChild(b); };
+  bouton(EVT.estOuvert() ? "Revoir le portail" : "Ouvrir le portail", () => { if (enTour) descendre(); arreterBalade(); if (EVT.zone()) { camera.position.set(0, 12, 30); controls.target.set(0, 9, -27); } EVT.ouvrir(); voler(V(5, 11, 4), V(0, 9.5, -27)); });
+  bouton("Entrer dans le portail", entrerPortail, true);
+  for (const [nom, pos, cible] of VUES_EVT) bouton(nom, () => { if (enTour) descendre(); arreterBalade(); voler(pos, cible); });
+  bouton("Revenir au parc", () => { camera.position.set(0, 12, 30); controls.target.set(0, 8, -27); controls.update(); voler(VUE_ENSEMBLE.pos, VUE_ENSEMBLE.cible, 1.8); });
+  arreterBalade();
+  if (!EVT.zone()) voler(V(5, 11, 4), V(0, 9.5, -27));
+}
+bEvt.addEventListener("click", choisirEvenement);
+
+// tour de manège : la caméra prend la place d'un passager
+const regard = { yaw: 0, pitch: 0, glisse: false, x: 0, y: 0 };
+let vitesseAff = 0;
+const derniere = V();
+function monter(a) {
+  if (nausee > 0) { nausee = 0; hote.style.filter = ""; $("nausee").style.opacity = "0"; $("mal").hidden = true; }
+  enTour = a; arreterBalade(); vol = null;
+  controls.enabled = false;
+  $("panneau").hidden = true; $("actions").hidden = true; $("tour").hidden = false;
+  $("t-nom").textContent = a.nom;
+  regard.yaw = regard.pitch = 0;
+  a.siege.updateWorldMatrix(true, false); a.siege.getWorldPosition(derniere);
+  camera.fov = 75; camera.updateProjectionMatrix();
+}
+function descendre() {
+  if (!enTour) return;
+  const a = enTour; enTour = null;
+  controls.enabled = true;
+  $("panneau").hidden = false; $("actions").hidden = false; $("tour").hidden = true;
+  camera.fov = 55; camera.updateProjectionMatrix();
+  camera.up.set(0, 1, 0);
+  camera.position.copy(a.vue.pos); controls.target.copy(a.vue.cible); controls.update();
+  screamer.cacher();
+  if (a.looping && Math.random() < 0.5) { nausee = 10; $("mal").hidden = false; }
+}
+let nausee = 0;
+const toile3d = renderer.domElement;
+toile3d.addEventListener("pointerdown", (e) => { if (!enTour) return; regard.glisse = true; regard.x = e.clientX; regard.y = e.clientY; toile3d.setPointerCapture(e.pointerId); });
+toile3d.addEventListener("pointermove", (e) => {
+  if (!enTour || !regard.glisse) return;
+  regard.yaw -= (e.clientX - regard.x) * 0.005; regard.pitch -= (e.clientY - regard.y) * 0.005;
+  regard.yaw = Math.max(-2.6, Math.min(2.6, regard.yaw)); regard.pitch = Math.max(-1.3, Math.min(1.3, regard.pitch));
+  regard.x = e.clientX; regard.y = e.clientY;
+});
+toile3d.addEventListener("pointerup", () => { regard.glisse = false; });
+
+// ================================================================ boucle
+function taille() { const w = hote.clientWidth, h = hote.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener("resize", taille); taille();
+
+let t = 0, avant = performance.now(), sombre = 0;
+const qTmp = new THREE.Quaternion(), eTmp = new THREE.Euler(0, 0, 0, "YXZ"), pTmp = V();
+const lumBrume = new THREE.Color();
+function boucle(now) {
+  const dt = Math.min(0.05, (now - avant) / 1000); avant = now; t += dt;
+  for (const a of ATTRACTIONS) a.maj(t, dt);
+  for (const d of DECOR) d.maj(dt, t);
+  EAU.offset.x += dt * 0.02;
+
+  let cible = 0;
+  if (enTour) {
+    const s = enTour.siege; s.updateWorldMatrix(true, false);
+    s.getWorldPosition(pTmp); s.getWorldQuaternion(qTmp);
+    if (!regard.glisse) { regard.yaw *= Math.exp(-dt * 0.8); regard.pitch *= Math.exp(-dt * 0.8); }
+    eTmp.set(regard.pitch, regard.yaw, 0); qTmp.multiply(_q.setFromEuler(eTmp));
+    camera.position.copy(pTmp); camera.quaternion.copy(qTmp);
+    const v = pTmp.distanceTo(derniere) / Math.max(dt, 1e-3); derniere.copy(pTmp);
+    vitesseAff += (v - vitesseAff) * Math.min(1, dt * 4);
+    $("t-vit").textContent = Math.round(vitesseAff * 3.6) + " km/h";
+    cible = enTour.sombre();
+  } else if (vol) {
+    vol.t += dt; const k = lisse(vol.t / vol.d);
+    camera.position.lerpVectors(vol.p0, vol.p1, k); controls.target.lerpVectors(vol.c0, vol.c1, k);
+    if (vol.t >= vol.d) vol = null;
+    controls.update();
+  } else controls.update();
+  sombre += (cible - sombre) * Math.min(1, dt * 4);
+  // nausée légère : la vue tangue, un peu floue et verdâtre, comme l'effet Nausée de Minecraft
+  if (nausee > 0 && !enTour) {
+    nausee -= dt; const k = Math.min(1, Math.max(0, nausee) / 3);
+    camera.rotateZ(Math.sin(t * 1.3) * 0.07 * k); camera.rotateX(Math.sin(t * 0.9) * 0.025 * k);
+    camera.fov = 55 + Math.sin(t * 1.7) * 6 * k; camera.updateProjectionMatrix();
+    hote.style.filter = k > 0.01 ? `blur(${(0.9 * k).toFixed(2)}px) saturate(${1 + 0.3 * k}) hue-rotate(${(-12 * k).toFixed(1)}deg)` : "";
+    $("nausee").style.opacity = (0.8 * k).toFixed(2);
+    if (nausee <= 0) { hote.style.filter = ""; $("nausee").style.opacity = "0"; $("mal").hidden = true; camera.fov = 55; camera.updateProjectionMatrix(); }
+  }
+
+  // jour / noir des tunnels
+  ciel.intensity = 0.7 * (1 - sombre) + 0.02;
+  LAMPE_POCHE.position.copy(camera.position); LAMPE_POCHE.intensity = enTour ? 0.22 * sombre : 0;
+  soleil.intensity = 0.85 * (1 - sombre);
+  soleil.castShadow = sombre < 0.5;
+  { const z = EVT.zone() ? V(EVT.D.x, 0, EVT.D.z - 80) : V(0, 0, 0); if (!soleil.target.position.equals(z)) { soleil.target.position.copy(z); soleil.position.copy(z).addScaledVector(DIR_SOLEIL, 320); } }   // l'ombre du soleil éteignait aussi les lanternes des tunnels
+  renderer.setClearColor(NOIR, sombre);
+  lumBrume.copy(BRUME_JOUR).lerp(NOIR, sombre); scene.fog.color.copy(lumBrume);
+  scene.fog.near = 260 * (1 - sombre) + 8 * sombre; scene.fog.far = 700 * (1 - sombre) + 55 * sombre;
+  // les lumières des tunnels se posent sur les lampes les plus proches
+  const lampes = enTour && sombre > 0.02 ? enTour.lampes : null;
+  if (lampes && lampes.length) {
+    const tri = lampes.map((l) => [l.p.distanceToSquared(camera.position), l]).sort((a, b) => a[0] - b[0]);
+    POOL.forEach((pl, i) => { const l = tri[i]; if (!l) { pl.intensity = 0; return; } pl.position.copy(l[1].p); pl.color.copy(l[1].c); pl.intensity = 0.9 * sombre; });
+  } else POOL.forEach((pl) => { pl.intensity = 0; });
+
+  Son.maj(dt, enTour ? vitesseAff : 0, !!enTour, !!(enTour && enTour.lift && enTour.lift()), sombre);
+
+  // étiquettes
+  const w = hote.clientWidth, h = hote.clientHeight;
+  for (const e of etiquettesBoss) {
+    const voir = noms && !enTour && EVT.zone();
+    if (!voir) { e.el.style.display = "none"; continue; }
+    pTmp.copy(e.b.ancre()).project(camera);
+    if (pTmp.z > 1 || Math.abs(pTmp.x) > 1.1 || Math.abs(pTmp.y) > 1.1) { e.el.style.display = "none"; continue; }
+    e.el.style.display = ""; e.el.textContent = e.b.txt();
+    e.el.style.transform = `translate(${(pTmp.x * 0.5 + 0.5) * w}px, ${(-pTmp.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+  }
+  $("barres").hidden = !(EVT.zone() && !enTour && camera.position.distanceTo(EVT.C) < 110);
+  for (const e of etiquettes) {
+    if (!noms || enTour) { e.el.style.display = "none"; continue; }
+    pTmp.copy(e.ancre).project(camera);
+    if (pTmp.z > 1 || Math.abs(pTmp.x) > 1.1 || Math.abs(pTmp.y) > 1.1) { e.el.style.display = "none"; continue; }
+    e.el.style.display = "";
+    e.el.style.transform = `translate(${(pTmp.x * 0.5 + 0.5) * w}px, ${(-pTmp.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+  }
+  if (PHOTO) PHOTO.capturer(renderer);
+  renderer.render(scene, camera);
+  requestAnimationFrame(boucle);
+}
+requestAnimationFrame(boucle);
+window.parc = { attractions: ATTRACTIONS, monter, descendre, choisir, POOL, LAMPE_POCHE, ciel, scene };   // pour essayer depuis la console
+})();
+</script>
