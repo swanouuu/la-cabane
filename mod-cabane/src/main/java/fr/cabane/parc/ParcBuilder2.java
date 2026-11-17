@@ -152,32 +152,18 @@ public final class ParcBuilder2 {
     // ================================================================== les allées vers les nouveaux manèges
 
     /** Le point du bord de la place (rayon 18) en direction de (x, z). */
-    private static double[] anneau(double x, double z) {
-        double a = Math.atan2(z, x);
-        return new double[]{Math.cos(a) * 18, Math.sin(a) * 18};
-    }
-
     private void route(double... pts) {
         BlockState sable = Blocks.SMOOTH_SANDSTONE.defaultBlockState();
         for (int i = 0; i + 3 < pts.length; i += 2) {
+            // (les lampadaires et leurs guirlandes viennent à la fin : voir Guirlandes et ParcBuilder.garnir)
             b.allee(pts[i], pts[i + 1], pts[i + 2], pts[i + 3], 4.4, sable);
-            double l = Math.hypot(pts[i + 2] - pts[i], pts[i + 3] - pts[i + 1]);
-            if (l < 14) {
-                continue;
-            }
-            double dx = (pts[i + 2] - pts[i]) / l, dz = (pts[i + 3] - pts[i + 1]) / l;
-            for (double s = 7; s < l - 4; s += 14) {
-                b.lampadaire((int) Math.floor(pts[i] + dx * s - dz * 3.2), (int) Math.floor(pts[i + 1] + dz * s + dx * 3.2));
-            }
         }
     }
 
     private void chemins() {
-        double[] m = anneau(-40, -24), c = anneau(10, -22);
-        route(m[0], m[1], -40, -24, -48, -40);
-        route(c[0], c[1], 10, -22, 25, -19);
-        route(-6, 58, -50, 58, -57, 49);
-        route(-6, 102, -76, 102, -76, 120, -97, 120);
+        for (double[] l : Guirlandes.ALLEES_2) {
+            route(l);
+        }
     }
 
     // ================================================================== La Mine Hantée

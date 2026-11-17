@@ -78,35 +78,18 @@ final class ParcBuilder3 {
         b.texte(x + 0.5 + dx * 0.56, 3.1, z + 0.5 + dz * 0.56, lacet, ParcBuilder.json(nom, couleur), 1.4F, fond);
     }
 
-    private static double[] anneau(double x, double z) {
-        double a = Math.atan2(z, x);
-        return new double[]{Math.cos(a) * 18, Math.sin(a) * 18};
-    }
-
     private void route(double... pts) {
         BlockState sable = Blocks.SMOOTH_SANDSTONE.defaultBlockState();
         for (int i = 0; i + 3 < pts.length; i += 2) {
+            // (les lampadaires et leurs guirlandes viennent à la fin : voir Guirlandes et ParcBuilder.garnir)
             b.allee(pts[i], pts[i + 1], pts[i + 2], pts[i + 3], 4.4, sable);
-            double l = Math.hypot(pts[i + 2] - pts[i], pts[i + 3] - pts[i + 1]);
-            if (l < 14) {
-                continue;
-            }
-            double dx = (pts[i + 2] - pts[i]) / l, dz = (pts[i + 3] - pts[i + 1]) / l;
-            for (double s = 7; s < l - 4; s += 14) {
-                b.lampadaire((int) Math.floor(pts[i] + dx * s - dz * 3.2), (int) Math.floor(pts[i + 1] + dz * s + dx * 3.2));
-            }
         }
     }
 
     private void chemins() {
-        double[] t = anneau(-30, -34), ba = anneau(-30, 24), tp = anneau(38, 18);
-        route(t[0], t[1], -30, -34);
-        route(ba[0], ba[1], -30, 24, -40, 23);
-        route(tp[0], tp[1], 38, 18, 40, 29);
-        route(5, 76, 45, 76, 45, 79);
-        route(-6, 35, -14, 35);
-        route(5, 35, 12, 35);
-        route(-6, 80, -14, 80);
+        for (double[] l : Guirlandes.ALLEES_3) {
+            route(l);
+        }
     }
 
     // ================================================================== la Tour de la Chute

@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  */
 final class ParcBuilder {
     /** À changer quand on modifie la construction : le parc se reconstruit à la visite suivante. */
-    static final int VERSION = 9;
+    static final int VERSION = 10;
     static final int SOL = Maneges.SOL;
     static final Vec3 ARRIVEE = new Vec3(0.5, SOL, 114.5);
     static final String TAG = "parc";
@@ -72,6 +72,7 @@ final class ParcBuilder {
         new ParcBuilder2(this).tout();
         new ParcBuilder3(this).tout();
         chemins();
+        garnir();
         haie();
         arbres();
         gens();
@@ -302,10 +303,6 @@ final class ParcBuilder {
             }
             occuper(0, z, 8);
         }
-        for (int z = 24; z <= 118; z += 13) {
-            lampadaire(-8, z);
-            lampadaire(7, z);
-        }
         stand(-12, 48, true, "BARBE À PAPA", "#ff5c8a", Blocks.PINK_WOOL);
         stand(11, 48, false, "POPCORN", "#e8333f", Blocks.RED_WOOL);
         stand(-12, 66, true, "CHURROS", "#f39c12", Blocks.ORANGE_WOOL);
@@ -506,13 +503,75 @@ final class ParcBuilder {
     private void chemins() {
         BlockState sable = Blocks.SMOOTH_SANDSTONE.defaultBlockState();
         // vers la gare du Dragon : on passe sous le grand huit
-        double a = Math.atan2(-4, 60);
-        allee(Math.cos(a) * 18, Math.sin(a) * 18, 60, -4, 4.4, sable);
-        allee(60, -4, 100, -4, 4.4, sable);
-        allee(100, -4, 108, 45.5, 4.4, sable);
-        allee(108, 45.5, 111, 45.5, 4.4, sable);
-        for (double x = 30; x <= 100; x += 14) {
-            lampadaire((int) x, -8);
+        double[] l = Guirlandes.ALLEE_DRAGON;
+        for (int i = 0; i + 3 < l.length; i += 2) {
+            allee(l[i], l[i + 1], l[i + 2], l[i + 3], 4.4, sable);
+        }
+    }
+
+    // ================================================================== la fête : lampadaires, bancs, massifs, mâts
+
+    /** Les bannières des lampadaires, à tour de rôle. */
+    private static final Block[] BANNIERES = {Blocks.RED_WALL_BANNER, Blocks.YELLOW_WALL_BANNER, Blocks.LIGHT_BLUE_WALL_BANNER,
+            Blocks.LIME_WALL_BANNER, Blocks.MAGENTA_WALL_BANNER, Blocks.ORANGE_WALL_BANNER, Blocks.CYAN_WALL_BANNER, Blocks.PINK_WALL_BANNER};
+
+    /** Un coin d'herbe libre (rien dessus jusqu'à {@code haut} blocs) : pas une allée, pas un manège. */
+    private boolean herbe(int x, int z, int haut) {
+        if (!level.getBlockState(new BlockPos(x, SOL - 1, z)).is(Blocks.GRASS_BLOCK)) {
+            return false;
+        }
+        for (int y = 0; y <= haut; y++) {
+            if (!level.getBlockState(new BlockPos(x, SOL + y, z)).isAir()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void garnir() {
+        // les lampadaires (là où il y a de la place), chacun avec sa bannière tournée vers l'allée
+        for (Guirlandes.Lampe l : Guirlandes.LAMPES) {
+            if (!herbe(l.x(), l.z(), 4) || !level.getBlockState(new BlockPos(l.x() + l.dx(), SOL + 3, l.z() + l.dz())).isAir()) {
+                continue;
+            }
+            bloc(l.x(), 0, l.z(), Blocks.POLISHED_BLACKSTONE_WALL);
+            remplir(l.x(), 1, l.z(), l.x(), 3, l.z(), Blocks.DARK_OAK_FENCE);
+            bloc(l.x(), 4, l.z(), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, false));
+            Direction vers = Direction.fromDelta(l.dx(), 0, l.dz());
+            if (vers != null) {
+                bloc(l.x() + l.dx(), 3, l.z() + l.dz(), BANNIERES[l.couleur() % BANNIERES.length].defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, vers));
+            }
+            occuper(l.x(), l.z(), 1);
+        }
+        // le long de l'avenue : des massifs d'azalée en fleurs, des bancs, des poubelles (pas devant les stands)
+        for (int z = 22; z <= 117; z++) {
+            boolean stand = false;
+            for (int[] st : Guirlandes.STANDS) {
+                stand |= Math.abs(z - st[1]) <= 3;
+            }
+            if (stand) {
+                continue;
+            }
+            for (int s = -1; s <= 1; s += 2) {
+                int bord = s < 0 ? -7 : 6, loin = s < 0 ? -8 : 7;
+                if (z % 6 == 3 && herbe(loin, z, 1)) {
+                    bloc(loin, 0, z, Blocks.FLOWERING_AZALEA);
+                } else if (z % 12 == 7 && herbe(bord, z, 0) && herbe(bord, z + 1, 0)) {
+                    BlockState banc = Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, s < 0 ? Direction.WEST : Direction.EAST);
+                    bloc(bord, 0, z, banc);
+                    bloc(bord, 0, z + 1, banc);
+                } else if (z % 12 == 10 && herbe(bord, z, 0)) {
+                    bloc(bord, 0, z, Blocks.CAULDRON);
+                }
+            }
+        }
+        // les mâts des drapeaux (les drapeaux flottent chez le client) : sur la place, au milieu des massifs
+        for (int[] d : Guirlandes.DRAPEAUX) {
+            if (d[2] == Guirlandes.MAT) {
+                remplir(d[0], 0, d[1], d[0], d[2] - 1, d[1], Blocks.IRON_BARS);
+                bloc(d[0], d[2], d[1], Blocks.GOLD_BLOCK);
+            }
         }
     }
 

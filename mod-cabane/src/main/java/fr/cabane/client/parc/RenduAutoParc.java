@@ -37,6 +37,15 @@ public class RenduAutoParc extends EntityRenderer<AutoParc> {
         RenduNacelleParc.b(c, ps, 0, 3.4F, -1.15F, 0.08F, 4.5F, 0.08F, 0x999999, lum);
         boolean etincelle = a.choc > 0 || (a.tickCount + a.getId()) % 37 == 0;
         RenduNacelleParc.b(c, ps, 0, 5.7F, -1.15F, 0.35F, 0.2F, 0.35F, etincelle ? 0xFFF27A : 0x777777, etincelle ? Boites.PLEIN : lum);
+        // un néon tout autour du pare-chocs, et la lumière de la caisse sous l'auto, qui battent avec le son
+        float puls = AmbianceParc.pulsation(partiel);
+        RenduNacelleParc.b(c, ps, 0, 0.47F, 1.485F, 2.15F, 0.07F, 0.05F, col, Boites.PLEIN);
+        RenduNacelleParc.b(c, ps, 0, 0.47F, -1.485F, 2.15F, 0.07F, 0.05F, col, Boites.PLEIN);
+        RenduNacelleParc.b(c, ps, 1.135F, 0.47F, 0, 0.05F, 0.07F, 2.9F, col, Boites.PLEIN);
+        RenduNacelleParc.b(c, ps, -1.135F, 0.47F, 0, 0.05F, 0.07F, 2.9F, col, Boites.PLEIN);
+        VertexConsumer l = buffers.getBuffer(Boites.lumiere());
+        Boites.lueur(l, ps.last(), 0, 0.03F, 0, 1.75F, 0.02F, 2.1F, col, 0.55F * puls);
+        Boites.lueur(l, ps.last(), 0, 0.47F, 0, 1.2F, 0.1F, 1.55F, col, 0.12F * puls);
         ps.popPose();
         super.render(a, lacet, partiel, ps, buffers, lum);
     }

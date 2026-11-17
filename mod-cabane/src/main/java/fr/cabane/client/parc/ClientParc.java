@@ -217,7 +217,12 @@ public final class ClientParc {
         DecorParc.dessiner(c, pose, cam, temps);
         DecorTournants.dessiner(c, pose, cam, event.getPartialTick().getGameTimeDeltaPartialTick(false));
         DecorEvenement.dessiner(c, pose, cam, temps);
+        float partiel = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        DecorFete.dessiner(c, pose, cam, temps, partiel);
         buf.endBatch(Boites.type());
+        // la lumière (halos, projecteurs, rayons) par-dessus, sans rien cacher
+        DecorFete.lueurs(buf.getBuffer(Boites.lumiere()), pose, cam, temps, partiel);
+        buf.endBatch(Boites.lumiere());
         DecorParc.ecran(ps, cam, buf);
     }
 
@@ -380,7 +385,10 @@ public final class ClientParc {
         public void tick() {
             if (!ici()) {
                 stop();
+                return;
             }
+            // elle se tait quand on approche des autos-tamponneuses, où passe un autre son
+            volume = 0.55F * (1F - 0.92F * AmbianceParc.presAutos());
         }
     }
 
