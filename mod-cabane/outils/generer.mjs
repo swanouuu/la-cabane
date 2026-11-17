@@ -22,6 +22,7 @@ import { genererArene } from "./arene.mjs";
 import { genererSceau } from "./sceau.mjs";
 import { genererDonjon } from "./donjon.mjs";
 import { genererParc, sonsParc } from "./parc.mjs";
+import { genererMuscu } from "./muscu.mjs";
 import { sonsOperation } from "./operation.mjs";
 import { sonsFoudre } from "./foudre.mjs";
 import { genererSharingan, sonsSharingan } from "./sharingan.mjs";
@@ -517,6 +518,8 @@ genererSceau({ ecrire, lang });
 genererDonjon({ ecrire });
 // le parc d'attractions (/parc) : dimension toujours au soleil, biome, bouton du retour (voir parc/Parc.java et docs/parc)
 genererParc({ ecrire, lang });
+// la salle de muscu : les machines noires et rouges à poser et les haltères (voir muscu/Muscu.java et docs/muscu)
+genererMuscu({ ecrire, lang });
 
 Object.assign(lang, {
   "item.cabane.parachute": "Parachute", "item.cabane.carte": "Carte", "item.cabane.booster": "Booster de cartes",

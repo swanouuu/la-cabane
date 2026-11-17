@@ -45,6 +45,8 @@ public abstract class PlayerModelMixin {
             fr.cabane.client.pouvoir.ClientLumiere.poser((PlayerModel<?>) (Object) this, joueur);
             // les lames de la Brume : à deux mains, et le geste de chacune
             fr.cabane.client.pouvoir.ClientLames.poser((PlayerModel<?>) (Object) this, joueur);
+            // la salle de muscu : le joueur sur sa machine (court, pédale, rame, tire, pousse), ou ses curls
+            fr.cabane.client.muscu.ClientMuscu.poser((PlayerModel<?>) (Object) this, joueur);
         }
     }
 }

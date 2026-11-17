@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Salle de muscu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap">
+<style>
+/* Croquis de la salle de muscu : la salle en 3D, la fiche des machines à gauche, les QTE en bas. Un seul thème : noir et rouge. */
+:root {
+  --fond: #0b0b0d; --plaque: #141418; --plaque2: #24242b; --trait: #33333b; --craie: #f4f1f1; --brume: #a9a4aa;
+  --rouge: #e01b2f; --rouge2: #ff4a5c; --bleu: #7cc8ff; --vert: #3ddc84;
+  --titre: "Bebas Neue", Impact, sans-serif; --texte: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--fond); color: var(--craie); font: 14px/1.45 var(--texte); overflow: hidden; }
+#scene { position: fixed; inset: 0; touch-action: none; }
+#scene canvas { display: block; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--rouge2); outline-offset: 2px; }
+.plaque { background: color-mix(in srgb, var(--fond) 92%, transparent); border: 1px solid var(--trait); }
+
+#panneau { position: fixed; left: 16px; top: 16px; width: min(350px, calc(100vw - 32px)); max-height: calc(100% - 32px); display: flex; flex-direction: column; }
+#bande { height: 5px; flex: none; background: repeating-linear-gradient(135deg, var(--rouge) 0 12px, #000 12px 24px); }
+#panneau .corps { padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto; }
+h1 { font: 400 36px/0.95 var(--titre); letter-spacing: 1px; margin: 0; }
+h1 span { color: var(--rouge); }
+#intro { font-size: 12.5px; color: var(--brume); margin: 0; }
+#intro b { color: var(--craie); }
+.groupe { font: 400 17px var(--titre); letter-spacing: 1px; color: var(--rouge2); margin: 4px 0 0; }
+.liste { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.liste button { text-align: left; background: var(--plaque2); border: 0; padding: 6px 9px; font-size: 13px; font-weight: 600; }
+.liste button:hover { background: #303039; }
+.liste button.actif { background: var(--rouge); color: #fff; }
+#fiche { background: var(--plaque); border: 1px solid var(--trait); border-left: 3px solid var(--rouge); padding: 10px 11px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; }
+#fiche h2 { font: 400 26px/1 var(--titre); letter-spacing: 1px; margin: 0; }
+#fiche p { margin: 0; color: var(--brume); }
+#fiche dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }
+#fiche dt { color: var(--brume); font-size: 12px; }
+#fiche dd { margin: 0; font-size: 12.5px; }
+#fiche dd.gain { color: var(--rouge2); font-weight: 700; }
+#fiche dd.gain.vit { color: var(--bleu); }
+#kilos { display: flex; flex-wrap: wrap; gap: 3px; }
+#kilos button { border: 1px solid var(--trait); background: var(--plaque2); padding: 3px 7px; font-size: 12px; font-weight: 700; }
+#kilos button.actif { background: var(--rouge); border-color: var(--rouge2); }
+#monter { align-self: flex-start; background: var(--rouge); border: 0; padding: 9px 16px; font: 400 20px var(--titre); letter-spacing: 1px; color: #fff; }
+#monter:hover { background: var(--rouge2); }
+details { font-size: 12.5px; color: var(--brume); }
+details summary { cursor: pointer; color: var(--craie); font-weight: 600; }
+details ul { margin: 6px 0 0; padding-left: 18px; }
+details b { color: var(--craie); }
+
+#etiquettes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.etiquette { position: absolute; left: 0; top: 0; background: #000; border-left: 3px solid var(--rouge); color: var(--craie); padding: 2px 7px; font: 400 15px var(--titre); letter-spacing: .5px; white-space: nowrap; pointer-events: auto; cursor: pointer; will-change: transform; }
+.etiquette.actif { background: var(--rouge); }
+
+#hud { position: fixed; right: 16px; top: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#coeurs { display: flex; gap: 2px; padding: 6px 8px; }
+#coeurs svg { width: 18px; height: 16px; }
+#coeurs .plein { fill: #e5202f; }
+#coeurs .vide { fill: #3a2024; }
+#coeurs.aie { animation: aie .35s; }
+@keyframes aie { 0%,100% { transform: none } 25% { transform: translateX(-5px) } 75% { transform: translateX(5px) } }
+#soigner { border: 1px solid var(--trait); background: var(--plaque2); font-size: 11px; padding: 2px 8px; }
+#effets { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.effet { display: flex; align-items: center; gap: 8px; padding: 5px 10px; font: 400 18px var(--titre); letter-spacing: .5px; border-left: 4px solid var(--rouge); }
+.effet.vitesse { border-left-color: var(--bleu); }
+.effet small { font: 600 12px var(--texte); color: var(--brume); }
+.effet.recup { border-left-color: #777; font-size: 15px; }
+
+#vues { position: fixed; bottom: 16px; right: 16px; display: flex; gap: 6px; }
+#vues button { padding: 8px 13px; border: 1px solid var(--trait); background: var(--plaque); font-weight: 600; }
+
+#qte { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; align-items: stretch; border-top: 3px solid var(--rouge); }
+.qtete { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.qtete b { font: 400 24px var(--titre); letter-spacing: 1px; }
+.compteurs { display: flex; gap: 10px; font-size: 12.5px; color: var(--brume); }
+.compteurs .rates { color: var(--rouge2); font-weight: 700; }
+#qAvant p { margin: 0 0 8px; color: var(--brume); font-size: 13px; }
+#qAvant .boutons { display: flex; gap: 8px; }
+#qAvant .boutons button, #qFin button { background: var(--rouge); border: 0; padding: 8px 16px; font: 400 19px var(--titre); letter-spacing: 1px; color: #fff; }
+#qAvant .boutons button.second, #qFin button.second { background: var(--plaque2); }
+#qJeu { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#qTouche { position: relative; width: 132px; height: 132px; display: grid; place-items: center; }
+#qTouche svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+#qTouche circle { fill: none; stroke-width: 7; }
+#qTouche .fondanneau { stroke: #26262d; }
+#qTouche .anneau { stroke: var(--rouge); stroke-linecap: butt; }
+#qSeq { display: flex; gap: 6px; }
+.cap { width: 74px; height: 74px; display: grid; place-items: center; background: #1b1b21; border: 3px solid #f4f1f1; box-shadow: 0 6px 0 #000; font: 400 46px/1 var(--titre); }
+.cap.petite { width: 52px; height: 52px; font-size: 32px; }
+.cap.fait { border-color: var(--vert); color: var(--vert); }
+#qPiste { position: relative; width: 100%; height: 76px; background: #101014; border: 1px solid var(--trait); overflow: hidden; }
+#qPiste .cible { position: absolute; left: 34px; top: 8px; width: 60px; height: 60px; border: 3px dashed var(--rouge); }
+#qPiste .note { position: absolute; top: 12px; left: 0; width: 52px; height: 52px; display: grid; place-items: center; background: #1b1b21; border: 3px solid #f4f1f1; font: 400 32px/1 var(--titre); will-change: transform; }
+#qPiste .note.ok { border-color: var(--vert); color: var(--vert); opacity: .5; }
+#qPiste .note.rate { border-color: var(--rouge); color: var(--rouge); opacity: .5; }
+#qMsg { height: 26px; font: 400 24px var(--titre); letter-spacing: 1px; }
+#qMsg.ok { color: var(--vert); }
+#qMsg.rate { color: var(--rouge2); }
+.pave { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: 40px 40px; gap: 4px; }
+.pave button { background: var(--plaque2); border: 1px solid var(--trait); font: 400 22px var(--titre); }
+.pave button:active { background: var(--rouge); }
+.pave .z { grid-column: 2; grid-row: 1; }
+.pave .q { grid-column: 1; grid-row: 2; }
+.pave .s { grid-column: 2; grid-row: 2; }
+.pave .d { grid-column: 3; grid-row: 2; }
+#qFin { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+#qFin .grand { font: 400 34px/1 var(--titre); letter-spacing: 1px; }
+#qFin .grand.ok { color: var(--vert); }
+#qFin .grand.rate { color: var(--rouge2); }
+#qFin p { margin: 0; color: var(--brume); font-size: 13px; }
+#qFin div { display: flex; gap: 8px; }
+#compte { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%); font: 400 120px var(--titre); color: #fff; text-shadow: 0 0 30px var(--rouge); pointer-events: none; }
+#flash { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 rgba(224, 27, 47, 0); transition: box-shadow .4s; }
+#flash.on { box-shadow: inset 0 0 160px 40px rgba(224, 27, 47, .55); transition: none; }
+
+@media (max-width: 760px) {
+  #panneau { max-height: 46vh; }
+  #hud { top: auto; bottom: 230px; }
+  #vues { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="etiquettes"></div>
+
+<aside id="panneau" class="plaque">
+  <div id="bande"></div>
+  <div class="corps">
+    <h1>Salle de <span>muscu</span></h1>
+    <p id="intro">Croquis. Chaque machine est <b>un bloc qu'on pose</b> (comme un meuble) : on donne les machines, les joueurs montent leur salle. <b>Clic droit</b> pour monter dessus, puis des <b>petits QTE</b> avec <b>Z Q S D</b> (dans le jeu, chacun voit ses propres touches). Clique une machine pour voir le joueur dessus.</p>
+    <div class="groupe">Cardio</div>
+    <div class="liste" id="listeCardio"></div>
+    <div class="groupe">Musculation</div>
+    <div class="liste" id="listeMuscu"></div>
+    <div class="groupe">Poids libres</div>
+    <div class="liste" id="listeLibre"></div>
+    <section id="fiche"></section>
+    <details>
+      <summary>Les règles des QTE</summary>
+      <ul>
+        <li><b>Muscu et haltères</b> : une touche au hasard s'affiche avec un cercle qui se vide, il faut appuyer avant la fin. 8 répétitions. Les charges lourdes demandent parfois 2 touches à la suite.</li>
+        <li><b>Cardio</b> : les touches défilent vers la cible, il faut appuyer pile quand elles passent dedans (en rythme).</li>
+        <li><b>Raté</b> (mauvaise touche ou trop tard) : <b>−1 cœur</b>. <b>3 ratés</b> : la série est ratée, on lâche la machine. Donc jamais plus de 3 cœurs perdus par série.</li>
+        <li><b>Série réussie</b> : muscu → <b>Force</b>, cardio → <b>Vitesse</b>. Plus c'est lourd, plus c'est fort.</li>
+        <li><b>Récup 2 min</b> après une série réussie : on peut continuer à s'entraîner, mais pas de nouveau bonus avant la fin de la récup (sinon on enchaîne à l'infini).</li>
+      </ul>
+    </details>
+  </div>
+</aside>
+
+<div id="hud">
+  <div id="coeurs" class="plaque"></div>
+  <button id="soigner" type="button">remettre les cœurs</button>
+  <div id="effets"></div>
+</div>
+
+<div id="vues"><button id="ensemble" type="button">Vue d'ensemble</button></div>
+
+<section id="qte" class="plaque" hidden>
+  <div class="qtete"><b id="qNom"></b><div class="compteurs"><span id="qReps"></span><span id="qRates" class="rates"></span></div></div>
+  <div id="qAvant">
+    <p id="qExplic"></p>
+    <div class="boutons"><button id="go" type="button">C'est parti</button><button id="descendre" class="second" type="button">Descendre</button></div>
+  </div>
+  <div id="qJeu" hidden>
+    <div id="qTouche"><svg viewBox="0 0 132 132"><circle class="fondanneau" cx="66" cy="66" r="60"/><circle class="anneau" id="anneau" cx="66" cy="66" r="60"/></svg><div id="qSeq"></div></div>
+    <div id="qPiste" hidden><div class="cible"></div></div>
+    <div id="qMsg"></div>
+    <div class="pave"><button class="z" data-t="Z">Z</button><button class="q" data-t="Q">Q</button><button class="s" data-t="S">S</button><button class="d" data-t="D">D</button></div>
+  </div>
+  <div id="qFin" hidden></div>
+</section>
+<div id="compte" hidden></div>
+<div id="flash"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+const T = THREE, DEG = Math.PI / 180;
+const L = (a, b, k) => a + (b - a) * k;
+const ease = (u) => (u < 0.5 ? 2 * u * u : 1 - 2 * (1 - u) * (1 - u));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const maintenant = () => performance.now() / 1000;
+
+// ------------------------------------------------------------------ la scène
+const hote = document.getElementById("scene");
+const renderer = new T.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+hote.appendChild(renderer.domElement);
+const scene = new T.Scene();
+scene.background = new T.Color(0x0b0b0d);
+scene.fog = new T.Fog(0x0b0b0d, 38, 70);
+const camera = new T.PerspectiveCamera(40, 1, 0.1, 200);
+const controls = new T.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = 1.5; controls.minDistance = 2; controls.maxDistance = 45;
+// la fiche cache la gauche de l'écran : on décale le centre de la vue vers la droite
+function retailler() {
+  renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight;
+  const decal = innerWidth > 760 ? Math.min(380, innerWidth * 0.3) / 2 : 0;
+  camera.setViewOffset(innerWidth, innerHeight, -decal, 0, innerWidth, innerHeight);
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", retailler); retailler();
+
+scene.add(new T.HemisphereLight(0xffffff, 0x2a1a1e, 0.9));
+const soleil = new T.DirectionalLight(0xffffff, 0.6); soleil.position.set(6, 14, 12); scene.add(soleil);
+for (let x = 2; x <= 20; x += 6) { const p = new T.PointLight(0xff2a3a, 0.8, 9, 1.5); p.position.set(x, 3.4, 0.6); scene.add(p); }
+for (let z = 3; z <= 10; z += 6) { const p = new T.PointLight(0xff2a3a, 0.6, 8, 1.5); p.position.set(0.6, 3.4, z); scene.add(p); }
+
+// ------------------------------------------------------------------ les briques
+const M = (c) => new T.MeshLambertMaterial({ color: c });
+const NOIR = M(0x222226), NOIR2 = M(0x313137), CUIR = M(0x17171a), ROUGE = M(0xd3182b), ROUGE2 = M(0x8c0f1b),
+  CHROME = M(0xc9ccd2), GRIS = M(0x55575e), GRIS2 = M(0x46484f), MUR = M(0x18181c), MIROIR = M(0x7d8a96);
+const NEON = new T.MeshBasicMaterial({ color: 0xff2236 }), ECRAN = new T.MeshBasicMaterial({ color: 0xff3a48 });
+const GEO = new T.BoxGeometry(1, 1, 1), BORD = new T.EdgesGeometry(GEO), TRAIT = new T.LineBasicMaterial({ color: 0x4f4f58 });
+const AXE_Z = new T.Vector3(0, 0, 1);
+
+function b(g, mat, x0, y0, z0, x1, y1, z1, bord = true) {
+  const m = new T.Mesh(GEO, mat);
+  m.scale.set(Math.abs(x1 - x0) || 0.001, Math.abs(y1 - y0) || 0.001, Math.abs(z1 - z0) || 0.001);
+  m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  if (bord) m.add(new T.LineSegments(BORD, TRAIT));
+  g.add(m); return m;
+}
+// la même boîte des deux côtés (x et −x)
+function bx(g, mat, x0, y0, z0, x1, y1, z1, bord = true) { b(g, mat, x0, y0, z0, x1, y1, z1, bord); return b(g, mat, -x1, y0, z0, -x0, y1, z1, bord); }
+// une barre entre deux points (câble, bielle, montant penché)
+function barre(g, mat, ep) { const m = new T.Mesh(GEO, mat); m.userData.ep = ep; m.add(new T.LineSegments(BORD, TRAIT)); g.add(m); return m; }
+const _d = new T.Vector3();
+function relier(m, a, c) {
+  _d.subVectors(c, a); const l = _d.length();
+  m.position.copy(a).addScaledVector(_d, 0.5);
+  m.scale.set(m.userData.ep, m.userData.ep, Math.max(l, 0.001));
+  if (l > 1e-6) m.quaternion.setFromUnitVectors(AXE_Z, _d.normalize());
+}
+// un disque / volant / poulie ; renvoie le maillage qui tourne (rotation.y)
+function roue(g, mat, r, ep, x, y, z, axe = "x", seg = 20) {
+  const o = new T.Group(); o.position.set(x, y, z);
+  if (axe === "x") o.rotation.z = Math.PI / 2; if (axe === "z") o.rotation.x = Math.PI / 2;
+  g.add(o);
+  const geo = new T.CylinderGeometry(r, r, ep, seg);
+  const m = new T.Mesh(geo, mat); m.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), TRAIT)); o.add(m);
+  return m;
+}
+const V = (x, y, z) => new T.Vector3(x, y, z);
+function loc(obj, g) { return g.worldToLocal(obj.getWorldPosition(new T.Vector3())); }
+// une pile de plaques ; les nm du haut montent avec la charge
+function pile(g, hx, z0, z1, y0, n, nm) {
+  for (let i = 0; i < n; i++) b(g, i % 2 ? GRIS : GRIS2, -hx, y0 + i * 0.075, z0, hx, y0 + i * 0.075 + 0.068, z1);
+  const ch = new T.Group(); g.add(ch);
+  for (let i = 0; i < nm; i++) b(ch, i === 0 ? ROUGE : GRIS, -hx, y0 + (n + i) * 0.075, z0, hx, y0 + (n + i) * 0.075 + 0.068, z1);
+  ch.userData.haut = y0 + (n + nm) * 0.075; ch.userData.z = (z0 + z1) / 2;
+  return ch;
+}
+function texte(txt, w, h, taille, couleur, fond) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
+  const t = new T.CanvasTexture(c);
+  const dessiner = () => {
+    x.clearRect(0, 0, w, h); if (fond) { x.fillStyle = fond; x.fillRect(0, 0, w, h); }
+    x.font = `${taille}px "Bebas Neue", Impact, sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
+    x.shadowColor = couleur; x.shadowBlur = taille * 0.25; x.fillStyle = couleur; x.fillText(txt, w / 2, h / 2 + taille * 0.04);
+    t.needsUpdate = true;
+  };
+  dessiner(); document.fonts && document.fonts.ready.then(dessiner);
+  return t;
+}
+
+// ------------------------------------------------------------------ la salle
+const LARG = 22, PROF = 12.5;
+(function salle() {
+  const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d");
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { x.fillStyle = (i + j) % 2 ? "#2a2a2f" : "#303036"; x.fillRect(i * 32, j * 32, 32, 32); }
+  for (let n = 0; n < 260; n++) { x.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.14)"; x.fillRect((Math.random() * 64) | 0, (Math.random() * 64) | 0, 1, 1); }
+  x.fillStyle = "rgba(0,0,0,.45)"; for (let i = 0; i <= 2; i++) { x.fillRect(i * 32 - 1, 0, 2, 64); x.fillRect(0, i * 32 - 1, 64, 2); }
+  const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.magFilter = T.NearestFilter; t.repeat.set(LARG / 2, PROF / 2);
+  const sol = new T.Mesh(new T.PlaneGeometry(LARG, PROF), new T.MeshLambertMaterial({ map: t }));
+  sol.rotation.x = -Math.PI / 2; sol.position.set(LARG / 2, 0, PROF / 2); scene.add(sol);
+  b(scene, MUR, 0, 0, -0.3, LARG, 5, 0); b(scene, MUR, -0.3, 0, -0.3, 0, 5, PROF);
+  b(scene, NEON, 0, 3.6, 0, LARG, 3.68, 0.05, false); b(scene, NEON, 0, 3.6, 0, 0.05, 3.68, PROF, false);
+  b(scene, ROUGE2, 0, 0, 0, LARG, 0.22, 0.05); b(scene, ROUGE2, 0, 0, 0, 0.05, 0.22, PROF);
+  for (let z = 0.6; z < PROF - 1; z += 2.4) { b(scene, MIROIR, 0, 0.5, z, 0.05, 3.1, z + 2.2, false); b(scene, NOIR, 0, 0.45, z - 0.05, 0.07, 0.5, z + 2.25); }
+  // la bande rouge au sol entre le cardio et la muscu
+  b(scene, ROUGE2, 0, 0, 5.55, LARG, 0.012, 5.75, false);
+  const enseigne = new T.Mesh(new T.PlaneGeometry(6, 1.3), new T.MeshBasicMaterial({ map: texte("CABANE GYM", 768, 166, 150, "#ff2a3c", "#060607") }));
+  enseigne.position.set(LARG / 2 + 0.3, 2.6, 0.02); scene.add(enseigne);
+  b(scene, NOIR, LARG / 2 + 0.3 - 3.1, 1.9, 0, LARG / 2 + 0.3 + 3.1, 1.95, 0.06); b(scene, NOIR, LARG / 2 + 0.3 - 3.1, 3.25, 0, LARG / 2 + 0.3 + 3.1, 3.3, 0.06);
+})();
+
+// ------------------------------------------------------------------ le joueur (Steve, bras et jambes pliables)
+const PEAU = M(0xc8946c), CHEV = M(0x3b2716), TSHIRT = M(0x2aa0b0), PANT = M(0x3a3f9c), CHAUS = M(0x4a4a4f), BLANC = M(0xffffff), YEUX = M(0x4b3fa0);
+const P = (function joueur() {
+  const root = new T.Group(), pelvis = new T.Group(); root.add(pelvis);
+  const torse = new T.Group(); pelvis.add(torse);
+  b(torse, TSHIRT, -0.25, 0, -0.125, 0.25, 0.75, 0.125);
+  const tete = new T.Group(); tete.position.y = 0.75; torse.add(tete);
+  b(tete, PEAU, -0.25, 0, -0.25, 0.25, 0.5, 0.25);
+  b(tete, CHEV, -0.26, 0.38, -0.26, 0.26, 0.52, 0.26); b(tete, CHEV, -0.26, 0.08, -0.26, 0.26, 0.5, -0.18);
+  bx(tete, BLANC, 0.06, 0.2, 0.25, 0.19, 0.27, 0.26, false); bx(tete, YEUX, 0.06, 0.2, 0.251, 0.12, 0.27, 0.262, false);
+  const bras = {}, jambes = {};
+  for (const [k, s] of [["G", 1], ["D", -1]]) {
+    const ep = new T.Group(); ep.position.set(s * 0.375, 0.68, 0); torse.add(ep);
+    b(ep, TSHIRT, -0.125, -0.18, -0.125, 0.125, 0.07, 0.125); b(ep, PEAU, -0.124, -0.375, -0.124, 0.124, -0.18, 0.124);
+    const co = new T.Group(); co.position.y = -0.375; ep.add(co);
+    b(co, PEAU, -0.12, -0.37, -0.12, 0.12, 0, 0.12);
+    const main = new T.Object3D(); main.position.y = -0.33; co.add(main);
+    bras[k] = { epaule: ep, coude: co, main };
+    const ha = new T.Group(); ha.position.set(s * 0.125, 0, 0); pelvis.add(ha);
+    b(ha, PANT, -0.125, -0.375, -0.125, 0.125, 0, 0.125);
+    const ge = new T.Group(); ge.position.y = -0.375; ha.add(ge);
+    b(ge, PANT, -0.12, -0.3, -0.12, 0.12, 0, 0.12); b(ge, CHAUS, -0.125, -0.375, -0.13, 0.125, -0.3, 0.13);
+    const pied = new T.Object3D(); pied.position.y = -0.36; ge.add(pied);
+    jambes[k] = { hanche: ha, genou: ge, pied };
+  }
+  return { root, pelvis, torse, tete, bras, jambes };
+})();
+// o.bascule : allongé vers l'arrière (90 = sur le dos) ; o.buste : penché en avant
+// brasX = [vers l'avant, écarté, coude plié, coude écarté] ; jambeX = [cuisse vers l'avant, genou plié]
+function poser(o) {
+  P.pelvis.rotation.set(-(o.bascule || 0) * DEG, 0, 0);
+  P.torse.rotation.set((o.buste || 0) * DEG, 0, 0);
+  for (const [k, s] of [["G", 1], ["D", -1]]) {
+    const a = o["bras" + k] || [0, 0, 0, 0], br = P.bras[k];
+    br.epaule.rotation.set(-a[0] * DEG, 0, s * (a[1] || 0) * DEG);
+    br.coude.rotation.set(-(a[2] || 0) * DEG, 0, s * (a[3] || 0) * DEG);
+    const l = o["jambe" + k] || [0, 0], j = P.jambes[k];
+    j.hanche.rotation.set(-l[0] * DEG, 0, s * (l[2] || 0) * DEG);
+    j.genou.rotation.set((l[1] || 0) * DEG, 0, 0);
+  }
+}
+const lerpA = (a, c, k) => a.map((v, i) => L(v, c[i], k));
+const lerpPose = (a, c, k) => { const o = {}; for (const key in a) o[key] = Array.isArray(a[key]) ? lerpA(a[key], c[key], k) : L(a[key], c[key], k); return o; };
+
+// un haltère, le long de l'axe donné ; plus c'est lourd, plus les têtes sont grosses
+function haltere(kg, axe = "z") {
+  const g = new T.Group();
+  const r = 0.042 + kg * 0.0021, lt = 0.035 + kg * 0.0028;
+  const cote = new T.Group(); g.add(cote);
+  roue(cote, CHROME, 0.022, 0.2, 0, 0, 0, "z", 10);
+  for (const s of [-1, 1]) {
+    roue(cote, NOIR, r, lt, 0, 0, s * (0.1 + lt / 2), "z", 6);
+    roue(cote, ROUGE, r * 1.04, 0.012, 0, 0, s * 0.106, "z", 6);
+  }
+  if (axe === "x") cote.rotation.y = Math.PI / 2;
+  return g;
+}
+const KILOS = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30];
+const kg = (v) => String(v).replace(".", ",");
+
+// ------------------------------------------------------------------ les machines
+// chaque machine : construite face à +Z (le joueur regarde +Z), centrée sur l'origine.
+// animer(r, k, ph) : k = 0 → 1 une répétition (muscu) ; ph = la phase qui tourne (cardio)
+const MACHINES = [
+  {
+    id: "tapis", nom: "Tapis de course", cat: "cardio", taille: "1 × 3 blocs", h: 1.7, x: 2.3, z: 3, rot: Math.PI / 2,
+    desc: "On court sur le tapis qui défile. Le rythme accélère quand on enchaîne.",
+    qte: { mode: "rythme", touches: ["Q", "D"], intervalle: 0.48, notes: 16, cadence: 1.4 },
+    gain: { nom: "Vitesse", niv: 1, duree: 90 }, explic: "Q = pied gauche, D = pied droit. Appuie quand la touche passe dans le carré rouge. 3 ratés et tu tombes du tapis.",
+    construire(g) {
+      b(g, NOIR, -0.5, 0, -1.5, 0.5, 0.22, 1.15);
+      bx(g, ROUGE, 0.5, 0.06, -1.5, 0.51, 0.16, 1.15, false);
+      const c = document.createElement("canvas"); c.width = 8; c.height = 32; const x = c.getContext("2d");
+      x.fillStyle = "#121214"; x.fillRect(0, 0, 8, 32); x.fillStyle = "#26262b"; for (let i = 0; i < 32; i += 4) x.fillRect(0, i, 8, 1);
+      const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.magFilter = T.NearestFilter; t.repeat.set(1, 4);
+      const tapis = b(g, new T.MeshLambertMaterial({ map: t }), -0.42, 0.22, -1.42, 0.42, 0.28, 1.1, false);
+      b(g, NOIR2, -0.5, 0, 1.1, 0.5, 0.42, 1.5);
+      bx(g, NOIR, 0.42, 0.3, 1.25, 0.5, 1.45, 1.35);
+      b(g, NOIR, -0.5, 1.4, 1.12, 0.5, 1.68, 1.45); b(g, ECRAN, -0.32, 1.46, 1.115, 0.32, 1.62, 1.12, false);
+      bx(g, CHROME, 0.44, 1.12, 0.55, 0.5, 1.18, 1.3);
+      return { tapis };
+    },
+    animer(r, k, ph, dt, vit) {
+      const s = Math.sin(ph), c = Math.cos(ph);
+      P.pelvis.position.set(0, 0.28 + 0.74 + 0.05 * Math.abs(Math.sin(ph)), 0.05);
+      poser({ buste: 10, brasG: [-38 * s, 6, 85], brasD: [38 * s, 6, 85], jambeG: [32 * s, 20 + 55 * Math.max(0, -c)], jambeD: [-32 * s, 20 + 55 * Math.max(0, c)] });
+      r.tapis.material.map.offset.y += dt * 1.6 * vit;
+    },
+  },
+  {
+    id: "elliptique", nom: "Vélo elliptique", cat: "cardio", taille: "1 × 2 blocs", h: 1.6, x: 5.4, z: 3, rot: Math.PI / 2,
+    desc: "Les pédales font des ellipses, les bras poussent et tirent les grandes poignées.",
+    qte: { mode: "rythme", touches: ["Q", "D", "Q", "D", "Z"], intervalle: 0.55, notes: 15, cadence: 0.9 },
+    gain: { nom: "Vitesse", niv: 1, duree: 90 }, explic: "Q et D en alternance pour les jambes, et de temps en temps Z pour pousser fort. Appuie quand la touche passe dans le carré rouge.",
+    construire(g) {
+      b(g, NOIR, -0.12, 0, -1, 0.12, 0.14, 0.95);
+      b(g, NOIR, -0.5, 0, -1, 0.5, 0.08, -0.85); b(g, NOIR, -0.45, 0, 0.8, 0.45, 0.08, 0.95);
+      b(g, NOIR2, -0.22, 0.08, -1, 0.22, 0.72, -0.5);
+      const volant = roue(g, ROUGE, 0.25, 0.46, 0, 0.42, -0.75, "x", 16); b(volant, NOIR, -0.24, -0.235, -0.04, 0.24, 0.235, 0.04);
+      b(g, NOIR, -0.1, 0.08, 0.72, 0.1, 1.38, 0.92);
+      b(g, NOIR, -0.3, 1.32, 0.7, 0.3, 1.52, 0.95); b(g, ECRAN, -0.2, 1.37, 0.695, 0.2, 1.48, 0.7, false);
+      return {
+        volant, manche: [barre(g, CHROME, 0.06), barre(g, CHROME, 0.06)],
+        pedale: [b(g, ROUGE, -0.09, -0.02, -0.17, 0.09, 0.02, 0.17), b(g, ROUGE, -0.09, -0.02, -0.17, 0.09, 0.02, 0.17)],
+        bielle: [barre(g, NOIR, 0.07), barre(g, NOIR, 0.07)],
+      };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      const s = Math.sin(ph), c = Math.cos(ph);
+      P.pelvis.position.set(0, 0.3 + 0.75, -0.05);
+      poser({ buste: 6, brasG: [40 - 22 * s, 8, 55], brasD: [40 + 22 * s, 8, 55], jambeG: [16 + 18 * s, 24 + 20 * c], jambeD: [16 - 18 * s, 24 - 20 * c] });
+      g.updateMatrixWorld(true);
+      ["G", "D"].forEach((cote, i) => {
+        const pied = loc(P.jambes[cote].pied, g), main = loc(P.bras[cote].main, g);
+        r.pedale[i].position.copy(pied).add(V(0, -0.04, 0.05));
+        relier(r.bielle[i], r.pedale[i].position, V(cote === "G" ? 0.25 : -0.25, 0.42, -0.75));
+        const pivot = V(cote === "G" ? 0.3 : -0.3, 0.3, 0.78);
+        const haut = main.clone().add(main.clone().sub(pivot).normalize().multiplyScalar(0.2));
+        relier(r.manche[i], pivot, haut);
+      });
+      r.volant.rotation.y += dt * 5 * vit;
+    },
+  },
+  {
+    id: "velo", nom: "Vélo", cat: "cardio", taille: "1 × 2 blocs", h: 1.4, x: 8.2, z: 3, rot: Math.PI / 2,
+    desc: "Vélo d'appartement avec un gros volant rouge. On pédale assis, penché vers le guidon.",
+    qte: { mode: "rythme", touches: ["Q", "D"], intervalle: 0.42, notes: 18, cadence: 1.1 },
+    gain: { nom: "Vitesse", niv: 1, duree: 90 }, explic: "Q et D en alternance, vite. Appuie quand la touche passe dans le carré rouge.",
+    construire(g) {
+      b(g, NOIR, -0.45, 0, -0.95, 0.45, 0.08, -0.8); b(g, NOIR, -0.45, 0, 0.75, 0.45, 0.08, 0.9); b(g, NOIR, -0.08, 0, -0.9, 0.08, 0.12, 0.85);
+      b(g, NOIR, -0.06, 0.1, -0.62, 0.06, 0.9, -0.5);
+      b(g, CUIR, -0.17, 0.9, -0.75, 0.17, 1.0, -0.35); bx(g, ROUGE, 0.17, 0.92, -0.74, 0.175, 0.97, -0.36, false);
+      relier(barre(g, NOIR, 0.14), V(0, 0.1, 0.8), V(0, 1.15, 0.5));
+      const volant = roue(g, ROUGE, 0.32, 0.08, 0, 0.45, 0.56, "x"); b(volant, NOIR, -0.3, -0.05, -0.04, 0.3, 0.05, 0.04);
+      roue(g, NOIR, 0.12, 0.1, 0, 0.45, 0.56, "x");
+      b(g, NOIR, -0.32, 1.12, 0.4, 0.32, 1.2, 0.58); bx(g, CUIR, 0.24, 1.11, 0.39, 0.33, 1.21, 0.59);
+      b(g, NOIR, -0.15, 1.2, 0.45, 0.15, 1.36, 0.6); b(g, ECRAN, -0.11, 1.24, 0.445, 0.11, 1.32, 0.45, false);
+      return {
+        volant, pedale: [b(g, ROUGE, -0.08, -0.02, -0.14, 0.08, 0.02, 0.14), b(g, ROUGE, -0.08, -0.02, -0.14, 0.08, 0.02, 0.14)],
+        manivelle: [barre(g, CHROME, 0.05), barre(g, CHROME, 0.05)],
+      };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      const s = Math.sin(ph), c = Math.cos(ph);
+      P.pelvis.position.set(0, 1.0 + 0.125, -0.56);
+      poser({ buste: 30, brasG: [62, 5, 18], brasD: [62, 5, 18], jambeG: [58 + 22 * s, 72 + 32 * c], jambeD: [58 - 22 * s, 72 - 32 * c] });
+      g.updateMatrixWorld(true);
+      const pG = loc(P.jambes.G.pied, g), pD = loc(P.jambes.D.pied, g), centre = pG.clone().add(pD).multiplyScalar(0.5);
+      [pG, pD].forEach((p, i) => { r.pedale[i].position.copy(p).add(V(0, -0.04, 0.04)); relier(r.manivelle[i], centre, r.pedale[i].position); });
+      r.volant.rotation.y += dt * 9 * vit;
+    },
+  },
+  {
+    id: "rameur", nom: "Rameur", cat: "cardio", taille: "1 × 3 blocs", h: 1.2, x: 11.6, z: 3, rot: Math.PI / 2,
+    desc: "Assis sur le chariot, on pousse avec les jambes puis on tire la poignée jusqu'au ventre.",
+    qte: { mode: "rythme", touches: ["Z", "S"], intervalle: 0.68, notes: 14, cadence: 0.45 },
+    gain: { nom: "Vitesse", niv: 1, duree: 90 }, explic: "Z = tirer, S = revenir, en alternance. Appuie quand la touche passe dans le carré rouge.",
+    construire(g) {
+      b(g, NOIR, -0.1, 0.18, -1.45, 0.1, 0.26, 1.0);
+      b(g, NOIR, -0.3, 0, -1.5, 0.3, 0.18, -1.35); b(g, NOIR2, -0.32, 0, 0.95, 0.32, 0.1, 1.5);
+      b(g, NOIR, -0.12, 0.1, 0.88, 0.12, 0.32, 1.0);
+      const volant = roue(g, NOIR2, 0.33, 0.44, 0, 0.44, 1.22, "x", 18); b(volant, ROUGE2, -0.3, -0.23, -0.05, 0.3, 0.23, 0.05);
+      roue(g, ROUGE, 0.34, 0.05, 0.2, 0.44, 1.22, "x", 18); roue(g, ROUGE, 0.34, 0.05, -0.2, 0.44, 1.22, "x", 18);
+      bx(g, NOIR, 0.05, 0.14, 0.72, 0.3, 0.5, 0.8); bx(g, ROUGE, 0.05, 0.3, 0.7, 0.3, 0.35, 0.72, false);
+      relier(barre(g, NOIR, 0.06), V(0, 0.6, 1.05), V(0, 0.98, 0.82));
+      b(g, NOIR, -0.15, 0.95, 0.74, 0.15, 1.15, 0.86); b(g, ECRAN, -0.11, 0.99, 0.735, 0.11, 1.11, 0.74, false);
+      const siege = new T.Group(); g.add(siege);
+      b(siege, CUIR, -0.2, 0.26, -0.18, 0.2, 0.36, 0.18); bx(siege, ROUGE, 0.2, 0.28, -0.17, 0.205, 0.33, 0.17, false);
+      const poignee = new T.Group(); g.add(poignee); b(poignee, NOIR, -0.28, -0.03, -0.03, 0.28, 0.03, 0.03);
+      return { volant, siege, poignee, chaine: barre(g, GRIS, 0.02) };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      const u = ((ph / (2 * Math.PI)) % 1 + 1) % 1;
+      const kk = u < 0.4 ? ease(u / 0.4) : 1 - ease((u - 0.4) / 0.6);
+      P.pelvis.position.set(0, 0.36 + 0.125, 0);
+      poser(lerpPose(
+        { buste: 28, brasG: [86, 8, 0], brasD: [86, 8, 0], jambeG: [125, 140], jambeD: [125, 140] },
+        { buste: -22, brasG: [30, 10, 112], brasD: [30, 10, 112], jambeG: [86, 6], jambeD: [86, 6] }, kk));
+      g.updateMatrixWorld(true);
+      const pied = loc(P.jambes.G.pied, g);
+      P.pelvis.position.z += 0.74 - pied.z;
+      r.siege.position.z = P.pelvis.position.z;
+      g.updateMatrixWorld(true);
+      const m = loc(P.bras.G.main, g).add(loc(P.bras.D.main, g)).multiplyScalar(0.5);
+      r.poignee.position.copy(m); relier(r.chaine, m, V(0, 0.44, 0.95));
+      r.volant.rotation.y += dt * (u < 0.4 ? 12 : 5) * vit;
+    },
+  },
+  {
+    id: "presse", nom: "Presse à cuisses", cat: "muscu", taille: "1 × 3 blocs", h: 1.8, x: 15.5, z: 3, rot: Math.PI / 2,
+    desc: "Allongé à moitié, on pousse le chariot chargé de disques rouges avec les jambes.",
+    qte: { mode: "touche", charge: "lourd" }, gain: { nom: "Force", niv: 2, duree: 60 },
+    construire(g) {
+      b(g, NOIR, -0.55, 0, -1.5, 0.55, 0.1, 1.5);
+      const dossier = new T.Group(); dossier.position.set(0, 0.5, -0.55); dossier.rotation.x = -50 * DEG; g.add(dossier);
+      b(dossier, CUIR, -0.3, -0.05, -0.29, 0.3, 0.95, -0.16); b(dossier, CUIR, -0.3, -0.22, -0.29, 0.3, -0.1, 0.3);
+      bx(dossier, ROUGE, 0.3, 0.0, -0.28, 0.305, 0.9, -0.17, false);
+      relier(barre(g, NOIR, 0.12), V(0, 0.1, -0.85), V(0, 0.45, -0.6)); relier(barre(g, NOIR, 0.12), V(0, 0.1, -1.3), V(0, 0.75, -1.15));
+      bx(g, CHROME, 0.33, 0.42, -0.85, 0.37, 0.47, -0.45);
+      const chariot = new T.Group(); g.add(chariot);
+      b(chariot, NOIR, -0.42, -0.42, -0.04, 0.42, 0.42, 0.06); b(chariot, ROUGE, -0.43, -0.43, 0.06, 0.43, 0.43, 0.09);
+      for (const s of [-1, 1]) { relier(barre(chariot, CHROME, 0.06), V(s * 0.42, 0, 0.15), V(s * 0.75, 0, 0.15)); roue(chariot, ROUGE, 0.24, 0.06, s * 0.55, 0, 0.15, "x"); roue(chariot, NOIR, 0.19, 0.06, s * 0.63, 0, 0.15, "x"); }
+      // les rails suivent le chemin des pieds
+      g.add(P.root); const ends = [];
+      for (const kk of [0, 1]) { this.animer({}, kk, 0, 0, 1, g, true); g.updateMatrixWorld(true); ends.push(loc(P.jambes.G.pied, g).add(loc(P.jambes.D.pied, g)).multiplyScalar(0.5)); }
+      g.remove(P.root);
+      const dir = ends[1].clone().sub(ends[0]).normalize();
+      for (const s of [-1, 1]) {
+        const a = ends[0].clone().addScaledVector(dir, -0.25).add(V(s * 0.48, -0.1, 0)), c = ends[1].clone().addScaledVector(dir, 0.55).add(V(s * 0.48, -0.1, 0));
+        relier(barre(g, NOIR, 0.1), a, c); relier(barre(g, NOIR, 0.1), c, V(c.x, 0.1, c.z)); relier(barre(g, NOIR, 0.1), a, V(a.x, 0.1, a.z));
+      }
+      return { chariot, dir };
+    },
+    animer(r, k, ph, dt, vit, g, mesure) {
+      P.pelvis.position.set(0, 0.5, -0.55);
+      poser(lerpPose(
+        { bascule: 50, brasG: [12, 22, 30], brasD: [12, 22, 30], jambeG: [122, 118], jambeD: [122, 118] },
+        { bascule: 50, brasG: [12, 22, 30], brasD: [12, 22, 30], jambeG: [74, 14], jambeD: [74, 14] }, k));
+      if (mesure) return;
+      g.updateMatrixWorld(true);
+      const p = loc(P.jambes.G.pied, g).add(loc(P.jambes.D.pied, g)).multiplyScalar(0.5);
+      r.chariot.position.copy(p).addScaledVector(r.dir, 0.1);
+      r.chariot.quaternion.setFromUnitVectors(AXE_Z, r.dir);
+    },
+  },
+  {
+    id: "tirageV", nom: "Tirage vertical", cat: "muscu", taille: "1 × 2 blocs (2,7 de haut)", h: 2.7, x: 2.3, z: 8.4, rot: Math.PI / 2,
+    desc: "Assis, les genoux bloqués sous le boudin rouge, on tire la grande barre jusqu'à la poitrine.",
+    qte: { mode: "touche", charge: "moyen" }, gain: { nom: "Force", niv: 1, duree: 90 },
+    construire(g) {
+      b(g, NOIR, -0.5, 0, -1, 0.5, 0.08, 1);
+      bx(g, NOIR, 0.33, 0.08, 0.8, 0.45, 2.65, 0.98);
+      b(g, NOIR, -0.45, 2.55, -0.1, 0.45, 2.67, 0.98); bx(g, ROUGE, 0.45, 2.58, -0.08, 0.46, 2.64, 0.96, false);
+      roue(g, GRIS, 0.08, 0.05, 0, 2.48, -0.02, "x"); roue(g, GRIS, 0.08, 0.05, 0, 2.48, 0.89, "x");
+      bx(g, CHROME, 0.2, 0.08, 0.86, 0.23, 2.4, 0.89);
+      const charge = pile(g, 0.28, 0.82, 0.95, 0.1, 9, 5);
+      b(g, NOIR, -0.06, 0.08, -0.43, 0.06, 0.5, -0.33);
+      b(g, CUIR, -0.26, 0.5, -0.62, 0.26, 0.6, -0.16); bx(g, ROUGE, 0.26, 0.52, -0.6, 0.265, 0.57, -0.18, false);
+      b(g, NOIR, -0.06, 0.08, -0.08, 0.06, 0.82, 0.02);
+      roue(g, ROUGE, 0.075, 0.62, 0, 0.92, -0.06, "x", 12);
+      const barreH = new T.Group(); g.add(barreH);
+      b(barreH, CHROME, -0.82, -0.025, -0.025, 0.82, 0.025, 0.025); bx(barreH, CUIR, 0.55, -0.035, -0.035, 0.82, 0.035, 0.035);
+      relier(barre(g, GRIS, 0.02), V(0, 2.5, -0.02), V(0, 2.5, 0.89));
+      return { charge, barreH, cable: barre(g, GRIS, 0.02), cable2: barre(g, GRIS, 0.02) };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      P.pelvis.position.set(0, 0.6 + 0.125, -0.38);
+      poser(lerpPose(
+        { buste: 0, brasG: [0, 165, 0, 0], brasD: [0, 165, 0, 0], jambeG: [90, 90], jambeD: [90, 90] },
+        { buste: -12, brasG: [0, 52, 0, 128], brasD: [0, 52, 0, 128], jambeG: [90, 90], jambeD: [90, 90] }, k));
+      g.updateMatrixWorld(true);
+      const m = loc(P.bras.G.main, g).add(loc(P.bras.D.main, g)).multiplyScalar(0.5);
+      r.barreH.position.copy(m); relier(r.cable, m, V(0, 2.44, -0.02));
+      r.charge.position.y = k * 0.55;
+      relier(r.cable2, V(0, 2.44, 0.89), V(0, r.charge.userData.haut + r.charge.position.y, 0.89));
+    },
+  },
+  {
+    id: "tirageH", nom: "Tirage horizontal", cat: "muscu", taille: "1 × 3 blocs", h: 2.1, x: 6.0, z: 8.4, rot: Math.PI / 2,
+    desc: "Assis, les pieds contre la plaque, on tire la poignée en V jusqu'au ventre en gardant le dos droit.",
+    qte: { mode: "touche", charge: "moyen" }, gain: { nom: "Force", niv: 1, duree: 90 },
+    construire(g) {
+      b(g, NOIR, -0.18, 0, -1.5, 0.18, 0.3, 1.0);
+      b(g, CUIR, -0.25, 0.3, -1.05, 0.25, 0.42, -0.25); bx(g, ROUGE, 0.25, 0.32, -1.04, 0.255, 0.4, -0.26, false);
+      b(g, NOIR, -0.36, 0.1, 0.12, 0.36, 0.62, 0.2); bx(g, ROUGE, 0.05, 0.3, 0.115, 0.36, 0.34, 0.12, false);
+      bx(g, NOIR, 0.33, 0, 1.05, 0.45, 2.05, 1.5); b(g, NOIR, -0.45, 1.95, 1.05, 0.45, 2.07, 1.5);
+      bx(g, ROUGE, 0.45, 1.98, 1.07, 0.46, 2.04, 1.48, false);
+      const charge = pile(g, 0.28, 1.2, 1.36, 0.05, 8, 5);
+      roue(g, GRIS, 0.08, 0.05, 0, 0.6, 1.0, "x"); roue(g, GRIS, 0.08, 0.05, 0, 1.88, 1.28, "x");
+      relier(barre(g, GRIS, 0.02), V(0, 0.6, 1.04), V(0, 0.6, 1.28)); relier(barre(g, GRIS, 0.02), V(0, 0.6, 1.28), V(0, 0.75, 1.28));
+      const poignee = new T.Group(); g.add(poignee); b(poignee, CHROME, -0.16, -0.03, -0.03, 0.16, 0.03, 0.03); bx(poignee, CUIR, 0.08, -0.04, -0.04, 0.17, 0.04, 0.04);
+      return { charge, poignee, cable: barre(g, GRIS, 0.02), cable2: barre(g, GRIS, 0.02) };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      P.pelvis.position.set(0, 0.42 + 0.125, -0.6);
+      poser(lerpPose(
+        { buste: 24, brasG: [80, 6, 0], brasD: [80, 6, 0], jambeG: [80, 12], jambeD: [80, 12] },
+        { buste: -6, brasG: [-18, 8, 100], brasD: [-18, 8, 100], jambeG: [80, 12], jambeD: [80, 12] }, k));
+      g.updateMatrixWorld(true);
+      const m = loc(P.bras.G.main, g).add(loc(P.bras.D.main, g)).multiplyScalar(0.5);
+      r.poignee.position.copy(m); relier(r.cable, m, V(0, 0.6, 0.96));
+      r.charge.position.y = k * 0.5;
+      relier(r.cable2, V(0, 1.84, 1.28), V(0, r.charge.userData.haut + r.charge.position.y, 1.28));
+    },
+  },
+  {
+    id: "banc", nom: "Développé couché", cat: "muscu", taille: "2 × 3 blocs", h: 1.5, x: 9.9, z: 8.4, rot: Math.PI / 2,
+    desc: "Allongé sur le banc, on pousse la barre chargée de disques rouges et noirs. Le rack garde la barre entre deux séries.",
+    qte: { mode: "touche", charge: "lourd" }, gain: { nom: "Force", niv: 2, duree: 60 },
+    construire(g) {
+      b(g, CUIR, -0.2, 0.36, -0.98, 0.2, 0.46, 0.45); bx(g, ROUGE, 0.2, 0.38, -0.97, 0.205, 0.44, 0.44, false);
+      b(g, NOIR, -0.24, 0, -0.9, 0.24, 0.36, -0.8); b(g, NOIR, -0.24, 0, 0.3, 0.24, 0.36, 0.4); b(g, NOIR, -0.06, 0.14, -0.85, 0.06, 0.28, 0.35);
+      b(g, NOIR, -0.72, 0, -1.3, 0.72, 0.08, -1.02); bx(g, NOIR, 0.55, 0.08, -1.2, 0.65, 1.42, -1.1);
+      bx(g, ROUGE, 0.55, 1.12, -1.1, 0.65, 1.18, -0.98); bx(g, ROUGE, 0.55, 1.18, -1.0, 0.65, 1.26, -0.98);
+      for (const s of [-1, 1]) { relier(barre(g, CHROME, 0.04), V(s * 0.65, 0.45, -1.15), V(s * 0.85, 0.45, -1.15)); roue(g, NOIR, 0.17, 0.05, s * 0.72, 0.45, -1.15, "x"); roue(g, ROUGE, 0.22, 0.05, s * 0.78, 0.45, -1.15, "x"); }
+      const barreB = new T.Group(); g.add(barreB);
+      b(barreB, CHROME, -1.0, -0.022, -0.022, 1.0, 0.022, 0.022);
+      for (const s of [-1, 1]) { roue(barreB, ROUGE, 0.23, 0.06, s * 0.72, 0, 0, "x"); roue(barreB, NOIR, 0.18, 0.05, s * 0.78, 0, 0, "x"); roue(barreB, CHROME, 0.04, 0.04, s * 0.83, 0, 0, "x", 10); }
+      return { barreB };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      P.pelvis.position.set(0, 0.46 + 0.125, 0.15);
+      poser(lerpPose(
+        { bascule: 90, brasG: [6, 72, 78], brasD: [6, 72, 78], jambeG: [10, 96], jambeD: [10, 96] },
+        { bascule: 90, brasG: [68, 12, 0], brasD: [68, 12, 0], jambeG: [10, 96], jambeD: [10, 96] }, k));
+      g.updateMatrixWorld(true);
+      const m = loc(P.bras.G.main, g).add(loc(P.bras.D.main, g)).multiplyScalar(0.5);
+      r.barreB.position.copy(m);
+    },
+  },
+  {
+    id: "biceps", nom: "Machine à biceps", cat: "muscu", taille: "1 × 2 blocs", h: 1.5, x: 13.4, z: 8.4, rot: Math.PI / 2,
+    desc: "Les bras posés sur le pupitre penché, on monte la barre en pliant les coudes.",
+    qte: { mode: "touche", charge: "leger" }, gain: { nom: "Force", niv: 1, duree: 60 },
+    construire(g) {
+      b(g, NOIR, -0.45, 0, -0.95, 0.45, 0.08, 0.95);
+      b(g, NOIR, -0.06, 0.08, -0.56, 0.06, 0.55, -0.46);
+      b(g, CUIR, -0.25, 0.55, -0.76, 0.25, 0.65, -0.3); bx(g, ROUGE, 0.25, 0.57, -0.75, 0.255, 0.62, -0.31, false);
+      b(g, NOIR, -0.07, 0.08, 0.0, 0.07, 0.95, 0.12);
+      const pupitre = new T.Group(); pupitre.position.set(0, 1.02, -0.06); pupitre.rotation.x = 0.75; g.add(pupitre);
+      b(pupitre, CUIR, -0.38, -0.05, -0.22, 0.38, 0.05, 0.22); b(pupitre, ROUGE, -0.39, -0.07, -0.23, 0.39, -0.05, 0.23, false);
+      bx(g, NOIR, 0.3, 0.08, 0.6, 0.42, 1.4, 0.86); b(g, NOIR, -0.42, 1.35, 0.6, 0.42, 1.45, 0.86);
+      const charge = pile(g, 0.25, 0.66, 0.8, 0.1, 7, 4);
+      const came = roue(g, ROUGE, 0.12, 0.06, 0.48, 1.0, 0.1, "x", 8);
+      const barreEZ = new T.Group(); g.add(barreEZ);
+      b(barreEZ, CHROME, -0.42, -0.025, -0.025, 0.42, 0.025, 0.025); bx(barreEZ, CUIR, 0.08, -0.035, -0.035, 0.3, 0.035, 0.035);
+      return { charge, came, barreEZ, levier: barre(g, NOIR, 0.06), cable: barre(g, GRIS, 0.02) };
+    },
+    animer(r, k, ph, dt, vit, g) {
+      P.pelvis.position.set(0, 0.65 + 0.125, -0.53);
+      poser(lerpPose(
+        { buste: 22, brasG: [50, 6, 12], brasD: [50, 6, 12], jambeG: [90, 90], jambeD: [90, 90] },
+        { buste: 22, brasG: [50, 6, 140], brasD: [50, 6, 140], jambeG: [90, 90], jambeD: [90, 90] }, k));
+      g.updateMatrixWorld(true);
+      const m = loc(P.bras.G.main, g).add(loc(P.bras.D.main, g)).multiplyScalar(0.5);
+      r.barreEZ.position.copy(m);
+      relier(r.levier, V(0.45, 1.0, 0.1), V(0.45, m.y, m.z));
+      r.came.rotation.y = -k * 2.2;
+      r.charge.position.y = k * 0.4;
+      relier(r.cable, V(0.45, 1.05, 0.2), V(0.2, r.charge.userData.haut + r.charge.position.y, 0.73));
+    },
+  },
+  {
+    id: "halteres", nom: "Haltères", cat: "libre", taille: "3 × 1 blocs (le rack)", h: 1.9, x: 19.4, z: 1.6, rot: 0,
+    desc: "Un rack de 12 paires, de 2,5 kg à 30 kg. On prend une paire (clic droit sur le rack), puis clic droit avec les haltères en main pour faire une série de curls.",
+    qte: { mode: "touche", charge: "kilos" }, gain: null,
+    construire(g) {
+      for (const x of [-1.45, -0.05, 1.35]) b(g, NOIR, x, 0, -0.75, x + 0.1, 0.95, -0.15);
+      b(g, NOIR, -1.45, 0.36, -0.72, 1.45, 0.42, -0.18); b(g, NOIR, -1.45, 0.8, -0.66, 1.45, 0.86, -0.3);
+      b(g, ROUGE, -1.45, 0.36, -0.18, 1.45, 0.42, -0.15, false); b(g, ROUGE, -1.45, 0.8, -0.3, 1.45, 0.86, -0.27, false);
+      const paires = {};
+      KILOS.forEach((v, i) => {
+        const lourd = i >= 6, j = lourd ? 11 - i : i;
+        const x = -1.15 + j * 0.46, y = lourd ? 0.42 : 0.86, z = lourd ? -0.45 : -0.48;
+        const paire = [];
+        for (const s of [-1, 1]) { const h = haltere(v, "z"); const r = 0.042 + v * 0.0021; h.position.set(x + s * 0.11, y + r * 0.87, z); g.add(h); paire.push(h); }
+        paires[v] = paire;
+        const plaque = new T.Mesh(new T.PlaneGeometry(0.34, 0.09), new T.MeshBasicMaterial({ map: texte(kg(v) + " KG", 160, 42, 36, "#ffffff", "#000000") }));
+        plaque.position.set(x, y - 0.03, lourd ? -0.144 : -0.264); g.add(plaque);
+      });
+      const enMain = { G: null, D: null };
+      return { paires, enMain };
+    },
+    animer(r, k, ph, dt, vit, g, mesure, cote) {
+      P.pelvis.position.set(0, 0.75, 0.55);
+      const kG = cote === "G" ? k : 0, kD = cote === "D" ? k : 0;
+      poser({ buste: 0, brasG: [6 + 14 * kG, 8, 10 + 130 * kG], brasD: [6 + 14 * kD, 8, 10 + 130 * kD], jambeG: [0, 0], jambeD: [0, 0, 4] });
+    },
+  },
+];
+
+// ------------------------------------------------------------------ poser les machines dans la salle
+const etiquettes = document.getElementById("etiquettes");
+const bloc = new T.LineBasicMaterial({ color: 0xff2a3c });
+MACHINES.forEach((m, i) => {
+  const g = new T.Group(); g.position.set(m.x, 0, m.z); g.rotation.y = m.rot; g.userData.idx = i; scene.add(g);
+  g.updateMatrixWorld(true);
+  m.g = g; m.r = m.construire(g);
+  m.k = 0; m.ph = 0;
+  // poignées, barres et pédales à leur place de repos (on pose le joueur un instant pour les mesurer)
+  g.add(P.root); m.animer(m.r, 0, 0, 0, 1, g, false, "G"); g.remove(P.root);
+  const e = document.createElement("div"); e.className = "etiquette"; e.textContent = m.nom; e.onclick = () => choisir(i);
+  etiquettes.appendChild(e); m.etiq = e;
+});
+
+// ------------------------------------------------------------------ fiche, liste, choix
+let actuel = -1, kilos = 12.5;
+const fiche = document.getElementById("fiche");
+const listes = { cardio: listeCardio, muscu: listeMuscu, libre: listeLibre };
+MACHINES.forEach((m, i) => { const bt = document.createElement("button"); bt.type = "button"; bt.textContent = m.nom; bt.onclick = () => choisir(i); listes[m.cat].appendChild(bt); m.bouton = bt; });
+
+const CHARGES = { leger: { fenetre: 1.5, combo: 0, nom: "légère — 1,5 s par touche" }, moyen: { fenetre: 1.2, combo: 0, nom: "moyenne — 1,2 s par touche" }, lourd: { fenetre: 0.95, combo: 0.35, nom: "lourde — 0,95 s, parfois 2 touches à la suite" } };
+function chargeHalteres(v) { return { fenetre: +(1.6 - v * 0.03).toFixed(2), combo: v >= 20 ? 0.3 : 0 }; }
+function gainHalteres(v) { return v <= 10 ? { nom: "Force", niv: 1, duree: 45 } : v <= 20 ? { nom: "Force", niv: 1, duree: 90 } : { nom: "Force", niv: 2, duree: 60 }; }
+const gainDe = (m) => (m.id === "halteres" ? gainHalteres(kilos) : m.gain);
+const ROMAIN = ["", "I", "II", "III"];
+const duree = (s) => (s >= 60 ? `${Math.floor(s / 60)} min${s % 60 ? " " + (s % 60) : ""}` : `${s} s`);
+const texteGain = (g) => `${g.nom} ${ROMAIN[g.niv]} pendant ${duree(g.duree)}`;
+
+function remplirFiche() {
+  const m = MACHINES[actuel], g = gainDe(m);
+  let qte, charge;
+  if (m.qte.mode === "rythme") { qte = `En rythme : ${[...new Set(m.qte.touches)].join(" / ")}, ${m.qte.notes} touches`; charge = `une touche toutes les ${String(m.qte.intervalle).replace(".", ",")} s`; }
+  else if (m.id === "halteres") { const c = chargeHalteres(kilos); qte = "Une touche au hasard (Z Q S D), 8 répétitions, un bras puis l'autre"; charge = `${kg(kilos)} kg — ${String(c.fenetre).replace(".", ",")} s par touche${c.combo ? ", parfois 2 touches" : ""}`; }
+  else { qte = "Une touche au hasard (Z Q S D), 8 répétitions"; charge = CHARGES[m.qte.charge].nom; }
+  fiche.innerHTML = `<h2>${m.nom}</h2><p>${m.desc}</p>
+    ${m.id === "halteres" ? `<div id="kilos">${KILOS.map((v) => `<button type="button" data-kg="${v}" class="${v === kilos ? "actif" : ""}">${kg(v)}</button>`).join("")}</div>` : ""}
+    <dl><dt>Taille</dt><dd>${m.taille}</dd><dt>QTE</dt><dd>${qte}</dd><dt>Charge</dt><dd>${charge}</dd>
+    <dt>Réussi</dt><dd class="gain ${g.nom === "Vitesse" ? "vit" : ""}">${texteGain(g)}</dd><dt>Raté</dt><dd>−1 cœur par raté, 3 ratés = on lâche</dd></dl>
+    <button id="monter" type="button">Monter dessus</button>`;
+  document.getElementById("monter").onclick = monter;
+  fiche.querySelectorAll("#kilos button").forEach((bt) => (bt.onclick = () => { kilos = +bt.dataset.kg; prendreHalteres(); remplirFiche(); }));
+}
+
+function prendreHalteres() {
+  const r = MACHINES.find((m) => m.id === "halteres").r;
+  for (const v of KILOS) r.paires[v].forEach((h) => (h.visible = !(actuel >= 0 && MACHINES[actuel].id === "halteres" && v === kilos)));
+  for (const c of ["G", "D"]) { if (r.enMain[c]) r.enMain[c].parent.remove(r.enMain[c]); r.enMain[c] = null; }
+  if (actuel >= 0 && MACHINES[actuel].id === "halteres") for (const c of ["G", "D"]) { const h = haltere(kilos, "x"); P.bras[c].main.add(h); r.enMain[c] = h; }
+}
+
+function centre(m) { return m.g.localToWorld(V(0, m.h * 0.45, 0)); }
+function choisir(i, voler = true) {
+  if (Q.etat === "jeu") return;
+  actuel = i; const m = MACHINES[i];
+  MACHINES.forEach((x, j) => { x.bouton.classList.toggle("actif", j === i); x.etiq.classList.toggle("actif", j === i); });
+  m.g.add(P.root); P.root.visible = true;
+  prendreHalteres(); remplirFiche(); fermerQte();
+  if (voler) { const c = centre(m); allerA(c.clone().add(V(3.4, 2.4, 6.2)), c); }
+}
+
+// ------------------------------------------------------------------ caméra
+let vol = null;
+function allerA(pos, cible) { vol = { t0: maintenant(), p0: camera.position.clone(), c0: controls.target.clone(), p1: pos, c1: cible }; }
+const VUE_ENSEMBLE = [V(11, 12.5, 23.5), V(11, 0.6, 5.6)];
+camera.position.copy(VUE_ENSEMBLE[0]); controls.target.copy(VUE_ENSEMBLE[1]);
+document.getElementById("ensemble").onclick = () => allerA(VUE_ENSEMBLE[0].clone(), VUE_ENSEMBLE[1].clone());
+
+// clic sur une machine dans la scène
+const ray = new T.Raycaster(); let appui = null;
+renderer.domElement.addEventListener("pointerdown", (e) => (appui = [e.clientX, e.clientY]));
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!appui || Math.hypot(e.clientX - appui[0], e.clientY - appui[1]) > 5) return;
+  ray.setFromCamera({ x: (e.clientX / innerWidth) * 2 - 1, y: -(e.clientY / innerHeight) * 2 + 1 }, camera);
+  const hit = ray.intersectObjects(MACHINES.map((m) => m.g), true).find((h) => h.object.isMesh);
+  if (!hit) return;
+  let o = hit.object; while (o && o.userData.idx === undefined) o = o.parent;
+  if (o && o.userData.idx !== actuel) choisir(o.userData.idx);
+});
+
+// ------------------------------------------------------------------ cœurs et effets
+const COEUR = '<svg viewBox="0 0 9 8"><path d="M1 0h2v1h1v1h1V1h1V0h2v1h1v3H8v1H7v1H6v1H5v1H4V7H3V6H2V5H1V4H0V1h1z"/></svg>';
+let coeurs = 10; const effets = []; let recupFin = 0;
+function dessinerCoeurs() { const el = document.getElementById("coeurs"); el.innerHTML = Array.from({ length: 10 }, (_, i) => COEUR.replace("<svg", `<svg class="${i < coeurs ? "plein" : "vide"}"`)).join(""); }
+dessinerCoeurs();
+document.getElementById("soigner").onclick = () => { coeurs = 10; dessinerCoeurs(); };
+function aie() {
+  coeurs = Math.max(0, coeurs - 1); dessinerCoeurs();
+  const el = document.getElementById("coeurs"); el.classList.remove("aie"); void el.offsetWidth; el.classList.add("aie");
+  const f = document.getElementById("flash"); f.classList.add("on"); requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove("on")));
+}
+function dessinerEffets(t) {
+  for (let i = effets.length - 1; i >= 0; i--) if (effets[i].fin <= t) effets.splice(i, 1);
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  let html = effets.map((e) => `<div class="effet plaque ${e.nom === "Vitesse" ? "vitesse" : ""}">${e.nom} ${ROMAIN[e.niv]} <small>${mmss(e.fin - t)}</small></div>`).join("");
+  if (recupFin > t) html += `<div class="effet plaque recup">Récup <small>${mmss(recupFin - t)}</small></div>`;
+  const el = document.getElementById("effets"); if (el.innerHTML !== html) el.innerHTML = html;
+}
+
+// ------------------------------------------------------------------ les QTE
+const Q = { etat: "rien" };
+const $ = (id) => document.getElementById(id);
+const anneau = $("anneau"), TOUR = 2 * Math.PI * 60; anneau.style.strokeDasharray = TOUR;
+
+function fermerQte() { Q.etat = "rien"; $("qte").hidden = true; $("compte").hidden = true; }
+function monter() {
+  const m = MACHINES[actuel];
+  Q.etat = "avant"; $("qte").hidden = false; $("qAvant").hidden = false; $("qJeu").hidden = true; $("qFin").hidden = true;
+  $("qNom").textContent = m.nom; $("qReps").textContent = ""; $("qRates").textContent = "";
+  $("qExplic").textContent = m.explic || `Une touche s'affiche avec un cercle qui se vide : appuie dessus avant la fin. 8 répétitions${m.id === "halteres" ? " (un bras puis l'autre)" : ""}. Raté = −1 cœur, 3 ratés = tu lâches la machine.`;
+  const c = centre(m); allerA(c.clone().add(V(2.2, 1.3, 3.9)), c.clone().add(V(0, -0.2, 0)));
+}
+$("descendre").onclick = () => { fermerQte(); };
+$("go").onclick = () => lancer();
+
+function lancer() {
+  const m = MACHINES[actuel], t = maintenant();
+  Object.assign(Q, { etat: "compte", m, t0: t, debut: t + 2.1, reps: 0, rates: 0, total: 8, vitesse: 1, anim: null, cote: "D" });
+  $("qAvant").hidden = true; $("qJeu").hidden = false; $("qFin").hidden = true; $("qMsg").textContent = ""; $("qMsg").className = "";
+  const rythme = m.qte.mode === "rythme";
+  $("qTouche").hidden = rythme; $("qPiste").hidden = !rythme;
+  $("qPiste").querySelectorAll(".note").forEach((n) => n.remove()); $("qSeq").innerHTML = ""; anneau.style.strokeDashoffset = 0;
+  if (rythme) {
+    Q.total = m.qte.notes;
+    Q.notes = Array.from({ length: m.qte.notes }, (_, i) => {
+      const el = document.createElement("div"); el.className = "note"; el.textContent = m.qte.touches[i % m.qte.touches.length]; $("qPiste").appendChild(el);
+      return { t: Q.debut + 0.4 + i * m.qte.intervalle, touche: el.textContent, el, jugee: false };
+    });
+  } else {
+    Q.charge = m.id === "halteres" ? chargeHalteres(kilos) : CHARGES[m.qte.charge];
+  }
+  compteurs();
+}
+function compteurs() { $("qReps").textContent = `${Q.reps}/${Q.total}`; $("qRates").textContent = Q.rates ? `${Q.rates}/3 ratés` : ""; }
+function message(txt, ok) { const el = $("qMsg"); el.textContent = txt; el.className = ok ? "ok" : "rate"; Q.msgFin = maintenant() + 0.7; }
+
+let derniere = "";
+function nouvelleInvite(t) {
+  const touches = ["Z", "Q", "S", "D"], seq = [];
+  const n = Math.random() < Q.charge.combo ? 2 : 1;
+  for (let i = 0; i < n; i++) { let c; do c = touches[(Math.random() * 4) | 0]; while (c === derniere); seq.push(c); derniere = c; }
+  Q.seq = seq; Q.idx = 0; Q.limite = t + Q.charge.fenetre * (n === 2 ? 1.5 : 1); Q.dureeInv = Q.limite - t; Q.etat = "jeu"; Q.sous = "attente";
+  Q.cote = Q.cote === "G" ? "D" : "G";
+  $("qSeq").innerHTML = seq.map((c) => `<div class="cap ${n === 2 ? "petite" : ""}">${c}</div>`).join("");
+}
+function rate(t) {
+  Q.rates++; aie(); message("RATÉ  −1 ♥", false); compteurs();
+  Q.anim = { t0: t, d: 0.7, ok: false };
+  if (coeurs <= 0) Q.rates = 3;
+}
+function touche(c) {
+  const t = maintenant();
+  if (Q.etat !== "jeu") return;
+  if (Q.m.qte.mode === "rythme") {
+    const n = Q.notes.find((n) => !n.jugee && Math.abs(t - n.t) <= 0.17);
+    if (!n) return;
+    n.jugee = true;
+    if (c === n.touche) { n.el.classList.add("ok"); Q.reps++; Q.vitesse = Math.min(1.8, Q.vitesse + 0.12); message(Math.abs(t - n.t) < 0.07 ? "PARFAIT" : "BIEN", true); compteurs(); }
+    else { n.el.classList.add("rate"); Q.vitesse = 0.6; rate(t); }
+    return;
+  }
+  if (Q.sous !== "attente") return;
+  if (c === Q.seq[Q.idx]) {
+    $("qSeq").children[Q.idx].classList.add("fait"); Q.idx++;
+    if (Q.idx === Q.seq.length) { Q.reps++; compteurs(); message(Q.limite - t > Q.dureeInv * 0.5 ? "PARFAIT" : "BIEN", true); Q.anim = { t0: t, d: 0.85, ok: true }; Q.sous = "anim"; }
+  } else { rate(t); Q.sous = "anim"; }
+}
+function finir(ok) {
+  const m = Q.m, t = maintenant(); Q.etat = "fin";
+  $("qJeu").hidden = true; $("qFin").hidden = false;
+  let titre, texteBas;
+  if (ok) {
+    const g = gainDe(m);
+    if (recupFin > t) { titre = "Série réussie"; texteBas = `Mais tu es encore en récup : pas de nouveau bonus cette fois (plus que ${Math.ceil(recupFin - t)} s).`; }
+    else {
+      titre = "Série réussie"; texteBas = `Tu gagnes <b>${texteGain(g)}</b>. Récup de 2 min avant le prochain bonus.`;
+      const ex = effets.find((e) => e.nom === g.nom); const fin = t + g.duree;
+      if (ex) { ex.niv = Math.max(ex.niv, g.niv); ex.fin = Math.max(ex.fin, fin); } else effets.push({ nom: g.nom, niv: g.niv, fin });
+      recupFin = t + 120;
+    }
+  } else {
+    titre = coeurs <= 0 ? "K.O." : m.id === "tapis" ? "Tu tombes du tapis" : "Série ratée";
+    texteBas = coeurs <= 0 ? "Plus de cœurs. (Dans le jeu, une seule série ne peut pas te tuer : 3 cœurs max.)" : "3 ratés : tu lâches la machine. Pas de bonus.";
+  }
+  $("qFin").innerHTML = `<div class="grand ${ok ? "ok" : "rate"}">${titre}</div><p>${texteBas}</p><div><button type="button" id="encore">Encore une série</button><button type="button" class="second" id="fini">Descendre</button></div>`;
+  $("encore").onclick = () => lancer(); $("fini").onclick = () => fermerQte();
+  if (!ok && m.id === "tapis") Q.chute = t;
+}
+
+addEventListener("keydown", (e) => {
+  const map = { KeyW: "Z", KeyA: "Q", KeyS: "S", KeyD: "D", ArrowUp: "Z", ArrowLeft: "Q", ArrowDown: "S", ArrowRight: "D" };
+  const c = map[e.code]; if (!c || Q.etat !== "jeu") return;
+  e.preventDefault(); touche(c);
+});
+document.querySelectorAll(".pave button").forEach((bt) => bt.addEventListener("pointerdown", (e) => { e.preventDefault(); touche(bt.dataset.t); }));
+
+function majQte(t) {
+  if (Q.etat === "compte") {
+    const reste = Q.debut - t; const el = $("compte");
+    if (reste > 0) { el.hidden = false; el.textContent = reste > 1.4 ? "3" : reste > 0.7 ? "2" : "1"; }
+    else { el.hidden = true; Q.etat = "jeu"; if (Q.m.qte.mode === "touche") nouvelleInvite(t); }
+    return;
+  }
+  if (Q.msgFin && t > Q.msgFin) { $("qMsg").textContent = ""; Q.msgFin = 0; }
+  if (Q.etat !== "jeu") return;
+  if (Q.m.qte.mode === "rythme") {
+    const piste = $("qPiste"), cible = 34 + 4;
+    for (const n of Q.notes) {
+      n.el.style.transform = `translateX(${cible + (n.t - t) * 300}px)`;
+      if (!n.jugee && t > n.t + 0.17) { n.jugee = true; n.el.classList.add("rate"); Q.vitesse = 0.6; rate(t); }
+    }
+    Q.vitesse = L(Q.vitesse, 1, 0.01);
+    if (Q.rates >= 3) return finir(false);
+    if (Q.notes.every((n) => n.jugee)) finir(true);
+    return;
+  }
+  if (Q.sous === "attente") {
+    const u = clamp((Q.limite - t) / Q.dureeInv, 0, 1);
+    anneau.style.strokeDashoffset = TOUR * (1 - u);
+    anneau.style.stroke = u < 0.3 ? "#ff4a5c" : "#e01b2f";
+    if (t > Q.limite) { rate(t); Q.sous = "anim"; }
+  } else if (Q.sous === "anim" && t > Q.anim.t0 + Q.anim.d) {
+    if (Q.rates >= 3) return finir(false);
+    if (Q.reps >= Q.total) return finir(true);
+    nouvelleInvite(t);
+  }
+}
+
+// ------------------------------------------------------------------ la boucle
+const vEtiq = new T.Vector3();
+let tPrec = maintenant();
+function boucle() {
+  const t = maintenant(), dt = Math.min(0.05, t - tPrec); tPrec = t;
+  if (vol) {
+    const u = ease(clamp((t - vol.t0) / 0.9, 0, 1));
+    camera.position.lerpVectors(vol.p0, vol.p1, u); controls.target.lerpVectors(vol.c0, vol.c1, u);
+    if (u >= 1) vol = null;
+  }
+  controls.update();
+  majQte(t);
+  dessinerEffets(t);
+
+  if (actuel >= 0) {
+    const m = MACHINES[actuel], enJeu = Q.etat === "jeu" || Q.etat === "compte" || Q.etat === "fin";
+    let k = 0, vit = 1, cote = "G";
+    if (m.cat === "cardio") {
+      vit = enJeu ? (Q.etat === "fin" ? 0.5 : Q.etat === "compte" ? 0.4 : Q.vitesse) : 1;
+      m.ph += dt * 2 * Math.PI * m.qte.cadence * vit;
+    } else if (enJeu) {
+      cote = Q.cote;
+      if (Q.anim && t < Q.anim.t0 + Q.anim.d) {
+        const u = (t - Q.anim.t0) / Q.anim.d;
+        k = Q.anim.ok ? Math.sin(Math.PI * u) : 0.4 * Math.sin(Math.PI * u) + 0.03 * Math.sin(u * 60);
+      } else if (Q.sous === "attente") k = 0.03 * Math.sin(t * 30) * (1 - clamp((Q.limite - t) / Q.dureeInv, 0, 1));
+    } else {
+      const u = (t % 2.4) / 2.4; k = 0.5 - 0.5 * Math.cos(2 * Math.PI * u); cote = Math.floor(t / 2.4) % 2 ? "G" : "D";
+    }
+    if (window.K_FIGE != null) { k = window.K_FIGE; m.ph = k * 2 * Math.PI; }
+    P.root.position.set(0, 0, 0); P.root.rotation.set(0, 0, 0);
+    m.animer(m.r, k, m.ph, dt, vit, m.g, false, cote);
+    if (Q.chute && Q.etat === "fin" && m.id === "tapis") {
+      const u = clamp((t - Q.chute) / 0.8, 0, 1);
+      P.root.position.set(0, -0.12 * ease(u), -0.9 * ease(u)); P.root.rotation.x = -1.3 * ease(u);
+    } else Q.chute = 0;
+  }
+
+  for (const m of MACHINES) {
+    vEtiq.copy(m.g.position).setY(m.h + 0.5).project(camera);
+    const vis = vEtiq.z < 1 && Math.abs(vEtiq.x) < 1.1 && Math.abs(vEtiq.y) < 1.1;
+    m.etiq.style.display = vis ? "" : "none";
+    if (vis) m.etiq.style.transform = `translate(${((vEtiq.x + 1) / 2) * innerWidth}px, ${((1 - vEtiq.y) / 2) * innerHeight}px) translate(-50%, -100%)`;
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(boucle);
+}
+choisir(MACHINES.findIndex((m) => m.id === "tirageV"), false);
+boucle();
+</script>
+</body>
+</html>

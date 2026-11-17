@@ -80,6 +80,9 @@ public final class GrandesTables {
     }
 
     public static List<BlockPos> parties(BlockPos pos, BlockState etat) {
+        if (etat.getBlock() instanceof fr.cabane.muscu.MachineBlock) {
+            return fr.cabane.muscu.MachineBlock.parties(pos, etat);
+        }
         if (etat.getBlock() instanceof fr.cabane.drogue.Labos.PosteBlock) {
             return fr.cabane.drogue.Labos.PosteBlock.parties(pos, etat);
         }
@@ -93,7 +96,8 @@ public final class GrandesTables {
     public static BlockPos principal(BlockGetter level, BlockPos partie) {
         for (BlockPos p : BlockPos.betweenClosed(partie.offset(-2, -4, -2), partie.offset(2, 0, 2))) {
             BlockState etat = level.getBlockState(p);
-            if ((etat.getBlock() instanceof BlocInteractif || etat.getBlock() instanceof fr.cabane.drogue.Labos.PosteBlock) && parties(p, etat).contains(partie)) {
+            if ((etat.getBlock() instanceof BlocInteractif || etat.getBlock() instanceof fr.cabane.drogue.Labos.PosteBlock
+                    || etat.getBlock() instanceof fr.cabane.muscu.MachineBlock) && parties(p, etat).contains(partie)) {
                 return p.immutable();
             }
         }

@@ -218,6 +218,11 @@ public final class PhotoTour {
         switch (e[1]) {
             // « act eveil » / « act frappe » : la touche Éveil, le clic gauche du pouvoir ; « act vue 0|1|2 » : F5
             // « act avancer 1|0 » : appuyer (ou lâcher) la touche pour avancer
+            // « act muscu ok|rate » : sur une machine de muscu (ou un haltère en main), la série se joue toute seule
+            case "muscu" -> {
+                fr.cabane.client.muscu.ClientMuscu.essai(e[2].equals("ok"));
+                return 2;
+            }
             case "avancer" -> {
                 Minecraft.getInstance().options.keyUp.setDown(e[2].equals("1"));
                 return 2;

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/presse_cuisses"
+    },
+    "facing=east": {
+      "model": "cabane:block/presse_cuisses",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/presse_cuisses",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/presse_cuisses",
+      "y": 270
+    }
+  }
+}

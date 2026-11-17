@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/rameur"
+    },
+    "facing=east": {
+      "model": "cabane:block/rameur",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/rameur",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/rameur",
+      "y": 270
+    }
+  }
+}

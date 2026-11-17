@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/rack_halteres"
+    },
+    "facing=east": {
+      "model": "cabane:block/rack_halteres",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/rack_halteres",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/rack_halteres",
+      "y": 270
+    }
+  }
+}

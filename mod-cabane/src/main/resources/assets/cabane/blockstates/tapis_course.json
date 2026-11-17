@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cabane:block/tapis_course"
+    },
+    "facing=east": {
+      "model": "cabane:block/tapis_course",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cabane:block/tapis_course",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cabane:block/tapis_course",
+      "y": 270
+    }
+  }
+}
