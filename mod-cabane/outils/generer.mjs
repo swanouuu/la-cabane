@@ -9,6 +9,7 @@ import { genererSaiyan } from "./saiyan.mjs";
 import { genererCurios } from "./curios.mjs";
 import { genererEspionnes, sonsEspionnes } from "./espionnes.mjs";
 import { genererMasques } from "./masques.mjs";
+import { genererBulle } from "./bulle.mjs";
 import { genererFastFood } from "./fastfood.mjs";
 import { genererMissions } from "./missions.mjs";
 import { genererForge } from "./forge.mjs";
@@ -499,6 +500,7 @@ genererSaiyan({ ecrire, lang });
 genererCurios({ ecrire });
 genererEspionnes({ ecrire, lang });
 console.log(`Masques ninja : ${genererMasques({ ecrire, lang })} pavés`);
+genererBulle({ ecrire, png, lang });
 genererLabo({ ecrire, png, lang });
 // le Sharingan : ses yeux, la dimension du genjutsu (voir pouvoir/Sharingan.java et docs/sharingan)
 genererSharingan({ ecrire, lang });

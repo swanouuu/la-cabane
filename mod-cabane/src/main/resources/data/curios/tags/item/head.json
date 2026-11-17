@@ -60,6 +60,10 @@
     {
       "id": "cabane:masque_chasseur",
       "required": false
+    },
+    {
+      "id": "cabane:bulle_verre",
+      "required": false
     }
   ]
 }

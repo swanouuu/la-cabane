@@ -14,6 +14,7 @@ public final class ClientMasques {
     public static void onClientSetup(FMLClientSetupEvent event) {
         if (ModList.get().isLoaded("curios")) {
             event.enqueueWork(RenduMasques::enregistrer);
+            event.enqueueWork(RenduBulle::enregistrer);
         }
     }
 

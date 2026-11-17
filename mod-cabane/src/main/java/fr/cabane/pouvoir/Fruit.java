@@ -98,7 +98,8 @@ import org.joml.Vector3f;
  * marchand) : seul l'hôte les donne. Accroupi + clic droit sur un bloc le pose, un fruit en 3D pour le montrer ; clic
  * droit dessus le reprend ; clic droit maintenu le mange : le pouvoir monte en lui pendant 3 s, et il est mis tout seul
  * sur la liste blanche du fruit (niveau 1 ; « lave2 » et « glace2 », avec le niveau 2, seul l'hôte les donne). Ensuite,
- * toujours : l'eau lui fait perdre un demi-cœur par seconde, comme du poison ; et le feu et la lave ne font rien à celui
+ * toujours : l'eau lui fait perdre un demi-cœur par seconde, comme du poison (sauf avec la bulle de verre sur la tête,
+ * {@link fr.cabane.accessoire.Bulle}) ; et le feu et la lave ne font rien à celui
  * de la lave. Éveillé (touche Éveil, 2 minutes puis 2 minutes de repos), sa main gauche se change en lave sous nos yeux
  * (ou la droite, en glace ; voir {@link ClientFruit}) :
  * <ul>
@@ -973,8 +974,8 @@ public final class Fruit {
             if (!est(pouvoir) || joueur.isSpectator()) {
                 continue;
             }
-            // l'eau, pour qui a mangé un fruit : un demi-cœur par seconde, comme du poison
-            if (joueur.isInWater() && !joueur.isCreative() && maintenant % 20 == 0) {
+            // l'eau, pour qui a mangé un fruit : un demi-cœur par seconde, comme du poison (rien avec la bulle de verre sur la tête)
+            if (maintenant % 20 == 0 && !joueur.isCreative() && fr.cabane.accessoire.Bulle.noye(joueur)) {
                 joueur.hurt(new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(EAU)), 1);
             }
             if (lave(pouvoir)) {
@@ -1166,7 +1167,7 @@ public final class Fruit {
     /** Dans l'eau, un fruit du démon ne guérit pas : sinon, le ventre plein, on regagnerait plus vite que l'eau ne prend. */
     @SubscribeEvent
     public static void soin(LivingHealEvent event) {
-        if (event.getEntity() instanceof ServerPlayer joueur && joueur.isInWater() && est(Pouvoirs.pouvoir(joueur))) {
+        if (event.getEntity() instanceof ServerPlayer joueur && est(Pouvoirs.pouvoir(joueur)) && fr.cabane.accessoire.Bulle.noye(joueur)) {
             event.setCanceled(true);
         }
     }

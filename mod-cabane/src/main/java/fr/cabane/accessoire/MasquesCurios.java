@@ -25,8 +25,21 @@ final class MasquesCurios {
     }
 
     static boolean surLaTete(LivingEntity e) {
-        return CuriosApi.getCuriosInventory(e).flatMap(inventaire -> inventaire.findFirstCurio(s -> s.getItem() instanceof Masques.Masque, "head"))
-                .isPresent();
+        return surLaTete(e, Masques.Masque.class);
+    }
+
+    /** La bulle de verre (accessoire/Bulle) est-elle sur la tête ? */
+    static boolean bulle(LivingEntity e) {
+        return surLaTete(e, Bulle.Objet.class);
+    }
+
+    /**
+     * Un objet de cette sorte dans le slot de tête ? (findFirstCurio(filtre, "head") ne trouve rien sur Curios 9.5 : on
+     * passe par findCurios("head"), qui liste bien ce qu'il y a dans le slot.)
+     */
+    private static boolean surLaTete(LivingEntity e, Class<? extends Item> sorte) {
+        return CuriosApi.getCuriosInventory(e).map(inventaire -> inventaire.findCurios("head").stream()
+                .anyMatch(r -> sorte.isInstance(r.stack().getItem()))).orElse(false);
     }
 
     private MasquesCurios() {

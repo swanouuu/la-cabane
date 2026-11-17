@@ -12,7 +12,8 @@ const MASQUES = Object.keys(NOMS_MASQUES).map((nom) => "masque_" + nom);
 /** slot Curios → objets du mod qui y vont. */
 export const SLOTS_CURIOS = {
   // les masques ninja (accessoire/Masques.java) : sur la tête, ou à la ceinture, sur le côté
-  head: [...DETECTEURS, "espionne_lunettes", ...MASQUES],
+  // la bulle de verre (accessoire/Bulle.java) : un fruit du démon ne prend plus l'eau
+  head: [...DETECTEURS, "espionne_lunettes", ...MASQUES, "bulle_verre"],
   queue: ["queue_saiyan"],
   // les gadgets des espionnes (pouvoir/EspionneCurios.java)
   feet: ["espionne_bottes"],

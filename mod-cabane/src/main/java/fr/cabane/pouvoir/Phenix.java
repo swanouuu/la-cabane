@@ -1393,14 +1393,14 @@ public final class Phenix {
             if (!est(Pouvoirs.pouvoir(joueur)) || joueur.isSpectator()) {
                 continue;
             }
-            // l'eau, pour qui a mangé un fruit : un demi-cœur par seconde
-            if (joueur.isInWater() && !joueur.isCreative() && maintenant % 20 == 0) {
+            // l'eau, pour qui a mangé un fruit : un demi-cœur par seconde (rien avec la bulle de verre sur la tête)
+            if (maintenant % 20 == 0 && !joueur.isCreative() && fr.cabane.accessoire.Bulle.noye(joueur)) {
                 joueur.hurt(new DamageSource(joueur.serverLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(Fruit.EAU)), 1);
             }
             int niveau = niveau(joueur), passif = Math.max(niveau, niveauFruit(joueur));
             // ses passifs marchent toujours, éveillé ou pas : il se soigne tout seul (un demi-cœur toutes les 4 s au
             // niveau 1, toutes les 2 s ensuite) et le feu ne lui fait rien
-            if (maintenant % (passif >= 2 ? 40 : 80) == 0 && !joueur.isInWater() && joueur.getHealth() < joueur.getMaxHealth()) {
+            if (maintenant % (passif >= 2 ? 40 : 80) == 0 && joueur.getHealth() < joueur.getMaxHealth() && !fr.cabane.accessoire.Bulle.noye(joueur)) {
                 joueur.heal(1);
             }
             if (joueur.isOnFire()) {
@@ -1487,7 +1487,7 @@ public final class Phenix {
     /** Dans l'eau, un fruit du démon ne guérit pas. */
     @SubscribeEvent
     public static void soin(LivingHealEvent event) {
-        if (event.getEntity() instanceof ServerPlayer joueur && joueur.isInWater() && est(Pouvoirs.pouvoir(joueur))) {
+        if (event.getEntity() instanceof ServerPlayer joueur && est(Pouvoirs.pouvoir(joueur)) && fr.cabane.accessoire.Bulle.noye(joueur)) {
             event.setCanceled(true);
         }
     }
