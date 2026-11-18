@@ -16,6 +16,7 @@ import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.neoforge.event.entity.living.ArmorHurtEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
@@ -32,7 +33,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  * {@link #PLAFOND 50 %} de sa vie à cause du même joueur en {@link #FENETRE 2 s} (2026-11-16 : « quasiment one shot avec
  * une seule attaque » sur une Netherite P4, c'était 80 %). La fenêtre était de 5 s jusqu'au 2026-11-18 (« on peut pas se
  * tuer ») : 2 dégâts/s au plus, autant que la régénération d'une barre de faim pleine. Maintenant 5 dégâts/s au plus, un
- * joueur en pleine forme tient au moins 4 s.</li>
+ * joueur en pleine forme tient au moins 4 s. Les ults ont des plafonds plus hauts (voir {@link #ULT_PAR_COUP}).</li>
  * <li>Entre joueurs, un coup (arme ou pouvoir) n'use l'armure qu'au {@link #USURE quart} de l'usure normale (2026-11-16 :
  * « sinon on détruit trop facilement nos armures ») ; contre les monstres, rien ne change.</li>
  * </ol>
@@ -45,6 +46,13 @@ public final class Equilibrage {
     private static final float ARMURE = 0.5F;
     /** La part de sa vie qu'un joueur peut perdre d'un seul coup, puis à cause du même joueur en 2 s. */
     private static final float PAR_COUP = 0.3F, PLAFOND = 0.5F;
+    /**
+     * Les gros coups (les ults) choquent (2026-11-18 : « les ults faut que ça fasse mal, que ça choque ») : à partir de
+     * {@link #ULT_DEBUT} dégâts d'origine, les deux plafonds montent, jusqu'à {@link #ULT_PAR_COUP 75 %} d'un coup et
+     * {@link #ULT_PLAFOND 85 %} en 2 s à {@link #ULT_PLEIN} et plus. Une ult seule ne tue donc pas quelqu'un en pleine vie,
+     * mais achève un blessé.
+     */
+    private static final float ULT_DEBUT = 8, ULT_PLEIN = 20, ULT_PAR_COUP = 0.75F, ULT_PLAFOND = 0.85F;
     /** La part de l'usure normale que prend l'armure d'un joueur frappé par un autre joueur. */
     public static final float USURE = 0.25F;
     private static final int FENETRE = 2 * 20;
@@ -88,6 +96,19 @@ public final class Equilibrage {
         event.addReductionModifier(DamageContainer.Reduction.ENCHANTMENTS, (c, r) -> r * ARMURE);
     }
 
+    private record Melee(UUID cible, int tick) {
+    }
+
+    /** Le dernier coup d'épée/de poing ordinaire de chaque joueur (le clic gauche de Minecraft). */
+    private static final Map<UUID, Melee> MELEE = new HashMap<>();
+
+    @SubscribeEvent
+    public static void cliqueGauche(AttackEntityEvent event) {
+        if (event.getEntity() instanceof ServerPlayer a) {
+            MELEE.put(a.getUUID(), new Melee(event.getTarget().getUUID(), a.server.getTickCount()));
+        }
+    }
+
     /** Tout à la fin : ce qui va vraiment être retiré de sa vie, armure comprise. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void plafonner(LivingDamageEvent.Pre event) {
@@ -105,7 +126,12 @@ public final class Equilibrage {
             deja += c.degats();
         }
         float max = event.getEntity().getMaxHealth();
-        float degats = Math.min(Math.min(event.getNewDamage(), PAR_COUP * max), Math.max(0, PLAFOND * max - deja));
+        // un coup d'épée ou de poing ordinaire (même critique) garde les petits plafonds : seuls les pouvoirs choquent
+        Melee m = MELEE.get(a.getUUID());
+        boolean melee = m != null && m.tick() == maintenant && m.cible().equals(event.getEntity().getUUID());
+        float k = melee ? 0 : Math.max(0, Math.min(1, (event.getContainer().getOriginalDamage() - ULT_DEBUT) / (ULT_PLEIN - ULT_DEBUT)));
+        float parCoup = PAR_COUP + (ULT_PAR_COUP - PAR_COUP) * k, plafond = PLAFOND + (ULT_PLAFOND - PLAFOND) * k;
+        float degats = Math.min(Math.min(event.getNewDamage(), parCoup * max), Math.max(0, plafond * max - deja));
         event.setNewDamage(degats);
         if (degats > 0) {
             coups.addLast(new Coup(maintenant, degats));
@@ -130,11 +156,13 @@ public final class Equilibrage {
     public static void deconnexion(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID u = event.getEntity().getUUID();
         RECENTS.keySet().removeIf(p -> p.victime().equals(u) || p.attaquant().equals(u));
+        MELEE.remove(u);
     }
 
     @SubscribeEvent
     public static void arret(ServerStoppedEvent event) {
         RECENTS.clear();
+        MELEE.clear();
     }
 
     private Equilibrage() {
