@@ -104,20 +104,21 @@ public final class Cartel {
             COMPOSANTS.registerComponentType("munitions", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
     // ------------------------------------------------------------------ les armes (dans l'onglet du mod)
+    // Nerf du 2026-11-18 (« beaucoup trop fort ») : dégâts ~÷2 et cadence plus lente ; le minigun passe de 26 à 5 cœurs/s.
     private static DeferredItem<ArmeItem> arme(String id, Spec spec) {
         return CabaneItems.ITEMS.register(id, () -> new ArmeItem(new Item.Properties().stacksTo(1), spec));
     }
 
-    public static final DeferredItem<ArmeItem> AK47 = arme("ak47", Spec.balle(3.5F, 3, 72, 30, 50, 1.6F, true, Prise.FUSIL, SON_AK));
-    public static final DeferredItem<ArmeItem> AK47_OR = arme("ak47_or", Spec.balle(4.5F, 3, 72, 30, 50, 1.2F, true, Prise.FUSIL, SON_AK_OR));
-    public static final DeferredItem<ArmeItem> UZI = arme("uzi", Spec.balle(2.2F, 2, 40, 32, 40, 4, true, Prise.FUSIL, SON_UZI));
-    public static final DeferredItem<ArmeItem> MAC10 = arme("mac10", Spec.balle(2.2F, 2, 40, 30, 40, 3.5F, true, Prise.MAIN, SON_MAC10));
-    public static final DeferredItem<ArmeItem> THOMPSON = arme("thompson", Spec.balle(2.6F, 3, 48, 50, 60, 3, true, Prise.FUSIL, SON_THOMPSON));
-    public static final DeferredItem<ArmeItem> DESERT_EAGLE = arme("desert_eagle_or", Spec.balle(8, 10, 64, 7, 35, 0.8F, false, Prise.MAIN, SON_EAGLE));
-    public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(2.6F, 14, 20, 2, 40, 5, false, Prise.FUSIL, SON_CANON).plombs(8));
-    public static final DeferredItem<ArmeItem> BARRETT = arme("barrett", Spec.balle(19, 30, 160, 5, 70, 0.2F, false, Prise.FUSIL, SON_BARRETT).avecLunette());
-    public static final DeferredItem<ArmeItem> M60 = arme("m60", Spec.balle(3.5F, 3, 72, 100, 90, 3, true, Prise.FUSIL, SON_M60).lourde());
-    public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(2.6F, 1, 56, 200, 120, 5, true, Prise.HANCHE, SON_MINIGUN).lourde());
+    public static final DeferredItem<ArmeItem> AK47 = arme("ak47", Spec.balle(2F, 4, 72, 30, 50, 1.6F, true, Prise.FUSIL, SON_AK));
+    public static final DeferredItem<ArmeItem> AK47_OR = arme("ak47_or", Spec.balle(2.5F, 4, 72, 30, 50, 1.2F, true, Prise.FUSIL, SON_AK_OR));
+    public static final DeferredItem<ArmeItem> UZI = arme("uzi", Spec.balle(1.2F, 3, 40, 32, 40, 4, true, Prise.FUSIL, SON_UZI));
+    public static final DeferredItem<ArmeItem> MAC10 = arme("mac10", Spec.balle(1.2F, 3, 40, 30, 40, 3.5F, true, Prise.MAIN, SON_MAC10));
+    public static final DeferredItem<ArmeItem> THOMPSON = arme("thompson", Spec.balle(1.6F, 4, 48, 50, 60, 3, true, Prise.FUSIL, SON_THOMPSON));
+    public static final DeferredItem<ArmeItem> DESERT_EAGLE = arme("desert_eagle_or", Spec.balle(5, 14, 64, 7, 35, 0.8F, false, Prise.MAIN, SON_EAGLE));
+    public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(1.5F, 20, 20, 2, 40, 5, false, Prise.FUSIL, SON_CANON).plombs(8));
+    public static final DeferredItem<ArmeItem> BARRETT = arme("barrett", Spec.balle(12, 40, 160, 5, 70, 0.2F, false, Prise.FUSIL, SON_BARRETT).avecLunette());
+    public static final DeferredItem<ArmeItem> M60 = arme("m60", Spec.balle(2F, 4, 72, 100, 90, 3, true, Prise.FUSIL, SON_M60).lourde());
+    public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(1F, 2, 56, 200, 120, 6, true, Prise.HANCHE, SON_MINIGUN).lourde());
     public static final DeferredItem<ArmeItem> RPG7 = arme("rpg7",
             new Spec(0, 40, 120, 1, 60, 0, 1, false, false, false, Tir.ROQUETTE, 2.9F, Prise.EPAULE, SON_RPG));
     public static final DeferredItem<ArmeItem> M79 = arme("m79",
