@@ -271,9 +271,11 @@ public final class Hachibi4 {
         int maintenant = joueur.server.getTickCount();
         Bete b = BETES.get(joueur.getUUID());
         if (action == ULTI) {
-            // la première fois : le manteau de chakra ; la deuxième (dans le manteau, ou s'il l'a déjà eu) : le Hachibi entier
+            // toujours dans l'ordre : d'abord le manteau de chakra rouge, puis (dans le manteau) le Hachibi entier
+            // (2026-11-18 : « pourquoi pas la forme rouge avant ? » — avant, une fois le manteau déjà pris dans l'éveil, J
+            // sautait direct au géant)
             if (b == null) {
-                if (Manteau.actif(joueur) || Manteau.dejaPris(joueur)) {
+                if (Manteau.actif(joueur)) {
                     commencer(joueur, maintenant);
                 } else {
                     Manteau.commencer(joueur);

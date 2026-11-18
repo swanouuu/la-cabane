@@ -107,10 +107,6 @@ public final class Manteau {
         return ETATS.containsKey(joueur.getUUID());
     }
 
-    static boolean dejaPris(ServerPlayer joueur) {
-        return FAITS.contains(joueur.getUUID());
-    }
-
     private static void message(ServerPlayer joueur, String texte) {
         joueur.displayClientMessage(Component.literal(texte).withStyle(ChatFormatting.RED), true);
     }
@@ -142,7 +138,7 @@ public final class Manteau {
 
     // ================================================================ le début, la fin
 
-    /** La touche de l'ulti, aux huit tentacules, sans manteau : il le prend (une fois par éveil). */
+    /** La touche de l'ulti, aux huit tentacules, sans manteau : il le prend (à chaque fois, avant le géant). */
     static void commencer(ServerPlayer joueur) {
         if (Pouvoirs.niveau(joueur) < 4) {
             message(joueur, "Le manteau de chakra se réveille aux huit tentacules (niveau 4).");
