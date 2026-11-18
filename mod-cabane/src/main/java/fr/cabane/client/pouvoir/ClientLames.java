@@ -19,6 +19,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -546,10 +547,15 @@ public final class ClientLames {
                     premierePersonne(ps, coup, tt[0]);
                 }
                 // grande à l'écran : toutes les lames prennent à peu près la même place, la prise dans la main
+                if (s == Sorte.DAGUE) {
+                    // la dague (2026-11-18 : « pas beau en main, on la voit pas ») : remontée dans l'écran, plus grande,
+                    // la garde dorée visible au-dessus de la main
+                    ps.translate(-0.06F, 0.16F, 0);
+                }
                 ps.mulPose(Axis.ZP.rotationDegrees(-45));
-                ps.translate(0, -0.42F, 0);
-                // (la dague reste une dague : plus petite que les grandes lames)
-                k = (s == Sorte.DAGUE ? 0.75F : 1.3F) / (t[0] + 4);
+                ps.translate(0, s == Sorte.DAGUE ? -0.3F : -0.42F, 0);
+                // (la dague reste une dague : un peu plus petite que les grandes lames)
+                k = (s == Sorte.DAGUE ? 1.05F : 1.3F) / (t[0] + 4);
                 ps.scale(k, k, k);
             } else {
                 ps.mulPose(Axis.ZP.rotationDegrees(-45));
@@ -560,7 +566,8 @@ public final class ClientLames {
             int g = groupe(s, stack, ctx.firstPerson() ? mc.player : null);
             ModeleVent m = modele(s, g);
             if (m != null) {
-                m.dessiner(buffers, ps.last(), lumiere, 1, 1);
+                // la lame du phénix est en flammes : elle brille même dans le noir
+                m.dessiner(buffers, ps.last(), s == Sorte.DAGUE ? LightTexture.FULL_BRIGHT : lumiere, 1, 1);
             }
             if (s == Sorte.KABUTOWARI && ctx == ItemDisplayContext.GUI && modele(s, 1) != null) {
                 ps.translate(6, -2, 0);
