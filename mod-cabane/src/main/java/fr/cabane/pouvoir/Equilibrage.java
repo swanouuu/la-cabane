@@ -29,9 +29,10 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  * 2026-11-16).</li>
  * <li>Ces coups traversent la moitié de l'armure et de ses enchantements de protection.</li>
  * <li>Un seul coup n'enlève jamais plus de {@link #PAR_COUP 30 %} de la vie d'un joueur, et un joueur ne perd jamais plus de
- * {@link #PLAFOND 50 %} de sa vie à cause du même joueur en {@link #FENETRE 5 s} (2026-11-16 : « quasiment one shot avec
- * une seule attaque » sur une Netherite P4, c'était 80 %) : il faut au moins une dizaine de secondes pour tuer quelqu'un en
- * pleine forme.</li>
+ * {@link #PLAFOND 50 %} de sa vie à cause du même joueur en {@link #FENETRE 2 s} (2026-11-16 : « quasiment one shot avec
+ * une seule attaque » sur une Netherite P4, c'était 80 %). La fenêtre était de 5 s jusqu'au 2026-11-18 (« on peut pas se
+ * tuer ») : 2 dégâts/s au plus, autant que la régénération d'une barre de faim pleine. Maintenant 5 dégâts/s au plus, un
+ * joueur en pleine forme tient au moins 4 s.</li>
  * <li>Entre joueurs, un coup (arme ou pouvoir) n'use l'armure qu'au {@link #USURE quart} de l'usure normale (2026-11-16 :
  * « sinon on détruit trop facilement nos armures ») ; contre les monstres, rien ne change.</li>
  * </ol>
@@ -42,11 +43,11 @@ public final class Equilibrage {
     private static final float PETIT = 1.6F, GROS = 2.0F, DEBUT_GROS = 6, PLEIN_GROS = 20;
     /** La part de l'armure (et de ses enchantements) qui protège encore d'un coup de joueur. */
     private static final float ARMURE = 0.5F;
-    /** La part de sa vie qu'un joueur peut perdre d'un seul coup, puis à cause du même joueur en 5 s. */
+    /** La part de sa vie qu'un joueur peut perdre d'un seul coup, puis à cause du même joueur en 2 s. */
     private static final float PAR_COUP = 0.3F, PLAFOND = 0.5F;
     /** La part de l'usure normale que prend l'armure d'un joueur frappé par un autre joueur. */
     public static final float USURE = 0.25F;
-    private static final int FENETRE = 5 * 20;
+    private static final int FENETRE = 2 * 20;
 
     private record Paire(UUID victime, UUID attaquant) {
     }
@@ -54,7 +55,7 @@ public final class Equilibrage {
     private record Coup(int tick, float degats) {
     }
 
-    /** Ce que chaque joueur a enlevé à chaque autre ces 5 dernières secondes. */
+    /** Ce que chaque joueur a enlevé à chaque autre ces 2 dernières secondes. */
     private static final Map<Paire, ArrayDeque<Coup>> RECENTS = new HashMap<>();
 
     /** Le joueur qui frappe, quelle que soit la cible, ou null (un mob, soi-même, /kill et le vide ne comptent pas). */
