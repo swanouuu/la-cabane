@@ -104,7 +104,7 @@ public final class Cartel {
             COMPOSANTS.registerComponentType("munitions", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
     // ------------------------------------------------------------------ les armes (dans l'onglet du mod)
-    // Nerf du 2026-11-18 (« beaucoup trop fort ») : dégâts ~÷2 et cadence plus lente ; le minigun passe de 26 à 5 cœurs/s.
+    // Nerf du 2026-11-18 (« beaucoup trop fort ») : dégâts ~÷2 et cadence plus lente ; le minigun passe de 26 à 5 cœurs/s, puis (redemandé le même soir) à ~2,7 cœurs/s, plus imprécis, 150 balles.
     private static DeferredItem<ArmeItem> arme(String id, Spec spec) {
         return CabaneItems.ITEMS.register(id, () -> new ArmeItem(new Item.Properties().stacksTo(1), spec));
     }
@@ -118,7 +118,7 @@ public final class Cartel {
     public static final DeferredItem<ArmeItem> CANON_SCIE = arme("canon_scie", Spec.balle(1.5F, 20, 20, 2, 40, 5, false, Prise.FUSIL, SON_CANON).plombs(8));
     public static final DeferredItem<ArmeItem> BARRETT = arme("barrett", Spec.balle(12, 40, 160, 5, 70, 0.2F, false, Prise.FUSIL, SON_BARRETT).avecLunette());
     public static final DeferredItem<ArmeItem> M60 = arme("m60", Spec.balle(2F, 4, 72, 100, 90, 3, true, Prise.FUSIL, SON_M60).lourde());
-    public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(1F, 2, 56, 200, 120, 6, true, Prise.HANCHE, SON_MINIGUN).lourde());
+    public static final DeferredItem<ArmeItem> MINIGUN = arme("minigun", Spec.balle(0.8F, 3, 48, 150, 140, 8, true, Prise.HANCHE, SON_MINIGUN).lourde());
     public static final DeferredItem<ArmeItem> RPG7 = arme("rpg7",
             new Spec(0, 40, 120, 1, 60, 0, 1, false, false, false, Tir.ROQUETTE, 2.9F, Prise.EPAULE, SON_RPG));
     public static final DeferredItem<ArmeItem> M79 = arme("m79",
