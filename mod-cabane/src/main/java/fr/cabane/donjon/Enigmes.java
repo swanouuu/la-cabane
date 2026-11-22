@@ -43,7 +43,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <li>La salle des leviers (aile est) : quatre leviers numérotés ; le code (I et III levés) est gravé au fond d'un
  * cul-de-sac… de l'aile ouest. Chaque levier levé allume son cristal.</li>
  * <li>Une énigme résolue réveille le sceau de sa salle. La porte des sceaux, au sud du carrefour, ne s'ouvre que si
- * quelqu'un se tient sur chacun des deux sceaux en même temps : il faut se séparer.</li>
+ * tous les sceaux du groupe sont éveillés et tenus en même temps : les deux des énigmes, plus un par chasseur au-delà
+ * de deux ({@link Roles}) ; seul, un seul sceau tenu suffit.</li>
  * <li>La grande porte de l'arène ne s'ouvre que quand tous les chasseurs du donjon sont dans l'antichambre ; elle se
  * referme derrière eux quand Ugrak se réveille, et se rouvre quand il est mort (ou rendormi).</li>
  * </ul>
@@ -214,6 +215,7 @@ public final class Enigmes {
         }
         braseros(l);
         leviers(l);
+        Roles.de(TypeDonjon.OGRE).tick(l, chasseurs(l), sceauxOuverts);
         sceaux(l);
         porte(l);
     }
@@ -289,7 +291,7 @@ public final class Enigmes {
         l.playSound(null, s.x, s.y, s.z, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.5F, 0.8F);
         l.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, s.x, s.y + 0.2, s.z, 40, 0.8, 0.2, 0.8, 0.05);
         Boss.annoncer(l, "SYSTÈME", new String[] {texte, braserosResolus && leviersResolus
-                ? "Tenez les deux sceaux en même temps pour ouvrir la porte." : "Il reste l'autre énigme."}, "", 0);
+                ? Roles.de(TypeDonjon.OGRE).suite(true, true) : "Il reste l'autre énigme."}, "", 0);
     }
 
     private static void sceaux(ServerLevel l) {
@@ -307,41 +309,19 @@ public final class Enigmes {
         if (sceauxOuverts) {
             return;
         }
-        boolean ouest = false, est = false;
-        List<ServerPlayer> dessus = new ArrayList<>();
-        for (ServerPlayer p : chasseurs(l)) {
-            boolean o = surSceau(p, DonjonBuilder.SALLE_BRASEROS), e = surSceau(p, DonjonBuilder.SALLE_LEVIERS);
-            ouest |= o;
-            est |= e;
-            if (o || e) {
-                dessus.add(p);
-            }
-        }
-        if (braserosResolus && leviersResolus && ouest && est) {
+        // autant de sceaux que de chasseurs (Roles) : les deux des énigmes, et ceux des grands groupes
+        if (Roles.de(TypeDonjon.OGRE).ouvrir(l, chasseurs(l), sceau(DonjonBuilder.SALLE_BRASEROS), braserosResolus,
+                "Ce sceau dort encore : allumez les braseros dans le bon ordre.", sceau(DonjonBuilder.SALLE_LEVIERS), leviersResolus,
+                "Ce sceau dort encore : trouvez le code des leviers.")) {
             sceauxOuverts = true;
             porteDesSceaux(l, true);
             int z = DonjonBuilder.PORTE_SCEAUX_Z;
             l.playSound(null, 0.5, sol() + 3, z, SoundEvents.IRON_DOOR_OPEN, SoundSource.BLOCKS, 2F, 0.5F);
             l.playSound(null, 0.5, sol() + 3, z, SoundEvents.END_PORTAL_SPAWN, SoundSource.BLOCKS, 0.8F, 1.2F);
             l.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, 0.5, sol() + 4, z + 0.5, 60, 2.5, 2.5, 0.3, 0.03);
-            Boss.annoncer(l, "SYSTÈME", new String[] {"Les deux sceaux répondent.", "La porte des sceaux est ouverte, au sud du carrefour."}, "", 0);
+            Boss.annoncer(l, "SYSTÈME", new String[] {"Tous les sceaux répondent.", "La porte des sceaux est ouverte, au sud du carrefour."}, "", 0);
             for (ServerPlayer p : Boss.joueurs(l, TypeDonjon.OGRE)) {
                 fr.cabane.pnj.Missions.evenement(p, "sceaux");
-            }
-            return;
-        }
-        if (l.getServer().getTickCount() % 20 == 0) {
-            for (ServerPlayer p : dessus) {
-                boolean o = surSceau(p, DonjonBuilder.SALLE_BRASEROS);
-                boolean eveille = o ? braserosResolus : leviersResolus;
-                if (!eveille) {
-                    barre(p, o ? "Ce sceau dort encore : allumez les braseros dans le bon ordre." : "Ce sceau dort encore : trouvez le code des leviers.",
-                            ChatFormatting.GRAY);
-                } else if (!(braserosResolus && leviersResolus)) {
-                    barre(p, "Le sceau est éveillé. Il faut aussi éveiller l'autre.", ChatFormatting.AQUA);
-                } else {
-                    barre(p, "Il faut quelqu'un sur l'autre sceau, en même temps !", ChatFormatting.AQUA);
-                }
             }
         }
     }
@@ -399,6 +379,12 @@ public final class Enigmes {
     }
 
     /** Pour les tests de l'hôte : les deux sceaux comme résolus, et la porte des sceaux ouverte. */
+    /** Pour les tests de l'hôte : les deux énigmes résolues, la porte des sceaux encore fermée (il reste les sceaux). */
+    static void resoudre() {
+        braserosResolus = true;
+        leviersResolus = true;
+    }
+
     static void toutOuvrir(ServerLevel l) {
         braserosResolus = true;
         leviersResolus = true;

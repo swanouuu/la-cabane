@@ -151,6 +151,8 @@ public final class Boss {
                 Epreuves.de(type).reinitialiser(niveau, true);
             }
             Cristaux.restaurer(niveau, type);
+            // les sceaux des grands groupes, les cloches, la course, les pierres d'écho : tout à refaire
+            Roles.de(type).installer(niveau);
         }
         if (data.vaincu(type)) {
             data.setVaincu(type, false);
@@ -279,7 +281,9 @@ public final class Boss {
                 continue;
             }
             Random r = new Random();
-            int n = s.gobelins() + s.brutes();
+            // plus on est, plus il y en a (×0,6 seul, ×1 à trois, ×1,8 à sept)
+            int k = Roles.chasseurs(donjon, type);
+            int brutes = Roles.monstres(s.brutes(), k), n = Roles.monstres(s.gobelins(), k) + brutes;
             for (int i = 0; i < n; i++) {
                 double a = r.nextDouble() * Math.PI * 2, d = Math.sqrt(r.nextDouble()) * s.rayon();
                 double x = s.centre().x + Math.cos(a) * d, z = s.centre().z + Math.sin(a) * d;
@@ -288,7 +292,7 @@ public final class Boss {
                     x = s.centre().x + (i - 1) * 1.6;
                     z = s.centre().z + (i % 2) * 1.5;
                 }
-                poserSbire(donjon, i < s.brutes() ? Donjon.BRUTE.get() : Donjon.GOBELIN.get(), x, y, z, new Vec3(type.x0() + 0.5, y, -20));
+                poserSbire(donjon, i < brutes ? Donjon.BRUTE.get() : Donjon.GOBELIN.get(), x, y, z, new Vec3(type.x0() + 0.5, y, -20));
             }
         }
     }

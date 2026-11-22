@@ -260,6 +260,15 @@ public final class PhotoTour {
                 mc.gameMode.releaseUsingItem(mc.player);
                 return 2;
             }
+            // « act renaitre » : si le joueur de test est mort (même dans la sauvegarde), il réapparaît
+            case "renaitre" -> {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player != null && !mc.player.isAlive()) {
+                    mc.player.respawn();
+                    mc.setScreen(null);
+                }
+                return 40;
+            }
             // « act clic-droit » : un vrai clic droit ; « act sauter 1|0 » : appuyer (ou lâcher) la touche pour sauter
             case "clic-droit" -> {
                 net.minecraft.client.KeyMapping.click(Minecraft.getInstance().options.keyUse.getKey());

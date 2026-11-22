@@ -631,8 +631,8 @@ public final class DonjonBuilder {
         Enigmes.panneau(level, new BlockPos(SALLE_BRASEROS[0] + 2, SOL + 1, SALLE_BRASEROS[1] + Enigmes.DZ_SCEAU), 8, "SCEAU DE", "L'OUEST", "", "");
         Enigmes.panneau(level, new BlockPos(SALLE_LEVIERS[0] - 2, SOL + 1, SALLE_LEVIERS[1] + Enigmes.DZ_SCEAU), 8, "SCEAU DE", "L'EST", "", "");
         // devant la porte des sceaux, et devant la grande porte
-        Enigmes.panneau(level, new BlockPos(-2, SOL + 1, PORTE_SCEAUX_Z - 2), 8, "PORTE DES", "SCEAUX", "Tenez les deux", "en même temps.");
-        Enigmes.panneau(level, new BlockPos(2, SOL + 1, PORTE_SCEAUX_Z - 2), 8, "Deux salles,", "deux énigmes,", "deux sceaux.", "");
+        Enigmes.panneau(level, new BlockPos(-2, SOL + 1, PORTE_SCEAUX_Z - 2), 8, "PORTE DES", "SCEAUX", "Un sceau par", "chasseur.");
+        Enigmes.panneau(level, new BlockPos(2, SOL + 1, PORTE_SCEAUX_Z - 2), 8, "Éveillez-les,", "puis tenez-les", "TOUS en même", "temps.");
         Enigmes.panneau(level, new BlockPos(-3, SOL_BAS + 1, GRANDE_PORTE_Z - 3), 8, "Elle ne s'ouvre", "que devant", "TOUS les", "chasseurs.");
         // les directions, au carrefour
         Enigmes.panneau(level, new BlockPos(-9, SOL + 1, CARREFOUR[1] - 2), 4, "", "<- OUEST", "", "");

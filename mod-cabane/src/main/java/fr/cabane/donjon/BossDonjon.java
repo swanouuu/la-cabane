@@ -338,6 +338,10 @@ public abstract class BossDonjon extends Monster {
             return source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY) && super.hurt(source, degats);
         }
         float d = degats / echellePv() * vulnerabilite(e);
+        // moins on est, plus chaque coup compte (Roles : ×2,5 seul, ×1 à quatre, ×0,75 à six et plus)
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            d *= Roles.forceContreBoss(Roles.chasseurs(sl, typeDonjon()));
+        }
         if (source.getEntity() instanceof Player p) {
             menace.merge(p.getUUID(), degats, Float::sum);
         }

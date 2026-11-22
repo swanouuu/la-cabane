@@ -36,7 +36,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <li>La salle de l'ordre : quatre feux (LUNE, SOLEIL, ÉTOILE, CRÂNE), un bouton devant chacun ; il faut les allumer
  * dans l'ordre gravé dans l'autre aile. Une erreur : tout s'éteint, et des gobelins sortent du sol.</li>
  * <li>La salle du code : quatre leviers I à IV ; seuls certains doivent être levés (le code est dans l'autre aile).</li>
- * <li>La porte des sceaux s'ouvre quand quelqu'un se tient sur chacun des deux sceaux en même temps.</li>
+ * <li>La porte des sceaux s'ouvre quand tous les sceaux du groupe sont éveillés et tenus en même temps : les deux des
+ * énigmes, plus un par chasseur au-delà de deux ({@link Roles}) ; seul, un seul sceau tenu suffit.</li>
  * <li>La grande porte de l'arène attend que tous les chasseurs du donjon soient dans l'antichambre ; elle se referme
  * quand le boss se réveille.</li>
  * </ul>
@@ -123,8 +124,8 @@ public final class Epreuves {
             Enigmes.panneau(l, BlockPos.containing(c.x + 2, PlanDonjon.SOL + 1, c.z), 0, "SCEAU DE", cote(s, plan), "", "");
         }
         int x0 = plan.x0;
-        Enigmes.panneau(l, new BlockPos(x0 - 2, PlanDonjon.SOL + 1, plan.porteSceauxZ - 2), 8, "PORTE DES", "SCEAUX", "Tenez les deux", "en même temps.");
-        Enigmes.panneau(l, new BlockPos(x0 + 2, PlanDonjon.SOL + 1, plan.porteSceauxZ - 2), 8, "Deux ailes,", "deux énigmes,", "deux sceaux.", "Séparez-vous.");
+        Enigmes.panneau(l, new BlockPos(x0 - 2, PlanDonjon.SOL + 1, plan.porteSceauxZ - 2), 8, "PORTE DES", "SCEAUX", "Un sceau par", "chasseur.");
+        Enigmes.panneau(l, new BlockPos(x0 + 2, PlanDonjon.SOL + 1, plan.porteSceauxZ - 2), 8, "Éveillez-les,", "puis tenez-les", "TOUS en même", "temps.");
         Enigmes.panneau(l, new BlockPos(x0 - 3, PlanDonjon.SOL_BAS + 1, plan.grandePorteZ - 3), 8, "Elle ne s'ouvre", "que devant", "TOUS les", "chasseurs.");
         Enigmes.panneau(l, new BlockPos(x0 - 9, PlanDonjon.SOL + 1, plan.carrefour.cz() - 2), 4, "", "<- OUEST", "", "");
         Enigmes.panneau(l, new BlockPos(x0 + 9, PlanDonjon.SOL + 1, plan.carrefour.cz() - 2), 12, "", "EST ->", "", "");
@@ -249,6 +250,7 @@ public final class Epreuves {
                 Epreuves e = de(t);
                 e.ordre(l);
                 e.code(l);
+                Roles.de(t).tick(l, e.chasseurs(l), e.sceauxOuverts);
                 e.sceaux(l);
                 e.porte(l);
             }
@@ -325,7 +327,7 @@ public final class Epreuves {
         l.playSound(null, s.x, s.y, s.z, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.5F, 0.8F);
         l.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, s.x, s.y + 0.2, s.z, 40, 0.8, 0.2, 0.8, 0.05);
         Boss.annoncer(l, type, "SYSTÈME", new String[] {texte, ordreResolu && codeResolu
-                ? "Tenez les deux sceaux en même temps pour ouvrir la porte." : "Il reste l'autre énigme, dans l'autre aile."}, "", 0);
+                ? Roles.de(type).suite(true, true) : "Il reste l'autre énigme, dans l'autre aile."}, "", 0);
     }
 
     private void sceaux(ServerLevel l) {
@@ -342,17 +344,9 @@ public final class Epreuves {
         if (sceauxOuverts) {
             return;
         }
-        boolean surOrdre = false, surCode = false;
-        List<ServerPlayer> dessus = new ArrayList<>();
-        for (ServerPlayer p : chasseurs(l)) {
-            boolean o = surSceau(p, plan.ordre), c = surSceau(p, plan.code);
-            surOrdre |= o;
-            surCode |= c;
-            if (o || c) {
-                dessus.add(p);
-            }
-        }
-        if (ordreResolu && codeResolu && surOrdre && surCode) {
+        // autant de sceaux que de chasseurs (Roles) : les deux des énigmes, et ceux des grands groupes
+        if (Roles.de(type).ouvrir(l, chasseurs(l), plan.sceau(plan.ordre), ordreResolu, "Ce sceau dort encore : allumez les feux dans le bon ordre.",
+                plan.sceau(plan.code), codeResolu, "Ce sceau dort encore : trouvez le code des leviers.")) {
             sceauxOuverts = true;
             porteDesSceaux(l, true);
             double x = plan.x0 + 0.5;
@@ -360,24 +354,9 @@ public final class Epreuves {
             l.playSound(null, x, PlanDonjon.SOL + 3, z, SoundEvents.IRON_DOOR_OPEN, SoundSource.BLOCKS, 2F, 0.5F);
             l.playSound(null, x, PlanDonjon.SOL + 3, z, SoundEvents.END_PORTAL_SPAWN, SoundSource.BLOCKS, 0.8F, 1.2F);
             l.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, PlanDonjon.SOL + 4, z + 0.5, 60, 2.5, 2.5, 0.3, 0.03);
-            Boss.annoncer(l, type, "SYSTÈME", new String[] {"Les deux sceaux répondent.", "La porte des sceaux est ouverte, au sud du carrefour."}, "", 0);
+            Boss.annoncer(l, type, "SYSTÈME", new String[] {"Tous les sceaux répondent.", "La porte des sceaux est ouverte, au sud du carrefour."}, "", 0);
             for (ServerPlayer p : chasseurs(l)) {
                 fr.cabane.pnj.Missions.evenement(p, "sceaux");
-            }
-            return;
-        }
-        if (l.getServer().getTickCount() % 20 == 0) {
-            for (ServerPlayer p : dessus) {
-                boolean o = surSceau(p, plan.ordre);
-                boolean eveille = o ? ordreResolu : codeResolu;
-                if (!eveille) {
-                    barre(p, o ? "Ce sceau dort encore : allumez les feux dans le bon ordre." : "Ce sceau dort encore : trouvez le code des leviers.",
-                            ChatFormatting.GRAY);
-                } else if (!(ordreResolu && codeResolu)) {
-                    barre(p, "Le sceau est éveillé. Il faut aussi éveiller l'autre.", ChatFormatting.AQUA);
-                } else {
-                    barre(p, "Il faut quelqu'un sur l'autre sceau, en même temps !", ChatFormatting.AQUA);
-                }
             }
         }
     }
@@ -429,6 +408,12 @@ public final class Epreuves {
     }
 
     /** Pour les tests de l'hôte : les deux énigmes résolues et la porte des sceaux ouverte. */
+    /** Pour les tests de l'hôte : les deux énigmes résolues, la porte des sceaux encore fermée (il reste les sceaux). */
+    void resoudre() {
+        ordreResolu = true;
+        codeResolu = true;
+    }
+
     void toutOuvrir(ServerLevel l) {
         ordreResolu = true;
         codeResolu = true;

@@ -735,6 +735,33 @@ public final class Donjon {
                             TypeDonjon t = typeArg(ctx);
                             return t == null ? 0 : versBoss(ctx.getSource(), t);
                         })))
+                // pour l'hôte : faire comme si le groupe comptait tant de chasseurs (les sceaux en plus, remis à neuf)
+                .then(Commands.literal("groupe").requires(Donjon::hote)
+                        .then(Commands.argument("chasseurs", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 7)).executes(ctx -> {
+                            ServerLevel donjon = niveau(ctx.getSource().getServer());
+                            ServerPlayer j = ctx.getSource().getPlayer();
+                            TypeDonjon t = j != null && dedans(j) ? TypeDonjon.de(j.getX()) : TypeDonjon.OGRE;
+                            int n = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "chasseurs");
+                            if (donjon != null) {
+                                Roles r = Roles.de(t);
+                                r.installer(donjon);
+                                r.forcer(n);
+                            }
+                            ctx.getSource().sendSuccess(() -> Component.literal(t.nom + " : groupe de " + n + " chasseur(s), sceaux remis à neuf."), true);
+                            return 1;
+                        })))
+                // pour l'hôte : les deux énigmes comme résolues, la porte des sceaux encore fermée
+                .then(Commands.literal("enigmes").requires(Donjon::hote).executes(ctx -> {
+                    ServerPlayer j = ctx.getSource().getPlayer();
+                    TypeDonjon t = j != null && dedans(j) ? TypeDonjon.de(j.getX()) : TypeDonjon.OGRE;
+                    if (t == TypeDonjon.OGRE) {
+                        Enigmes.resoudre();
+                    } else {
+                        Epreuves.de(t).resoudre();
+                    }
+                    ctx.getSource().sendSuccess(() -> Component.literal("Énigmes résolues (il reste les sceaux)."), true);
+                    return 1;
+                }))
                 // pour l'hôte : les énigmes comme résolues et la porte des sceaux ouverte
                 .then(Commands.literal("ouvrir").requires(Donjon::hote).executes(ctx -> {
                     ServerLevel donjon = niveau(ctx.getSource().getServer());
