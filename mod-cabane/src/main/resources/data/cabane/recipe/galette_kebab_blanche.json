@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "isma_kebab",
+  "ingredients": [
+    {
+      "item": "minecraft:wheat"
+    },
+    {
+      "item": "cabane:viande_kebab"
+    },
+    {
+      "item": "cabane:sauce_blanche"
+    }
+  ],
+  "result": {
+    "id": "cabane:galette_kebab",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "sauce": "blanche"
+      }
+    }
+  }
+}

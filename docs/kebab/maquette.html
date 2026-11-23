@@ -1,0 +1,855 @@
+<title>Isma Kebab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Plein écran, de nuit : la maquette au centre, l'enseigne et les zones à gauche, la carte des items à droite. Un seul thème, celui d'une rue à 23 h. */
+:root {
+  --nuit: #0d0f1a; --plaque: #171a2b; --bord: #2d3252; --bord2: #454b75;
+  --jaune: #ffd21f; --rouge: #d9262c; --creme: #fff6e0; --gris: #aab0c8;
+  --enseigne: "Bungee", "Arial Black", Impact, sans-serif; --texte: "Rubik", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--nuit); color: var(--creme); font-family: var(--texte); overflow: hidden; }
+#scene { position: fixed; inset: 0; background: linear-gradient(#070915 0%, #151a37 55%, #3b2742 100%); touch-action: none; }
+#scene canvas { display: block; }
+.plaque { background: color-mix(in srgb, var(--plaque) 93%, transparent); border: 2px solid var(--bord); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--jaune); outline-offset: 2px; }
+
+#panneau {
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; max-height: calc(100% - 100px);
+}
+#bandeau { background: var(--jaune); color: var(--rouge); padding: 8px 12px 6px; flex: none; border-bottom: 3px solid var(--rouge); }
+#bandeau h1 { font: 400 30px/1 var(--enseigne); margin: 0; letter-spacing: 1px; }
+#bandeau p { margin: 2px 0 0; font: 700 12px var(--texte); letter-spacing: 1.5px; text-transform: uppercase; color: #8a1216; }
+#panneau .corps { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+#vues { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: none; }
+#vues button { background: var(--plaque); border: 2px solid var(--bord2); padding: 6px; font-weight: 700; font-size: 13px; }
+#vues button[aria-pressed="true"] { background: var(--jaune); border-color: var(--jaune); color: #2a1406; }
+#resume { font-size: 13px; line-height: 1.45; color: var(--gris); margin: 0; }
+#zones { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; }
+#zones button { text-align: left; background: #20243a; border: 0; padding: 7px 10px; font-size: 13px; line-height: 1.3; }
+#zones button:hover { background: var(--bord2); }
+#zones button.active { background: var(--rouge); }
+#detail { font-size: 13px; line-height: 1.45; margin: 0; }
+#detail:empty { display: none; }
+
+#carte {
+  position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  width: 330px; max-height: calc(100% - 100px); display: flex; flex-direction: column;
+}
+#carte header { padding: 9px 12px; border-bottom: 2px solid var(--bord); display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex: none; }
+#carte h2 { margin: 0; font: 400 18px var(--enseigne); color: var(--jaune); letter-spacing: .5px; }
+#carte header span { font-size: 12px; color: var(--gris); }
+#fermer-carte { display: none; background: none; border: 0; font-size: 13px; color: var(--gris); padding: 2px 4px; }
+#grille { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 10px 12px 6px; flex: none; }
+#grille button { background: #20243a; border: 2px solid transparent; padding: 4px; aspect-ratio: 1; display: grid; place-items: center; }
+#grille button:hover { border-color: var(--bord2); }
+#grille button[aria-pressed="true"] { border-color: var(--jaune); background: #2b2f4a; }
+#grille canvas { width: 100%; max-width: 44px; image-rendering: pixelated; }
+#fiche { padding: 6px 12px 12px; overflow-y: auto; min-height: 0; display: grid; grid-template-columns: 76px 1fr; gap: 4px 12px; align-items: start; }
+#fiche canvas { width: 76px; height: 76px; image-rendering: pixelated; background: #20243a; grid-row: span 3; }
+#fiche h3 { margin: 0; font: 700 17px/1.2 var(--texte); }
+#fiche .type { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--jaune); }
+#fiche .prix { font: 400 15px var(--enseigne); color: var(--jaune); }
+#fiche dl { grid-column: 1 / -1; margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 13px; line-height: 1.4; }
+#fiche dt { color: var(--gris); }
+#fiche dd { margin: 0; min-width: 0; }
+
+#actions {
+  position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
+}
+#actions button { padding: 10px 16px; border: 2px solid var(--bord2); background: var(--plaque); font-weight: 700; font-size: 14px; white-space: nowrap; }
+#entrer { background: var(--rouge) !important; border-color: #ff7a7e !important; }
+#ouvrir-carte { display: none; }
+
+#etiquettes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.etiquette {
+  position: absolute; left: 0; top: 0; pointer-events: auto; background: var(--nuit); border: 1px solid var(--jaune);
+  color: var(--creme); padding: 3px 7px; font-size: 12px; white-space: nowrap; will-change: transform;
+}
+
+#viseur { position: fixed; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; pointer-events: none;
+  background: linear-gradient(#fff,#fff) center/2px 14px no-repeat, linear-gradient(#fff,#fff) center/14px 2px no-repeat; mix-blend-mode: difference; }
+#haut-visite {
+  position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; pointer-events: none;
+}
+#ou { padding: 8px 12px; font: 400 16px var(--enseigne); color: var(--jaune); }
+#aide { padding: 8px 12px; font-size: 12px; line-height: 1.5; color: var(--gris); max-width: 330px; }
+#quitter { pointer-events: auto; padding: 9px 14px; background: var(--rouge); border: 2px solid #ff7a7e; font-weight: 700; font-size: 14px; white-space: nowrap; }
+#message { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 9px 14px;
+  font-size: 14px; max-width: calc(100vw - 32px); text-align: center; }
+#message:empty { display: none; }
+#tactile { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; grid-template-columns: 60px 60px; }
+#tactile button { height: 56px; background: color-mix(in srgb, var(--plaque) 85%, transparent); border: 2px solid var(--bord2); font-weight: 700; font-size: 13px; touch-action: none; }
+#erreur { position: fixed; inset: 0; display: grid; place-items: center; padding-inline: 24px; text-align: center; font-size: 16px; background: var(--nuit); }
+
+@media (max-width: 860px) {
+  #carte { left: max(16px, env(safe-area-inset-left, 0px)); width: auto; top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); max-height: 62%; }
+  #carte:not(.ouverte) { display: none; }
+  #fermer-carte, #ouvrir-carte { display: inline-block !important; }
+  #panneau { max-height: 44%; }
+}
+@media (max-width: 520px) {
+  #bandeau h1 { font-size: 26px; }
+  #actions button { padding: 9px 11px; font-size: 13px; }
+  #aide { display: none; }
+  .etiquette { font-size: 11px; }
+}
+</style>
+
+<div id="scene" aria-label="Maquette 3D du kebab"></div>
+<div id="etiquettes"></div>
+
+<div id="ordinaire">
+  <section id="panneau" class="plaque">
+    <div id="bandeau"><h1>ISMA KEBAB</h1><p>Sur place ou à emporter</p></div>
+    <div class="corps">
+      <div id="vues" role="group" aria-label="Vue"></div>
+      <p id="resume"></p>
+      <nav id="zones" aria-label="Zones"></nav>
+      <p id="detail"></p>
+    </div>
+  </section>
+  <section id="carte" class="plaque" aria-label="Les items">
+    <header><h2>La carte</h2><span>13 items</span><button id="fermer-carte" type="button">Fermer</button></header>
+    <div id="grille"></div>
+    <div id="fiche"></div>
+  </section>
+  <div id="actions">
+    <button id="entrer" type="button">Entrer dans le kebab</button>
+    <button id="noms" type="button" aria-pressed="true">Noms des zones</button>
+    <button id="ouvrir-carte" type="button">La carte</button>
+  </div>
+</div>
+
+<div id="visite" hidden>
+  <div id="viseur"></div>
+  <div id="haut-visite">
+    <div id="ou" class="plaque"></div>
+    <div id="aide" class="plaque">Z Q S D ou flèches pour marcher, glisse pour regarder, clic ou E sur la caisse, les broches ou le frigo.</div>
+    <button id="quitter" type="button">Sortir</button>
+  </div>
+  <div id="message" class="plaque" role="status"></div>
+  <div id="tactile" hidden>
+    <button id="avant" type="button" aria-label="Avancer">Avancer</button>
+    <button id="agir" type="button" aria-label="Actionner">Agir</button>
+    <button id="arriere" type="button" aria-label="Reculer">Reculer</button>
+  </div>
+</div>
+<div id="erreur" hidden>La 3D ne peut pas démarrer sur cet appareil.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+(function () {
+const el = (id) => document.getElementById(id);
+const alea = (s) => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+const rgb = (a) => "rgb(" + a[0] + "," + a[1] + "," + a[2] + ")";
+
+// ================================================================ les items, en 16 x 16 comme dans le jeu
+function px(c, x, y, col) { c.fillStyle = col; c.fillRect(x, y, 1, 1); }
+function rect(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
+function ell(c, cx, cy, rx, ry, f) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const u = (x + .5 - cx) / rx, v = (y + .5 - cy) / ry, d = u * u + v * v;
+    if (d <= 1) { const k = f(x, y, d); if (k) px(c, x, y, k); }
+  }
+}
+// le contour sombre autour de tout ce qui est dessiné, comme les items de Minecraft
+function contour(c, col) {
+  const d = c.getImageData(0, 0, 16, 16).data, plein = (x, y) => x >= 0 && y >= 0 && x < 16 && y < 16 && d[(y * 16 + x) * 4 + 3] > 0;
+  const ajout = [];
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (!plein(x, y) && (plein(x - 1, y) || plein(x + 1, y) || plein(x, y - 1) || plein(x, y + 1))) ajout.push([x, y]);
+  for (const [x, y] of ajout) px(c, x, y, col);
+}
+function grille(c, lignes, pal) { lignes.forEach((l, y) => [...l].forEach((ch, x) => { if (pal[ch]) px(c, x, y, rgb(pal[ch])); })); }
+const VIANDE = ["#8a4a24", "#6e3818", "#a35d2e", "#7c4020"];
+const piocher = (r, t) => t[Math.floor(r() * t.length)];
+
+const DESSINS = {
+  sandwich_kebab(c) {
+    grille(c, [
+      "",
+      "......G...T",
+      "....GTMGOMWTG",
+      "...GMWMMGWMMTG",
+      "..TMMWMMMMWMMMG",
+      ".KBBBBBBBBBBBBK",
+      ".KBsBBBBBsBBBBK",
+      ".KBBBBsBBBBBsBK",
+      ".KPPPPPPPPPPPPK",
+      "..KPrPPrPPrPPK",
+      "..KPPPPPPPPPPK",
+      "...KPrPPrPPrK",
+      "....KPPPPPPK",
+      ".....KKKKKK",
+    ], { G: [96, 176, 56], T: [214, 48, 40], O: [222, 190, 236], M: [140, 78, 40], W: [250, 250, 242], B: [226, 178, 104], s: [248, 230, 180], P: [244, 240, 232], r: [200, 40, 36], K: [70, 40, 20] });
+    contour(c, "#46280f");
+  },
+  galette_kebab(c, r) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const X = x + .5 - 8, Y = y + .5 - 8, a = (X - Y) / Math.SQRT2, p = (X + Y) / Math.SQRT2;
+      if (Math.abs(p) > 2.4 || a < -6.6 || a > 6.2) continue;
+      let col;
+      if (a > 4.4) col = Math.abs(p) > 1.7 ? "#e8c98e" : piocher(r, ["#8c4e28", "#60b038", "#d63028", "#fafaf2", "#784020"]);
+      else if (a < -.8) { const s = ((Math.floor(a * 1.2 + p * .8) % 2) + 2) % 2; col = Math.abs(p) > 1.6 ? "#8d939c" : s ? "#e3e7ec" : "#b9bfc8"; }
+      else col = Math.abs(p) > 1.7 ? "#c99a5a" : (r() < .14 ? "#a8743a" : "#e7c587");
+      px(c, x, y, col);
+    }
+    contour(c, "#46280f");
+  },
+  assiette_kebab(c, r) {
+    ell(c, 8, 9.5, 7.6, 5.4, (x, y, d) => d > .72 ? "#c9ccd3" : "#f4f5f7");
+    for (let i = 0; i < 10; i++) { const x = 3 + Math.floor(r() * 4), y = 7 + Math.floor(r() * 4); px(c, x, y, "#ffe27a"); px(c, x, y + 1, "#f2bd3c"); }
+    ell(c, 10.6, 9.4, 3.1, 2.3, () => piocher(r, VIANDE));
+    for (const [x, y, k] of [[6, 6, "#60b038"], [7, 6, "#4a9a2c"], [8, 5, "#60b038"], [9, 6, "#d63028"], [10, 6, "#60b038"], [8, 6, "#d63028"], [11, 6, "#de9ad8"]]) px(c, x, y, k);
+    ell(c, 7.5, 12.4, 2, 1, () => "#fffdf2");
+    contour(c, "#4d5260");
+  },
+  tacos(c, r) {
+    for (let y = 4; y <= 11; y++) for (let x = 2; x <= 13; x++) {
+      if ((y === 4 || y === 11) && (x === 2 || x === 13)) continue;
+      let k = y === 11 ? "#c58f4a" : "#e3b66d";
+      if (y > 4 && y < 10 && (x + y) % 4 === 0) k = "#a8662c";
+      if (x >= 12 && y >= 5 && y <= 10) k = piocher(r, ["#ffd23f", "#ffd23f", "#8a4a24", "#f2bd3c"]);
+      px(c, x, y, k);
+    }
+    for (const [x, y] of [[12, 12], [12, 13], [13, 12]]) px(c, x, y, "#ffd23f");
+    contour(c, "#4a2a10");
+  },
+  broche(c) {
+    rect(c, 7, 0, 2, 14, "#c3c9d2");
+    for (let y = 2; y <= 12; y++) {
+      const hw = 4.6 - (y - 2) * .2;
+      for (let x = 0; x < 16; x++) {
+        const dx = x + .5 - 8; if (Math.abs(dx) > hw) continue;
+        let k = dx < -hw * .35 ? "#a65c2c" : dx > hw * .45 ? "#5e2e12" : "#8c4a22";
+        if (y % 3 === 0 && dx > -hw * .6) k = "#74391a";
+        px(c, x, y, k);
+      }
+    }
+    rect(c, 3, 1, 10, 1, "#c3c9d2"); rect(c, 5, 13, 6, 1, "#c3c9d2"); rect(c, 4, 14, 8, 1, "#9aa1ab");
+    contour(c, "#2e1a0c");
+  },
+  couteau_kebab(c) {
+    for (let i = 0; i <= 8; i++) { px(c, 6 + i, 9 - i, "#eef1f5"); px(c, 6 + i, 10 - i, "#aeb5bf"); }
+    for (const [x, y] of [[4, 10], [5, 10], [5, 11], [5, 9], [6, 11]]) px(c, x, y, "#5b616b");
+    for (let i = 0; i <= 2; i++) { px(c, 2 + i, 13 - i, "#34343a"); px(c, 2 + i, 14 - i, "#1c1c20"); }
+    contour(c, "#22252b");
+  },
+  viande_kebab(c, r) {
+    for (const [cx, cy] of [[5, 12], [10, 12], [7.5, 10], [12, 10.5], [4.5, 9.5], [9, 8], [6.5, 7.5]]) {
+      const base = piocher(r, VIANDE);
+      ell(c, cx, cy, 2.8, 1.2, (x, y, d) => d > .5 ? "#5a2c12" : base);
+    }
+    contour(c, "#3a1d0c");
+  },
+  pain_turc(c, r) {
+    ell(c, 8, 8.5, 7.2, 5.2, (x, y, d) => d > .7 ? "#b9792f" : d > .45 ? "#d9a04f" : (x + y) % 3 === 0 ? "#c98d42" : "#e8bb6c");
+    for (let i = 0; i < 8; i++) px(c, 4 + Math.floor(r() * 8), 6 + Math.floor(r() * 5), "#fbf3dc");
+    contour(c, "#5a3412");
+  },
+  sauce_blanche(c) { sauce(c, "#f3efe2", "#2f9a4a", "#2f9a4a"); },
+  sauce_samourai(c) { sauce(c, "#e5732b", "#c8231f", "#ffe9a8"); },
+  sauce_algerienne(c) { sauce(c, "#ea9d6d", "#2a7a3a", "#fff3e6"); },
+  ayran(c) {
+    for (let y = 5; y <= 14; y++) { const m = Math.floor((y - 5) / 5); for (let x = 4 + m; x <= 11 - m; x++) px(c, x, y, y >= 8 && y <= 10 ? (y === 9 && x % 2 ? "#e9eefb" : "#2d63c8") : y === 14 ? "#d9dce3" : "#f7f8fb"); }
+    rect(c, 3, 4, 10, 1, "#c9ced6"); rect(c, 3, 3, 10, 1, "#eef1f5"); px(c, 13, 3, "#c9ced6"); px(c, 14, 2, "#c9ced6");
+    contour(c, "#2c3446");
+  },
+  baklava(c) {
+    const losange = (cx, cy, R) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.abs(x + .5 - cx) + Math.abs(y + .5 - cy) * 1.3; if (d > R) continue; px(c, x, y, d > R - 1 ? "#9a5a1c" : y % 2 ? "#e2a64a" : "#c7832c"); } px(c, Math.floor(cx), Math.floor(cy) - 1, "#6cab3a"); px(c, Math.floor(cx) - 1, Math.floor(cy) - 1, "#8bc94e"); };
+    losange(8, 6, 4.2); losange(4.8, 10.5, 4.4); losange(11.2, 10.5, 4.4);
+    contour(c, "#5a3412");
+  },
+};
+function sauce(c, corps, bouchon, etiquette) {
+  rect(c, 7, 1, 2, 2, bouchon); rect(c, 6, 3, 4, 2, bouchon); rect(c, 5, 5, 6, 1, corps); rect(c, 4, 6, 8, 8, corps); rect(c, 5, 14, 6, 1, corps);
+  rect(c, 4, 9, 8, 3, "#fbf7ea"); rect(c, 6, 10, 4, 1, etiquette); rect(c, 5, 6, 1, 3, "rgba(255,255,255,.45)"); rect(c, 5, 12, 1, 2, "rgba(255,255,255,.45)");
+  contour(c, "#3a2418");
+}
+const ITEMS = [
+  { id: "sandwich_kebab", nom: "Sandwich kebab", type: "Plat", prix: 20, effet: "8 de faim, Force I pendant 40 s", recette: "Pain turc + viande de kebab + une sauce", d: "Pain turc, viande, salade tomate oignon, emballé dans son papier." },
+  { id: "galette_kebab", nom: "Galette kebab", type: "Plat", prix: 20, effet: "8 de faim, Vitesse I pendant 40 s", recette: "Galette + viande de kebab + une sauce", d: "Roulée dans l'alu, elle se mange en marchant." },
+  { id: "assiette_kebab", nom: "Assiette kebab", type: "Plat", prix: 30, effet: "11 de faim, Absorption II pendant 45 s", recette: "Viande de kebab ×2 + frites + sauce blanche", d: "Viande, frites, salade, et la sauce à côté." },
+  { id: "tacos", nom: "Tacos", type: "Plat", prix: 28, effet: "12 de faim, Résistance I pendant 45 s, puis Lenteur I 15 s", recette: "Galette + viande de kebab + frites + sauce fromagère", d: "Viande, frites et sauce fromagère dans la galette grillée. Ça cale." },
+  { id: "broche", nom: "Broche", type: "Bloc", prix: 250, effet: "Tourne devant son grill. Un clic avec le couteau donne une viande de kebab", recette: "Vendue au comptoir", d: "La broche du kebab, à poser où tu veux. Elle se recharge toute seule." },
+  { id: "couteau_kebab", nom: "Couteau à kebab", type: "Arme et outil", prix: 60, effet: "Frappe comme une épée en fer, découpe la broche", recette: "Vendu au comptoir", d: "La grande lame du kebabier." },
+  { id: "viande_kebab", nom: "Viande de kebab", type: "Ingrédient", prix: 6, effet: "3 de faim si on la mange seule", recette: "Couteau à kebab sur une broche", d: "Découpée à la broche, encore chaude." },
+  { id: "pain_turc", nom: "Pain turc", type: "Ingrédient", prix: 4, effet: "4 de faim", recette: "Blé ×3 + graines (four)", d: "Bien gonflé, sésame dessus." },
+  { id: "sauce_blanche", nom: "Sauce blanche", type: "Sauce", prix: 3, effet: "Ajoute Régénération I 8 s au plat", recette: "Lait + œuf", d: "La classique." },
+  { id: "sauce_samourai", nom: "Sauce samouraï", type: "Sauce", prix: 3, effet: "Le plat donne Force II au lieu de Force I", recette: "Sauce blanche + piment", d: "Ça pique un peu." },
+  { id: "sauce_algerienne", nom: "Sauce algérienne", type: "Sauce", prix: 3, effet: "Ajoute Hâte I 30 s au plat", recette: "Sauce blanche + oignon", d: "Oignon, poivron, un peu épicée." },
+  { id: "ayran", nom: "Ayran", type: "Boisson", prix: 6, effet: "Retire tous les effets, même Ballonné", recette: "Lait + sel", d: "Yaourt salé bien frais, ça marche comme le lait." },
+  { id: "baklava", nom: "Baklava", type: "Dessert", prix: 10, effet: "4 de faim, Régénération I pendant 10 s", recette: "Blé + miel + pistache", d: "Feuilleté au miel et à la pistache." },
+];
+const IMG = {};
+ITEMS.forEach((it, i) => {
+  const c = document.createElement("canvas"); c.width = c.height = 16; const g = c.getContext("2d");
+  DESSINS[it.id](g, alea(i * 31 + 7)); IMG[it.id] = c;
+});
+function copie(id, taille) { const c = document.createElement("canvas"); c.width = c.height = taille; const g = c.getContext("2d"); g.imageSmoothingEnabled = false; g.drawImage(IMG[id], 0, 0, taille, taille); return c; }
+
+// la carte, à droite
+let itemActif = ITEMS[0];
+const boutonsItems = {};
+for (const it of ITEMS) {
+  const b = document.createElement("button"); b.type = "button"; b.title = it.nom; b.setAttribute("aria-label", it.nom);
+  b.appendChild(copie(it.id, 48)); b.onclick = () => choisirItem(it); el("grille").appendChild(b); boutonsItems[it.id] = b;
+}
+function choisirItem(it) {
+  itemActif = it;
+  for (const k in boutonsItems) boutonsItems[k].setAttribute("aria-pressed", k === it.id ? "true" : "false");
+  const f = el("fiche"); f.textContent = "";
+  f.appendChild(copie(it.id, 64));
+  const ajout = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = txt; f.appendChild(e); return e; };
+  ajout("div", "type", it.type); ajout("h3", "", it.nom); ajout("div", "prix", it.prix + " $");
+  const dl = document.createElement("dl"); f.appendChild(dl);
+  for (const [t, v] of [["Effet", it.effet], ["Recette", it.recette], ["", it.d]]) { const dt = document.createElement("dt"); dt.textContent = t; const dd = document.createElement("dd"); dd.textContent = v; dl.append(dt, dd); }
+}
+choisirItem(ITEMS[0]);
+el("ouvrir-carte").onclick = () => el("carte").classList.add("ouverte");
+el("fermer-carte").onclick = () => el("carte").classList.remove("ouverte");
+
+// ================================================================ la grille de blocs
+const X0 = -10, X1 = 26, Y0 = 0, Y1 = 12, Z0 = -14, Z1 = 20;
+const DX = X1 - X0 + 1, DY = Y1 - Y0 + 1, DZ = Z1 - Z0 + 1, N = DX * DY * DZ;
+const carte = new Uint8Array(N), meta = new Uint8Array(N), lumiere = new Uint8Array(N);
+const idx = (x, y, z) => (x - X0) + (y - Y0) * DX + (z - Z0) * DX * DY;
+const dans = (x, y, z) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1 && z >= Z0 && z <= Z1;
+const CIEL = 8; // de nuit
+
+// ================================================================ les textures, peintes ici en 16 x 16
+const atlas = document.createElement("canvas"); atlas.width = atlas.height = 256;
+const ax = atlas.getContext("2d");
+const TUILES = {}; let nTuiles = 0;
+function teinteHex(hex, d) {
+  const n = parseInt(hex.slice(1), 16), f = (v) => Math.max(0, Math.min(255, Math.round(v + d)));
+  return "rgb(" + f(n >> 16) + "," + f((n >> 8) & 255) + "," + f(n & 255) + ")";
+}
+function tuile(nom, fn) {
+  const i = nTuiles++; TUILES[nom] = i;
+  ax.save(); ax.translate((i % 16) * 16, (i >> 4) * 16); ax.beginPath(); ax.rect(0, 0, 16, 16); ax.clip();
+  fn(ax, alea(i * 97 + 13)); ax.restore();
+}
+const grain = (c, base, amp, r, x0 = 0, y0 = 0, w = 16, h = 16) => {
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { c.fillStyle = teinteHex(base, (r() - .5) * amp); c.fillRect(x, y, 1, 1); }
+};
+const uni = (nom, base, amp) => tuile(nom, (c, r) => grain(c, base, amp, r));
+uni("crepi", "#d6c7a8", 18); uni("rougemur", "#b3262a", 10); uni("inox", "#b9bec6", 7); uni("noir", "#1f2024", 6); uni("bois", "#8a5a32", 14);
+uni("rouge", "#c4262c", 10); uni("blanc", "#eeeeee", 6); uni("asphalte", "#2c2e35", 14); uni("bordure", "#9a9ca3", 10); uni("toit", "#5f5d5a", 28);
+uni("grisclair", "#a7acb5", 8); uni("vertpoub", "#2f6b3a", 10); uni("huile", "#d9a62a", 14); uni("eau", "#6fa6d6", 10);
+uni("saucebl", "#f3efe2", 4); uni("saucesam", "#e5732b", 6); uni("saucealg", "#ea9d6d", 6); uni("ketchup", "#c41f1f", 6);
+tuile("faience", (c, r) => { grain(c, "#f1f2f0", 5, r); c.fillStyle = "#c7cbcc"; for (const v of [0, 8]) { c.fillRect(0, v, 16, 1); c.fillRect(v, 0, 1, 16); } });
+tuile("carrelage", (c, r) => { for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) grain(c, (x + y) % 2 ? "#c9b48e" : "#9c7f5a", 8, r, x * 8, y * 8, 8, 8); });
+tuile("trottoir", (c, r) => { grain(c, "#7d7c7a", 14, r); c.fillStyle = "#5e5d5b"; c.fillRect(0, 0, 16, 1); c.fillRect(0, 0, 1, 16); });
+tuile("ligne", (c, r) => { grain(c, "#2c2e35", 14, r); grain(c, "#e6e6e0", 8, r, 0, 6, 16, 4); });
+tuile("comptoirfront", (c, r) => { grain(c, "#b8232a", 10, r); grain(c, "#ffd21f", 8, r, 0, 3, 16, 2); c.fillStyle = "#d9dde3"; c.fillRect(0, 0, 16, 1); c.fillStyle = "#7d1418"; c.fillRect(0, 15, 16, 1); });
+tuile("frigo", (c, r) => { c.fillStyle = "#1c2230"; c.fillRect(0, 0, 16, 16); for (const y of [1, 6, 11]) { for (let x = 1; x < 15; x += 2) { c.fillStyle = ["#d42a2a", "#f39a1e", "#2f9a4a", "#e9d34a", "#c2185b", "#2b6ad1"][Math.floor(r() * 6)]; c.fillRect(x, y, 2, 4); c.fillStyle = "#d0d4da"; c.fillRect(x, y, 2, 1); } c.fillStyle = "#9aa1ab"; c.fillRect(0, y + 4, 16, 1); } c.fillStyle = "rgba(200,230,255,.28)"; c.fillRect(2, 0, 2, 16); c.fillStyle = "#c3c9d2"; c.fillRect(0, 0, 1, 16); c.fillRect(15, 0, 1, 16); });
+tuile("grill", (c, r) => { grain(c, "#2a2224", 8, r); for (let x = 1; x < 16; x += 3) { for (let y = 0; y < 16; y++) { c.fillStyle = teinteHex(y % 4 < 2 ? "#ff7a1a" : "#ffb02e", (r() - .5) * 40); c.fillRect(x, y, 2, 1); } } });
+tuile("plancha", (c, r) => { grain(c, "#2a2b30", 10, r); c.fillStyle = "#3d3f46"; for (let y = 2; y < 16; y += 4) c.fillRect(0, y, 16, 1); });
+tuile("salade", (c, r) => grain(c, "#5aa83a", 50, r));
+tuile("tomate", (c, r) => { grain(c, "#cf2b22", 26, r); c.fillStyle = "#f4a39a"; for (let i = 0; i < 6; i++) c.fillRect(Math.floor(r() * 15), Math.floor(r() * 15), 1, 1); });
+tuile("oignon", (c, r) => { grain(c, "#e7dcef", 20, r); c.fillStyle = "#b07ac0"; for (let i = 0; i < 10; i++) c.fillRect(Math.floor(r() * 15), Math.floor(r() * 15), 2, 1); });
+tuile("chou", (c, r) => { grain(c, "#7d2a6e", 30, r); c.fillStyle = "#e2c3dc"; for (let i = 0; i < 8; i++) c.fillRect(Math.floor(r() * 15), Math.floor(r() * 15), 2, 1); });
+tuile("pain", (c, r) => { grain(c, "#e0a85a", 16, r); c.fillStyle = "#fbf0cf"; for (let i = 0; i < 9; i++) c.fillRect(Math.floor(r() * 15), Math.floor(r() * 15), 1, 1); });
+tuile("viandetex", (c, r) => grain(c, "#7a3e1e", 30, r));
+tuile("fritesbac", (c, r) => { grain(c, "#5b5e66", 10, r); for (let x = 1; x < 15; x += 2) { c.fillStyle = teinteHex("#f2bd3c", (r() - .5) * 40); c.fillRect(x, 1 + Math.floor(r() * 3), 1, 12); } });
+tuile("rayure", (c) => { for (let x = 0; x < 16; x += 4) { c.fillStyle = "#c8232a"; c.fillRect(x, 0, 2, 16); c.fillStyle = "#f4f1ea"; c.fillRect(x + 2, 0, 2, 16); } });
+tuile("caisson", (c, r) => grain(c, "#ffd21f", 8, r));
+tuile("vitre", (c) => { c.fillStyle = "rgba(150,200,235,.30)"; c.fillRect(0, 0, 16, 16); c.fillStyle = "rgba(255,255,255,.6)"; c.fillRect(0, 0, 16, 1); c.fillRect(0, 15, 16, 1); c.fillRect(0, 0, 1, 16); c.fillRect(15, 0, 1, 16); c.fillRect(4, 4, 1, 1); c.fillRect(5, 3, 1, 1); });
+tuile("lampe", (c) => { c.fillStyle = "#fffaf0"; c.fillRect(0, 0, 16, 16); c.fillStyle = "#f5e2b8"; c.fillRect(0, 0, 16, 1); c.fillRect(0, 15, 16, 1); });
+tuile("neonbleu", (c) => { c.fillStyle = "#1b1f3a"; c.fillRect(0, 0, 16, 16); c.fillStyle = "#7a5cff"; for (const y of [3, 7, 11]) c.fillRect(1, y, 14, 2); c.fillStyle = "#cfc4ff"; for (const y of [3, 7, 11]) c.fillRect(1, y, 14, 1); });
+tuile("ecran", (c) => { c.fillStyle = "#15171d"; c.fillRect(0, 0, 16, 16); c.fillStyle = "#2fbf6a"; c.fillRect(2, 2, 12, 9); c.fillStyle = "#e6ffe9"; c.fillRect(3, 3, 7, 1); c.fillRect(3, 5, 9, 1); c.fillRect(3, 7, 5, 1); });
+tuile("grille", (c, r) => { grain(c, "#3a3a42", 8, r); c.fillStyle = "#101014"; for (let x = 1; x < 16; x += 3) c.fillRect(x, 1, 2, 14); });
+tuile("inoxfrigo", (c, r) => { grain(c, "#c3c8cf", 6, r); c.fillStyle = "#8e939b"; c.fillRect(0, 0, 16, 1); c.fillRect(0, 15, 16, 1); c.fillRect(8, 0, 1, 16); c.fillStyle = "#555a62"; c.fillRect(6, 4, 1, 8); c.fillRect(10, 4, 1, 8); });
+tuile("paillasson", (c, r) => { grain(c, "#5a3a24", 22, r); c.fillStyle = "#7d1418"; c.fillRect(0, 0, 16, 2); c.fillRect(0, 14, 16, 2); });
+
+// ================================================================ les blocs
+const TYPES = [{ nom: "air", solide: false, opaque: false, lum: 0 }], BL = {};
+function bloc(nom, o) { const t = Object.assign({ nom, solide: true, opaque: true, lum: 0, forme: null }, o); if (t.forme) t.opaque = false; BL[nom] = TYPES.length; TYPES.push(t); }
+const plein = (nom, tex, o) => bloc(nom, Object.assign({ tex }, o));
+for (const n of ["crepi", "inox", "noir", "rouge", "blanc", "asphalte", "bordure", "toit", "trottoir", "ligne", "carrelage", "faience"]) plein(n, n);
+// les murs : crépi dehors, faïence dedans, et une bande rouge en haut
+plein("mur_o", { c: "crepi", px: "faience" }); plein("mur_e", { c: "crepi", nx: "faience" }); plein("mur_s", { c: "crepi", pz: "faience" }); plein("mur_n", { c: "crepi", nz: "faience" });
+plein("murh_o", { c: "crepi", px: "rougemur" }); plein("murh_e", { c: "crepi", nx: "rougemur" }); plein("murh_s", { c: "crepi", pz: "rougemur" }); plein("murh_n", { c: "crepi", nz: "rougemur" });
+plein("comptoir", { h: "inox", c: "inox", nz: "comptoirfront" });
+plein("frigo", { c: "inox", nx: "frigo" }, { lum: 9 });
+plein("frigoinox", { c: "inox", nz: "inoxfrigo" });
+plein("caisson", "caisson", { lum: 15 });
+bloc("verre", { tex: "vitre", opaque: false, verre: true });
+const pieds = (h, l) => [[.05, 0, .05, .05 + l, h, .05 + l], [.95 - l, 0, .05, .95, h, .05 + l], [.05, 0, .95 - l, .05 + l, h, .95], [.95 - l, 0, .95 - l, .95, h, .95]];
+const FORMES = {
+  dalleH: () => [[0, .5, 0, 1, 1, 1]], dalleB: () => [[0, 0, 0, 1, .5, 1]], tapis: () => [[0, 0, 0, 1, .0625, 1]],
+  table: () => [[0, .82, 0, 1, 1, 1]].concat(pieds(.82, .1)),
+  chaise: () => [[.2, .42, .2, .8, .52, .8], [.2, .52, .72, .8, 1.05, .8]].concat(pieds(.42, .08).map((b) => [b[0] * .6 + .2, b[1], b[2] * .6 + .2, b[3] * .6 + .2, b[4], b[5] * .6 + .2])),
+  tablette: () => [[0, .9, 0, 1, 1, .55], [.45, 0, .05, .55, .9, .2]],
+  tabouret: () => [[.25, .62, .25, .75, .72, .75, "rouge"], [.45, 0, .45, .55, .62, .55, "inox"], [.3, 0, .3, .7, .05, .7, "inox"]],
+  bacs: () => [[0, 0, 0, 1, .06, 1, "inox"], [.04, .06, .04, .48, .3, .48, "salade"], [.52, .06, .04, .96, .3, .48, "tomate"], [.04, .06, .52, .48, .3, .96, "oignon"], [.52, .06, .52, .96, .3, .96, "chou"]],
+  sauces: () => [[.08, 0, .1, .28, .5, .3, "saucebl"], [.4, 0, .1, .6, .5, .3, "saucesam"], [.72, 0, .1, .92, .5, .3, "saucealg"], [.24, 0, .55, .44, .5, .75, "ketchup"], [.56, 0, .55, .76, .5, .75, "saucebl"]],
+  caisse: () => [[.15, 0, .2, .85, .25, .8, "noir"], [.2, .25, .55, .8, .65, .62, "ecran"], [.3, .25, .2, .7, .32, .5, "grisclair"]],
+  serviettes: () => [[.25, 0, .35, .65, .4, .65, "inox"], [.7, 0, .4, .85, .28, .55, "blanc"]],
+  plancha: () => [[0, 0, 0, 1, .88, 1, "inox"], [.03, .88, .03, .97, .92, .97, "plancha"], [.2, .92, .3, .45, .96, .5, "viandetex"], [.55, .92, .5, .8, .96, .75, "oignon"]],
+  pains: () => [[0, 0, 0, 1, .8, 1, "inox"], [.08, .8, .1, .48, 1, .48, "pain"], [.52, .8, .1, .92, 1, .48, "pain"], [.08, .8, .54, .48, .98, .92, "pain"], [.52, .8, .54, .92, .96, .92, "pain"]],
+  plan: () => [[0, 0, 0, 1, .88, 1, "inox"]],
+  planche: () => [[0, 0, 0, 1, .88, 1, "inox"], [.15, .88, .2, .85, .94, .8, "bois"]],
+  grill: () => [[.05, 0, 0, .95, 1, .22]],
+  socle: () => [[.12, 0, .12, .88, .1, .88, "inox"], [.2, .1, .2, .8, .14, .8, "noir"]],
+  friteuse: () => [[0, 0, 0, 1, .85, 1, "inox"], [.08, .85, .1, .92, .87, .9, "huile"], [.2, .87, .25, .8, 1.02, .75, "fritesbac"], [.45, .87, .02, .55, 1.15, .25, "noir"]],
+  evier: () => [[0, 0, 0, 1, .85, 1, "inox"], [.15, .85, .15, .85, .87, .8, "eau"], [.45, .87, .82, .55, 1.3, .92, "inox"], [.45, 1.2, .6, .55, 1.3, .92, "inox"]],
+  hotte: () => [[0, .35, 0, 1, 1, 1]],
+  plafonnier: () => [[.05, .82, .05, .95, 1, .95]],
+  antimouche: () => [[.15, .35, 0, .85, .75, .22]],
+  tuyau: () => [[.25, 0, .25, .75, 1, .75]], chapeau: () => [[.1, 0, .1, .9, .2, .9], [.25, -.1, .25, .75, 0, .75]],
+  clim: () => [[.05, 0, .05, .95, .85, .95]],
+  poteau: () => [[.42, 0, .42, .58, 1, .58]], lanterne: () => [[.3, .08, .3, .7, .62, .7]],
+  poubelle: () => [[.2, 0, .2, .8, .85, .8], [.15, .85, .15, .85, .95, .85]],
+};
+const forme = (nom, tex, f, o) => bloc(nom, Object.assign({ tex, forme: FORMES[f] }, o));
+forme("auventH", "rayure", "dalleH", { solide: false, plafond: true }); forme("auventB", "rayure", "dalleB", { solide: false, plafond: true });
+forme("tablebois", { h: "bois", c: "noir" }, "table"); forme("tablepl", "blanc", "table"); forme("chaiserouge", "rouge", "chaise"); forme("chaisepl", "blanc", "chaise");
+forme("tablette", "bois", "tablette"); forme("tabouret", "rouge", "tabouret");
+forme("bacs", "inox", "bacs"); forme("sauces", "inox", "sauces"); forme("caisse", "noir", "caisse"); forme("serviettes", "inox", "serviettes");
+forme("plancha", "inox", "plancha"); forme("pains", "inox", "pains"); forme("plan", "inox", "plan"); forme("planche", "inox", "planche");
+forme("grill", "grill", "grill", { lum: 12 }); forme("socle", "inox", "socle"); forme("friteuse", "inox", "friteuse"); forme("evier", "inox", "evier");
+forme("hotte", "inox", "hotte", { lum: 11, plafond: true }); forme("plafonnier", "lampe", "plafonnier", { solide: false, lum: 15, plafond: true });
+forme("antimouche", "neonbleu", "antimouche", { solide: false, lum: 9, plafond: true });
+forme("tuyau", "inox", "tuyau"); forme("chapeau", "inox", "chapeau"); forme("clim", { h: "grille", c: "grisclair" }, "clim");
+forme("poteau", "noir", "poteau", { solide: false }); forme("lanterne", "lampe", "lanterne", { solide: false, lum: 15 });
+forme("poubelle", "vertpoub", "poubelle"); forme("paillasson", "paillasson", "tapis", { solide: false });
+
+function pose(x, y, z, nom, m) { if (!dans(x, y, z)) return; const i = idx(x, y, z); carte[i] = nom ? BL[nom] : 0; meta[i] = m || 0; }
+function zone(x0, y0, z0, x1, y1, z1, nom, m) { for (let z = z0; z <= z1; z++) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) pose(x, y, z, nom, m); }
+const vide = (x0, y0, z0, x1, y1, z1) => zone(x0, y0, z0, x1, y1, z1, null);
+
+// ================================================================ la rue
+zone(X0, 0, Z0, X1, 0, Z1, "trottoir");
+zone(X0, 0, Z0, X1, 0, -8, "asphalte"); for (let x = X0; x <= X1; x++) if (((x - X0) % 5) < 3) pose(x, 0, -11, "ligne");
+zone(X0, 0, -7, X1, 0, -7, "bordure");
+
+// ================================================================ la coque : 15 x 13, une vitrine, une enseigne lumineuse
+zone(0, 0, 0, 14, 0, 12, "carrelage");
+zone(0, 1, 0, 0, 3, 12, "mur_o"); zone(14, 1, 0, 14, 3, 12, "mur_e"); zone(0, 1, 0, 14, 3, 0, "mur_s"); zone(0, 1, 12, 14, 3, 12, "mur_n");
+zone(0, 4, 0, 0, 4, 12, "murh_o"); zone(14, 4, 0, 14, 4, 12, "murh_e"); zone(0, 4, 0, 14, 4, 0, "murh_s"); zone(0, 4, 12, 14, 4, 12, "murh_n");
+zone(0, 5, 0, 14, 5, 12, "toit");
+zone(0, 6, 0, 14, 6, 0, "crepi"); zone(0, 6, 12, 14, 6, 12, "crepi"); zone(0, 6, 0, 0, 6, 12, "crepi"); zone(14, 6, 0, 14, 6, 12, "crepi");
+// vitrine et porte
+zone(1, 1, 0, 6, 3, 0, "verre"); zone(8, 1, 0, 13, 3, 0, "verre"); vide(7, 1, 0, 7, 2, 0); pose(7, 3, 0, "verre"); pose(7, 1, 1, "paillasson");
+// le caisson lumineux et l'auvent rayé
+zone(0, 5, -1, 14, 6, -1, "caisson");
+zone(1, 4, -1, 13, 4, -1, "auventB"); zone(1, 4, -1, 13, 4, -1, "auventH"); zone(1, 4, -2, 13, 4, -2, "auventB");
+// la terrasse
+for (const x of [2, 12]) { pose(x, 1, -3, "tablepl"); pose(x, 1, -4, "chaisepl", 2); pose(x, 1, -2, "chaisepl", 0); }
+pose(16, 1, -1, "poubelle"); zone(-3, 1, -6, -3, 5, -6, "poteau"); pose(-3, 6, -6, "lanterne"); zone(21, 1, -6, 21, 5, -6, "poteau"); pose(21, 6, -6, "lanterne");
+// la cheminée d'extraction et la clim sur le toit
+pose(9, 5, 10, "tuyau"); zone(9, 6, 10, 9, 7, 10, "tuyau"); pose(9, 8, 10, "chapeau"); pose(4, 6, 6, "clim");
+
+// ================================================================ la salle
+zone(9, 1, 1, 13, 1, 1, "tablette"); for (const x of [9, 11, 13]) pose(x, 1, 2, "tabouret");
+for (const z of [3, 6]) { zone(1, 1, z, 2, 1, z, "tablebois"); zone(1, 1, z - 1, 2, 1, z - 1, "chaiserouge", 2); zone(1, 1, z + 1, 2, 1, z + 1, "chaiserouge", 0); }
+zone(13, 1, 4, 13, 2, 6, "frigo"); pose(12, 1, 7, "poubelle");
+for (const [x, z] of [[3, 3], [3, 6], [10, 3], [10, 6], [6, 8]]) pose(x, 4, z, "plafonnier");
+pose(7, 4, 1, "antimouche");
+
+// le comptoir : caisse, bacs de crudités, sauces
+zone(1, 1, 8, 12, 1, 8, "comptoir");
+pose(2, 2, 8, "caisse", 2); zone(4, 2, 8, 8, 2, 8, "bacs"); pose(6, 2, 8, "bacs", 1); zone(10, 2, 8, 11, 2, 8, "sauces"); pose(12, 2, 8, "serviettes");
+
+// la cuisine : plancha, pains, deux broches devant leur grill, friteuse, évier, frigo
+pose(1, 1, 11, "plancha"); pose(2, 1, 11, "pains"); pose(3, 1, 11, "planche"); pose(5, 1, 11, "plan"); pose(6, 1, 11, "plan"); pose(8, 1, 11, "plan");
+zone(4, 1, 11, 4, 2, 11, "grill"); zone(7, 1, 11, 7, 2, 11, "grill"); pose(4, 1, 10, "socle"); pose(7, 1, 10, "socle");
+zone(9, 1, 11, 10, 1, 11, "friteuse"); pose(11, 1, 11, "evier"); zone(12, 1, 11, 13, 2, 11, "frigoinox");
+zone(1, 4, 10, 11, 4, 11, "hotte"); pose(12, 4, 10, "plafonnier");
+
+// ================================================================ vues et zones
+const VUES = [
+  { id: "dehors", nom: "La rue", min: 0, max: 99, resume: "De nuit, l'enseigne jaune allumée, les photos des plats collées sur la vitrine et la cheminée qui fume." },
+  { id: "dedans", nom: "L'intérieur", min: 0, max: 4, resume: "Sans le toit. Les deux broches tournent devant leur grill, derrière le comptoir." },
+];
+const ZONES = [
+  { v: "dehors", nom: "Enseigne", b: [0, 5, -1, 14, 6, -1], d: "Caisson lumineux jaune, grosses lettres rouges ISMA KEBAB." },
+  { v: "dehors", nom: "Vitrine", b: [1, 1, 0, 13, 3, 0], d: "Grandes vitres avec les photos des plats collées dessus et le néon OUVERT qui clignote." },
+  { v: "dehors", nom: "Terrasse", b: [1, 1, -4, 13, 1, -2], d: "Tables et chaises en plastique blanc sous l'auvent rayé." },
+  { v: "dehors", nom: "Scooter du livreur", b: [17, 1, -5, 19, 2, -3], d: "Garé devant, la caisse isotherme sur le porte-bagages." },
+  { v: "dehors", nom: "Cheminée", b: [9, 6, 10, 9, 8, 10], d: "La sortie de la hotte. Elle fume sans arrêt, ça sent jusqu'au bout de la rue." },
+  { v: "dedans", nom: "Salle", b: [1, 1, 2, 2, 2, 7], d: "Huit places, chaises rouges, et la télé du match accrochée au mur." },
+  { v: "dedans", nom: "Bar vitrine", b: [9, 1, 1, 13, 2, 2], d: "Une tablette contre la vitre et trois tabourets, sous le tableau d'Istanbul." },
+  { v: "dedans", nom: "Frigo à boissons", b: [13, 1, 4, 13, 2, 6], d: "Canettes de toutes les couleurs et les ayrans, éclairé de l'intérieur." },
+  { v: "dedans", nom: "Comptoir", b: [1, 1, 8, 12, 2, 8], d: "Caisse, bacs de crudités (salade, tomate, oignon, chou rouge), les sauces, et le menu lumineux au-dessus." },
+  { v: "dedans", nom: "Affiche du chef", b: [13, 2, 9, 13, 3, 10], d: "Sur le mur de droite, à côté du comptoir : « Sauce du chef, faite maison, comme il faut »." },
+  { v: "dedans", nom: "Les broches", b: [3, 1, 10, 8, 2, 11], d: "Deux broches qui tournent devant leur grill : veau-dinde et poulet. Le couteau à kebab sert à les découper." },
+  { v: "dedans", nom: "Plancha et pains", b: [1, 1, 11, 3, 1, 11], d: "La plancha pour griller les galettes, et le chauffe-pain plein de pains turcs." },
+  { v: "dedans", nom: "Friteuse", b: [9, 1, 11, 11, 1, 11], d: "Double friteuse, un panier de frites qui égoutte, l'évier à côté." },
+];
+const centre = (b) => new THREE.Vector3((b[0] + b[3] + 1) / 2, (b[1] + b[4] + 1) / 2, (b[2] + b[5] + 1) / 2);
+
+// ================================================================ la lumière (comme Minecraft : 15 niveaux)
+function calculerLumiere() {
+  lumiere.fill(0);
+  const file = new Int32Array(N * 2); let t = 0, q = 0;
+  const bloque = (i) => TYPES[carte[i]].opaque;
+  for (let z = Z0; z <= Z1; z++) for (let x = X0; x <= X1; x++) for (let y = Y1; y >= Y0; y--) { const i = idx(x, y, z); if (bloque(i)) break; lumiere[i] = CIEL; file[t++] = i; }
+  for (let i = 0; i < N; i++) { const l = TYPES[carte[i]].lum; if (l > lumiere[i]) { lumiere[i] = l; file[t++] = i; } }
+  const voisins = [1, -1, DX, -DX, DX * DY, -DX * DY];
+  while (q < t) { const i = file[q++], l = lumiere[i] - 1; if (l <= 0) continue; for (const d of voisins) { const v = i + d; if (v < 0 || v >= N || bloque(v) || lumiere[v] >= l) continue; lumiere[v] = l; if (t < file.length) file[t++] = v; } }
+}
+calculerLumiere();
+
+// ================================================================ fabriquer la géométrie
+const FACES = [
+  { n: [0, 1, 0], v: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]], o: 1, a: 0, b: 2, t: "h", d: "py", uv: (p) => [p[0], p[2]] },
+  { n: [0, -1, 0], v: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], o: .55, a: 0, b: 2, t: "b", d: "ny", uv: (p) => [p[0], p[2]] },
+  { n: [1, 0, 0], v: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]], o: .74, a: 1, b: 2, t: "c", d: "px", uv: (p) => [1 - p[2], 1 - p[1]] },
+  { n: [-1, 0, 0], v: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]], o: .74, a: 1, b: 2, t: "c", d: "nx", uv: (p) => [p[2], 1 - p[1]] },
+  { n: [0, 0, 1], v: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], o: .87, a: 0, b: 1, t: "c", d: "pz", uv: (p) => [p[0], 1 - p[1]] },
+  { n: [0, 0, -1], v: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]], o: .87, a: 0, b: 1, t: "c", d: "nz", uv: (p) => [1 - p[0], 1 - p[1]] },
+];
+const nomTuile = (tex, f) => typeof tex === "string" ? tex : (tex[f.d] || tex[f.t] || tex.h || tex.c);
+function uvTuile(i, s, t) { const c = i % 16, r = i >> 4, e = .002; return [(c + e + s * (1 - 2 * e)) / 16, 1 - (r + e + t * (1 - 2 * e)) / 16]; }
+const paquet = () => ({ p: [], u: [], c: [], i: [] });
+function quad(S, sommets, cols, tuileI, uvs) {
+  const n = S.p.length / 3;
+  for (let k = 0; k < 4; k++) { S.p.push(sommets[k][0], sommets[k][1], sommets[k][2]); const t = uvTuile(tuileI, uvs[k][0], uvs[k][1]); S.u.push(t[0], t[1]); S.c.push(cols[k][0], cols[k][1], cols[k][2]); }
+  S.i.push(n, n + 1, n + 2, n, n + 2, n + 3);
+}
+const brillance = (l) => .3 + .7 * Math.pow(l / 15, 1.25);
+// dedans une lumière chaude, dehors le bleu de la nuit
+function teinte(x, y, z) { return x >= 1 && x <= 13 && z >= 1 && z <= 11 && y >= 1 && y <= 4 ? [1.05, 1, .93] : [.8, .88, 1.08]; }
+function rotBoite(b, m) { let [x0, y0, z0, x1, y1, z1] = b; for (let k = 0; k < m; k++) { const a = z0, c = z1; z0 = 1 - x1; z1 = 1 - x0; x0 = a; x1 = c; } return [x0, y0, z0, x1, y1, z1]; }
+function ajoutBoite(S, ox, oy, oz, b, tex, couleur) {
+  for (const f of FACES) {
+    const pts = f.v.map((v) => [b[0] + v[0] * (b[3] - b[0]), b[1] + v[1] * (b[4] - b[1]), b[2] + v[2] * (b[5] - b[2])]);
+    const uvs = pts.map(f.uv), c = [couleur[0] * f.o, couleur[1] * f.o, couleur[2] * f.o];
+    quad(S, pts.map((p) => [ox + p[0], oy + p[1], oz + p[2]]), [c, c, c, c], TUILES[nomTuile(tex, f)], uvs);
+  }
+}
+let coupe = { min: 0, max: 99 };
+let opaqueCoupe;
+function construire() {
+  const S = paquet(), V = paquet();
+  opaqueCoupe = (x, y, z) => dans(x, y, z) && y >= coupe.min && y <= coupe.max && TYPES[carte[idx(x, y, z)]].opaque;
+  const lum = (x, y, z) => dans(x, y, z) ? lumiere[idx(x, y, z)] : CIEL;
+  const AO = [.55, .72, .86, 1];
+  for (let z = Z0; z <= Z1; z++) for (let y = Math.max(Y0, coupe.min); y <= Math.min(Y1, coupe.max); y++) for (let x = X0; x <= X1; x++) {
+    const i = idx(x, y, z), id = carte[i]; if (!id) continue; const t = TYPES[id], ti = t.lum ? [1, 1, 1] : teinte(x, y, z);
+    if (t.plafond && y === coupe.max) continue; // en coupe, ce qui pend du plafond flotterait
+    if (t.forme) {
+      const l = Math.max(brillance(Math.max(lumiere[i], lum(x, y + 1, z))), t.lum ? 1 : 0), col = [l * ti[0], l * ti[1], l * ti[2]];
+      for (const b of t.forme()) ajoutBoite(S, x, y, z, rotBoite(b, meta[i]), b[6] || t.tex, col);
+      continue;
+    }
+    for (const f of FACES) {
+      const nx = x + f.n[0], ny = y + f.n[1], nz = z + f.n[2];
+      if (t.verre) { if (dans(nx, ny, nz) && ny >= coupe.min && ny <= coupe.max && (TYPES[carte[idx(nx, ny, nz)]].verre || TYPES[carte[idx(nx, ny, nz)]].opaque)) continue; }
+      else if (opaqueCoupe(nx, ny, nz)) continue;
+      const base = t.lum ? 1 : brillance(lum(nx, ny, nz)), cols = [], pts = [];
+      for (const v of f.v) {
+        let ao = 1;
+        if (!t.lum && !t.verre) {
+          const da = v[f.a] * 2 - 1, db = v[f.b] * 2 - 1, A = [nx, ny, nz], B = [nx, ny, nz], C = [nx, ny, nz];
+          A[f.a] += da; B[f.b] += db; C[f.a] += da; C[f.b] += db;
+          const s1 = opaqueCoupe(A[0], A[1], A[2]) ? 1 : 0, s2 = opaqueCoupe(B[0], B[1], B[2]) ? 1 : 0, c = opaqueCoupe(C[0], C[1], C[2]) ? 1 : 0;
+          ao = AO[s1 && s2 ? 0 : 3 - (s1 + s2 + c)];
+        }
+        const k = base * f.o * ao; cols.push([k * ti[0], k * ti[1], k * ti[2]]); pts.push([x + v[0], y + v[1], z + v[2]]);
+      }
+      quad(t.verre ? V : S, pts, cols, TUILES[nomTuile(t.tex, f)], f.v.map(f.uv));
+    }
+  }
+  remplir(meshBlocs, S); remplir(meshVerre, V);
+}
+function remplir(mesh, S) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(S.p, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(S.u, 2)); g.setAttribute("color", new THREE.Float32BufferAttribute(S.c, 3));
+  g.setIndex(S.i); if (mesh.geometry) mesh.geometry.dispose(); mesh.geometry = g;
+}
+
+// ================================================================ la scène
+let rendu;
+try { rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true }); }
+catch (e) { console.error(e); el("erreur").hidden = false; return; }
+const hote = el("scene");
+rendu.setPixelRatio(Math.min(devicePixelRatio, 2)); hote.appendChild(rendu.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, .08, 500);
+const texAtlas = new THREE.CanvasTexture(atlas); texAtlas.magFilter = THREE.NearestFilter; texAtlas.minFilter = THREE.NearestFilter;
+const matBlocs = new THREE.MeshBasicMaterial({ map: texAtlas, vertexColors: true, alphaTest: .4 });
+const matVerre = new THREE.MeshBasicMaterial({ map: texAtlas, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+const meshBlocs = new THREE.Mesh(new THREE.BufferGeometry(), matBlocs), meshVerre = new THREE.Mesh(new THREE.BufferGeometry(), matVerre);
+meshVerre.renderOrder = 2; scene.add(meshBlocs, meshVerre);
+const controles = new THREE.OrbitControls(camera, rendu.domElement);
+controles.enableDamping = true; controles.dampingFactor = .09; controles.maxPolarAngle = Math.PI * .495; controles.minDistance = 4; controles.maxDistance = 60;
+const couleur = (hex) => new THREE.MeshBasicMaterial({ color: hex });
+const matCache = new THREE.MeshBasicMaterial({ visible: false });
+
+// un panneau peint sur un canvas (enseigne, menu, télé, tableau)
+function panneau(l, h, w, hh, x, y, z, rot, dessin, lisse) {
+  const c = document.createElement("canvas"); c.width = w; c.height = hh; const g = c.getContext("2d");
+  const t = new THREE.CanvasTexture(c); t.magFilter = lisse ? THREE.LinearFilter : THREE.NearestFilter; t.minFilter = THREE.LinearFilter;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(l, h), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
+  m.position.set(x, y, z); m.rotation.y = rot; scene.add(m);
+  const peindre = () => { g.clearRect(0, 0, w, hh); g.imageSmoothingEnabled = false; dessin(g, w, hh); t.needsUpdate = true; };
+  peindre(); return { m, peindre };
+}
+const ENSEIGNE = "\"Bungee\", \"Arial Black\", Impact, sans-serif";
+function ajuster(g, texte, police, max) { let p = police; g.font = p + "px " + ENSEIGNE; while (g.measureText(texte).width > max && p > 8) { p -= 1; g.font = p + "px " + ENSEIGNE; } }
+
+// l'enseigne
+const enseigne = panneau(15, 2, 750, 100, 7.5, 6, -1.03, Math.PI, (g, w, h) => {
+  g.fillStyle = "#ffd21f"; g.fillRect(0, 0, w, h); g.fillStyle = "#d9262c"; g.fillRect(0, 0, w, 6); g.fillRect(0, h - 6, w, 6);
+  g.drawImage(IMG.broche, 18, 14, 72, 72); g.drawImage(IMG.sandwich_kebab, w - 90, 14, 72, 72);
+  g.textBaseline = "middle"; g.textAlign = "center"; ajuster(g, "ISMA KEBAB", 66, w - 220); g.fillStyle = "#8a1216"; g.fillText("ISMA KEBAB", w / 2 + 4, 44); g.fillStyle = "#d9262c"; g.fillText("ISMA KEBAB", w / 2, 40);
+  g.font = "700 16px Rubik, sans-serif"; g.fillStyle = "#8a1216"; g.fillText("SANDWICH · GALETTE · TACOS · ASSIETTE", w / 2, 82);
+});
+// les photos collées sur la vitrine et le néon OUVERT
+function etiquetteVitrine(g, w, h, titre, prix, ids) {
+  g.fillStyle = "#ffd21f"; g.fillRect(0, 0, w, h); g.fillStyle = "#d9262c"; g.fillRect(4, 4, w - 8, h - 8);
+  ids.forEach((id, i) => g.drawImage(IMG[id], 12 + i * ((w - 24) / ids.length), 30, Math.min(64, (w - 24) / ids.length - 4), Math.min(64, (w - 24) / ids.length - 4)));
+  g.textAlign = "center"; g.textBaseline = "middle"; ajuster(g, titre, 22, w - 20); g.fillStyle = "#fff6e0"; g.fillText(titre, w / 2, 18);
+  ajuster(g, prix, 26, w - 20); g.fillStyle = "#ffd21f"; g.fillText(prix, w / 2, h - 20);
+}
+const photo1 = panneau(2.4, 1.6, 240, 160, 3.6, 2.2, -.03, Math.PI, (g, w, h) => etiquetteVitrine(g, w, h, "MENU KEBAB", "30 $", ["sandwich_kebab", "ayran"]));
+const photo2 = panneau(1.6, 1.3, 160, 130, 10.2, 2.6, -.03, Math.PI, (g, w, h) => etiquetteVitrine(g, w, h, "TACOS XL", "28 $", ["tacos"]));
+let neonAllume = true;
+const neon = panneau(1.5, .5, 150, 50, 12.2, 1.6, -.04, Math.PI, (g, w, h) => {
+  g.fillStyle = "#170a10"; g.fillRect(0, 0, w, h); g.strokeStyle = neonAllume ? "#ff4fa0" : "#5a2140"; g.lineWidth = 3; g.strokeRect(3, 3, w - 6, h - 6);
+  g.textAlign = "center"; g.textBaseline = "middle"; g.font = "28px " + ENSEIGNE; g.fillStyle = neonAllume ? "#ff7ab8" : "#4a1c34"; g.fillText("OUVERT", w / 2, h / 2 + 2);
+});
+// le menu lumineux au-dessus du comptoir
+const MENU = [["sandwich_kebab", "SANDWICH", "20 $"], ["galette_kebab", "GALETTE", "20 $"], ["assiette_kebab", "ASSIETTE", "30 $"], ["tacos", "TACOS", "28 $"], ["ayran", "+ FRITES BOISSON", "+10 $"]];
+const menu = panneau(10, 1.6, 1000, 160, 6.5, 4.05, 8.5, Math.PI, (g, w, h) => {
+  g.fillStyle = "#14141c"; g.fillRect(0, 0, w, h);
+  MENU.forEach(([id, nom, prix], i) => {
+    const x = i * 200; g.fillStyle = i % 2 ? "#2a1a14" : "#311c15"; g.fillRect(x + 4, 4, 192, h - 8); g.drawImage(IMG[id], x + 52, 10, 96, 96);
+    g.textAlign = "center"; g.textBaseline = "middle"; ajuster(g, nom, 20, 180); g.fillStyle = "#fff6e0"; g.fillText(nom, x + 100, 120);
+    ajuster(g, prix, 24, 180); g.fillStyle = "#ffd21f"; g.fillText(prix, x + 100, 146);
+  });
+});
+// la télé du match
+let tvT = 0;
+const tele = panneau(1.7, 1, 170, 100, 1.04, 3.3, 4.5, Math.PI / 2, (g, w, h) => {
+  g.fillStyle = "#111"; g.fillRect(0, 0, w, h); g.fillStyle = "#2f8f3a"; g.fillRect(6, 6, w - 12, h - 12);
+  g.strokeStyle = "rgba(255,255,255,.8)"; g.lineWidth = 1; g.strokeRect(14, 14, w - 28, h - 28); g.beginPath(); g.moveTo(w / 2, 14); g.lineTo(w / 2, h - 14); g.stroke(); g.beginPath(); g.arc(w / 2, h / 2, 12, 0, 7); g.stroke();
+  const bx = w / 2 + Math.sin(tvT * 1.3) * 50, by = h / 2 + Math.sin(tvT * 2.1) * 22;
+  for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? "#e33" : "#36f"; g.fillRect(bx + Math.sin(tvT + k * 1.7) * 30 - 2, by + Math.cos(tvT * .8 + k) * 20 - 3, 4, 6); }
+  g.fillStyle = "#fff"; g.fillRect(bx - 1.5, by - 1.5, 3, 3);
+  g.fillStyle = "rgba(0,0,0,.7)"; g.fillRect(8, 8, 74, 14); g.fillStyle = "#fff"; g.font = "700 10px Rubik, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left"; g.fillText("BVS 2 - 1 AMI", 12, 15);
+}, true);
+// le tableau d'Istanbul, et l'œil bleu près de la télé
+const tableau = panneau(1.8, 1.1, 180, 110, 13.96, 3.1, 2.4, -Math.PI / 2, (g, w, h) => {
+  g.fillStyle = "#c9a14a"; g.fillRect(0, 0, w, h);
+  const ciel = g.createLinearGradient(0, 8, 0, h - 8); ciel.addColorStop(0, "#f7a24a"); ciel.addColorStop(1, "#d9483b"); g.fillStyle = ciel; g.fillRect(8, 8, w - 16, h - 16);
+  g.fillStyle = "#2d2240"; g.fillRect(8, h - 30, w - 16, 22);
+  g.beginPath(); g.arc(w / 2, h - 30, 22, Math.PI, 0); g.fill(); for (const dx of [-34, 34]) { g.beginPath(); g.arc(w / 2 + dx, h - 30, 11, Math.PI, 0); g.fill(); }
+  for (const dx of [-58, -46, 46, 58]) { g.fillRect(w / 2 + dx - 2, h - 70, 4, 42); g.beginPath(); g.moveTo(w / 2 + dx - 3, h - 70); g.lineTo(w / 2 + dx, h - 80); g.lineTo(w / 2 + dx + 3, h - 70); g.fill(); }
+  g.fillStyle = "rgba(60,80,140,.55)"; g.fillRect(8, h - 12, w - 16, 4);
+}, true);
+panneau(.5, .5, 50, 50, 1.03, 3.4, 6.2, Math.PI / 2, (g) => {
+  for (const [r, c] of [[22, "#1c4fb8"], [16, "#ffffff"], [11, "#7cc4f2"], [6, "#101014"]]) { g.fillStyle = c; g.beginPath(); g.arc(25, 25, r, 0, 7); g.fill(); }
+}, true);
+
+// l'affiche du chef, sur le mur de droite, côté comptoir
+const affiche = panneau(2, 1.5, 200, 150, 13.96, 2.9, 9.7, -Math.PI / 2, (g, w, h) => {
+  g.fillStyle = "#fff3d6"; g.fillRect(0, 0, w, h); g.strokeStyle = "#d9262c"; g.lineWidth = 6; g.strokeRect(5, 5, w - 10, h - 10);
+  g.fillStyle = "#d9262c"; g.fillRect(5, 5, w - 10, 34);
+  g.textAlign = "center"; g.textBaseline = "middle"; ajuster(g, "SAUCE DU CHEF", 22, w - 30); g.fillStyle = "#ffd21f"; g.fillText("SAUCE DU CHEF", w / 2, 23);
+  g.drawImage(IMG.sauce_blanche, 14, 48, 56, 56); g.drawImage(IMG.sauce_samourai, w - 70, 48, 56, 56);
+  g.fillStyle = "#3a1d0c"; g.font = "700 italic 17px Rubik, sans-serif"; g.fillText("faite maison", w / 2, 66);
+  g.font = "700 italic 14px Rubik, sans-serif"; g.fillText("comme il faut", w / 2, 88);
+  ajuster(g, "ISMA KEBAB", 16, w - 40); g.fillStyle = "#d9262c"; g.fillText("ISMA KEBAB", w / 2, 126);
+}, true);
+
+// les deux broches qui tournent, en tranches comme des blocs
+const BROCHES = [];
+function broche(x, z, teintes) {
+  const g = new THREE.Group(); g.position.set(x + .5, 1.14, z + .5);
+  const tige = new THREE.Mesh(new THREE.BoxGeometry(.06, 2.1, .06), couleur(0xc3c9d2)); tige.position.y = 1.05; g.add(tige);
+  const r = alea(x * 13 + z), n = 17;
+  for (let i = 0; i < n; i++) {
+    const l = .3 + .36 * Math.pow(i / (n - 1), .8), tranche = new THREE.Mesh(new THREE.BoxGeometry(l, .1, l), couleur(teintes[Math.floor(r() * teintes.length)]));
+    tranche.position.y = .12 + i * .1; tranche.rotation.y = r() * .5; g.add(tranche);
+  }
+  const plateau = new THREE.Mesh(new THREE.BoxGeometry(.74, .04, .74), couleur(0xc3c9d2)); plateau.position.y = .1 + n * .1; g.add(plateau);
+  const pointe = new THREE.Mesh(new THREE.BoxGeometry(.1, .12, .1), couleur(0xc3c9d2)); pointe.position.y = 2.1; g.add(pointe);
+  scene.add(g); BROCHES.push(g); return g;
+}
+broche(4, 10, [0x8a4a24, 0x6e3818, 0xa35d2e, 0x7c4020, 0x93522a, 0x5e2e12]);
+broche(7, 10, [0xd59a4a, 0xc0823a, 0xe3ad5c, 0xb8763a, 0x9c5f28]);
+
+// le scooter du livreur
+const scooter = new THREE.Group(); scooter.position.set(18, 1, -4);
+for (const [l, h, p, x, y, z, c] of [
+  [1.7, .32, .5, 0, .35, 0, 0xd9262c], [.7, .5, .5, -.5, .6, 0, 0xd9262c], [.6, .12, .4, -.3, .9, 0, 0x1f2024], [.15, .7, .15, .75, .75, 0, 0x8e939b],
+  [.1, .08, .8, .8, 1.12, 0, 0x1f2024], [.62, .58, .62, -.75, 1.25, 0, 0x1fb5a8], [.64, .1, .64, -.75, 1.56, 0, 0x158a80],
+]) { const m = new THREE.Mesh(new THREE.BoxGeometry(l, h, p), couleur(c)); m.position.set(x, y, z); scooter.add(m); }
+for (const x of [-.7, .75]) { const roue = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, .16, 14), couleur(0x111114)); roue.rotation.x = Math.PI / 2; roue.position.set(x, .24, 0); scooter.add(roue); }
+const phare = new THREE.Mesh(new THREE.BoxGeometry(.06, .14, .2), couleur(0xfff3c4)); phare.position.set(.84, .95, 0); scooter.add(phare);
+scooter.rotation.y = .2; scene.add(scooter);
+
+// la fumée de la cheminée
+const FUMEE = [];
+for (let i = 0; i < 16; i++) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x9aa0ab, transparent: true, opacity: 0, depthWrite: false }));
+  s.userData.age = i / 16 * 4; scene.add(s); FUMEE.push(s);
+}
+
+// ce qu'on peut actionner pendant la visite
+const CIBLES = [];
+function cible(x, y, z, l, h, p, textes) { const m = new THREE.Mesh(new THREE.BoxGeometry(l, h, p), matCache); m.position.set(x, y, z); m.userData = { textes, n: 0 }; scene.add(m); CIBLES.push(m); }
+cible(2.5, 2.3, 8.5, 1, .8, 1, ["« Bonsoir chef, sur place ou à emporter ? »", "« Salade tomate oignon ? Quelle sauce ? »", "« Blanche harissa ? Ça marche. 20 $. »"]);
+cible(4.5, 1.9, 10.5, .9, 1.6, .9, ["La broche veau-dinde. Il faut le couteau à kebab pour la découper."]);
+cible(7.5, 1.9, 10.5, .9, 1.6, .9, ["La broche poulet, bien dorée."]);
+cible(13.5, 2, 5.5, 1, 2, 3, ["Canettes, ayrans, eau gazeuse. 6 $ la boisson."]);
+cible(10.5, 2.3, 8.5, 2, .6, 1, ["Blanche, samouraï, algérienne, ketchup. Deux sauces maximum, chef."]);
+
+// ================================================================ vues, zones, étiquettes
+let vueCourante = VUES[0], zoneActive = null, modeVisite = false, nomsVisibles = true;
+const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let vol = null;
+function volerVers(pos, cible, instant) { if (reduit || instant) { camera.position.copy(pos); controles.target.copy(cible); controles.update(); vol = null; return; } vol = { t: 0, p0: camera.position.clone(), c0: controles.target.clone(), p1: pos, c1: cible }; }
+const lissage = (t) => t * t * (3 - 2 * t);
+const boutonsVue = {};
+for (const v of VUES) { const b = document.createElement("button"); b.type = "button"; b.textContent = v.nom; b.onclick = () => choisirVue(v); el("vues").appendChild(b); boutonsVue[v.id] = b; }
+function choisirVue(v, instant) {
+  vueCourante = v; zoneActive = null; coupe = { min: v.min, max: v.max }; construire();
+  for (const k in boutonsVue) boutonsVue[k].setAttribute("aria-pressed", k === v.id ? "true" : "false");
+  el("resume").textContent = v.resume; el("detail").textContent = "";
+  const liste = el("zones"); liste.textContent = "";
+  for (const z of ZONES.filter((x) => x.v === v.id)) { const b = document.createElement("button"); b.type = "button"; b.textContent = z.nom; b.onclick = () => choisirZone(z, b); liste.appendChild(b); z.bouton = b; }
+  majVisibles();
+  if (v.id === "dehors") volerVers(new THREE.Vector3(-7, 9, -19), new THREE.Vector3(8, 3, 3), instant);
+  else volerVers(new THREE.Vector3(2, 19, -3), new THREE.Vector3(7.5, 1, 7), instant);
+  majEtiquettes();
+}
+function choisirZone(z, bouton) {
+  zoneActive = z; document.querySelectorAll("#zones button").forEach((b) => b.classList.remove("active")); if (bouton) bouton.classList.add("active");
+  el("detail").textContent = z.d;
+  const c = centre(z.b), l = Math.max(z.b[3] - z.b[0], z.b[5] - z.b[2]), d = Math.max(7, l * .9);
+  volerVers(new THREE.Vector3(c.x - d * .25, c.y + d * 1.05, c.z - d * .7), c);
+}
+function majVisibles() {
+  const toit = modeVisite || coupe.max >= 5;
+  enseigne.m.visible = toit;
+  menu.m.visible = modeVisite; // vu d'en haut, il cacherait les broches
+  for (const s of FUMEE) s.visible = toit;
+}
+const conteneur = el("etiquettes");
+for (const z of ZONES) { const b = document.createElement("button"); b.type = "button"; b.className = "etiquette"; b.textContent = z.nom; b.hidden = true; b.onclick = () => choisirZone(z, z.bouton); conteneur.appendChild(b); z.etiquette = b; z.c = centre(z.b); z.c.y = z.b[1] + .5; }
+const vecT = new THREE.Vector3();
+function majEtiquettes() {
+  const w = innerWidth, h = innerHeight;
+  for (const z of ZONES) {
+    const b = z.etiquette, voir = !modeVisite && nomsVisibles && z.v === vueCourante.id;
+    if (!voir) { b.hidden = true; continue; }
+    vecT.copy(z.c).project(camera);
+    if (vecT.z > 1) { b.hidden = true; continue; }
+    b.hidden = false; b.style.transform = "translate(" + Math.round((vecT.x * .5 + .5) * w - b.offsetWidth / 2) + "px," + Math.round((-vecT.y * .5 + .5) * h - b.offsetHeight / 2) + "px)";
+  }
+}
+el("noms").onclick = () => { nomsVisibles = !nomsVisibles; el("noms").setAttribute("aria-pressed", nomsVisibles ? "true" : "false"); };
+
+// ================================================================ cliquer
+const rayon = new THREE.Raycaster(), souris = new THREE.Vector2();
+let tempoMsg = 0;
+function dire(t) { el("message").textContent = t; tempoMsg = 3; }
+function actionner(m) { const u = m.userData; dire(u.textes[u.n % u.textes.length]); u.n++; }
+let appui = null, regard = null;
+rendu.domElement.addEventListener("pointerdown", (e) => { appui = { x: e.clientX, y: e.clientY }; if (modeVisite) { regard = { x: e.clientX, y: e.clientY }; rendu.domElement.setPointerCapture(e.pointerId); } });
+rendu.domElement.addEventListener("pointermove", (e) => {
+  if (modeVisite && regard) { joueur.lacet -= (e.clientX - regard.x) * .0048; joueur.tangage = Math.max(-1.5, Math.min(1.5, joueur.tangage - (e.clientY - regard.y) * .0048)); regard = { x: e.clientX, y: e.clientY }; }
+});
+rendu.domElement.addEventListener("pointerup", (e) => {
+  regard = null; if (!appui) return; const d = Math.hypot(e.clientX - appui.x, e.clientY - appui.y); appui = null; if (d > 6) return;
+  if (modeVisite) viser();
+});
+function cibleVisee() { rayon.setFromCamera(new THREE.Vector2(0, 0), camera); rayon.far = 4.5; return rayon.intersectObjects(CIBLES)[0]; }
+function viser() { const t = cibleVisee(); if (t) actionner(t.object); }
+
+// ================================================================ la visite à pied
+const joueur = { x: 7.5, y: 1, z: -5, vy: 0, lacet: 0, tangage: 0, solAge: 0, oeil: 1.62 };
+const touches = new Set();
+function bloque(ix, iy, iz) { if (!dans(ix, iy, iz)) return false; return TYPES[carte[idx(ix, iy, iz)]].solide; }
+function collision(x, y, z) {
+  const r = .28;
+  for (let ix = Math.floor(x - r); ix <= Math.floor(x + r); ix++) for (let iz = Math.floor(z - r); iz <= Math.floor(z + r); iz++) for (let iy = Math.floor(y + .01); iy <= Math.floor(y + 1.75); iy++) if (bloque(ix, iy, iz)) return true;
+  return false;
+}
+function deplacer(dx, dz) {
+  if (dx) { const nx = joueur.x + dx; if (!collision(nx, joueur.y, joueur.z)) joueur.x = nx; }
+  if (dz) { const nz = joueur.z + dz; if (!collision(joueur.x, joueur.y, nz)) joueur.z = nz; }
+}
+const tactile = { avant: false, arriere: false };
+function avancerVisite(dt) {
+  const av = (touches.has("KeyW") || touches.has("ArrowUp") || tactile.avant ? 1 : 0) - (touches.has("KeyS") || touches.has("ArrowDown") || tactile.arriere ? 1 : 0);
+  const co = (touches.has("KeyA") || touches.has("ArrowLeft") ? 1 : 0) - (touches.has("KeyD") || touches.has("ArrowRight") ? 1 : 0);
+  const v = 4.6 * dt, s = Math.sin(joueur.lacet), c = Math.cos(joueur.lacet);
+  let dx = s * av + c * co, dz = c * av - s * co; const l = Math.hypot(dx, dz); if (l > 1) { dx /= l; dz /= l; }
+  deplacer(dx * v, 0); deplacer(0, dz * v);
+  joueur.vy = Math.max(-22, joueur.vy - 26 * dt); const dy = joueur.vy * dt;
+  if (!collision(joueur.x, joueur.y + dy, joueur.z)) joueur.y += dy;
+  else { if (joueur.vy < 0) joueur.y = Math.floor(joueur.y + dy) + 1; joueur.vy = 0; }
+  if (joueur.y < -5) rejoindre(7.5, 1, -5);
+  const ch = Math.cos(joueur.tangage);
+  camera.position.set(joueur.x, joueur.y + joueur.oeil, joueur.z);
+  camera.lookAt(joueur.x + Math.sin(joueur.lacet) * ch, joueur.y + joueur.oeil + Math.sin(joueur.tangage), joueur.z + Math.cos(joueur.lacet) * ch);
+  const dedans = joueur.x > 0 && joueur.x < 14 && joueur.z > 0 && joueur.z < 12;
+  el("ou").textContent = !dedans ? "Dans la rue" : joueur.z > 8 ? "Derrière le comptoir" : "Dans le kebab";
+  const t = cibleVisee();
+  if (tempoMsg <= 0) el("message").textContent = t ? "E : regarder" : "";
+}
+function rejoindre(x, y, z) { joueur.x = x; joueur.y = y; joueur.z = z; joueur.vy = 0; }
+function entrerVisite() {
+  modeVisite = true; coupe = { min: 0, max: 99 }; construire(); majVisibles();
+  el("ordinaire").hidden = true; el("visite").hidden = false; controles.enabled = false; rendu.domElement.style.cursor = "crosshair";
+  rejoindre(7.5, 1, -5); joueur.lacet = 0; joueur.tangage = 0; camera.fov = 72; camera.updateProjectionMatrix();
+  el("tactile").hidden = !matchMedia("(pointer: coarse)").matches; majEtiquettes();
+}
+function sortirVisite() {
+  modeVisite = false; el("visite").hidden = true; el("ordinaire").hidden = false; controles.enabled = true; camera.fov = 50; camera.updateProjectionMatrix();
+  touches.clear(); tactile.avant = tactile.arriere = false; rendu.domElement.style.cursor = "grab"; el("message").textContent = ""; choisirVue(vueCourante, true);
+}
+el("entrer").onclick = entrerVisite; el("quitter").onclick = sortirVisite;
+addEventListener("keydown", (e) => { if (!modeVisite) return; if (e.code === "KeyE") viser(); else if (e.code === "Escape") sortirVisite(); else { touches.add(e.code); if (e.code.startsWith("Arrow")) e.preventDefault(); } });
+addEventListener("keyup", (e) => touches.delete(e.code));
+addEventListener("blur", () => touches.clear());
+for (const k of ["avant", "arriere"]) { const b = el(k); b.addEventListener("pointerdown", (e) => { e.preventDefault(); tactile[k] = true; }); for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, () => { tactile[k] = false; }); }
+el("agir").onclick = viser;
+
+// les polices arrivent après le premier dessin : on repeint l'enseigne et le menu
+if (document.fonts && document.fonts.load) Promise.all([document.fonts.load("40px Bungee"), document.fonts.load("700 16px Rubik"), document.fonts.load("italic 700 16px Rubik")]).then(() => { for (const p of [enseigne, photo1, photo2, neon, menu, affiche]) p.peindre(); }, () => {});
+
+// ================================================================ boucle
+function taille() { const w = innerWidth, h = innerHeight; rendu.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener("resize", taille); taille();
+choisirVue(VUES[0], true);
+let avant = performance.now(), tNeon = 0, tTele = 0;
+function boucle(t) {
+  requestAnimationFrame(boucle);
+  const dt = Math.min(.2, (t - avant) / 1000); avant = t;
+  if (!reduit) for (const b of BROCHES) b.rotation.y += dt * .9;
+  tNeon += dt; if (tNeon > (neonAllume ? 2.2 : .25)) { tNeon = 0; neonAllume = !neonAllume; neon.peindre(); }
+  tTele += dt; tvT += dt; if (tTele > .12) { tTele = 0; tele.peindre(); }
+  for (const s of FUMEE) {
+    s.userData.age = (s.userData.age + dt) % 4; const a = s.userData.age / 4;
+    s.position.set(9.5 + Math.sin(a * 5 + s.id) * .4 + a * 1.2, 8.6 + a * 5, 10.5 + a * .8);
+    const k = .5 + a * 1.8; s.scale.set(k, k, 1); s.material.opacity = Math.sin(a * Math.PI) * .42;
+  }
+  if (tempoMsg > 0) { tempoMsg -= dt; if (tempoMsg <= 0) el("message").textContent = ""; }
+  if (modeVisite) { for (let reste = dt; reste > 1e-4; reste -= .04) avancerVisite(Math.min(reste, .04)); }
+  else {
+    if (vol) { vol.t = Math.min(1, vol.t + dt / .9); const k = lissage(vol.t); camera.position.lerpVectors(vol.p0, vol.p1, k); controles.target.lerpVectors(vol.c0, vol.c1, k); if (vol.t >= 1) vol = null; }
+    controles.update(); majEtiquettes();
+  }
+  rendu.render(scene, camera);
+}
+requestAnimationFrame(boucle);
+})();
+</script>

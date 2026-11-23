@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "isma_kebab",
+  "ingredients": [
+    {
+      "item": "cabane:tacos"
+    },
+    {
+      "item": "cabane:sauce_algerienne"
+    }
+  ],
+  "result": {
+    "id": "cabane:tacos",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "sauce": "algerienne"
+      }
+    }
+  }
+}

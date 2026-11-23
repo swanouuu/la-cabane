@@ -89,7 +89,8 @@ public final class ClientBoutique {
             super.render(g, mouseX, mouseY, partialTick);
             // les offres des autres vendeurs ont un préfixe : « noir_… » (le Fourgue), « cartes_… » (Jean-Mi)
             String premiere = offres.isEmpty() ? "" : offres.get(0).id();
-            String titre = premiere.contains(":noir_") ? "Marché noir" : premiere.contains(":cartes_") ? "Jean-Mi Collector" : "Boutique du marché";
+            String titre = premiere.contains(":noir_") ? "Marché noir" : premiere.contains(":cartes_") ? "Jean-Mi Collector"
+                    : premiere.contains(":kebab_") ? "Isma Kebab" : "Boutique du marché";
             Ui.titre(g, font, titre, left + 10, top + 10);
             Ui.solde(g, font, left + W - 10, top + 10);
             int debut = page * PAR_PAGE;

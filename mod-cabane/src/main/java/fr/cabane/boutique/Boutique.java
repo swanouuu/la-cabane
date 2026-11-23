@@ -100,6 +100,10 @@ public final class Boutique extends SimpleJsonResourceReloadListener {
                     }
                     stack.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS, new net.minecraft.world.item.alchemy.PotionContents(potion.get()));
                 }
+                // un plat du kebab avec sa sauce (« sauce » : blanche, samourai, algerienne)
+                if (o.has("sauce")) {
+                    fr.cabane.bouffe.Kebab.avecSauce(stack, GsonHelper.getAsString(o, "sauce"));
+                }
                 liste.add(new Offre(id.toString(), stack,
                         GsonHelper.getAsLong(o, "prix"), GsonHelper.getAsInt(o, "ordre", 100), GsonHelper.getAsString(o, "vendeur", "")));
             } catch (Exception e) {

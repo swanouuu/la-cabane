@@ -1,0 +1,106 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "grill": "cabane:block/grill_kebab",
+    "inox": "minecraft:block/iron_block",
+    "particle": "minecraft:block/iron_block"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        15,
+        16,
+        4
+      ],
+      "faces": {
+        "north": {
+          "texture": "#grill"
+        },
+        "south": {
+          "texture": "#inox"
+        },
+        "east": {
+          "texture": "#inox"
+        },
+        "west": {
+          "texture": "#inox"
+        },
+        "up": {
+          "texture": "#inox"
+        },
+        "down": {
+          "texture": "#inox"
+        }
+      }
+    },
+    {
+      "from": [
+        0.5,
+        0,
+        0
+      ],
+      "to": [
+        1.5,
+        16,
+        4.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#inox"
+        },
+        "south": {
+          "texture": "#inox"
+        },
+        "east": {
+          "texture": "#inox"
+        },
+        "west": {
+          "texture": "#inox"
+        },
+        "up": {
+          "texture": "#inox"
+        },
+        "down": {
+          "texture": "#inox"
+        }
+      }
+    },
+    {
+      "from": [
+        14.5,
+        0,
+        0
+      ],
+      "to": [
+        15.5,
+        16,
+        4.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#inox"
+        },
+        "south": {
+          "texture": "#inox"
+        },
+        "east": {
+          "texture": "#inox"
+        },
+        "west": {
+          "texture": "#inox"
+        },
+        "up": {
+          "texture": "#inox"
+        },
+        "down": {
+          "texture": "#inox"
+        }
+      }
+    }
+  ]
+}

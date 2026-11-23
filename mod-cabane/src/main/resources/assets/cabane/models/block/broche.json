@@ -1,0 +1,74 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "inox": "minecraft:block/iron_block",
+    "noir": "minecraft:block/black_concrete",
+    "particle": "minecraft:block/iron_block"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        1.5,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#inox"
+        },
+        "south": {
+          "texture": "#inox"
+        },
+        "east": {
+          "texture": "#inox"
+        },
+        "west": {
+          "texture": "#inox"
+        },
+        "up": {
+          "texture": "#inox"
+        },
+        "down": {
+          "texture": "#inox"
+        }
+      }
+    },
+    {
+      "from": [
+        3.5,
+        1.5,
+        3.5
+      ],
+      "to": [
+        12.5,
+        2,
+        12.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#noir"
+        },
+        "south": {
+          "texture": "#noir"
+        },
+        "east": {
+          "texture": "#noir"
+        },
+        "west": {
+          "texture": "#noir"
+        },
+        "up": {
+          "texture": "#noir"
+        },
+        "down": {
+          "texture": "#noir"
+        }
+      }
+    }
+  ]
+}

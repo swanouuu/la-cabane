@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "isma_kebab",
+  "ingredients": [
+    {
+      "item": "cabane:viande_kebab"
+    },
+    {
+      "item": "cabane:viande_kebab"
+    },
+    {
+      "item": "cabane:frites"
+    }
+  ],
+  "result": {
+    "id": "cabane:assiette_kebab",
+    "count": 1
+  }
+}

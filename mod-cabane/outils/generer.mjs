@@ -11,6 +11,7 @@ import { genererEspionnes, sonsEspionnes } from "./espionnes.mjs";
 import { genererMasques } from "./masques.mjs";
 import { genererBulle } from "./bulle.mjs";
 import { genererFastFood } from "./fastfood.mjs";
+import { genererKebab } from "./kebab.mjs";
 import { genererMissions } from "./missions.mjs";
 import { genererForge } from "./forge.mjs";
 import { genererLabo } from "./labo.mjs";
@@ -493,6 +494,8 @@ bloc("roue_fortune", { front: "cabane:block/roue_fortune_front", side: "minecraf
 genererHistoire({ ecrire, png, lang });
 genererBoissons({ ecrire, png, lang });
 genererFastFood({ ecrire, png, lang });
+// Isma Kebab : les items, la broche, la boutique d'Isma et le plan de /kebab (voir bouffe/Kebab.java et docs/kebab)
+console.log(`Isma Kebab : ${genererKebab({ ecrire, png, lang })}`);
 console.log(`Missions des habitants : ${genererMissions({ ecrire })}`);
 genererMarcheNoir({ ecrire, png, lang });
 genererAccessoires({ ecrire, png, lang });

@@ -159,6 +159,30 @@ export function genererPnj(ecrire) {
     ], boutons: [{ texte: "Un autre secret (15 $)", action: "payer:15:secret" }, RETOUR, BYE("Merci Gribbs")] },
   ] });
 
+  // ------------------------------------------------------------ Sanzonion, le cuistot d'Isma Kebab, derrière la caisse (posé par /kebab, bouffe/IsmaKebab.java)
+  pnj({ fichier: "kebabier", nom: "Sanzonion", couleur: "yellow", objectifs: IMMOBILE, mains: ["cabane:couteau_kebab", null], dialogues: [
+    { label: "default", titre: "Isma Kebab", texte: [
+      "Bienvenue chez Isma Kebab ! Sur place ou à emporter ?",
+      "Salade tomate oignon ? … Tout ? Ça marche.",
+      "Wesh ! Qu'est-ce que je te sers aujourd'hui ?",
+      "La broche est chaude, le pain sort du four. C'est le moment.",
+      "Assieds-toi, assieds-toi. Je te fais ça bien.",
+    ], boutons: [{ texte: "Voir la carte", action: "boutique:pnj.kebabier" }, { texte: "C'est quoi ta sauce du chef ?", vers: "sauce" },
+      { texte: "Un conseil ?", vers: "conseil" }, BYE("À plus Sanzonion")] },
+    { label: "sauce", titre: "La sauce du chef", texte: [
+      "Ma sauce ? Faite maison, comme il faut. La recette, je l'emporterai dans ma tombe.",
+      "Y'a de l'amour dedans. Et un truc secret. Surtout le truc secret.",
+      "Les gens viennent de loin pour la sauce. Certains reviennent même pas pour la viande.",
+    ], boutons: [RETOUR, BYE("Ça donne faim")] },
+    { label: "conseil", titre: "Les conseils de Sanzonion", texte: [
+      "Prends une samouraï dans ton sandwich : ça donne de la force, la vraie.",
+      "Le tacos, ça cale. Après, tu marches doucement. C'est normal.",
+      "Trop mangé ? Un ayran, et ça repart.",
+      "Tu veux ta broche chez toi ? Je t'en vends une, avec le grill. Le couteau, c'est en plus.",
+      "La sauce algérienne, ça réveille. Tu creuses plus vite après, je te jure.",
+    ], boutons: [{ texte: "Un autre conseil", vers: "conseil" }, RETOUR, BYE("Merci Sanzonion")] },
+  ] });
+
   pnj({ fichier: "pole_emploi", nom: "Mehdi de Pôle emploi", couleur: "blue", peau: "mehdi", dialogues: [
     { label: "default", titre: "Mehdi", texte: [
       "Bonjour, Pôle emploi, Mehdi, enchanté. Vous avez rendez-vous ? … Non ? Bon. Les contrats sont affichés au-dessus du tableau, ils changent toutes les heures.",

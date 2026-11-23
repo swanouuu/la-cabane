@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "isma_kebab",
+  "ingredients": [
+    {
+      "item": "cabane:pain_turc"
+    },
+    {
+      "item": "cabane:viande_kebab"
+    }
+  ],
+  "result": {
+    "id": "cabane:sandwich_kebab",
+    "count": 1
+  }
+}

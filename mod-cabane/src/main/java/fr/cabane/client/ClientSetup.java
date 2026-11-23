@@ -24,6 +24,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(CabaneBlocks.ETAL_BE.get(), EtalRenderer::new);
         event.registerBlockEntityRenderer(CabaneBlocks.INTERACTIF_BE.get(), InteractifRenderer::new);
         event.registerBlockEntityRenderer(fr.cabane.drogue.Labos.POSTE_BE.get(), PosteRenderer::new);
+        event.registerBlockEntityRenderer(fr.cabane.bouffe.Kebab.BROCHE_BE.get(), RenduBroche::new);
     }
 
     @SubscribeEvent

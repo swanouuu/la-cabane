@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "isma_kebab",
+  "ingredients": [
+    {
+      "item": "cabane:sauce_blanche"
+    },
+    {
+      "item": "minecraft:sweet_berries"
+    }
+  ],
+  "result": {
+    "id": "cabane:sauce_samourai",
+    "count": 1
+  }
+}

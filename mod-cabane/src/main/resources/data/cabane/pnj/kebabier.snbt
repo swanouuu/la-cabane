@@ -1,0 +1,14 @@
+{
+  id:"easy_npc:humanoid",
+  UUID:[I;-1203715343,-403248390,-655899436,-205655487],
+  CustomName:'{"text":"Sanzonion","color":"yellow"}',
+  CustomNameVisible:1b,
+  PersistenceRequired:1b,
+  Tags:["cabane_pnj","pnj.kebabier"],
+  EasyNPCVersion:3,
+  VariantType:"STEVE",
+  SkinData:{Type:"RESOURCE_LOCATION",Texture:"cabane:textures/entity/pnj/kebabier.png"},
+  ObjectiveData:{ObjectiveDataSet:[{Type:"MOVE_BACK_TO_HOME",Prio:4,SpeedModifier:0.8},{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER",Prio:7}]},
+  HandItems:[{id:"cabane:couteau_kebab",count:1},{}],
+  Status:{finalized:1b}
+}

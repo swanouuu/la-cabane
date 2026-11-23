@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "poulet=false": {
+      "model": "cabane:block/viande_broche"
+    },
+    "poulet=true": {
+      "model": "cabane:block/viande_poulet"
+    }
+  }
+}

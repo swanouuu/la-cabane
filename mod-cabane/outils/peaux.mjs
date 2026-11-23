@@ -66,6 +66,8 @@ function personne(nom, o) {
     return peau;
   });
   // ---- accessoires de tête (couche « chapeau », 32,0)
+  // une casquette noire
+  if (o.casquette) boite(img, 32, 0, 8, 8, 8, (face, x, y) => (face === "haut" ? hex(o.casquette) : face !== "bas" && y < 2 ? hex(o.casquette) : null));
   if (o.bandeau) boite(img, 32, 0, 8, 8, 8, (face, x, y) => (face !== "haut" && face !== "bas" && y === 2 ? hex(o.bandeau) : null));
   if (o.plume) { img.set(56, 9, hex(o.plume)); img.set(56, 10, hex(o.plume)); img.set(57, 8, hex(o.plume)); img.set(57, 9, hex(o.plume)); }
   if (o.couronne) boite(img, 32, 0, 8, 8, 8, (face, x, y) => (face !== "haut" && face !== "bas" && y === 1 && (x + y) % 2 === 0 ? hex("#4f8f2f") : face !== "haut" && face !== "bas" && y === 1 ? hex("#6fbf3f") : null));
@@ -94,6 +96,10 @@ function personne(nom, o) {
         if (y === 3 || y === 7) return hex("#3b2614");
         if (x === 0 || x === 7) return hex("#5a3a1e");
         return (x + y) % 2 ? hex("#8a5a2b") : hex("#7a4e24");
+      case "kebabier": // t-shirt blanc, tablier rouge noué à la taille
+        if (y === 4) return hex("#f4f1ea");
+        if (face === "avant" && y > 4) return x === 0 || x === 7 ? hex("#a01c22") : (x + y) % 6 === 0 ? hex("#b8222a") : hex("#c4262c");
+        return (x + y) % 5 === 0 ? hex("#e2e2e2") : hex("#f6f6f6");
       case "croupier":
         if (y === 11) return hex("#111114");
         if (face === "avant" && y === 0 && x > 1 && x < 6) return x === 3 || x === 4 ? hex("#c0182a") : hex("#8a1020");
@@ -118,6 +124,7 @@ function personne(nom, o) {
   // ---- bras (40,16) et (32,48) : 4 x 12 x 4
   const bras = (face, x, y) => {
     if (o.tenue === "armure") return y < 4 ? hex("#7a4e24") : y > 9 ? hex("#5a3a1e") : peau;
+    if (o.tenue === "kebabier") return y < 4 ? hex("#f6f6f6") : face === "bas" ? peauOmbre : peau;
     if (o.tenue === "croupier") return y < 10 ? (y === 9 ? hex("#d8d8d8") : hex("#f4f4f4")) : face === "bas" ? peauOmbre : peau;
     if (o.tenue === "tunique" || o.tenue === "robe") return y < (o.tenue === "robe" ? 6 : 4) ? tissu : face === "bas" ? peauOmbre : peau;
     if (o.bracelet && y === 9) return hex(o.bracelet);
@@ -129,6 +136,7 @@ function personne(nom, o) {
   const jambe = (face, x, y) => {
     if (y >= 10) return hex(o.sandales ?? "#5a3a1e");
     if (o.tenue === "robe") return y < 8 ? tissu : peau;
+    if (o.tenue === "kebabier") return y >= 10 ? hex("#141414") : (x + y) % 4 === 0 ? hex("#26344f") : hex("#2e3d5c");
     if (o.tenue === "croupier") return y >= 10 ? hex("#0c0c0e") : (x + y) % 4 === 0 ? hex("#1a1a20") : hex("#22222a");
     if (o.tenue === "armure") return y < 5 ? hex("#7a4e24") : y < 8 ? peau : hex("#5a3a1e");
     const pagne = o.tenue === "pagne" ? hex("#7a5230") : tissu;
@@ -170,5 +178,6 @@ for (const [n, teint] of [["garde_1", "#8d5a3b"], ["garde_2", "#c99366"], ["gard
   personne(n, { teint, cheveux: "#120c0a", coupe: "chauve", tenue: "armure", masque: true, sandales: "#3b2614" });
 }
 // le croupier du blackjack
+personne("kebabier", { teint: "#c99366", cheveux: "#140e0a", coupe: "courts", barbe: true, tenue: "kebabier", casquette: "#1a1a1e", yeux: "#3b2416" });
 personne("croupier", { teint: "#e8c09a", cheveux: "#141010", coupe: "courts", tenue: "croupier", tissu: "#26262e", yeux: "#2a4a6a" });
 console.log("Peaux écrites dans", DOSSIER);

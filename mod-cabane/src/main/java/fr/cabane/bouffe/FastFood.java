@@ -86,6 +86,11 @@ public final class FastFood {
     /** Combien de plats chacun a mangés ces deux dernières minutes (au-delà de quatre : on est ballonné). */
     private static final Map<UUID, List<Long>> REPAS = new HashMap<>();
 
+    /** L'ayran : on oublie tout ce qu'on vient de manger. */
+    static void digerer(UUID joueur) {
+        REPAS.remove(joueur);
+    }
+
     public static class Plat extends Item {
         private final String description;
         private final Supplier<MobEffectInstance> bonus;

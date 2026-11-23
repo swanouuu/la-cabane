@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "isma_kebab",
+  "ingredients": [
+    {
+      "item": "cabane:assiette_kebab"
+    },
+    {
+      "item": "cabane:sauce_samourai"
+    }
+  ],
+  "result": {
+    "id": "cabane:assiette_kebab",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "sauce": "samourai"
+      }
+    }
+  }
+}
