@@ -31,8 +31,11 @@ public class RenduVisiteurParc extends HumanoidMobRenderer<VisiteurParc, PlayerM
         fin = new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER_SLIM), true);
     }
 
+    /** Le skin de Rachida (bras fins). */
+    private static final PlayerSkin RACHIDA = new PlayerSkin(Cabane.id("textures/entity/parc/rachida.png"), null, null, null, PlayerSkin.Model.SLIM, true);
+
     private static PlayerSkin skin(VisiteurParc v) {
-        return DefaultPlayerSkin.get(v.getUUID());
+        return v.role() == VisiteurParc.RACHIDA ? RACHIDA : DefaultPlayerSkin.get(v.getUUID());
     }
 
     @Override
@@ -49,7 +52,7 @@ public class RenduVisiteurParc extends HumanoidMobRenderer<VisiteurParc, PlayerM
 
     @Override
     protected boolean shouldShowName(VisiteurParc v) {
-        return false;
+        return v.role() == VisiteurParc.RACHIDA;
     }
 
     @EventBusSubscriber(modid = Cabane.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)

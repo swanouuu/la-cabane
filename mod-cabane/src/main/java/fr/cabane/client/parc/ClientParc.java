@@ -392,7 +392,7 @@ public final class ClientParc {
                 return;
             }
             // elle se tait quand on approche des autos-tamponneuses, où passe un autre son
-            volume = 0.55F * (1F - 0.92F * AmbianceParc.presAutos());
+            volume = 0.55F * (1F - 0.92F * Math.max(AmbianceParc.presAutos(), MusiquesParc.presence()));
         }
     }
 

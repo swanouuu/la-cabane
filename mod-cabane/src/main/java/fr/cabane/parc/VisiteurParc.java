@@ -29,7 +29,9 @@ import net.minecraft.world.level.Level;
  */
 public class VisiteurParc extends PathfinderMob {
     /** Ce qu'il fait : il se promène, ou il travaille (il ne bouge pas de sa place). */
-    public static final byte PROMENEUR = 0, EMPLOYE = 1;
+    public static final byte PROMENEUR = 0, EMPLOYE = 1, RACHIDA = 2;
+    /** Rachida, devant la fontaine, face à l'avenue (elle répète ses répliques, côté joueur : AmbianceParc). */
+    public static final double RACHIDA_X = 0.5, RACHIDA_Z = 9.5;
 
     private static final EntityDataAccessor<Byte> ROLE = SynchedEntityData.defineId(VisiteurParc.class, EntityDataSerializers.BYTE);
     private int rayon = 12;
@@ -67,6 +69,15 @@ public class VisiteurParc extends PathfinderMob {
         return this;
     }
 
+    /** Rachida : elle reste plantée devant la fontaine, son nom au-dessus de la tête. */
+    VisiteurParc rachida() {
+        entityData.set(ROLE, RACHIDA);
+        restrictTo(blockPosition(), 0);
+        setCustomName(net.minecraft.network.chat.Component.literal("Rachida"));
+        setCustomNameVisible(true);
+        return this;
+    }
+
     /** Un employé : il reste à sa place. */
     VisiteurParc employe() {
         entityData.set(ROLE, EMPLOYE);
@@ -91,7 +102,7 @@ public class VisiteurParc extends PathfinderMob {
     public void tick() {
         super.tick();
         // l'employé ne quitte pas sa place, même bousculé
-        if (!level().isClientSide && role() == EMPLOYE && hasRestriction()) {
+        if (!level().isClientSide && role() != PROMENEUR && hasRestriction()) {
             BlockPos p = getRestrictCenter();
             if (distanceToSqr(p.getX() + 0.5, getY(), p.getZ() + 0.5) > 0.6) {
                 moveTo(p.getX() + 0.5, getY(), p.getZ() + 0.5, getYRot(), getXRot());
@@ -138,7 +149,7 @@ public class VisiteurParc extends PathfinderMob {
         rayon = tag.contains("rayon") ? tag.getInt("rayon") : 12;
         // sa place : là où il se promène (ou là où il travaille)
         if (tag.contains("chez")) {
-            restrictTo(BlockPos.of(tag.getLong("chez")), role() == EMPLOYE ? 0 : rayon);
+            restrictTo(BlockPos.of(tag.getLong("chez")), role() != PROMENEUR ? 0 : rayon);
         }
     }
 }

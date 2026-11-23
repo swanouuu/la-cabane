@@ -163,6 +163,37 @@ final class ParcVie {
             t.tick(parc);
         }
         TournantsVie.tick(parc);
+        if (parc.getGameTime() % 100 == 0) {
+            rachida(parc);
+        }
+    }
+
+    /**
+     * Rachida, devant la fontaine : si elle n'y est pas (parc construit avant elle, ou reconstruit), elle arrive. On
+     * attend que les entités du coin soient chargées, sinon on en ferait une deuxième.
+     */
+    private static void rachida(ServerLevel parc) {
+        double x = VisiteurParc.RACHIDA_X, z = VisiteurParc.RACHIDA_Z;
+        net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(x, ParcBuilder.SOL, z);
+        if (!parc.isLoaded(pos) || !parc.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(pos))) {
+            return;
+        }
+        net.minecraft.world.phys.AABB zone = new net.minecraft.world.phys.AABB(pos).inflate(40, 20, 40);
+        List<VisiteurParc> elles = parc.getEntitiesOfClass(VisiteurParc.class, zone, v -> v.role() == VisiteurParc.RACHIDA);
+        if (!elles.isEmpty()) {
+            return;
+        }
+        VisiteurParc v = Parc.VISITEUR.get().create(parc);
+        if (v == null) {
+            return;
+        }
+        v.moveTo(x, ParcBuilder.SOL, z, 0F, 0F);
+        v.setYHeadRot(0F);
+        v.setYBodyRot(0F);
+        v.addTag(ParcBuilder.TAG);
+        v.addTag(ParcBuilder.tagConstruction(ParcData.get(parc.getServer()).construction()));
+        v.rachida();
+        parc.addFreshEntity(v);
     }
 
     private static void creer() {
