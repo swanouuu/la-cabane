@@ -44,7 +44,8 @@ import org.joml.Vector3f;
  * pilote pendant 45 secondes, puis il redevient le chevalier. Le géant est dessiné chez chacun (ClientSusano4) ; ici,
  * le joueur est tenu à la hauteur du joyau (les pieds du géant touchent le sol), il vole lentement, et ses attaques :
  * clic gauche, l'épée de lumière puis l'épée aux flammes noires, en alternance, sur tout ce qui est devant ; clic
- * droit, une pluie d'Amaterasu sur une zone ronde là où il vise ; accroupi, la perce, une charge en vrille.
+ * droit, une pluie d'Amaterasu sur une zone ronde là où il vise ; accroupi, la perce, une charge en vrille ; la touche de la
+ * fracture, le retour dans le passé (les 10 dernières secondes remontent autour du géant, toutes les 30 s, voir Fracture).
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Susano4 {
@@ -67,6 +68,8 @@ public final class Susano4 {
     /** La perce : 24 blocs en 1 s, 20 de dégâts, tout est projeté ; 12 s de recharge. */
     public static final int RECHARGE_PERCE = 240, DUREE_PERCE = 20;
     private static final float DEGATS_PERCE = 20;
+    /** Le retour dans le passé : toutes les 30 s (les 10 dernières secondes, voir Fracture.lancerGeant). */
+    public static final int RECHARGE_RETOUR = 30 * 20;
 
     public static boolean est(String pouvoir) {
         return NOM.equals(pouvoir) || Susano3.DEV.equals(pouvoir);
@@ -84,6 +87,7 @@ public final class Susano4 {
     private static final Map<UUID, Integer> NB_COUPS = new HashMap<>();
     private static final Map<UUID, Integer> PLUIES_PRETES = new HashMap<>();
     private static final Map<UUID, Integer> PERCES_PRETES = new HashMap<>();
+    private static final Map<UUID, Integer> RETOURS_PRETS = new HashMap<>();
 
     private record Pluie(UUID tireur, ServerLevel monde, Vec3 centre, int debut, Map<Integer, Float> recu) {
     }
@@ -111,7 +115,8 @@ public final class Susano4 {
 
     /** Serveur → ceux qui le voient : une attaque (0 l'épée de lumière, 1 l'épée noire, 2 la pluie, 3 la perce) et son point. */
     public record Attaque4(UUID joueur, int sorte, Vector3f point) implements CustomPacketPayload {
-        public static final int LUMIERE = 0, NOIR = 1, PLUIE = 2, PERCE = 3;
+        /** RETOUR (le retour dans le passé) n'est envoyé qu'au lanceur, pour son panneau. */
+        public static final int LUMIERE = 0, NOIR = 1, PLUIE = 2, PERCE = 3, RETOUR = 4;
         public static final Type<Attaque4> TYPE = new Type<>(Cabane.id("susano4_attaque"));
         public static final StreamCodec<ByteBuf, Attaque4> CODEC = StreamCodec.composite(
                 UUIDUtil.STREAM_CODEC, Attaque4::joueur, ByteBufCodecs.VAR_INT, Attaque4::sorte, ByteBufCodecs.VECTOR3F, Attaque4::point, Attaque4::new);
@@ -296,6 +301,23 @@ public final class Susano4 {
         Vec3 p = pieds(joueur);
         joueur.serverLevel().playSound(null, p.x, p.y + 15, p.z, SoundEvents.TRIDENT_RIPTIDE_3.value(), SoundSource.PLAYERS, 3F, 0.5F);
         joueur.serverLevel().playSound(null, p.x, p.y + 15, p.z, SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 1.2F, 0.7F);
+    }
+
+    /** La touche de la fracture : le retour dans le passé, autour du géant (du sol sous lui jusqu'à sa tête). */
+    static void retour(ServerPlayer joueur) {
+        int maintenant = joueur.server.getTickCount();
+        int reste = RETOURS_PRETS.getOrDefault(joueur.getUUID(), 0) - maintenant;
+        if (reste > 0) {
+            joueur.displayClientMessage(Component.literal("Le retour dans le passé revient… " + (reste + 19) / 20 + " s").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        Vec3 sous = sol(joueur.serverLevel(), joueur.position().add(0, 0.5, 0), 90, joueur);
+        if (!Fracture.lancerGeant(joueur, sous == null ? pieds(joueur).y : sous.y)) {
+            joueur.displayClientMessage(Component.literal("Le temps remonte déjà…").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        RETOURS_PRETS.put(joueur.getUUID(), maintenant + RECHARGE_RETOUR);
+        PacketDistributor.sendToPlayer(joueur, new Attaque4(joueur.getUUID(), Attaque4.RETOUR, Fruit.v(joueur.position())));
     }
 
     /** Le sol sous ce point (le dessus du premier bloc plein, à au plus profondeur blocs dessous), ou null. */

@@ -196,7 +196,7 @@ export function genererSharingan({ ecrire, lang }) {
   ecrire("data/cabane/damage_type/tsukuyomi.json", { message_id: "cabane.tsukuyomi", exhaustion: 0.1, scaling: "never" });
   ecrire("data/cabane/damage_type/meteorite.json", { message_id: "cabane.meteorite", exhaustion: 0.1, scaling: "never" });
   Object.assign(lang, {
-    "key.cabane.technique": "Technique (pouvoir)", "key.cabane.kamui": "Kamui (Sharingan)", "key.cabane.meteorite": "Météorite (Rinnegan)", "key.cabane.corbeau": "Corbeau (susanodev)", "key.cabane.fracture": "Fracture temporelle (susanodev)",
+    "key.cabane.technique": "Technique (pouvoir)", "key.cabane.kamui": "Kamui (Sharingan)", "key.cabane.meteorite": "Météorite (Rinnegan)", "key.cabane.corbeau": "Corbeau (susanodev)", "key.cabane.fracture": "Retour dans le passé (Susano parfait)",
     "subtitles.cabane.sharingan.eveil": "Le Sharingan s'éveille", "subtitles.cabane.sharingan.mangekyo": "Le Mangekyo s'éveille",
     "death.attack.cabane.tsukuyomi": "%1$s n'est jamais revenu du Tsukuyomi de %2$s",
     "death.attack.cabane.tsukuyomi.item": "%1$s n'est jamais revenu du Tsukuyomi de %2$s",

@@ -63,7 +63,7 @@ public final class ClientSusano4 {
 
     private static final List<Coup> COUPS = new ArrayList<>();
     /** Les recharges du joueur local (pour le panneau) : la dernière pluie et la dernière perce. */
-    private static long pluieLocale = -1, perceLocale = -1;
+    private static long pluieLocale = -1, perceLocale = -1, retourLocal = -1;
 
     public static void etat(Susano4.Etat4 p) {
         if (p.phase() == 0) {
@@ -75,6 +75,11 @@ public final class ClientSusano4 {
 
     public static void attaque(Susano4.Attaque4 p) {
         long maintenant = System.nanoTime();
+        if (p.sorte() == Susano4.Attaque4.RETOUR) {
+            // rien à dessiner ici (la fissure, c'est ClientFracture) : juste la recharge du panneau
+            retourLocal = maintenant;
+            return;
+        }
         COUPS.add(new Coup(p.joueur(), p.sorte(), maintenant, new Vec3(p.point())));
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.getUUID().equals(p.joueur())) {
@@ -128,6 +133,10 @@ public final class ClientSusano4 {
     /** Les secondes avant la prochaine pluie et la prochaine perce du joueur local. */
     static double rechargePluie() {
         return pluieLocale < 0 ? 0 : Susano4.RECHARGE_PLUIE / 20.0 - (System.nanoTime() - pluieLocale) / 1e9;
+    }
+
+    static double rechargeRetour() {
+        return retourLocal < 0 ? 0 : Susano4.RECHARGE_RETOUR / 20.0 - (System.nanoTime() - retourLocal) / 1e9;
     }
 
     static double rechargePerce() {

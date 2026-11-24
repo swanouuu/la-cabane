@@ -56,18 +56,24 @@ import org.joml.Vector3f;
  * mobs ; ce qui est apparu entre-temps disparaît, ce qui est mort revient. Les inventaires ne changent pas, et hors de la
  * zone rien ne bouge.
  *
- * <p>Tant qu'un joueur a susanodev, on retient ce qui se passe autour de lui : tous les changements de blocs (voir
- * mixin/LevelChunkMixin), et tous les deux ticks la place de ceux qui sont vivants. La fissure est dessinée par {@link ClientFracture}.
+ * <p>Le Susano parfait (Susano niveau 4) a sa version, le retour dans le passé ({@link #lancerGeant}) : les 10 dernières
+ * secondes, sur une colonne de 16 blocs autour du géant, du sol à sa tête ; toutes les 30 s (voir Susano4.retour).
+ *
+ * <p>Tant qu'un joueur a susanodev ou est en Susano parfait, on retient ce qui se passe autour de lui : tous les changements
+ * de blocs (voir mixin/LevelChunkMixin), et tous les deux ticks la place de ceux qui sont vivants. La fissure est dessinée
+ * par {@link ClientFracture}.
  */
 @EventBusSubscriber(modid = Cabane.MODID)
 public final class Fracture {
     private static final double RAYON = 10, PORTEE = 48;
     /** En ticks : ce qu'on remonte, l'écart entre deux relevés, la fissure, le retour en arrière, la fissure qui se referme. */
     public static final int FENETRE = 200, CASSE = 14, LECTURE = 50, FIN = 10;
+    /** Le retour dans le passé du Susano parfait : la même fenêtre de 10 s, dans 16 blocs autour du géant. */
+    private static final double RAYON_GEANT = 16;
     private static final int ETAPE = 2, JOURNAL_MAX = 200_000;
     private static final DustParticleOptions VIOLET = new DustParticleOptions(new Vector3f(0.66F, 0.35F, 1F), 1.3F);
 
-    /** Vérifié par le mixin à chaque bloc posé : quand personne n'a susanodev, ça ne coûte rien. */
+    /** Vérifié par le mixin à chaque bloc posé : quand personne n'a susanodev ni n'est en Susano parfait, ça ne coûte rien. */
     public static volatile boolean enregistre;
     private static boolean restauration;
 
@@ -155,7 +161,7 @@ public final class Fracture {
         }
         DEVS.clear();
         for (ServerPlayer p : serveur.getPlayerList().getPlayers()) {
-            if (Susano3.DEV.equals(Pouvoirs.pouvoir(p))) {
+            if (Susano3.DEV.equals(Pouvoirs.pouvoir(p)) || Susano4.enForme(p)) {
                 DEVS.add(p);
             }
         }
@@ -229,7 +235,57 @@ public final class Fracture {
     /** La touche : l'écran se fissure et tout repart en arrière autour de lui. */
     static void lancer(ServerPlayer lanceur) {
         if (retour == null && lanceur.level().dimension() != Genjutsu.DIMENSION) {
-            retour = new Retour(lanceur);
+            retour = new Retour(lanceur, new Zone(lanceur.position(), RAYON, -1, -1));
+        }
+    }
+
+    /**
+     * Le retour dans le passé du Susano parfait : les 10 dernières secondes remontent, sur une colonne autour du géant (du
+     * sol sous lui jusqu'au-dessus de sa tête, là où est le joueur).
+     *
+     * @return faux si le temps remonte déjà quelque part (il pourra réessayer)
+     */
+    static boolean lancerGeant(ServerPlayer lanceur, double solY) {
+        if (retour != null || lanceur.level().dimension() == Genjutsu.DIMENSION) {
+            return false;
+        }
+        Vec3 pieds = new Vec3(lanceur.getX(), solY, lanceur.getZ());
+        retour = new Retour(lanceur, new Zone(pieds, RAYON_GEANT, 4, lanceur.getY() - solY + 5));
+        return true;
+    }
+
+    /** Le temps remonte-t-il en ce moment ? */
+    static boolean enCours() {
+        return retour != null;
+    }
+
+    /** Une boule (bas &lt; 0) ou une colonne (de bas blocs sous le centre à haut blocs au-dessus). */
+    private record Zone(Vec3 centre, double rayon, double bas, double haut) {
+        boolean dedans(double x, double y, double z) {
+            double dx = x - centre.x, dy = y - centre.y, dz = z - centre.z;
+            if (bas < 0) {
+                return dx * dx + dy * dy + dz * dz <= rayon * rayon;
+            }
+            return dx * dx + dz * dz <= rayon * rayon && dy >= -bas && dy <= haut;
+        }
+
+        boolean dedans(Vec3 p) {
+            return dedans(p.x, p.y, p.z);
+        }
+
+        AABB boite() {
+            return bas < 0 ? new AABB(centre, centre).inflate(rayon)
+                    : new AABB(centre.x - rayon, centre.y - bas, centre.z - rayon, centre.x + rayon, centre.y + haut, centre.z + rayon);
+        }
+
+        /** Un point au hasard sur le bord (pour les particules). */
+        Vec3 bord(net.minecraft.util.RandomSource r) {
+            double a = r.nextDouble() * Math.PI * 2;
+            if (bas < 0) {
+                double b = (r.nextDouble() - 0.5) * Math.PI;
+                return new Vec3(centre.x + Math.cos(a) * Math.cos(b) * rayon, centre.y + 1 + Math.sin(b) * rayon, centre.z + Math.sin(a) * Math.cos(b) * rayon);
+            }
+            return new Vec3(centre.x + Math.cos(a) * rayon, centre.y - bas + r.nextDouble() * (bas + haut), centre.z + Math.sin(a) * rayon);
         }
     }
 
@@ -264,6 +320,7 @@ public final class Fracture {
     private static final class Retour {
         final ServerLevel level;
         final Vec3 centre;
+        final Zone zone;
         final int depart;
         final List<Cible> cibles = new ArrayList<>();
         final List<Changement> blocs = new ArrayList<>();
@@ -271,19 +328,18 @@ public final class Fracture {
         int indexBloc;
         int age;
 
-        Retour(ServerPlayer lanceur) {
+        Retour(ServerPlayer lanceur, Zone zone) {
             level = lanceur.serverLevel();
             centre = lanceur.position();
+            this.zone = zone;
             depart = level.getServer().getTickCount();
-            double r2 = RAYON * RAYON;
             for (Changement c : JOURNAL) {
-                if (c.monde() == level.dimension() && c.pos().distToCenterSqr(centre) <= r2) {
+                if (c.monde() == level.dimension() && zone.dedans(Vec3.atCenterOf(c.pos()))) {
                     blocs.add(c);
                 }
             }
             indexBloc = blocs.size() - 1;
-            AABB zone = new AABB(centre, centre).inflate(RAYON);
-            for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, zone, x -> x.position().distanceToSqr(centre) <= r2 && !x.getTags().contains("cabane_pnj"))) {
+            for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, zone.boite(), x -> zone.dedans(x.position()) && !x.getTags().contains("cabane_pnj"))) {
                 ArrayDeque<Trace> t = TRACES.get(e.getUUID());
                 List<Trace> liste = new ArrayList<>(t == null ? List.of() : t);
                 liste.add(trace(e, depart));
@@ -293,7 +349,7 @@ public final class Fracture {
                 ArrayDeque<Trace> t = TRACES.get(m.getKey());
                 if (t != null && !t.isEmpty()) {
                     Trace derniere = t.peekLast();
-                    if (Vec3.ZERO.add(derniere.x(), derniere.y(), derniere.z()).distanceToSqr(centre) <= r2) {
+                    if (zone.dedans(derniere.x(), derniere.y(), derniere.z())) {
                         ajouter(m.getKey(), null, new ArrayList<>(t), m.getValue());
                     }
                 }
@@ -301,7 +357,7 @@ public final class Fracture {
             level.playSound(null, centre.x, centre.y, centre.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 2F, 0.55F);
             level.playSound(null, centre.x, centre.y, centre.z, SoundEvents.AMETHYST_CLUSTER_BREAK, SoundSource.PLAYERS, 2F, 0.6F);
             for (ServerPlayer p : level.players()) {
-                if (p.position().distanceToSqr(centre) <= r2) {
+                if (zone.dedans(p.position())) {
                     PacketDistributor.sendToPlayer(p, new Effet(CASSE, LECTURE, FIN));
                 }
             }
@@ -335,9 +391,8 @@ public final class Fracture {
                 int curseur = depart - lecture * FENETRE / LECTURE;
                 remonter(curseur);
                 for (int i = 0; i < 28; i++) {
-                    double a = level.random.nextDouble() * Math.PI * 2, b = (level.random.nextDouble() - 0.5) * Math.PI;
-                    level.sendParticles(ParticleTypes.REVERSE_PORTAL, centre.x + Math.cos(a) * Math.cos(b) * RAYON, centre.y + 1 + Math.sin(b) * RAYON,
-                            centre.z + Math.sin(a) * Math.cos(b) * RAYON, 1, 0, 0, 0, 0);
+                    Vec3 b = zone.bord(level.random);
+                    level.sendParticles(ParticleTypes.REVERSE_PORTAL, b.x, b.y, b.z, 1, 0, 0, 0, 0);
                 }
                 return false;
             }
@@ -357,7 +412,7 @@ public final class Fracture {
                     Map.Entry<UUID, Integer> n = i.next();
                     if (n.getValue() >= curseur) {
                         Entity e = level.getEntity(n.getKey());
-                        if (e != null && !(e instanceof Player) && !e.getTags().contains("cabane_pnj") && e.position().distanceToSqr(centre) <= RAYON * RAYON) {
+                        if (e != null && !(e instanceof Player) && !e.getTags().contains("cabane_pnj") && zone.dedans(e.position())) {
                             e.discard();
                         }
                         i.remove();

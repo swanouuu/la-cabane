@@ -1314,6 +1314,8 @@ public final class ClientSusano {
                 {Clavier.droite(), ClientSusano4.rechargePluie() > 0 ? String.format("Pluie d'Amaterasu (%.0f s)", Math.ceil(ClientSusano4.rechargePluie())) : "Pluie d'Amaterasu"},
                 {Clavier.accroupi(), ClientSusano4.enVol() ? "Descendre"
                         : ClientSusano4.rechargePerce() > 0 ? String.format("Perce (%.0f s)", Math.ceil(ClientSusano4.rechargePerce())) : "Perce"},
+                {Clavier.nom(ClientSharingan.FRACTURE), ClientSusano4.rechargeRetour() > 0
+                        ? String.format("Retour dans le passé (%.0f s)", Math.ceil(ClientSusano4.rechargeRetour())) : "Retour dans le passé"},
                 {mc.options.keyJump.getTranslatedKeyMessage().getString(), "Voler"},
                 {EVEIL.getTranslatedKeyMessage().getString(), fr.cabane.pouvoir.Susano3.DEV.equals(s.pouvoir) ? "Chevalier" : String.format("Chevalier (%.0f s)", Math.ceil(ClientSusano4.resteLocal()))}}
                 : new String[][]{

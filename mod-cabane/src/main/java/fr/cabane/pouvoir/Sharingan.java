@@ -161,7 +161,13 @@ public final class Sharingan {
             return;
         }
         int niveau = Pouvoirs.yeux(joueur);
-        // dans le Susano parfait, ses techniques sont celles du géant
+        // dans le Susano parfait, ses techniques sont celles du géant (dont le retour dans le passé, sur la touche de la fracture)
+        if (action == J_FRACTURE && niveau >= 1 && Pouvoirs.niveau(joueur) >= 4) {
+            if (Susano4.actif(joueur)) {
+                Susano4.retour(joueur);
+            }
+            return;
+        }
         if (niveau < 1 || Pouvoirs.niveau(joueur) >= 4) {
             if (niveau < 1) {
                 joueur.displayClientMessage(Component.literal("Éveille d'abord tes yeux.").withStyle(ChatFormatting.GRAY), true);
